@@ -1,12 +1,11 @@
 var struct_c_b_message =
 [
     [ "base", "struct_c_b_message.html#a85c7cc70d743217b3789a64a74756995", null ],
-    [ "bytes", "struct_c_b_message.html#adcc78999fdbb41052741a6e30b16fab5", null ],
-    [ "checksum", "struct_c_b_message.html#a5d9958844b3ea0a3cb642d69272b96c3", null ],
+    [ "bytes", "struct_c_b_message.html#a43112a214169a8345f988d1d1341102f", null ],
+    [ "checksum", "struct_c_b_message.html#aae84df1fce1366e52ff9a6b9c9a2c50a", null ],
     [ "cursor", "struct_c_b_message.html#af3b2b8ffe2b1effcf3983354beb28099", null ],
-    [ "engine", "struct_c_b_message.html#a1c9161c22c7317d5579b80aceab0abc3", null ],
+    [ "events", "struct_c_b_message.html#a4f3c89642b33624d384d773b0b82c894", null ],
     [ "length", "struct_c_b_message.html#a9f59b34b1f25fe00023291b678246bcc", null ],
-    [ "offset", "struct_c_b_message.html#aed7ea92f45bd273dde380a45ddced592", null ],
     [ "params", "struct_c_b_message.html#a2aec9f694830e518722ab4bc4e275527", null ],
     [ "parsed", "struct_c_b_message.html#a45084d4f88de51901190de4d95c9e90b", null ],
     [ "parseLazy", "struct_c_b_message.html#a1108359840ff643943e08d9c8cd9a648", null ],

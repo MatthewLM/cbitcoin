@@ -117,7 +117,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 <p>Contains and initialises common structures required. Inherits <a class="el" href="struct_c_b_object.html" title="Base structure for all other structures.">CBObject</a>.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;<a class="el" href="_c_b_event_centre_8h_source.html">CBEventCentre.h</a>&quot;</code><br/>
+<div class="textblock"><code>#include &quot;<a class="el" href="_c_b_engine_8h_source.html">CBEngine.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="_c_b_byte_array_8h_source.html">CBByteArray.h</a>&quot;</code><br/>
 </div>
 <p><a href="_c_b_engine_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -129,10 +130,10 @@ Data Structures</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure for <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> objects.  <a href="struct_c_b_engine.html#details">More...</a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a60b85918a01d5a7e2f623c148c49b563"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_engine.html">CBEngine</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#a60b85918a01d5a7e2f623c148c49b563">CBNewEngine</a> ()</td></tr>
-<tr class="memdesc:a60b85918a01d5a7e2f623c148c49b563"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object.  <a href="#a60b85918a01d5a7e2f623c148c49b563"></a><br/></td></tr>
-<tr class="memitem:a926ed12457504ac200eaa62d0217cf69"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#a926ed12457504ac200eaa62d0217cf69">CBCreateEngineVT</a> ()</td></tr>
-<tr class="memdesc:a926ed12457504ac200eaa62d0217cf69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_engine_v_t.html" title="Virtual function table for CBEngine.">CBEngineVT</a>.  <a href="#a926ed12457504ac200eaa62d0217cf69"></a><br/></td></tr>
+<tr class="memitem:afae372fba649d3d28452a8c06cfaf7f4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_engine.html">CBEngine</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#afae372fba649d3d28452a8c06cfaf7f4">CBNewEngine</a> (void)</td></tr>
+<tr class="memdesc:afae372fba649d3d28452a8c06cfaf7f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object.  <a href="#afae372fba649d3d28452a8c06cfaf7f4"></a><br/></td></tr>
+<tr class="memitem:a49ff2a005a4fa290058ddda47539dcd5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#a49ff2a005a4fa290058ddda47539dcd5">CBCreateEngineVT</a> (void)</td></tr>
+<tr class="memdesc:a49ff2a005a4fa290058ddda47539dcd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_engine_v_t.html" title="Virtual function table for CBEngine.">CBEngineVT</a>.  <a href="#a49ff2a005a4fa290058ddda47539dcd5"></a><br/></td></tr>
 <tr class="memitem:aa0a8b33cd41ff6e2960046835dc2b2e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#aa0a8b33cd41ff6e2960046835dc2b2e3">CBSetEngineVT</a> (<a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a> *VT)</td></tr>
 <tr class="memdesc:aa0a8b33cd41ff6e2960046835dc2b2e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the <a class="el" href="struct_c_b_engine_v_t.html" title="Virtual function table for CBEngine.">CBEngineVT</a> function pointers.  <a href="#aa0a8b33cd41ff6e2960046835dc2b2e3"></a><br/></td></tr>
 <tr class="memitem:ad5a7c4cdf1c12840ca4ae64971e72934"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#ad5a7c4cdf1c12840ca4ae64971e72934">CBGetEngineVT</a> (<a class="el" href="struct_c_b_engine.html">CBEngine</a> *self)</td></tr>
@@ -142,20 +143,23 @@ Functions</h2></td></tr>
 <tr class="memitem:a45f3a71e85ec5326281951dc6f2cdf52"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#a45f3a71e85ec5326281951dc6f2cdf52">CBInitEngine</a> (<a class="el" href="struct_c_b_engine.html">CBEngine</a> *self)</td></tr>
 <tr class="memdesc:a45f3a71e85ec5326281951dc6f2cdf52"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object.  <a href="#a45f3a71e85ec5326281951dc6f2cdf52"></a><br/></td></tr>
 <tr class="memitem:ab2d4855f8e5175488d99dea46834cae3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#ab2d4855f8e5175488d99dea46834cae3">CBFreeEngine</a> (<a class="el" href="struct_c_b_engine.html">CBEngine</a> *self)</td></tr>
-<tr class="memdesc:ab2d4855f8e5175488d99dea46834cae3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees the <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object.  <a href="#ab2d4855f8e5175488d99dea46834cae3"></a><br/></td></tr>
+<tr class="memdesc:ab2d4855f8e5175488d99dea46834cae3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees a <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object.  <a href="#ab2d4855f8e5175488d99dea46834cae3"></a><br/></td></tr>
 <tr class="memitem:ab2f260bf2f5250dc66336c828634d5ef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_engine_8h.html#ab2f260bf2f5250dc66336c828634d5ef">CBFreeProcessEngine</a> (<a class="el" href="struct_c_b_engine.html">CBEngine</a> *self)</td></tr>
 <tr class="memdesc:ab2f260bf2f5250dc66336c828634d5ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does the processing to free a <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object. Should be called by the children when freeing objects.  <a href="#ab2f260bf2f5250dc66336c828634d5ef"></a><br/></td></tr>
+<tr class="memitem:af44c7cf22d98b05ef3efdf89e734a7c1"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af44c7cf22d98b05ef3efdf89e734a7c1"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>CBDummyErrorReceived</b> (CBError error, char *err,...)</td></tr>
 </table>
 <hr/><a name="details" id="details"></a><h2>Detailed Description</h2>
 <div class="textblock"><p>Contains and initialises common structures required. Inherits <a class="el" href="struct_c_b_object.html" title="Base structure for all other structures.">CBObject</a>. </p>
 </div><hr/><h2>Function Documentation</h2>
-<a class="anchor" id="a926ed12457504ac200eaa62d0217cf69"></a>
+<a class="anchor" id="a49ff2a005a4fa290058ddda47539dcd5"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a>* <a class="el" href="_c_b_engine_8h.html#a926ed12457504ac200eaa62d0217cf69">CBCreateEngineVT</a> </td>
+          <td class="memname"><a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a>* <a class="el" href="_c_b_engine_8h.html#a49ff2a005a4fa290058ddda47539dcd5">CBCreateEngineVT</a> </td>
           <td>(</td>
+          <td class="paramtype">void&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
@@ -183,7 +187,7 @@ Functions</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Frees the <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object. </p>
+<p>Frees a <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object. </p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> object to free. </td></tr>
@@ -296,13 +300,14 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a60b85918a01d5a7e2f623c148c49b563"></a>
+<a class="anchor" id="afae372fba649d3d28452a8c06cfaf7f4"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_c_b_engine.html">CBEngine</a>* <a class="el" href="_c_b_engine_8h.html#a60b85918a01d5a7e2f623c148c49b563">CBNewEngine</a> </td>
+          <td class="memname"><a class="el" href="struct_c_b_engine.html">CBEngine</a>* <a class="el" href="_c_b_engine_8h.html#afae372fba649d3d28452a8c06cfaf7f4">CBNewEngine</a> </td>
           <td>(</td>
+          <td class="paramtype">void&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
@@ -346,7 +351,7 @@ Functions</h2></td></tr>
     <ul>
       <li class="navelem"><a class="el" href="_c_b_engine_8h.html">CBEngine.h</a>      </li>
 
-    <li class="footer">Generated on Mon Apr 30 2012 20:36:52 for cbitcoin by
+    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>
