@@ -1,5 +1,5 @@
 //
-//  test.c
+//  testCBBase58.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 26/04/2012.
@@ -21,9 +21,11 @@
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
+#include "CBBase58.h"
 
-int main (int argc, const char * argv[]){
-	printf("Hello, World!\n");
-    return 0;
+int main(){
+	char str[28];
+	unsigned char test[] = {0x00,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,0xA7,0xA4,};
+	CBEncodeBase58(str,test,20);
+	printf("%s\n",str);
 }
-

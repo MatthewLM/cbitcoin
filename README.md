@@ -5,6 +5,8 @@ cbitcoin is a bitcoin library in development that will use nothing but the stand
 
 The library is being developed from the bitcoinj library. Once functionalities have been implemented from bitcoinj, remaining functionalities will be developed from the C++ bitcoin client. Network, threading and any requirements not available in the standard C library will be attached to cbitcoin using function pointers.
 
+THE LIBRARY IS STILL IN DEVELOPMENT AND MOSTLY INCOMPLETE.
+
 Making a Contribution
 ---------------------
 
