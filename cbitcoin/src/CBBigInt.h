@@ -35,10 +35,10 @@
 #include <string.h>
 
 /**
- @brief Contains byte data with the length of this data to represent a large integer. You MUST ensure that the first byte contains the first set bit. Ensure this with CBBigIntNormalise
+ @brief Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first.
  */
 typedef struct{
-	u_int8_t * data; /**< The byte data. */
+	u_int8_t * data; /**< The byte data. Should be little-endian */
 	u_int8_t length; /**< The length of this data in bytes */
 }CBBigInt;
 
@@ -88,6 +88,13 @@ void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans);
  */
 void CBBigIntEqualsRightShiftByUInt8(CBBigInt * a,u_int8_t b);
 /**
+ @brief Calculates the result of a multiplication of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a *= b".
+ @param a A pointer to the CBBigInt
+ @param b An 8 bit integer
+ @param ans A memory block the same size as the CBBigInt data memory block to store temporary data in calculations. Should be set with zeros.
+ */
+void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans);
+/**
  @brief Calculates the result of a subtraction of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a -= b".
  @param a A pointer to the CBBigInt
  @param b An 8 bit integer
@@ -101,7 +108,7 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b);
  */
 u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b);
 /**
- @brief Normalises a CBBigInt so that the first byte has the first set bit.
+ @brief Normalises a CBBigInt so that there are no uneccessary trailing zeros.
  @param a A pointer to the CBBigInt
  */
 void CBBigIntNormalise(CBBigInt * a);
