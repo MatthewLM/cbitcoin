@@ -30,19 +30,19 @@ static int objectNum = 0;
 
 //  Constructors
 
-CBSha256Hash * CBNewEmptySha256Hash(CBEngine * events){
+CBSha256Hash * CBNewEmptySha256Hash(CBEvents * events){
 	CBSha256Hash * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateSha256HashVT);
 	CBInitEmptySha256Hash(self,events);
 	return self;
 }
-CBSha256Hash * CBNewSha256HashFromByteArray(CBByteArray * bytes,CBEngine * events){
+CBSha256Hash * CBNewSha256HashFromByteArray(CBByteArray * bytes,CBEvents * events){
 	CBSha256Hash * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateSha256HashVT);
 	CBInitSha256HashFromByteArrayAndHash(self,bytes,-1,events);
 	return self;
 }
-CBSha256Hash * CBNewSha256HashFromByteArrayAndHash(CBByteArray * bytes,int hash,CBEngine * events){
+CBSha256Hash * CBNewSha256HashFromByteArrayAndHash(CBByteArray * bytes,int hash,CBEvents * events){
 	CBSha256Hash * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateSha256HashVT);
 	CBInitSha256HashFromByteArrayAndHash(self,bytes,hash,events);
@@ -75,15 +75,15 @@ CBSha256Hash * CBGetSha256Hash(void * self){
 
 //  Initialiser
 
-bool CBInitEmptySha256Hash(CBSha256Hash * self,CBEngine * events){
+bool CBInitEmptySha256Hash(CBSha256Hash * self,CBEvents * events){
 	CBInitByteArrayOfSize(CBGetByteArray(self), 32, events);
 	self->hash = -1;
 	memset(CBGetByteArray(self)->sharedData->data,0,32); // ZERO_HASH
 	return true;
 }
-bool CBInitSha256HashFromByteArrayAndHash(CBSha256Hash * self,CBByteArray * bytes,int hash,CBEngine * events){
+bool CBInitSha256HashFromByteArrayAndHash(CBSha256Hash * self,CBByteArray * bytes,int hash,CBEvents * events){
 	if (bytes->length != 32) 
-		events->errorReceived(CB_ERROR_SHA_256_HASH_BAD_BYTE_ARRAY_LENGTH,"Error: Cannot make SHA-256 hash from a byte array that is not 32 bytes in length.");
+		events->onErrorReceived(CB_ERROR_SHA_256_HASH_BAD_BYTE_ARRAY_LENGTH,"Error: Cannot make SHA-256 hash from a byte array that is not 32 bytes in length.");
 	self->hash = hash;
 	CBGetByteArray(self)->events = events;
 	CBGetByteArray(self)->length = 32;

@@ -30,7 +30,7 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEngine * events){
+CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateTransactionInputVT);
 	CBInitTransactionInput(self,params,parentTransaction,scriptData,outPointerHash,outPointerIndex,events);
@@ -63,7 +63,7 @@ CBTransactionInput * CBGetTransactionInput(void * self){
 
 //  Initialiser
 
-bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEngine * events){
+bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->scriptData = scriptData;

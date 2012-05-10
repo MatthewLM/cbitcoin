@@ -31,8 +31,8 @@
 
 //  Includes
 
-#include "CBEngine.h"
 #include "CBByteArray.h"
+#include "CBEvents.h"
 
 /**
  @brief Virtual function table for CBEngine.
@@ -47,8 +47,7 @@ typedef struct{
 typedef struct{
 	CBObject base; /**< CBObject base structure */
 	CBByteArray * satoshiKey; /**< The key used for alerts by some bitcoin developers */
-	// Events
-	void (*onErrorReceived)(CBError error,char *,...);
+	CBEvents events;
 } CBEngine;
 
 /**

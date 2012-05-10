@@ -53,7 +53,7 @@ typedef struct{
  @param events A CBEngine for errors.
  @returns A new CBVersionChecksumBytes object.
  */
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEngine * events);
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events);
 
 /**
  @brief Creates a new CBVersionChecksumBytesVT.
@@ -86,7 +86,7 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self);
  @param string A string to make a CBVersionChecksumBytes object.
  @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEngine * events);
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events);
 
 /**
  @brief Frees a CBVersionChecksumBytes object.

@@ -30,7 +30,7 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBScript * CBNewScript(CBNetworkParameters * params,CBByteArray * program,CBEngine * events){
+CBScript * CBNewScript(CBNetworkParameters * params,CBByteArray * program,CBEvents * events){
 	CBScript * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateScriptVT);
 	CBInitScript(self,params,program,events);
@@ -69,7 +69,7 @@ CBScript * CBGetScript(void * self){
 
 //  Initialiser
 
-bool CBInitScript(CBScript * self,CBNetworkParameters * params,CBByteArray * program,CBEngine * events){
+bool CBInitScript(CBScript * self,CBNetworkParameters * params,CBByteArray * program,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->params = params;

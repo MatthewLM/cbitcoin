@@ -59,12 +59,12 @@ typedef struct{
  @brief Creates a new CBTransactionInput object.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEngine * events);
+CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 /**
  @brief Creates a new unsigned CBTransactionInput object and links it to a given output.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBTransactionOutput * output,CBEngine * events);
+CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBTransactionOutput * output,CBEvents * events);
 
 /**
  @brief Creates a new CBTransactionInputVT.
@@ -96,7 +96,7 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEngine * events);
+bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 
 /**
  @brief Frees a CBTransactionInput object.

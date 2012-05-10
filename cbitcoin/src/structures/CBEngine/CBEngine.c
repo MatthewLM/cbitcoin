@@ -66,9 +66,9 @@ CBEngine * CBGetEngine(void * self){
 bool CBInitEngine(CBEngine * self){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
-	self->errorReceived = CBDummyErrorReceived;
+	self->events.onErrorReceived = CBDummyErrorReceived;
 	// Assign satoshi key
-	self->satoshiKey = CBNewByteArrayOfSize(65,self->events);
+	self->satoshiKey = CBNewByteArrayOfSize(65,&self->events);
 	CBGetByteArrayVT(self->satoshiKey)->insertByte(self->satoshiKey,0,0x4);
 	CBGetByteArrayVT(self->satoshiKey)->insertByte(self->satoshiKey,1,0xfc);
 	CBGetByteArrayVT(self->satoshiKey)->insertByte(self->satoshiKey,2,0x97);

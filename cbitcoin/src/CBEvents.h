@@ -1,5 +1,5 @@
 //
-//  testCBBase58.c
+//  CBEvents.h
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 10/05/2012.
@@ -21,15 +21,21 @@
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <stdio.h>
-#include "CBBase58.h"
+/**
+ @file
+ @brief File for the structure that holds event callback function pointers.
+ */
 
-int main(){
-	char str[28];
-	unsigned char * test = malloc(3);
-	test[0] = 0xBE;
-	test[1] = 0xFA;
-	test[2] = 0x0B;
-	CBEncodeBase58(str,test,3);
-	printf("%s\n",str);
-}
+#ifndef CBEVENTSH
+#define CBEVENTSH
+
+#include "CBConstants.h"
+
+/**
+ @brief Structure holding event callback function pointers.
+ */
+typedef struct{
+	void (*onErrorReceived)(CBError error,char *,...);
+}CBEvents;
+
+#endif

@@ -66,14 +66,14 @@ typedef struct CBMessage{
 	int protocolVersion; /**< Version of the bitcoin protocol. */
 	CBByteArray * checksum;
 	void * params; /**< Storage for parameters. */
-	CBEngine * events; /**< Pointer to bitcoin event centre for errors */
+	CBEvents * events; /**< Pointer to bitcoin event centre for errors */
 } CBMessage;
 
 /**
  @brief Creates a new CBMessage object.
  @returns A new CBMessage object.
  */
-CBMessage * CBNewMessage(void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEngine * events);
+CBMessage * CBNewMessage(void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEvents * events);
 
 /**
  @brief Creates a new CBMessageVT.
@@ -106,7 +106,7 @@ CBMessage * CBGetMessage(void * self);
  @param self The CBMessage object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitMessage(CBMessage * self,void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEngine * events);
+bool CBInitMessage(CBMessage * self,void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEvents * events);
 
 /**
  @brief Frees a CBMessage object.

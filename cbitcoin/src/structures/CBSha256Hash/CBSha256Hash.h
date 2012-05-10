@@ -54,14 +54,14 @@ typedef struct{
  @param events CBEngine for errors.
  @returns A new empty CBSha256Hash object.
  */
-CBSha256Hash * CBNewEmptySha256Hash(CBEngine * events);
+CBSha256Hash * CBNewEmptySha256Hash(CBEvents * events);
 /**
  @brief Creates a new CBSha256Hash object from CBByteArray. Shares the underlying byte data.
  @param bytes CBByteArray to make CBSha256Hash
  @param events CBEngine for errors.
  @returns A new CBSha256Hash object.
  */
-CBSha256Hash * CBNewSha256HashFromByteArray(CBByteArray * bytes,CBEngine * events);
+CBSha256Hash * CBNewSha256HashFromByteArray(CBByteArray * bytes,CBEvents * events);
 /**
  @brief Creates a new CBSha256Hash object from CBByteArray and a hash. Shares the underlying byte data.
  @param bytes CBByteArray to make CBSha256Hash
@@ -69,7 +69,7 @@ CBSha256Hash * CBNewSha256HashFromByteArray(CBByteArray * bytes,CBEngine * event
  @param events CBEngine for errors.
  @returns A new CBSha256Hash object.
  */
-CBSha256Hash * CBNewSha256HashFromByteArrayAndHash(CBByteArray * bytes,int hash,CBEngine * events);
+CBSha256Hash * CBNewSha256HashFromByteArrayAndHash(CBByteArray * bytes,int hash,CBEvents * events);
 
 /**
  @brief Creates a new CBSha256HashVT.
@@ -102,7 +102,7 @@ CBSha256Hash * CBGetSha256Hash(void * self);
  @param events CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitEmptySha256Hash(CBSha256Hash * self,CBEngine * events);
+bool CBInitEmptySha256Hash(CBSha256Hash * self,CBEvents * events);
 /**
  @brief Initialises a CBSha256Hash object from a CBByteArray
  @param self The CBSha256Hash object to initialise.
@@ -110,7 +110,7 @@ bool CBInitEmptySha256Hash(CBSha256Hash * self,CBEngine * events);
  @param events CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitSha256HashFromByteArrayAndHash(CBSha256Hash * self,CBByteArray * bytes,int hash,CBEngine * events);
+bool CBInitSha256HashFromByteArrayAndHash(CBSha256Hash * self,CBByteArray * bytes,int hash,CBEvents * events);
 
 /**
  @brief Frees a CBSha256Hash object.

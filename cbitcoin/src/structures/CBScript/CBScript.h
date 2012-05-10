@@ -58,14 +58,14 @@ typedef struct{
 	CBByteArray ** segments; /**< Segments of parsed program */
 	int segmentsLen; /**< Number of segments */
 	CBNetworkParameters * params;
-	CBEngine * events;
+	CBEvents * events;
 } CBScript;
 
 /**
  @brief Creates a new CBScript object.
  @returns A new CBScript object.
  */
-CBScript * CBNewScript(CBNetworkParameters * params,CBByteArray * program,CBEngine * events);
+CBScript * CBNewScript(CBNetworkParameters * params,CBByteArray * program,CBEvents * events);
 
 /**
  @brief Creates a new CBScriptVT.
@@ -97,7 +97,7 @@ CBScript * CBGetScript(void * self);
  @param self The CBScript object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitScript(CBScript * self,CBNetworkParameters * params,CBByteArray * program,CBEngine * events);
+bool CBInitScript(CBScript * self,CBNetworkParameters * params,CBByteArray * program,CBEvents * events);
 
 /**
  @brief Frees a CBScript object.

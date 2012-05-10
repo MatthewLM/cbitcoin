@@ -31,7 +31,8 @@
 
 //  Includes
 
-#include "CBEngine.h"
+#include "CBObject.h"
+#include "CBEvents.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -67,7 +68,7 @@ typedef struct{
 	CBSharedData * sharedData; /**< Underlying byte data */
 	u_int32_t offset; /**< Offset from the begining of the byte data to the begining of this array */
 	u_int32_t length; /**< Length of byte array. Set to CB_BYTE_ARRAY_UNKNOWN_LENGTH if unknown. */
-	CBEngine * events;
+	CBEvents * events;
 } CBByteArray;
 
 /**
@@ -76,7 +77,7 @@ typedef struct{
  @param events CBEngine for errors.
  @returns An empty CBByteArray object.
  */
-CBByteArray * CBNewByteArrayOfSize(int size,CBEngine * events);
+CBByteArray * CBNewByteArrayOfSize(int size,CBEvents * events);
 /**
  @brief References a subsection of an CBByteArray.
  @param self The CBByteArray object to reference.
@@ -117,7 +118,7 @@ CBByteArray * CBGetByteArray(void * self);
  @param events CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEngine * events);
+bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEvents * events);
 /**
  @brief Initialises a reference CBByteArray to a subsection of an CBByteArray.
  @param ref The CBByteArray object to reference.

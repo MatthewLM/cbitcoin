@@ -30,7 +30,7 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEngine * events){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
 	CBInitVersionChecksumBytesFromString(self,string,events);
@@ -63,7 +63,7 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self){
 
 //  Initialiser
 
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEngine * events){
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events){
 	if (!CBInitByteArrayOfSize(self, 32, events))
 		return false;
 	return true;

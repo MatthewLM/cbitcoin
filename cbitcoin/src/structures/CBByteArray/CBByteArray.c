@@ -30,7 +30,7 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBByteArray * CBNewByteArrayOfSize(int size,CBEngine * events){
+CBByteArray * CBNewByteArrayOfSize(int size,CBEvents * events){
 	CBByteArray * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
 	CBInitByteArrayOfSize(self,size,events);
@@ -54,14 +54,14 @@ void CBSetByteArrayVT(CBByteArrayVT * VT){
 	CBSetObjectVT((CBObjectVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeByteArray;
 	VT->copy = (void * (*)(void *))CBByteArrayCopy;
-	VT->getByte = (u_int8_t (*)(void *,int))CBByteArrayGetByte;
+	VT->getByte = (u_int8_t (*)(void *,u_int32_t))CBByteArrayGetByte;
 	VT->getData = (u_int8_t * (*)(void *))CBByteArrayGetData;
-	VT->insertByte = (void (*)(void *,int,u_int8_t))CBByteArrayInsertByte;
-	VT->readUInt16 = (u_int16_t (*)(void *,int))CBByteArrayReadUInt16;
-	VT->readUInt32 = (u_int32_t (*)(void *,int))CBByteArrayReadUInt32;
-	VT->readUInt64 = (u_int64_t (*)(void *,int))CBByteArrayReadUInt64;
+	VT->insertByte = (void (*)(void *,u_int32_t,u_int8_t))CBByteArrayInsertByte;
+	VT->readUInt16 = (u_int16_t (*)(void *,u_int32_t))CBByteArrayReadUInt16;
+	VT->readUInt32 = (u_int32_t (*)(void *,u_int32_t))CBByteArrayReadUInt32;
+	VT->readUInt64 = (u_int64_t (*)(void *,u_int32_t))CBByteArrayReadUInt64;
 	VT->reverse = (void (*)(void *))CBByteArrayReverseBytes;
-	VT->subCopy = (void * (*)(void *,int,int))CBByteArraySubCopy;
+	VT->subCopy = (void * (*)(void *,u_int32_t,u_int32_t))CBByteArraySubCopy;
 }
 
 //  Virtual Table Getter
@@ -78,7 +78,7 @@ CBByteArray * CBGetByteArray(void * self){
 
 //  Initialisers
 
-bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEngine * events){
+bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = events;

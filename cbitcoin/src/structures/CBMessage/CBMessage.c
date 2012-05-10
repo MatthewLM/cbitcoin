@@ -30,7 +30,7 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBMessage * CBNewMessage(void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEngine * events){
+CBMessage * CBNewMessage(void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEvents * events){
 	CBMessage * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, &CBCreateMessageVT);
 	if (CBInitMessage(self,params,bytes,length,protocolVersion,parseLazy,parseRetain,events))
@@ -72,7 +72,7 @@ CBMessage * CBGetMessage(void * self){
 
 //  Initialiser
 
-bool CBInitMessage(CBMessage * self,void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEngine * events){
+bool CBInitMessage(CBMessage * self,void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->params = params;
@@ -97,7 +97,7 @@ bool CBInitMessage(CBMessage * self,void * params,CBByteArray * bytes,int length
 		self->parsed = true;
 	}
 	if (self->length == CB_BYTE_ARRAY_UNKNOWN_LENGTH){
-		self->events->errorReceived(CB_ERROR_MESSAGE_LENGTH_NOT_SET,"Error: Length has not been set after %s parse.",self->parseLazy ? "lite" : "full");
+		self->events->onErrorReceived(CB_ERROR_MESSAGE_LENGTH_NOT_SET,"Error: Length has not been set after %s parse.",self->parseLazy ? "lite" : "full");
 		return false;
 	}
 	if (!parseRetain && self->parsed)
@@ -134,7 +134,7 @@ int CBMessageGetLength(CBMessage * self){
 		return self->length;
 	CBGetMessageVT(self)->maybeParse(self);
 	if (self->length != CB_BYTE_ARRAY_UNKNOWN_LENGTH)
-		self->events->errorReceived(CB_ERROR_MESSAGE_LENGTH_NOT_SET,"Error: Cannot get length of message after full parse.");
+		self->events->onErrorReceived(CB_ERROR_MESSAGE_LENGTH_NOT_SET,"Error: Cannot get length of message after full parse.");
 	return self->length;
 }
 void CBMessageMaybeParse(CBMessage * self){
@@ -152,7 +152,7 @@ void CBMessageParseLite(CBMessage * self){
 	
 }
 CBByteArray * CBMessageProcessBitcoinSerialise(CBMessage * self){
-	self->events->errorReceived(CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,"Error: CBMessageProcessBitcoinSerialise has not been overriden. Returning no data.");
+	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,"Error: CBMessageProcessBitcoinSerialise has not been overriden. Returning no data.");
 	return CBNewByteArrayOfSize(0,self->events);
 }
 CBByteArray * CBMessageReadByteArray(CBMessage * self){
@@ -189,7 +189,7 @@ u_int64_t CBMessageReadVarInt(CBMessage * self){
 }
 bool CBMessageSetChecksum(CBMessage * self,CBByteArray * checksum){
 	if (checksum->length != 4) {
-		self->events->errorReceived(CB_ERROR_MESSAGE_CHECKSUM_BAD_SIZE,"Error: Tried to set a checksum to a message that was %i bytes in length. Checksums should be 4 bytes long.",checksum->length);
+		self->events->onErrorReceived(CB_ERROR_MESSAGE_CHECKSUM_BAD_SIZE,"Error: Tried to set a checksum to a message that was %i bytes in length. Checksums should be 4 bytes long.",checksum->length);
 		return false;
 	}
 	self->checksum = checksum;
