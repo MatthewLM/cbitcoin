@@ -35,7 +35,7 @@
 #include <string.h>
 
 /**
- @brief Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first.
+ @brief Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first. 
  */
 typedef struct{
 	u_int8_t * data; /**< The byte data. Should be little-endian */

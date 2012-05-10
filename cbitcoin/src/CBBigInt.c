@@ -107,15 +107,23 @@ void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
 		if (!x)
 			break;
 	}
-	a->length -= ans[a->length-1]? 0 : 1; // If last byte is zero, adjust length.
+	if (!ans[a->length-1]) { // If last byte is zero, adjust length.
+		a->length--;
+		a->data = realloc(a->data, a->length);
+	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
 void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
 	// Multiply b by each byte and then add to answer
-	for (u_int8_t x = a->length-1; x > 0; x++) {
-		
-		
+	for (u_int8_t x = 0; x < a->length; x++) {
+		u_int16_t mult = ans[x] + a->data[x] * b; // Allow for overflow onto next byte.
+		ans[x] = mult;
+		ans[x+1] = (mult >> 8);
 	}
+	if (ans[a->length-1]) { // If last byte is not zero, adjust length.
+		a->length++;
+	}
+	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
 void CBBigIntEqualsRightShiftByUInt8(CBBigInt * a,u_int8_t b){
 	u_int8_t deadBytes = b / 8; // These bytes fall off the side.
