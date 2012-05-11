@@ -3,7 +3,7 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 28/04/2012.
-//  Last modified by Matthew Mitchell on 10/05/2012.
+//  Last modified by Matthew Mitchell on 11/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.
@@ -29,15 +29,15 @@
 #ifndef CBBASE58H
 #define CBBASE58H
 
-static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
 #include <stdlib.h>
 #include "CBBigInt.h"
+
+static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 /**
  @brief Decodes base 58 string into byte data.
  @param bytes Pointer to byte data. Must point to memory large enough.
- @param str Base 58 string to decode.
+ @param str Base 58 string to decode. 52 characters maximum.
  */
 void CBDecodeBase58(u_int8_t * bytes,char * str);
 /**

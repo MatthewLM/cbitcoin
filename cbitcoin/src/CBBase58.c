@@ -3,7 +3,7 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 28/04/2012.
-//  Last modified by Matthew Mitchell on 10/05/2012.
+//  Last modified by Matthew Mitchell on 11/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.
@@ -23,10 +23,32 @@
 
 #include "CBBase58.h"
 
-void CBDecodeBase58(u_int8_t * bytes,char * str, u_int8_t len){
-	
+void CBDecodeBase58(u_int8_t * bytes,char * str){
+	// ??? Quite likely these functions can be improved
+	CBBigInt bi;
+	bi.data = malloc(1);
+	bi.data[0] = 0;
+	bi.length = 1;
+	for (int x = (int)strlen(str) - 1; x >= 0; x--){ // Working backwards
+		// Get index in alphebet array
+		int alphaIndex = str[x];
+		if (str[x] < 58){ // Numbers
+			alphaIndex -= 49;
+		}else if (str[x] < 73){ // A-H
+			alphaIndex -= 56;
+		}else if (str[x] < 79){ // J-N
+			alphaIndex -= 57;
+		}else if (str[x] < 91){ // P-Z
+			alphaIndex -= 58;
+		}else if (str[x] < 108){ // a-k
+			alphaIndex -= 64;
+		}else{ // m-z
+			alphaIndex -= 65;
+		}
+		
+	}
 }
-void CBDecodeBase58Checked(u_int8_t * bytes,char * str, u_int8_t len){
+void CBDecodeBase58Checked(u_int8_t * bytes,char * str){
 	
 }
 void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
@@ -63,4 +85,6 @@ void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 		str[x-y-1] = temp;
 	}
 	str[x] = '\0';
+	// Cleanup
+	free(temp);
 }
