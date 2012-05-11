@@ -41,7 +41,7 @@ int main(){
 	CBBigIntEqualsMultiplicationByUInt8(&bil,180,templ);
 	printf("(%x,%x,%x,%x)\n",bil.data[0],bil.data[1],bil.data[2],bil.data[3]);
 	// Full test
-	u_int8_t temp[33];
+	u_int8_t temp[255];
 	CBBigInt bi;
 	bi.length = 32;
 	bi.data = malloc(32);
@@ -94,6 +94,17 @@ int main(){
 		if (expected != ans) {
 			printf("BIGNUM COMPARE FAILURE = %i: %i != %i (%i,%i),%i\n",x,expected, ans,(int)bi.data[0],(int)bi.data[1],(int)someInt);
 			res = 1;
+		}
+		// Exp
+		u_int8_t a = rand();
+		u_int8_t b = rand();
+		CBBigInt bi = CBBigIntFromPowUInt8(a,b);
+		memset(temp, 0, 255);
+		for (int x = 0; x < b; x++) {
+			CBBigIntEqualsDivisionByUInt8(&bi, a, temp);
+		}
+		if (bi.data[0] != 1) {
+			printf("BIGNUM EXPONENTIATION/DIVISION FAILURE = %i: %i != 1 Base=%i Exp=%i \n",x,bi.data[0], a,b);
 		}
 	}
 	return res;

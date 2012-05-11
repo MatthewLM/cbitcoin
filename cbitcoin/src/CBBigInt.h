@@ -3,7 +3,7 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 28/04/2012.
-//  Last modified by Matthew Mitchell on 10/05/2012.
+//  Last modified by Matthew Mitchell on 11/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.
@@ -107,6 +107,13 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b);
  @returns The result of the modulo operation as an 8 bit integer.
  */
 u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b);
+/**
+ @brief Makes a new CBBigInt from an exponentiation of an unsigned 8 bit intger with another unsigned 8 bit integer. Like "a^b".
+ @param a The base
+ @param b The exponent.
+ @returns The new CBBigInt. Free the CBBigInt data when done.
+ */
+CBBigInt CBBigIntFromPowUInt8(u_int8_t a,u_int8_t b);
 /**
  @brief Normalises a CBBigInt so that there are no uneccessary trailing zeros.
  @param a A pointer to the CBBigInt

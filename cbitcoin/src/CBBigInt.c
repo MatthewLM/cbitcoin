@@ -3,7 +3,7 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 28/04/2012.
-//  Last modified by Matthew Mitchell on 10/05/2012.
+//  Last modified by Matthew Mitchell on 11/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.
@@ -122,6 +122,7 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
 	}
 	if (ans[a->length-1]) { // If last byte is not zero, adjust length.
 		a->length++;
+		a->data = realloc(a->data, a->length);
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
@@ -163,6 +164,18 @@ u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b){
 			break;
 	}
 	return result;
+}
+CBBigInt CBBigIntFromPowUInt8(u_int8_t a,u_int8_t b){
+	CBBigInt bi;
+	bi.data = malloc(1);
+	bi.length = 1;
+	bi.data[0] = 1;
+	u_int8_t * temp = malloc(b);
+	for (u_int8_t x = 0; x < b; x++) {
+		CBBigIntEqualsMultiplicationByUInt8(&bi, a, temp);
+	}
+	free(temp);
+	return bi;
 }
 void CBBigIntNormalise(CBBigInt * a){
 	for (u_int8_t x = a->length - 1;; x--){
