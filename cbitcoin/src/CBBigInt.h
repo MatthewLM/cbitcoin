@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 /**
  @brief Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first. 
@@ -43,31 +44,6 @@ typedef struct{
 }CBBigInt;
 
 /**
- @brief For a power of two, determine the the log2. Eg. 8 would be 3
- @param b An 8 bit integer
- @returns An 8 bit integer
- */
-u_int8_t CBPowerOf2Log2(u_int8_t a);
-/**
- @brief For an 8 bit integer determine the the log2 and floor it. Eg. 23 would be 4
- @param b An 8 bit integer
- @returns An 8 bit integer
- */
-u_int8_t CBFloorLog2(u_int8_t a);
-/**
- @brief For an 8 bit integer, determine the the position of the first bit. Eg 00010101 would give 4
- @param b An 8 bit integer
- @returns An 8 bit integer
- */
-u_int8_t CBBase2MSBPos(u_int8_t a);
-/**
- @brief Compares two CBBigInt. You can replicate "a op b" as "CBBigIntCompare(a,b) op 0" replacing "op" with a comparison operator.
- @param a The first CBBigInt
- @param b The second CBBigInt
- @returns The result of the comparison as a CBCompare constant. Returns what a is in relation to b.
- */
-CBCompare CBBigIntCompare(CBBigInt a,CBBigInt b);
-/**
  @brief Compares a CBBigInt to an 8 bit integer. You can replicate "a op b" as "CBBigIntCompareToUInt8(a,b) op 0" replacing "op" with a comparison operator.
  @param a The first CBBigInt
  @param b An 8 bit integer
@@ -75,18 +51,18 @@ CBCompare CBBigIntCompare(CBBigInt a,CBBigInt b);
  */
 CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b);
 /**
+ @brief Calculates the result of an addition of a CBBigInt structure by another CBBigInt structure and the first CBBigInt becomes this new figure. Like "a += b".
+ @param a A pointer to the CBBigInt
+ @param b A pointer to the second CBBigInt
+ */
+void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b);
+/**
  @brief Calculates the result of a division of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a /= b".
  @param a A pointer to the CBBigInt
  @param b An 8 bit integer
  @param ans A memory block the same size as the CBBigInt data memory block to store temporary data in calculations. Should be set with zeros.
  */
 void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans);
-/**
- @brief Calculates the result of a right bit shift of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a >>= b".
- @param a A pointer to the CBBigInt
- @param b An 8 bit integer
- */
-void CBBigIntEqualsRightShiftByUInt8(CBBigInt * a,u_int8_t b);
 /**
  @brief Calculates the result of a multiplication of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a *= b".
  @param a A pointer to the CBBigInt
@@ -108,7 +84,7 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b);
  */
 u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b);
 /**
- @brief Makes a new CBBigInt from an exponentiation of an unsigned 8 bit intger with another unsigned 8 bit integer. Like "a^b".
+ @brief Makes a new CBBigInt from an exponentiation of an unsigned 8 bit intger with another unsigned 8 bit integer. Like "a^b". Data must be freed.
  @param a The base
  @param b The exponent.
  @returns The new CBBigInt. Free the CBBigInt data when done.

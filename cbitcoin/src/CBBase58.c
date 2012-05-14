@@ -23,13 +23,14 @@
 
 #include "CBBase58.h"
 
-void CBDecodeBase58(u_int8_t * bytes,char * str){
+CBBigInt CBDecodeBase58(char * str){
 	// ??? Quite likely these functions can be improved
 	CBBigInt bi;
 	bi.data = malloc(1);
 	bi.data[0] = 0;
 	bi.length = 1;
-	for (int x = (int)strlen(str) - 1; x >= 0; x--){ // Working backwards
+	u_int8_t temp[189];
+	for (u_int8_t x = strlen(str) - 1; x >= 0; x--){ // Working backwards
 		// Get index in alphebet array
 		int alphaIndex = str[x];
 		if (str[x] < 58){ // Numbers
@@ -45,8 +46,13 @@ void CBDecodeBase58(u_int8_t * bytes,char * str){
 		}else{ // m-z
 			alphaIndex -= 65;
 		}
-		
+		CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
+		CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
+		CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
+		free(bi2.data);
 	}
+	// Got CBBigInt from base-58 string.
+	return bi;
 }
 void CBDecodeBase58Checked(u_int8_t * bytes,char * str){
 	

@@ -32,4 +32,11 @@ int main(){
 	test[2] = 0x0B;
 	CBEncodeBase58(str,test,3);
 	printf("%s\n",str);
+	CBBigInt bi = CBDecodeBase58("52Ny");
+	printf("0x");
+	for (int x = 0; x < bi.length; x++) {
+		printf("%.2x",bi.data[x]);
+	}
+	printf("\n");
+	free(bi.data);
 }

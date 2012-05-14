@@ -28,64 +28,6 @@
 
 #include "CBBigInt.h"
 
-u_int8_t CBPowerOf2Log2(u_int8_t a){
-	switch (a) {
-		case 1:
-			return 0;
-		case 2:
-			return 1;
-		case 4:
-			return 2;
-		case 8:
-			return 3;
-		case 16:
-			return 4;
-		case 32:
-			return 5;
-		case 64:
-			return 6;
-	}
-	return 7;
-}
-u_int8_t CBFloorLog2(u_int8_t a){
-	if (a < 16){
-		if (a < 4) {
-			if (a == 1){
-				return 0;
-			}
-			return 1;
-		}
-		if (a < 8){
-			return 2;
-		}
-		return 3;
-	}
-	if (a < 64){
-		if (a < 32) {
-			return 4;
-		}
-		return 5;
-	}
-	if (a < 128){
-		return 6;
-	}
-	return 7;
-}
-CBCompare CBBigIntCompare(CBBigInt a,CBBigInt b){
-	if (a.length > b.length)
-		return CB_COMPARE_MORE_THAN;
-	else if (a.length < b.length)
-		return CB_COMPARE_LESS_THAN;
-	for (u_int8_t x = a.length - 1;; x--) {
-		if (a.data[x] < b.data[x])
-			return CB_COMPARE_LESS_THAN;
-		else if (a.data[x] > b.data[x])
-			return CB_COMPARE_MORE_THAN;
-		if (!x)
-			break;
-	}
-	return CB_COMPARE_EQUAL;
-}
 CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b){
 	for (u_int8_t x = a.length - 1;x > 0; x--)
 		if (a.data[x]) 
@@ -95,6 +37,23 @@ CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b){
 	else if (a.data[0] < b)
 		return CB_COMPARE_LESS_THAN;
 	return CB_COMPARE_EQUAL;
+}
+void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
+	if (a->length < b->length) {
+		realloc(a->data, b->length);
+	}
+	u_int8_t overflow = 0;
+	for (u_int8_t x = 0; x < b->length; x++) {
+		a->data[x] += b->data[x] + overflow;
+		overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
+	}
+	if (overflow) { // Add extra byte
+		a->length = b->length + 1;
+		realloc(a->data, a->length);
+		a->data[a->length - 1] = 1;
+	}else{
+		a->length = b->length;
+	}
 }
 void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
 	// base-256 long division.
@@ -120,29 +79,11 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
 		ans[x] = mult;
 		ans[x+1] = (mult >> 8);
 	}
-	if (ans[a->length-1]) { // If last byte is not zero, adjust length.
+	if (ans[a->length]) { // If last byte is not zero, adjust length.
 		a->length++;
 		a->data = realloc(a->data, a->length);
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
-}
-void CBBigIntEqualsRightShiftByUInt8(CBBigInt * a,u_int8_t b){
-	u_int8_t deadBytes = b / 8; // These bytes fall off the side.
-	a->length -= deadBytes; // Reduce length of bignum by the removed bytes
-	u_int8_t remainderShift = b % 8;
-	if (!remainderShift) { // No more work
-		return;
-	}
-	u_int16_t splitter;
-	u_int8_t toRight = 0; // Bits taken from the left to the next byte.
-	for (u_int8_t x = a->length-1;; x--) {
-		splitter = a->data[x] << 8 - remainderShift; // Splits data in splitters between first and second byte.
-		a->data[x] = splitter >> 8; // First byte in splitter is the new data.
-		a->data[x] |= toRight; // Take the bits from the left
-		toRight = splitter; // Second byte is the data going to the right from this byte.
-		if (!x)
-			break;
-	}
 }
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
 	u_int16_t end = a->data[0] + (a->data[1] << 8);
@@ -172,6 +113,7 @@ CBBigInt CBBigIntFromPowUInt8(u_int8_t a,u_int8_t b){
 	bi.data[0] = 1;
 	u_int8_t * temp = malloc(b);
 	for (u_int8_t x = 0; x < b; x++) {
+		memset(temp, 0, bi.length);
 		CBBigIntEqualsMultiplicationByUInt8(&bi, a, temp);
 	}
 	free(temp);

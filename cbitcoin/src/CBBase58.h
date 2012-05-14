@@ -35,11 +35,11 @@
 static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 /**
- @brief Decodes base 58 string into byte data.
- @param bytes Pointer to byte data. Must point to memory large enough.
- @param str Base 58 string to decode. 52 characters maximum.
+ @brief Decodes base 58 string into byte data as a CBBigInt.
+ @param str Base 58 string to decode.
+ @returns Pointer to the byte data as a CBBigInt. The byte data will be created in this function. Remember to free the data.
  */
-void CBDecodeBase58(u_int8_t * bytes,char * str);
+CBBigInt CBDecodeBase58(char * str);
 /**
  @brief Decodes base 58 string into byte data. Checks a 4 byte checksum.
  @param bytes Pointer to byte data. Must point to memory large enough.
