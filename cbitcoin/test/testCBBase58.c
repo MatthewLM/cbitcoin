@@ -26,6 +26,11 @@
 int main(){
 	char str[41];
 	unsigned char * test = malloc(29);
+	// ??? Test for:
+	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
+	// 7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU = CORRECT
+	// 7EyVQVmCjB3siBN8DdtuG3ws64y9xsnT25vbt5eU = FAILURE
+	
 	unsigned char * verify = malloc(29);
 	for (int x = 0; x < 1000; x++) {
 		for (int y = 0; y < 29; y++) {
@@ -37,7 +42,7 @@ int main(){
 			printf("%.2x",verify[y]);
 		}
 		CBEncodeBase58(str,test,29);
-		printf(" -> %s -> ",str);
+		printf(" -> %s -> \n",str);
 		CBBigInt bi = CBDecodeBase58(str);
 		printf("0x");
 		for (int y = 0; y < 29; y++) {

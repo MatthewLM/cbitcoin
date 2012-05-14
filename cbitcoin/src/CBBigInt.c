@@ -41,6 +41,9 @@ CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b){
 void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
 		a->data = realloc(a->data, b->length);
+		// Make certain data is empty
+		u_int8_t diff = b->length - a->length;
+		memset(a->data + (b->length - diff), 0, diff);
 	}
 	u_int8_t overflow = 0;
 	for (u_int8_t x = 0; x < b->length; x++) {
@@ -106,6 +109,11 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
 	end -= b;
 	a->data[0] = end;
 	a->data[1] = end >> 8;
+	if (!a->data[a->length-1]) {
+		// Reduce size
+		a->length--;
+		a->data = realloc(a->data, a->length);
+	}
 	assert(a->data[a->length-1]);
 }
 u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b){
