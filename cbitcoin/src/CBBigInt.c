@@ -26,6 +26,7 @@
 //  permission.
 
 #include "CBBigInt.h"
+#include <assert.h>
 
 CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b){
 	for (u_int8_t x = a.length - 1;x > 0; x--)
@@ -53,8 +54,12 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	}else{
 		a->length = b->length;
 	}
+	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
+	if (a->length == 1 && !a->data[0]) { // "a" is zero
+		return;
+	}
 	// base-256 long division.
 	u_int16_t temp = 0;
 	for (u_int8_t x = a->length-1;; x--) {
@@ -70,8 +75,19 @@ void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
 		a->data = realloc(a->data, a->length);
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
+	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
+	if (!b) {
+		// Mutliplication by zero. "a" becomes zero
+		a->length = 1;
+		realloc(a->data, 1);
+		a->data[0] = 0;
+		return;
+	}
+	if (a->length == 1 && !a->data[0]) { // "a" is zero
+		return;
+	}
 	// Multiply b by each byte and then add to answer
 	for (u_int8_t x = 0; x < a->length; x++) {
 		u_int16_t mult = ans[x] + a->data[x] * b; // Allow for overflow onto next byte.
@@ -83,12 +99,14 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
 		a->data = realloc(a->data, a->length);
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
+	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
 	u_int16_t end = a->data[0] + (a->data[1] << 8);
 	end -= b;
 	a->data[0] = end;
 	a->data[1] = end >> 8;
+	assert(a->data[a->length-1]);
 }
 u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b){
 	if (!(b & (b - 1)))

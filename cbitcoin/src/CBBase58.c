@@ -30,26 +30,28 @@ CBBigInt CBDecodeBase58(char * str){
 	bi.length = 1;
 	u_int8_t temp[189];
 	for (u_int8_t x = strlen(str) - 1;; x--){ // Working backwards
-		// Get index in alphebet array
+		// Get index in alphabet array
 		int alphaIndex = str[x];
-		if (str[x] < 58){ // Numbers
-			alphaIndex -= 49;
-		}else if (str[x] < 73){ // A-H
-			alphaIndex -= 56;
-		}else if (str[x] < 79){ // J-N
-			alphaIndex -= 57;
-		}else if (str[x] < 91){ // P-Z
-			alphaIndex -= 58;
-		}else if (str[x] < 108){ // a-k
-			alphaIndex -= 64;
-		}else{ // m-z
-			alphaIndex -= 65;
+		if (alphaIndex != 49){ // If not 1
+			if (str[x] < 58){ // Numbers
+				alphaIndex -= 49;
+			}else if (str[x] < 73){ // A-H
+				alphaIndex -= 56;
+			}else if (str[x] < 79){ // J-N
+				alphaIndex -= 57;
+			}else if (str[x] < 91){ // P-Z
+				alphaIndex -= 58;
+			}else if (str[x] < 108){ // a-k
+				alphaIndex -= 64;
+			}else{ // m-z
+				alphaIndex -= 65;
+			}
+			CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
+			memset(temp, 0, bi2.length + 1);
+			CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
+			CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
+			free(bi2.data);
 		}
-		CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
-		memset(temp, 0, bi2.length + 1);
-		CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
-		CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
-		free(bi2.data);
 		if (!x) 
 			break;
 	}
@@ -58,6 +60,8 @@ CBBigInt CBDecodeBase58(char * str){
 	for (u_int8_t x = 0; x < strlen(str); x++)
 		if (str[x] == '1')
 			zeros++;
+		else
+			break;
 	if (zeros) {
 		bi.length += zeros;
 		realloc(bi.data, bi.length);
@@ -71,6 +75,16 @@ void CBDecodeBase58Checked(u_int8_t * bytes,char * str){
 void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	// ??? Improvement?
 	u_int8_t x = 0;
+	// Zeros
+	for (u_int8_t y = len - 1;; y--)
+		if (!bytes[y]){
+			str[x] = '1';
+			x++;
+			if (!y)
+				break;
+		}else
+			break;
+	u_int8_t zeros = x;
 	// Make CBBigInt
 	CBBigInt bi;
 	bi.data = bytes;
@@ -89,19 +103,12 @@ void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	}
 	str[x] = base58Characters[bi.data[bi.length-1]];
 	x++;
-	// zeros
-	for (int y = len - 1;; y--, x++)
-		if (!bytes[y]){
-			str[x] = '1';
-			if (!y)
-				break;
-		}else
-			break;
 	// Reversal
-	for (int y = 0; y < x / 2; y++) {
+	
+	for (u_int8_t y = zeros; y < x / 2; y++) {
 		char temp = str[y];
-		str[y] = str[x-y-1];
-		str[x-y-1] = temp;
+		str[y] = str[x-y-1+zeros];
+		str[x-y-1+zeros] = temp;
 	}
 	str[x] = '\0';
 	// Cleanup

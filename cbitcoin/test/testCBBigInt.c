@@ -142,8 +142,38 @@ int main(){
 		}
 		if (bi2.data[0] != 1) {
 			printf("BIGNUM EXPONENTIATION/DIVISION FAILURE = %i: %i != 1 Base=%i Exp=%i \n",x,bi2.data[0], a,b);
+			return 1;
 		}
 		free(bi2.data);
+	}
+	// Test 0s
+	bi.data[0] = 0;
+	bi.length = 1;
+	CBBigIntNormalise(&bi);
+	if (bi.data[0] != 0 || bi.length != 1) {
+		printf("CBBigIntNormalise WITH ZERO FAILURE\n");
+		return 1;
+	}
+	u_int8_t test = CBBigIntModuloWithUInt8(bi, 255);
+	if (bi.data[0] != 0 || bi.length != 1 || test) {
+		printf("CBBigIntModuloWithUInt8 WITH ZERO FAILURE\n");
+		return 1;
+	}
+	CBBigIntEqualsMultiplicationByUInt8(&bi, 255, NULL);
+	if (bi.data[0] != 0 || bi.length != 1) {
+		printf("CBBigIntEqualsMultiplicationByUInt8 WITH ZERO FAILURE\n");
+		return 1;
+	}
+	CBBigIntEqualsDivisionByUInt8(&bi, 255, NULL);
+	if (bi.data[0] != 0 || bi.length != 1) {
+		printf("CBBigIntEqualsDivisionByUInt8 WITH ZERO FAILURE\n");
+		return 1;
+	}
+	CBBigInt bi3 = CBBigIntFromPowUInt8(3,9);
+	CBBigIntEqualsAdditionByCBBigInt(&bi, &bi3);
+	if (bi.length != 2 || bi.data[0] != 0xe3 || bi.data[1] != 0x4c) {
+		printf("CBBigIntEqualsAdditionByCBBigInt WITH ZERO FAILURE\n");
+		return 1;
 	}
 	return 0;
 }

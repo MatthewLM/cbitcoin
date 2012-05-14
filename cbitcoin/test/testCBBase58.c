@@ -24,19 +24,31 @@
 #include "CBBase58.h"
 
 int main(){
-	char str[28];
-	unsigned char * test = malloc(4);
-	test[0] = 0xBE;
-	test[1] = 0xFA;
-	test[2] = 0x0B;
-	test[3] = 0x00;
-	CBEncodeBase58(str,test,4);
-	printf("%s\n",str);
-	CBBigInt bi = CBDecodeBase58("152Ny");
-	printf("0x");
-	for (int x = 0; x < bi.length; x++) {
-		printf("%.2x",bi.data[x]);
+	char str[41];
+	unsigned char * test = malloc(29);
+	unsigned char * verify = malloc(29);
+	for (int x = 0; x < 1000; x++) {
+		for (int y = 0; y < 29; y++) {
+			test[y] = rand();
+			verify[y] = test[y];
+		}
+		printf("0x");
+		for (int y = 0; y < 29; y++) {
+			printf("%.2x",verify[y]);
+		}
+		CBEncodeBase58(str,test,29);
+		printf(" -> %s -> ",str);
+		CBBigInt bi = CBDecodeBase58(str);
+		printf("0x");
+		for (int y = 0; y < 29; y++) {
+			printf("%.2x",bi.data[y]);
+			if (bi.data[y] != verify[y]) {
+				printf(" = FAIL\n");
+				return 1;
+			}
+		}
+		printf(" = OK\n");
+		free(bi.data);
 	}
-	printf("\n");
-	free(bi.data);
+	return 0;
 }
