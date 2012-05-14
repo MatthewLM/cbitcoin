@@ -7,16 +7,22 @@ The library is being developed from the bitcoinj library. Once functionalities h
 
 THE LIBRARY IS STILL IN DEVELOPMENT AND MOSTLY INCOMPLETE.
 
+Contributors
+------------
+
+Anyone who contributes to this project can have their name and a bitcoin address placed here.
+
+Matthew Mitchell - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9
+
 Making a Contribution
 ---------------------
 
 1. Fork the project on github: https://github.com/MatthewLM/cbitcoin
 2. Implement the changes.
 3. Document the changes (See "Documenting" below)
-4. Ensure the "Last modified" parts to each changed file are updated.
-5. Send a pull request.
-6. Send an email to cbitcoin@thelibertyportal.com notifying that a request has been made.
-7. The changes will be pulled once approved.
+4. Send a pull request.
+5. Send an email to cbitcoin@thelibertyportal.com notifying that a request has been made.
+6. The changes will be pulled once approved.
 
 Coding Guidelines
 -----------------
