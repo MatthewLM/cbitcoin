@@ -40,7 +40,7 @@ CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b){
 }
 void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
-		realloc(a->data, b->length);
+		a->data = realloc(a->data, b->length);
 	}
 	u_int8_t overflow = 0;
 	for (u_int8_t x = 0; x < b->length; x++) {
@@ -49,7 +49,7 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	if (overflow) { // Add extra byte
 		a->length = b->length + 1;
-		realloc(a->data, a->length);
+		a->data = realloc(a->data, a->length);
 		a->data[a->length - 1] = 1;
 	}else{
 		a->length = b->length;
@@ -81,7 +81,7 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
 	if (!b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
-		realloc(a->data, 1);
+		a->data = realloc(a->data, 1);
 		a->data[0] = 0;
 		return;
 	}
