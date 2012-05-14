@@ -3,7 +3,6 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 01/05/2012.
-//  Last modified by Matthew Mitchell on 01/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.

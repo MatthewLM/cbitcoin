@@ -4,7 +4,6 @@
 #  cbitcoin
 #
 #  Created by Matthew Mitchell on 28/04/2012.
-#  Last modified by Matthew Mitchell on 29/04/2012.
 #  Copyright (c) 2012 Matthew Mitchell
 #  
 #  This file is part of cbitcoin.
@@ -48,7 +47,6 @@ header.write("//\n\
 //  cbitcoin\n\
 //\n\
 //  Created by "+author+" on "+d.strftime("%d/%m/%Y")+".\n\
-//  Last modified by "+author+" on "+d.strftime("%d/%m/%Y")+".\n\
 //  Copyright (c) 2012 Matthew Mitchell\n\
 //  \n\
 //  This file is part of cbitcoin.\n\
@@ -151,7 +149,6 @@ source.write("//\n\
 //  cbitcoin\n\
 //\n\
 //  Created by "+author+" on "+d.strftime("%d/%m/%Y")+".\n\
-//  Last modified by "+author+" on "+d.strftime("%d/%m/%Y")+".\n\
 //  Copyright (c) 2012 Matthew Mitchell\n\
 //  \n\
 //  This file is part of cbitcoin.\n\
