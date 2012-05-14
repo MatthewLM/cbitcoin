@@ -29,7 +29,7 @@ CBBigInt CBDecodeBase58(char * str){
 	bi.data[0] = 0;
 	bi.length = 1;
 	u_int8_t temp[189];
-	for (u_int8_t x = strlen(str) - 1; x >= 0; x--){ // Working backwards
+	for (u_int8_t x = strlen(str) - 1;; x--){ // Working backwards
 		// Get index in alphebet array
 		int alphaIndex = str[x];
 		if (str[x] < 58){ // Numbers
@@ -46,11 +46,23 @@ CBBigInt CBDecodeBase58(char * str){
 			alphaIndex -= 65;
 		}
 		CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
+		memset(temp, 0, bi2.length + 1);
 		CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
 		CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
 		free(bi2.data);
+		if (!x) 
+			break;
 	}
-	// Got CBBigInt from base-58 string.
+	// Got CBBigInt from base-58 string. Add zeros on end.
+	u_int8_t zeros = 0;
+	for (u_int8_t x = 0; x < strlen(str); x++)
+		if (str[x] == '1')
+			zeros++;
+	if (zeros) {
+		bi.length += zeros;
+		realloc(bi.data, bi.length);
+		memset(bi.data + bi.length - zeros, 0, zeros);
+	}
 	return bi;
 }
 void CBDecodeBase58Checked(u_int8_t * bytes,char * str){
@@ -77,11 +89,13 @@ void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	}
 	str[x] = base58Characters[bi.data[bi.length-1]];
 	x++;
-	// Leading zeros
-	for (int y = 0; y < len; y++, x++)
-		if (!bytes[y])
+	// zeros
+	for (int y = len - 1;; y--, x++)
+		if (!bytes[y]){
 			str[x] = '1';
-		else
+			if (!y)
+				break;
+		}else
 			break;
 	// Reversal
 	for (int y = 0; y < x / 2; y++) {
