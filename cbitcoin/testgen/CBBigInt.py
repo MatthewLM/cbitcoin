@@ -6,6 +6,7 @@ li4 = []
 li5 = []
 li6 = []
 li7 = []
+li8 = []
 for x in xrange(100):
 	a = 0
 	lii = []
@@ -18,6 +19,7 @@ for x in xrange(100):
 	li5.append(a*li2[-1])
 	li4.append(a % li2[-1])
 	li7.append(a)
+	li8.append(a - li2[-1]);
 for x in xrange(100):
 	li6.append(li7[x]+li7[99-x])
 print "u_int8_t bytes[][32] = {",
@@ -56,6 +58,14 @@ for x in li5:
 print "};"
 print "u_int8_t add_results[][33] = {",
 for x in li6:
+	print "{",
+	for y in xrange(32,-1,-1):
+		print str(hex((x & (0xFF << 8*(32-y))) >> 8*(32-y)))[:-1],
+		print ",",
+	print "},",
+print "};"
+print "u_int8_t sub_results[][33] = {",
+for x in li8:
 	print "{",
 	for y in xrange(32,-1,-1):
 		print str(hex((x & (0xFF << 8*(32-y))) >> 8*(32-y)))[:-1],
