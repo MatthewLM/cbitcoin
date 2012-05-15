@@ -105,15 +105,19 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
 	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
-	u_int16_t end = a->data[0] + (a->data[1] << 8);
-	end -= b;
-	a->data[0] = end;
-	a->data[1] = end >> 8;
-	if (!a->data[a->length-1]) {
-		// Reduce size
-		a->length--;
-		a->data = realloc(a->data, a->length);
+	int sub = b;
+	for (u_int8_t x = a->length - 1;; x--) {
+		if (a->data[x] > sub) {
+			a->data[x] -= sub;
+			break;
+		}else{
+			assert(x); // If x is zero then it can't borrow any more. "b" is larger than "a"
+			// Borrow along. Even simple mathematics is horrible. :-(
+			a->data[x] = 255 - (sub - a->data[x] - 1);
+			sub = 1;
+		}
 	}
+	CBBigIntNormalise(a);
 	assert(a->data[a->length-1]);
 }
 u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b){

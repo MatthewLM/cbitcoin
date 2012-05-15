@@ -150,6 +150,8 @@ int main(){
 			return 1;
 		}
 		free(bi2.data);
+		// Sub ??? Add this
+		
 	}
 	// Test 0s
 	bi.data[0] = 0;

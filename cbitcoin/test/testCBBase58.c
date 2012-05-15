@@ -30,7 +30,37 @@ int main(){
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
 	// 7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU = CORRECT
 	// 7EyVQVmCjB3siBN8DdtuG3ws64y9xsnT25vbt5eU = FAILURE
-	
+	test[0] = 0xc5;
+	test[1] = 0xf8;
+	test[2] = 0x85;
+	test[3] = 0x41;
+	test[4] = 0x63;
+	test[5] = 0x4f;
+	test[6] = 0xb7;
+	test[7] = 0xba;
+	test[8] = 0xde;
+	test[9] = 0x5f;
+	test[10] = 0x94;
+	test[11] = 0xff;
+	test[12] = 0x67;
+	test[13] = 0x1d;
+	test[14] = 0x1f;
+	test[15] = 0xeb;
+	test[16] = 0xdc;
+	test[17] = 0xbd;
+	test[18] = 0xa1;
+	test[19] = 0x16;
+	test[20] = 0xd2;
+	test[21] = 0xda;
+	test[22] = 0x77;
+	test[23] = 0x90;
+	test[24] = 0x38;
+	test[25] = 0xed;
+	test[26] = 0x76;
+	test[27] = 0x79;
+	test[28] = 0x89;
+	CBEncodeBase58(str,test,29);
+	printf("%s\n",str);
 	unsigned char * verify = malloc(29);
 	for (int x = 0; x < 1000; x++) {
 		for (int y = 0; y < 29; y++) {
