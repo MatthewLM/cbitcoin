@@ -22,8 +22,12 @@
 
 #include <stdio.h>
 #include "CBBase58.h"
+#include <time.h>
 
 int main(){
+	unsigned int s = (unsigned int)time(NULL);
+	printf("Session = %ui\n",s);
+	srand(s);
 	char str[41];
 	unsigned char * test = malloc(29);
 	// ??? Test for:
@@ -62,7 +66,7 @@ int main(){
 	CBEncodeBase58(str,test,29);
 	printf("%s\n",str);
 	unsigned char * verify = malloc(29);
-	for (int x = 0; x < 1000; x++) {
+	for (int x = 0; x < 10000; x++) {
 		for (int y = 0; y < 29; y++) {
 			test[y] = rand();
 			verify[y] = test[y];

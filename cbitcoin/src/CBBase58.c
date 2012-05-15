@@ -104,10 +104,10 @@ void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	str[x] = base58Characters[bi.data[bi.length-1]];
 	x++;
 	// Reversal
-	for (u_int8_t y = zeros; y < x / 2; y++) {
-		char temp = str[y];
-		str[y] = str[x-y-1+zeros];
-		str[x-y-1+zeros] = temp;
+	for (u_int8_t y = 0; y < (x-zeros) / 2; y++) {
+		char temp = str[y+zeros];
+		str[y+zeros] = str[x-y-1];
+		str[x-y-1] = temp;
 	}
 	str[x] = '\0';
 	// Cleanup
