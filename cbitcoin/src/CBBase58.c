@@ -69,8 +69,35 @@ CBBigInt CBDecodeBase58(char * str){
 	}
 	return bi;
 }
-void CBDecodeBase58Checked(u_int8_t * bytes,char * str){
-	
+CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dependencies){
+	CBBigInt bi = CBDecodeBase58(str);
+	if (bi.length < 4){
+		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"Error: The string passed into CBDecodeBase58Checked decoded into data that was too short.");
+		bi.length = 1;
+		bi.data[0] -= 0;
+		return bi;
+	}
+	// Reverse bytes for checksum generation
+	u_int8_t * reversed = malloc(bi.length-4);
+	for (u_int8_t x = 4; x < bi.length; x++) {
+		reversed[bi.length-1-x] = bi.data[x];
+	}
+	// The checksum uses SHA-256, twice, for some reason unknown to man.
+	u_int8_t * checksum = dependencies->sha256(reversed,bi.length-4);
+	checksum = dependencies->sha256(checksum,32);
+	bool ok = true;
+	for (u_int8_t x = 0; x < 4; x++) {
+		if (checksum[x] != bi.data[3-x]) {
+			ok = false;
+		}
+	}
+	if(!ok){
+		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"Error: The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
+		bi.length = 1;
+		bi.data[0] -= 0;
+		return bi;
+	}
+	return bi;
 }
 void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	// ??? Improvement?

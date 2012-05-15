@@ -30,6 +30,8 @@
 
 #include <stdlib.h>
 #include "CBBigInt.h"
+#include "CBEvents.h"
+#include "CBDependencies.h"
 
 static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -40,11 +42,11 @@ static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcde
  */
 CBBigInt CBDecodeBase58(char * str);
 /**
- @brief Decodes base 58 string into byte data. Checks a 4 byte checksum.
- @param bytes Pointer to byte data. Must point to memory large enough.
+ @brief Decodes base 58 string into byte data as a CBBigInt and checks a 4 byte checksum.
  @param str Base 58 string to decode.
+ @returns Byte data as a CBBigInt. Is zero on failure. Checksum is included in returned data.
  */
-void CBDecodeBase58Checked(u_int8_t * bytes,char * str);
+CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dependencies);
 /**
  @brief Encodes byte data into base 58.
  @param str Pointer to a string to be filled with base 58 data.
