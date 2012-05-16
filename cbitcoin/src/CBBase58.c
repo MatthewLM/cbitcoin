@@ -91,6 +91,7 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dep
 			ok = false;
 		}
 	}
+	free(checksum);
 	if(!ok){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"Error: The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;
