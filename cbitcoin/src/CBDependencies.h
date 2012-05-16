@@ -2,7 +2,7 @@
 //  CBDependencies.h
 //  cbitcoin
 //
-//  Created by Matthew Mitchell on 10/05/2012.
+//  Created by Matthew Mitchell on 15/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.
@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief File for the structure that holds function pointers for dependency injection.
+ @brief File for the structure that holds function pointers for dependency injection. This includes the crytography functions which are key for the functioning of bitcoin.
  */
 
 #ifndef CBDEPENDENCIESH
@@ -34,7 +34,7 @@
  @brief Structure holding event callback function pointers.
  */
 typedef struct{
-	u_int8_t * (*sha256)(u_int8_t *,u_int16_t); /**< SHA-256 cryptographic hash function. The first argument is a pointer to the byte data. The second argument is the length of the data to hash. Should return a pointer to a 32-byte hash. */
+	u_int8_t * (*sha256)(u_int8_t *,u_int16_t); /**< SHA-256 cryptographic hash function. The first argument is a pointer to the byte data. The second argument is the length of the data to hash. Should return a pointer to a 32-byte hash, allocated in the function. */
 }CBDependencies;
 
 #endif
