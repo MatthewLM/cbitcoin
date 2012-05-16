@@ -31,12 +31,14 @@
 //  Includes
 
 #include "CBByteArray.h"
+#include "CBBase58.h"
 
 /**
  @brief Virtual function table for CBVersionChecksumBytes.
 */
 typedef struct{
 	CBByteArrayVT base; /**< CBByteArrayVT base structure */
+	u_int8_t (*getVersion)(void *); /**< A function pointer to the function to get the version from a CBVersionChecksumBytes */
 }CBVersionChecksumBytesVT;
 
 /**
@@ -47,12 +49,20 @@ typedef struct{
 } CBVersionChecksumBytes;
 
 /**
- @brief Creates a new CBVersionChecksumBytes object from a string.
- @param string A string to make a CBVersionChecksumBytes object.
+ @brief Creates a new CBVersionChecksumBytes object from a base-58 encoded string. The base-58 string will be validated by it's checksum. This returns NULL if the string is invalid. The CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT error is given if the decoded data is less than 4 bytes. CB_ERROR_BASE58_DECODE_CHECK_INVALID is given if the checksum does not match.
+ @param string A base-58 encoded string to make a CBVersionChecksumBytes object.
+ @param events A CBEngine for errors.
+ @returns A new CBVersionChecksumBytes object or NULL on failure.
+ */
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events,CBDependencies * dependencies);
+/**
+ @brief Creates a new CBVersionChecksumBytes object from bytes.
+ @param bytes The bytes for the CBVersionChecksumBytes object.
+ @param size The size of the byte data.
  @param events A CBEngine for errors.
  @returns A new CBVersionChecksumBytes object.
  */
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events);
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,CBEvents * events);
 
 /**
  @brief Creates a new CBVersionChecksumBytesVT.
@@ -81,11 +91,21 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self);
 
 /**
  @brief Initialises a CBVersionChecksumBytes object from a string.
- @param self The CBVersionChecksumBytes object to initialise
+ @param self The CBVersionChecksumBytes object to initialise.
  @param string A string to make a CBVersionChecksumBytes object.
+ @param version The network version for this address.
  @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events);
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events,CBDependencies * dependencies);
+/**
+ @brief Initialises a new CBVersionChecksumBytes object from bytes.
+ @param self The CBVersionChecksumBytes object to initialise.
+ @param bytes The bytes for the CBVersionChecksumBytes object.
+ @param size The size of the byte data.
+ @param events A CBEngine for errors.
+ @returns true on success, false on failure.
+ */
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t * bytes,u_int32_t size,CBEvents * events);
 
 /**
  @brief Frees a CBVersionChecksumBytes object.
@@ -100,5 +120,12 @@ void CBFreeVersionChecksumBytes(CBVersionChecksumBytes * self);
 void CBFreeProcessVersionChecksumBytes(CBVersionChecksumBytes * self);
  
 //  Functions
+
+/**
+ @brief Gets the version for a CBVersionChecksumBytes object.
+ @param self The CBVersionChecksumBytes object.
+ @returns The version code. The Macros CB_PRODUCTION_NETWORK and CB_TEST_NETWORK should correspond to this. 
+ */
+u_int8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self);
 
 #endif

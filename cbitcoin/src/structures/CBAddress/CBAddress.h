@@ -22,7 +22,9 @@
 
 /**
  @file
- @brief Based upon an ECDSA public key. Used to receive bitcoins with. Inherits CBObject
+ @brief Based upon an ECDSA public key and a network version code. Used for receiving bitcoins. Inherits CBVersionChecksumBytes.
+ @details Here is a diagram of how a bitcoin address is structured created by Alan Reiner, developer of Bitcoin Armory (http://bitcoinarmory.com/):
+ \image html CBAddress.png
 */
 
 #ifndef CBADDRESSH
@@ -30,27 +32,41 @@
 
 //  Includes
 
-#include "CBObject.h"
+#include "CBVersionChecksumBytes.h"
+#include "CBNetworkParameters.h"
 
 /**
  @brief Virtual function table for CBAddress.
 */
 typedef struct{
-	CBObjectVT base; /**< CBObjectVT base structure */
+	CBVersionChecksumBytesVT base; /**< CBVersionChecksumBytesVT base structure */
 }CBAddressVT;
 
 /**
  @brief Structure for CBAddress objects. @see CBAddress.h
 */
 typedef struct{
-	CBObject base; /**< CBObject base structure */
+	CBVersionChecksumBytes base; /**< CBVersionChecksumBytes base structure */
 } CBAddress;
 
 /**
- @brief Creates a new CBAddress object.
+ @brief Creates a new CBAddress object from a RIPEMD-160 hash.
+ @param network A CBNetworkParameters object with the network information.
+ @param hash The RIPEMD-160 hash. Must be 20 bytes.
+ @param events Events for errors.
+ @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBAddress object.
  */
-CBAddress * CBNewAddress(void);
+CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies);
+/**
+ @brief Creates a new CBAddress object from a base-58 encoded string.
+ @param self The CBAddress object to initialise.
+ @param string The base-58 encoded string.
+ @param events Events for errors.
+ @param dependencies Takes the SHA-256 function for the checksum.
+ @returns A new CBAddress object. Returns NULL on failure such as an invalid bitcoin address.
+ */
+CBAddress * CBNewAddressFromString(CBNetworkParameters * network,char * string,CBEvents * events,CBDependencies * dependencies);
 
 /**
  @brief Creates a new CBAddressVT.
@@ -78,11 +94,24 @@ CBAddressVT * CBGetAddressVT(void * self);
 CBAddress * CBGetAddress(void * self);
 
 /**
- @brief Initialises a CBAddress object
- @param self The CBAddress object to initialise
+ @brief Initialises a CBAddress object from a RIPEMD-160 hash.
+ @param self The CBAddress object to initialise.
+ @param network A CBNetworkParameters object with the network information.
+ @param hash The RIPEMD-160 hash. Must be 20 bytes.
+ @param events Events for errors.
+ @param dependencies Takes the SHA-256 function for the checksum.
  @returns true on success, false on failure.
  */
-bool CBInitAddress(CBAddress * self);
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies);
+/**
+ @brief Initialises a CBAddress object from a base-58 encoded string.
+ @param self The CBAddress object to initialise.
+ @param string The base-58 encoded string.
+ @param events Events for errors.
+ @param dependencies Takes the SHA-256 function for the checksum.
+ @returns true on success, false on failure.
+ */
+bool CBInitAddressFromString(CBAddress * self,char * string,CBEvents * events,CBDependencies * dependencies);
 
 /**
  @brief Frees a CBAddress object.

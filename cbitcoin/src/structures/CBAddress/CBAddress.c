@@ -27,12 +27,21 @@
 static CBAddressVT * VTStore = NULL;
 static int objectNum = 0;
 
-//  Constructor
+//  Constructors
 
-CBAddress * CBNewAddress(){
+CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies){
 	CBAddress * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateAddressVT);
-	CBInitAddress(self);
+	CBInitAddressFromRIPEMD160Hash(self,network,hash,events,dependencies);
+	return self;
+}
+CBAddress * CBNewAddressFromString(CBNetworkParameters * network,char * string,CBEvents * events,CBDependencies * dependencies){
+	CBAddress * self = malloc(sizeof(*self));
+	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateAddressVT);
+	bool ok = CBInitAddressFromString(self,string,events,dependencies);
+	if (!ok) {
+		return NULL;
+	}
 	return self;
 }
 
@@ -44,7 +53,7 @@ CBAddressVT * CBCreateAddressVT(){
 	return VT;
 }
 void CBSetAddressVT(CBAddressVT * VT){
-	CBSetObjectVT((CBObjectVT *)VT);
+	CBSetVersionChecksumBytesVT((CBVersionChecksumBytesVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeAddress;
 }
 
@@ -62,8 +71,25 @@ CBAddress * CBGetAddress(void * self){
 
 //  Initialiser
 
-bool CBInitAddress(CBAddress * self){
-	if (!CBInitObject(CBGetObject(self)))
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies){
+	// Build address and then complete intitialisation with CBVersionChecksumBytes
+	u_int8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
+	// Set network byte
+	data[0] = network->networkCode;
+	// Move hash
+	memmove(data+1, hash, 20);
+	// Make checksum and move it into address
+	u_int8_t * checksum = dependencies->sha256(hash,20);
+	checksum = dependencies->sha256(checksum,32);
+	memmove(data+21, checksum, 4);
+	// Initialise CBVersionChecksumBytes
+	if (!CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25, events))
+		return false;
+	CBGetByteArrayVT(self)->reverse(self); // Big endian to little endian. Craziness. Convert everything to big endian??? No thanks.
+	return true;
+}
+bool CBInitAddressFromString(CBAddress * self,char * string,CBEvents * events,CBDependencies * dependencies){
+	if (!CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, events, dependencies))
 		return false;
 	return true;
 }

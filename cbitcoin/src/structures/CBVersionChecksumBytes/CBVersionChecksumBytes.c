@@ -27,12 +27,21 @@
 static CBVersionChecksumBytesVT * VTStore = NULL;
 static int objectNum = 0;
 
-//  Constructor
+//  Constructors
 
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events,CBDependencies * dependencies){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
-	CBInitVersionChecksumBytesFromString(self,string,events);
+	bool ok = CBInitVersionChecksumBytesFromString(self,string,events,dependencies);
+	if (!ok) {
+		return NULL;
+	}
+	return self;
+}
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,CBEvents * events){
+	CBVersionChecksumBytes * self = malloc(sizeof(*self));
+	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
+	CBInitVersionChecksumBytesFromBytes(self,bytes,size,events);
 	return self;
 }
 
@@ -46,6 +55,7 @@ CBVersionChecksumBytesVT * CBCreateVersionChecksumBytesVT(){
 void CBSetVersionChecksumBytesVT(CBVersionChecksumBytesVT * VT){
 	CBSetByteArrayVT((CBByteArrayVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeVersionChecksumBytes;
+	VT->getVersion = (u_int8_t (*)(void *))CBVersionChecksumBytesGetVersion;
 }
 
 //  Virtual Table Getter
@@ -60,10 +70,20 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self){
 	return self;
 }
 
-//  Initialiser
+//  Initialisers
 
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events){
-	if (!CBInitByteArrayOfSize(self, 32, events))
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events,CBDependencies * dependencies){
+	CBBigInt bytes = CBDecodeBase58Checked(string, events, dependencies);
+	if (bytes.length == 1) {
+		return false;
+	}
+	// Take over the bytes with the CBByteArray
+	if (!CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length, events))
+		return false;
+	return true;
+}
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t * bytes,u_int32_t size,CBEvents * events){
+	if (!CBInitByteArrayWithData(CBGetByteArray(self), bytes, size, events))
 		return false;
 	return true;
 }
@@ -80,3 +100,6 @@ void CBFreeProcessVersionChecksumBytes(CBVersionChecksumBytes * self){
 
 //  Functions
 
+u_int8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self){
+	return CBGetByteArrayVT(self)->getLastByte(self);
+}
