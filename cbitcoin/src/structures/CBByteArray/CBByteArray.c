@@ -111,7 +111,6 @@ bool CBInitByteArrayWithData(CBByteArray * self,u_int8_t * data,u_int32_t size,C
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = events;
-	CBGetObjectVT(self->events)->retain(self->events);
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	self->sharedData->data = data;
 	self->sharedData->references = 1;
