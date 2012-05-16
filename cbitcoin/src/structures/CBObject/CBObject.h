@@ -22,10 +22,12 @@
 
 /**
  @file
- @brief Base structure for other structures.
- @details CBObject is the root structure for all other OOP-type structures in cbitcoin. It provides memory mangement through reference counting. Other structures inherit CBObject through the CBOBjectVT structure and the CBOBject structure itself.
-
- Whenever an object is created it must be released and objects must be released for each time they are retained. Failure to abide by this will cause memory leaks.
+ @brief The base structure for other structures using OOP-style and reference counting features.
+ @details CBObject is the root structure for all other OOP-type structures in cbitcoin. It provides memory mangement through reference counting. Other structures inherit CBObject through the CBOBjectVT structure and the CBOBject structure itself. The retain, release and free functions are used for memory management. 
+ 
+ The rule for memory management is to retain an object before returning it, to retain an object when giving it to another object, and to release an object once the object is no longer needed. When a new object is created it should be retained. Unless required for thread safety, objects don't need to be retained when passed into functions. Whenever an object is created it must be released and objects must be released for each time they are retained. Failure to abide by this properly will cause memory leaks or segmentation faults.
+ 
+ Remember to pass a reference to an object to the release function. Forgeting to do this will break your code.
  */
 
 #ifndef CBOBJECTH
@@ -41,7 +43,7 @@
  */
 typedef struct{
 	void (*free)(void *); /**< Pointer to the function used to free a CBObject. */
-	void (*release)(void *); /**< Pointer to the function used to release (calling free if necessary) a CBObject. Must exist with each retain to free memory. An additional call to release should exist for each object created.*/
+	void (*release)(void *); /**< Pointer to the function used to release (calling free if necessary) a CBObject by reference. Must exist with each retain to free memory. An additional call to release should exist for each object created. */
 	void (*retain)(void *); /**< Pointer to the function used to retain a CBObject. Always call release when done with an object. */
 }CBObjectVT;
 
