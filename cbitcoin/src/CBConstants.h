@@ -35,8 +35,8 @@
 #define CB_BLOCK_HEADER_SIZE 80
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours
 #define CB_PROTOCOL_VERSION 31800 // Version 0.3.18.00
-#define CB_PRODUCTION_NETWORK "org.bitcoin.production" // The normal network for trading
-#define CB_TEST_NETWORK "org.bitcoin.test" // The network for testing
+#define CB_PRODUCTION_NETWORK 0 // The normal network for trading
+#define CB_TEST_NETWORK 111 // The network for testing
 #define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
 #define CB_TRANSACTION_INPUT_OUT_POINTER_MESSAGE_LENGTH 36
 
