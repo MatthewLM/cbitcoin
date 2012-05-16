@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Contains data needed for working with a block chain. Inherits CBObject
+ @brief Contains data needed for working with a block chain. Everything for wokring with a particular network including the bitcoin test network as well as the productuon network. Inherits CBObject.
  */
 
 #ifndef CBNETWORKPARAMETERSH
@@ -45,6 +45,7 @@ typedef struct{
  */
 typedef struct{
 	CBObject base; /**< CBObject base structure */
+	u_int8_t networkCode; /**< The network code. The macros CB_TEST_NETWORK and CB_PRODUCTION_NETWORK are used for the test and production bitcoin networks. */
 } CBNetworkParameters;
 
 /**
