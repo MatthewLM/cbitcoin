@@ -49,10 +49,10 @@ CBBigInt CBDecodeBase58(char * str);
 CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dependencies);
 /**
  @brief Encodes byte data into base 58.
- @param str Pointer to a string to be filled with base 58 data.
  @param bytes Pointer to byte data to encode. Will almost certainly be modified. Copy data beforehand if needed.
  @param len Length of bytes to encode.
+ @returns Newly allocated string with encoded data. 
  */
-void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len);
+char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len);
 
 #endif

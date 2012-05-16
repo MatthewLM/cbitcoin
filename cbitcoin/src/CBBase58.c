@@ -84,14 +84,15 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dep
 	}
 	// The checksum uses SHA-256, twice, for some reason unknown to man.
 	u_int8_t * checksum = dependencies->sha256(reversed,bi.length-4);
-	checksum = dependencies->sha256(checksum,32);
+	u_int8_t * checksum2 = dependencies->sha256(checksum,32);
+	free(checksum);
 	bool ok = true;
 	for (u_int8_t x = 0; x < 4; x++) {
-		if (checksum[x] != bi.data[3-x]) {
+		if (checksum2[x] != bi.data[3-x]) {
 			ok = false;
 		}
 	}
-	free(checksum);
+	free(checksum2);
 	if(!ok){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"Error: The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;
@@ -100,9 +101,11 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dep
 	}
 	return bi;
 }
-void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
+char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len){
 	// ??? Improvement?
 	u_int8_t x = 0;
+	char * str = malloc(len);
+	u_int8_t size = len;
 	// Zeros
 	for (u_int8_t y = len - 1;; y--)
 		if (!bytes[y]){
@@ -124,6 +127,10 @@ void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	u_int8_t mod;
 	for (;CBBigIntCompareToUInt8(bi, 58) >= 0;x++) {
 		mod = CBBigIntModuloWithUInt8(bi, 58);
+		if (size < x + 3) {
+			str = realloc(str, x + 3);
+			size = x + 3;
+		}
 		str[x] = base58Characters[mod];
 		CBBigIntEqualsSubtractionByUInt8(&bi, mod);
 		memset(temp, 0, len);
@@ -140,4 +147,5 @@ void CBEncodeBase58(char * str, u_int8_t * bytes, u_int8_t len){
 	str[x] = '\0';
 	// Cleanup
 	free(temp);
+	return str;
 }

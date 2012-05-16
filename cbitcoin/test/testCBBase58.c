@@ -50,7 +50,6 @@ int main(){
 	CBDecodeBase58Checked("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", &events, &d); // Valid
 	printf("END VALID\n");
 	CBDecodeBase58Checked("1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", &events, &d); // Invalid
-	char str[41];
 	unsigned char * test = malloc(29);
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
@@ -85,8 +84,9 @@ int main(){
 	test[26] = 0x76;
 	test[27] = 0x79;
 	test[28] = 0x89;
-	CBEncodeBase58(str,test,29);
+	char * str = CBEncodeBase58(test,29);
 	printf("%s\n",str);
+	free(str);
 	unsigned char * verify = malloc(29);
 	for (int x = 0; x < 10000; x++) {
 		for (int y = 0; y < 29; y++) {
@@ -97,9 +97,10 @@ int main(){
 		for (int y = 0; y < 29; y++) {
 			printf("%.2x",verify[y]);
 		}
-		CBEncodeBase58(str,test,29);
+		str = CBEncodeBase58(test,29);
 		printf(" -> %s -> \n",str);
 		CBBigInt bi = CBDecodeBase58(str);
+		free(str);
 		printf("0x");
 		for (int y = 0; y < 29; y++) {
 			printf("%.2x",bi.data[y]);

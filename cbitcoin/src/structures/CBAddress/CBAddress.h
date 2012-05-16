@@ -53,20 +53,22 @@ typedef struct{
  @brief Creates a new CBAddress object from a RIPEMD-160 hash.
  @param network A CBNetworkParameters object with the network information.
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
+ @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
  @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBAddress object.
  */
-CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies);
+CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies);
 /**
  @brief Creates a new CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
- @param string The base-58 encoded string.
+ @param string The base-58 encoded CBString.
+ @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
  @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBAddress object. Returns NULL on failure such as an invalid bitcoin address.
  */
-CBAddress * CBNewAddressFromString(CBNetworkParameters * network,char * string,CBEvents * events,CBDependencies * dependencies);
+CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies);
 
 /**
  @brief Creates a new CBAddressVT.
@@ -98,20 +100,22 @@ CBAddress * CBGetAddress(void * self);
  @param self The CBAddress object to initialise.
  @param network A CBNetworkParameters object with the network information.
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
+ @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
  @param dependencies Takes the SHA-256 function for the checksum.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies);
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies);
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
- @param string The base-58 encoded string.
+ @param string The base-58 encoded CBString.
+ @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
  @param dependencies Takes the SHA-256 function for the checksum.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromString(CBAddress * self,char * string,CBEvents * events,CBDependencies * dependencies);
+bool CBInitAddressFromString(CBAddress * self,CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies);
 
 /**
  @brief Frees a CBAddress object.

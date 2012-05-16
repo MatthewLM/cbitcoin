@@ -29,19 +29,19 @@ static int objectNum = 0;
 
 //  Constructors
 
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(char * string,CBEvents * events,CBDependencies * dependencies){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
-	bool ok = CBInitVersionChecksumBytesFromString(self,string,events,dependencies);
+	bool ok = CBInitVersionChecksumBytesFromString(self,string,cacheString,events,dependencies);
 	if (!ok) {
 		return NULL;
 	}
 	return self;
 }
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,CBEvents * events){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
-	CBInitVersionChecksumBytesFromBytes(self,bytes,size,events);
+	CBInitVersionChecksumBytesFromBytes(self,bytes,size,cacheString,events);
 	return self;
 }
 
@@ -56,6 +56,7 @@ void CBSetVersionChecksumBytesVT(CBVersionChecksumBytesVT * VT){
 	CBSetByteArrayVT((CBByteArrayVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeVersionChecksumBytes;
 	VT->getVersion = (u_int8_t (*)(void *))CBVersionChecksumBytesGetVersion;
+	VT->getString = (CBString * (*)(void *))CBVersionChecksumBytesGetString;
 }
 
 //  Virtual Table Getter
@@ -72,17 +73,28 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self){
 
 //  Initialisers
 
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,char * string,CBEvents * events,CBDependencies * dependencies){
-	CBBigInt bytes = CBDecodeBase58Checked(string, events, dependencies);
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
+	// Cache string if needed
+	if (cacheString) {
+		self->cached = string;
+		CBGetObjectVT(string)->retain(string);
+	}else
+		self->cached = NULL;
+	self->cacheString = cacheString;
+	// Get bytes from string conversion
+	CBBigInt bytes = CBDecodeBase58Checked(string->string, events, dependencies);
 	if (bytes.length == 1) {
 		return false;
 	}
 	// Take over the bytes with the CBByteArray
 	if (!CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length, events))
 		return false;
+	CBGetByteArrayVT(self)->reverse(self); // CBBigInt is in little-endian. Conversion needed to make bitcoin address the right way.
 	return true;
 }
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t * bytes,u_int32_t size,CBEvents * events){
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events){
+	self->cacheString = cacheString;
+	self->cached = NULL;
 	if (!CBInitByteArrayWithData(CBGetByteArray(self), bytes, size, events))
 		return false;
 	return true;
@@ -95,11 +107,29 @@ void CBFreeVersionChecksumBytes(CBVersionChecksumBytes * self){
 	CBFree();
 }
 void CBFreeProcessVersionChecksumBytes(CBVersionChecksumBytes * self){
+	free(self->cached);
 	CBFreeProcessObject(CBGetObject(self));
 }
 
 //  Functions
 
 u_int8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self){
-	return CBGetByteArrayVT(self)->getLastByte(self);
+	return CBGetByteArrayVT(self)->getByte(self,0);
+}
+CBString * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
+	if (self->cached) {
+		// Return cached string
+		CBGetObjectVT(self->cached)->retain(self->cached);
+		return self->cached;
+	}else{
+		// Make string
+		CBGetByteArrayVT(self)->reverse(self); // Make this into little-endian
+		CBString * str = CBNewStringByTakingCString(CBEncodeBase58(CBGetByteArrayVT(self)->getData(self), CBGetByteArray(self)->length));
+		CBGetByteArrayVT(self)->reverse(self); // Now the string is got, back to big-endian.
+		if (self->cacheString) {
+			self->cached = str;
+			CBGetObjectVT(str)->retain(str); // Retain for this object.
+		}
+		return str; // No additional retain. Retained from constructor.
+	}
 }

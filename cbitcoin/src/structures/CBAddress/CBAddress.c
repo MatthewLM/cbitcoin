@@ -29,16 +29,16 @@ static int objectNum = 0;
 
 //  Constructors
 
-CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies){
+CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	CBAddress * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateAddressVT);
-	CBInitAddressFromRIPEMD160Hash(self,network,hash,events,dependencies);
+	CBInitAddressFromRIPEMD160Hash(self,network,hash,cacheString,events,dependencies);
 	return self;
 }
-CBAddress * CBNewAddressFromString(CBNetworkParameters * network,char * string,CBEvents * events,CBDependencies * dependencies){
+CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	CBAddress * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateAddressVT);
-	bool ok = CBInitAddressFromString(self,string,events,dependencies);
+	bool ok = CBInitAddressFromString(self,string,cacheString,events,dependencies);
 	if (!ok) {
 		return NULL;
 	}
@@ -71,7 +71,7 @@ CBAddress * CBGetAddress(void * self){
 
 //  Initialiser
 
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,CBEvents * events,CBDependencies * dependencies){
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	// Build address and then complete intitialisation with CBVersionChecksumBytes
 	u_int8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
 	// Set network byte
@@ -79,17 +79,18 @@ bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * netwo
 	// Move hash
 	memmove(data+1, hash, 20);
 	// Make checksum and move it into address
-	u_int8_t * checksum = dependencies->sha256(hash,20);
-	checksum = dependencies->sha256(checksum,32);
-	memmove(data+21, checksum, 4);
+	u_int8_t * checksum = dependencies->sha256(data,21);
+	u_int8_t * checksum2 = dependencies->sha256(checksum,32);
+	free(checksum);
+	memmove(data+21, checksum2, 4);
+	free(checksum2);
 	// Initialise CBVersionChecksumBytes
-	if (!CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25, events))
+	if (!CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25,cacheString, events))
 		return false;
-	CBGetByteArrayVT(self)->reverse(self); // Big endian to little endian. Craziness. Convert everything to big endian??? No thanks.
 	return true;
 }
-bool CBInitAddressFromString(CBAddress * self,char * string,CBEvents * events,CBDependencies * dependencies){
-	if (!CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, events, dependencies))
+bool CBInitAddressFromString(CBAddress * self,CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
+	if (!CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string,cacheString, events, dependencies))
 		return false;
 	return true;
 }
