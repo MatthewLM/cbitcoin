@@ -29,16 +29,22 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBByteArray * CBNewByteArrayOfSize(int size,CBEvents * events){
+CBByteArray * CBNewByteArrayOfSize(u_int32_t size,CBEvents * events){
 	CBByteArray * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
 	CBInitByteArrayOfSize(self,size,events);
 	return self;
 }
-CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,int offset,int length){
+CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,u_int32_t offset,u_int32_t length){
 	CBByteArray * self = malloc(sizeof(*self));
 	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
 	CBInitByteArraySubReference(self, ref, offset, length);
+	return self;
+}
+CBByteArray * CBNewByteArrayWithData(u_int8_t * data,u_int32_t size,CBEvents * events){
+	CBByteArray * self = malloc(sizeof(*self));
+	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
+	CBInitByteArrayWithData(self, data, size, events);
 	return self;
 }
 
@@ -55,6 +61,7 @@ void CBSetByteArrayVT(CBByteArrayVT * VT){
 	VT->copy = (void * (*)(void *))CBByteArrayCopy;
 	VT->getByte = (u_int8_t (*)(void *,u_int32_t))CBByteArrayGetByte;
 	VT->getData = (u_int8_t * (*)(void *))CBByteArrayGetData;
+	VT->getLastByte = (u_int8_t (*)(void *))CBByteArrayGetLastByte;
 	VT->insertByte = (void (*)(void *,u_int32_t,u_int8_t))CBByteArrayInsertByte;
 	VT->readUInt16 = (u_int16_t (*)(void *,u_int32_t))CBByteArrayReadUInt16;
 	VT->readUInt32 = (u_int32_t (*)(void *,u_int32_t))CBByteArrayReadUInt32;
@@ -77,7 +84,7 @@ CBByteArray * CBGetByteArray(void * self){
 
 //  Initialisers
 
-bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEvents * events){
+bool CBInitByteArrayOfSize(CBByteArray * self,u_int32_t size,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = events;
@@ -89,7 +96,7 @@ bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEvents * events){
 	self->offset = 0;
 	return true;
 }
-bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,int offset,int length){
+bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,u_int32_t offset,u_int32_t length){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = ref->events;
@@ -98,6 +105,18 @@ bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,int offset
 	self->sharedData->references++; // Since a new reference to the shared data is being made, an increase in the reference count must be made.
 	self->length = length;
 	self->offset = ref->offset + offset;
+	return true;
+}
+bool CBInitByteArrayWithData(CBByteArray * self,u_int8_t * data,u_int32_t size,CBEvents * events){
+	if (!CBInitObject(CBGetObject(self)))
+		return false;
+	self->events = events;
+	CBGetObjectVT(self->events)->retain(self->events);
+	self->sharedData = malloc(sizeof(*self->sharedData));
+	self->sharedData->data = data;
+	self->sharedData->references = 1;
+	self->length = size;
+	self->offset = 0;
 	return true;
 }
 
@@ -137,6 +156,9 @@ u_int8_t CBByteArrayGetByte(CBByteArray * self,int index){
 }
 u_int8_t * CBByteArrayGetData(CBByteArray * self){
 	return self->sharedData->data + self->offset;
+}
+u_int8_t CBByteArrayGetLastByte(CBByteArray * self){
+	return self->sharedData->data[self->offset+self->length];
 }
 void CBByteArrayInsertByte(CBByteArray * self,int index,u_int8_t byte){
 	self->sharedData->data[self->offset+index] = byte;

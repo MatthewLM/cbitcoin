@@ -51,6 +51,7 @@ typedef struct{
 	void * (*copy)(void *); /**< Pointer to the function used to copy a byte array */
 	u_int8_t (*getByte)(void *,u_int32_t); /**< Pointer to the function used to get a byte from a byte array */
 	u_int8_t * (*getData)(void *); /**< Pointer to the function used to get a pointer to the underlying data at the byte array offset */
+	u_int8_t (*getLastByte)(void *); /**< Pointer to the function used to get the last byte in the array */
 	void (*insertByte)(void *,u_int32_t,u_int8_t); /**< Pointer to the function used to insert a byte into a byte array */
 	u_int16_t (*readUInt16)(void *,u_int32_t); /**< Pointer to the function used to read a 16 bit integer from the byte array */
 	u_int32_t (*readUInt32)(void *,u_int32_t); /**< Pointer to the function used to read a 32 bit integer from the byte array */
@@ -76,7 +77,7 @@ typedef struct{
  @param events CBEngine for errors.
  @returns An empty CBByteArray object.
  */
-CBByteArray * CBNewByteArrayOfSize(int size,CBEvents * events);
+CBByteArray * CBNewByteArrayOfSize(u_int32_t size,CBEvents * events);
 /**
  @brief References a subsection of an CBByteArray.
  @param self The CBByteArray object to reference.
@@ -84,7 +85,15 @@ CBByteArray * CBNewByteArrayOfSize(int size,CBEvents * events);
  @param length The length of the reference.
  @returns The new CBByteArray.
  */
-CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,int offset,int length);
+CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,u_int32_t offset,u_int32_t length);
+/**
+ @brief Creates a new CBByteArray using data.
+ @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
+ @param size Size in bytes for the new array.
+ @param events CBEngine for errors.
+ @returns The new CBByteArray object.
+ */
+CBByteArray * CBNewByteArrayWithData(u_int8_t * data,u_int32_t size,CBEvents * events);
 /**
  @brief Creates a new CBByteArrayVT.
  @returns A new CBByteArrayVT.
@@ -117,15 +126,25 @@ CBByteArray * CBGetByteArray(void * self);
  @param events CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayOfSize(CBByteArray * self,int size,CBEvents * events);
+bool CBInitByteArrayOfSize(CBByteArray * self,u_int32_t size,CBEvents * events);
 /**
  @brief Initialises a reference CBByteArray to a subsection of an CBByteArray.
+ @param self The CBByteArray object to initialise
  @param ref The CBByteArray object to reference.
  @param offset The offset to the start of the reference.
  @param length The length of the reference.
  @returns true on success, false on failure.
  */
-bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,int offset,int length);
+bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,u_int32_t offset,u_int32_t length);
+/**
+ @brief Creates a new CBByteArray using data.
+ @param self The CBByteArray object to initialise
+ @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
+ @param size Size in bytes for the new array.
+ @param events CBEngine for errors.
+ @returns true on success, false on failure.
+ */
+bool CBInitByteArrayWithData(CBByteArray * self,u_int8_t * data,u_int32_t size,CBEvents * events);
 /**
  @brief Frees a CBByteArray object.
  @param self The CBByteArray object to free.
@@ -167,6 +186,12 @@ u_int8_t CBByteArrayGetByte(CBByteArray * self,int index);
  @returns The pointer
  */
 u_int8_t * CBByteArrayGetData(CBByteArray * self);
+/**
+ @brief Get the last byte from the CBByteArray object. A byte will be returned from self->offset+self->length in the underlying data.
+ @param self The CBByteArray object.
+ @returns The last byte
+ */
+u_int8_t CBByteArrayGetLastByte(CBByteArray * self);
 /**
  @brief Insert a byte into array. This will be inserted at self->offset+index in the underlying data.
  @param self The CBByteArray object.
