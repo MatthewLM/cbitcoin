@@ -31,7 +31,7 @@ author = raw_input("Enter your first and last name: ")
 desc = raw_input("Enter a description for the structure: ")
 d = datetime.utcnow()
 # Make directory
-dir = os.path.dirname(sys.argv[0]) + "/src/structures/CB" + name
+dir = os.path.dirname(sys.argv[0]) + "../src/structures/CB" + name
 if os.path.exists(dir):
 	input = raw_input("This name conflicts with a previous name. Overwrite? (Y/N): ")
 	if input != "Y":
