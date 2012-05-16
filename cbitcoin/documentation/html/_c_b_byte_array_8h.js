@@ -4,6 +4,7 @@ var _c_b_byte_array_8h =
     [ "CBByteArrayCopy", "_c_b_byte_array_8h.html#a60253d63a7687bc7d02cee769caa223c", null ],
     [ "CBByteArrayGetByte", "_c_b_byte_array_8h.html#ab544faec82ff809a5c22547b45e7a142", null ],
     [ "CBByteArrayGetData", "_c_b_byte_array_8h.html#a9963391b58cfe590b4b1b7da5488f973", null ],
+    [ "CBByteArrayGetLastByte", "_c_b_byte_array_8h.html#abc33819525bf5fd63b79aed526a98a28", null ],
     [ "CBByteArrayInsertByte", "_c_b_byte_array_8h.html#a96c33edb50f3afe83c9f6bb5d41741a4", null ],
     [ "CBByteArrayReadUInt16", "_c_b_byte_array_8h.html#a2d752896e28713937a292f3d331a4ba5", null ],
     [ "CBByteArrayReadUInt32", "_c_b_byte_array_8h.html#aeba63fca929cf6e3abdfc8e3df2bb547", null ],
@@ -15,9 +16,11 @@ var _c_b_byte_array_8h =
     [ "CBFreeProcessByteArray", "_c_b_byte_array_8h.html#ac8d17896519a52aa564cea1b749890b2", null ],
     [ "CBGetByteArray", "_c_b_byte_array_8h.html#a01a3575ad3bc96eae5a96a552955a607", null ],
     [ "CBGetByteArrayVT", "_c_b_byte_array_8h.html#a88178a1f4daf43e4291c64cf4060e2bb", null ],
-    [ "CBInitByteArrayOfSize", "_c_b_byte_array_8h.html#aeeb9ced8dc4eaa31349f53b925e0cf17", null ],
-    [ "CBInitByteArraySubReference", "_c_b_byte_array_8h.html#a9d75452b3ecb9b0fec369220a8830dcf", null ],
-    [ "CBNewByteArrayOfSize", "_c_b_byte_array_8h.html#ace6d975a3267b8734908623bfdbbcabf", null ],
-    [ "CBNewByteArraySubReference", "_c_b_byte_array_8h.html#a859febfe5ad9569fa9d0f996fbb81a81", null ],
+    [ "CBInitByteArrayOfSize", "_c_b_byte_array_8h.html#add344f09dadbf0293cf2f8619acecbff", null ],
+    [ "CBInitByteArraySubReference", "_c_b_byte_array_8h.html#a50e666c50babca1eafef652637bc1a63", null ],
+    [ "CBInitByteArrayWithData", "_c_b_byte_array_8h.html#a7d5bbecc078d93602b932e0fb4059dd1", null ],
+    [ "CBNewByteArrayOfSize", "_c_b_byte_array_8h.html#a5fe2d7a160b34d6dd512eec9b0932c6e", null ],
+    [ "CBNewByteArraySubReference", "_c_b_byte_array_8h.html#abad170e840184076acf557f4293822a8", null ],
+    [ "CBNewByteArrayWithData", "_c_b_byte_array_8h.html#a460f4124f9ea8430264b7cdf1432cde5", null ],
     [ "CBSetByteArrayVT", "_c_b_byte_array_8h.html#a50d9260b9c5dc19879afdb1332af5e6d", null ]
 ];

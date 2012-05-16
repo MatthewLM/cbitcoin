@@ -3,6 +3,8 @@ var files =
     [ "src/CBBase58.h", "_c_b_base58_8h.html", "_c_b_base58_8h" ],
     [ "src/CBBigInt.h", "_c_b_big_int_8h.html", "_c_b_big_int_8h" ],
     [ "src/CBConstants.h", null, null ],
+    [ "src/CBDependencies.h", "_c_b_dependencies_8h.html", null ],
+    [ "src/CBEvents.h", "_c_b_events_8h.html", null ],
     [ "src/structures/CBAddress/CBAddress.h", "_c_b_address_8h.html", "_c_b_address_8h" ],
     [ "src/structures/CBBlock/CBBlock.h", "_c_b_block_8h.html", "_c_b_block_8h" ],
     [ "src/structures/CBByteArray/CBByteArray.h", "_c_b_byte_array_8h.html", "_c_b_byte_array_8h" ],

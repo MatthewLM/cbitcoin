@@ -118,36 +118,70 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;stdlib.h&gt;</code><br/>
 <code>#include &quot;<a class="el" href="_c_b_big_int_8h_source.html">CBBigInt.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="_c_b_events_8h_source.html">CBEvents.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="_c_b_dependencies_8h_source.html">CBDependencies.h</a>&quot;</code><br/>
 </div>
 <p><a href="_c_b_base58_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a010454b57eb32e672f39fd8000ca9060"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_base58_8h.html#a010454b57eb32e672f39fd8000ca9060">CBDecodeBase58</a> (u_int8_t *bytes, char *str)</td></tr>
-<tr class="memdesc:a010454b57eb32e672f39fd8000ca9060"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes base 58 string into byte data.  <a href="#a010454b57eb32e672f39fd8000ca9060"></a><br/></td></tr>
-<tr class="memitem:a924de38d392b82deb67fcdcdd0e202ec"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_base58_8h.html#a924de38d392b82deb67fcdcdd0e202ec">CBDecodeBase58Checked</a> (u_int8_t *bytes, char *str)</td></tr>
-<tr class="memdesc:a924de38d392b82deb67fcdcdd0e202ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes base 58 string into byte data. Checks a 4 byte checksum.  <a href="#a924de38d392b82deb67fcdcdd0e202ec"></a><br/></td></tr>
+<tr class="memitem:a9c162d223445f70d14c7a6489d54d0ee"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_big_int.html">CBBigInt</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_base58_8h.html#a9c162d223445f70d14c7a6489d54d0ee">CBDecodeBase58</a> (char *str)</td></tr>
+<tr class="memdesc:a9c162d223445f70d14c7a6489d54d0ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes base 58 string into byte data as a <a class="el" href="struct_c_b_big_int.html" title="Contains byte data with the length of this data to represent a large integer. The byte data is in lit...">CBBigInt</a>.  <a href="#a9c162d223445f70d14c7a6489d54d0ee"></a><br/></td></tr>
+<tr class="memitem:a9892fed34e9af387eb765c56eb39d241"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_big_int.html">CBBigInt</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_base58_8h.html#a9892fed34e9af387eb765c56eb39d241">CBDecodeBase58Checked</a> (char *str, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events, <a class="el" href="struct_c_b_dependencies.html">CBDependencies</a> *dependencies)</td></tr>
+<tr class="memdesc:a9892fed34e9af387eb765c56eb39d241"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes base 58 string into byte data as a <a class="el" href="struct_c_b_big_int.html" title="Contains byte data with the length of this data to represent a large integer. The byte data is in lit...">CBBigInt</a> and checks a 4 byte checksum.  <a href="#a9892fed34e9af387eb765c56eb39d241"></a><br/></td></tr>
 <tr class="memitem:a44e12f5464dcf784b3dc2644cecc055d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_base58_8h.html#a44e12f5464dcf784b3dc2644cecc055d">CBEncodeBase58</a> (char *str, u_int8_t *bytes, u_int8_t len)</td></tr>
 <tr class="memdesc:a44e12f5464dcf784b3dc2644cecc055d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Encodes byte data into base 58.  <a href="#a44e12f5464dcf784b3dc2644cecc055d"></a><br/></td></tr>
 </table>
 <hr/><a name="details" id="details"></a><h2>Detailed Description</h2>
 <div class="textblock"><p>Functions for encoding and decoding in base 58. Avoids 0olI whch may look alike. This is for readability concerns. </p>
 </div><hr/><h2>Function Documentation</h2>
-<a class="anchor" id="a010454b57eb32e672f39fd8000ca9060"></a>
+<a class="anchor" id="a9c162d223445f70d14c7a6489d54d0ee"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="_c_b_base58_8h.html#a010454b57eb32e672f39fd8000ca9060">CBDecodeBase58</a> </td>
+          <td class="memname"><a class="el" href="struct_c_b_big_int.html">CBBigInt</a> <a class="el" href="_c_b_base58_8h.html#a9c162d223445f70d14c7a6489d54d0ee">CBDecodeBase58</a> </td>
           <td>(</td>
-          <td class="paramtype">u_int8_t *&#160;</td>
-          <td class="paramname"><em>bytes</em>, </td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>str</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Decodes base 58 string into byte data as a <a class="el" href="struct_c_b_big_int.html" title="Contains byte data with the length of this data to represent a large integer. The byte data is in lit...">CBBigInt</a>. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">str</td><td>Base 58 string to decode. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>Pointer to the byte data as a <a class="el" href="struct_c_b_big_int.html" title="Contains byte data with the length of this data to represent a large integer. The byte data is in lit...">CBBigInt</a>. The byte data will be created in this function. Remember to free the data. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a9892fed34e9af387eb765c56eb39d241"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_c_b_big_int.html">CBBigInt</a> <a class="el" href="_c_b_base58_8h.html#a9892fed34e9af387eb765c56eb39d241">CBDecodeBase58Checked</a> </td>
+          <td>(</td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>str</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">char *&#160;</td>
-          <td class="paramname"><em>str</em>&#160;</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
+          <td class="paramname"><em>events</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_dependencies.html">CBDependencies</a> *&#160;</td>
+          <td class="paramname"><em>dependencies</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -158,50 +192,14 @@ Functions</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Decodes base 58 string into byte data. </p>
+<p>Decodes base 58 string into byte data as a <a class="el" href="struct_c_b_big_int.html" title="Contains byte data with the length of this data to represent a large integer. The byte data is in lit...">CBBigInt</a> and checks a 4 byte checksum. </p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">bytes</td><td>Pointer to byte data. Must point to memory large enough. </td></tr>
     <tr><td class="paramname">str</td><td>Base 58 string to decode. </td></tr>
   </table>
   </dd>
 </dl>
-
-</div>
-</div>
-<a class="anchor" id="a924de38d392b82deb67fcdcdd0e202ec"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void <a class="el" href="_c_b_base58_8h.html#a924de38d392b82deb67fcdcdd0e202ec">CBDecodeBase58Checked</a> </td>
-          <td>(</td>
-          <td class="paramtype">u_int8_t *&#160;</td>
-          <td class="paramname"><em>bytes</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char *&#160;</td>
-          <td class="paramname"><em>str</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Decodes base 58 string into byte data. Checks a 4 byte checksum. </p>
-<dl class="params"><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">bytes</td><td>Pointer to byte data. Must point to memory large enough. </td></tr>
-    <tr><td class="paramname">str</td><td>Base 58 string to decode. </td></tr>
-  </table>
-  </dd>
-</dl>
+<dl class="section return"><dt>Returns:</dt><dd>Byte data as a <a class="el" href="struct_c_b_big_int.html" title="Contains byte data with the length of this data to represent a large integer. The byte data is in lit...">CBBigInt</a>. Is zero on failure. Checksum is included in returned data. </dd></dl>
 
 </div>
 </div>
@@ -254,7 +252,7 @@ Functions</h2></td></tr>
     <ul>
       <li class="navelem"><a class="el" href="_c_b_base58_8h.html">CBBase58.h</a>      </li>
 
-    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
+    <li class="footer">Generated on Wed May 16 2012 02:30:31 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>

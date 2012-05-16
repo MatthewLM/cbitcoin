@@ -6,7 +6,7 @@ var _c_b_message_8h =
     [ "CBFreeProcessMessage", "_c_b_message_8h.html#a4308e4448a4f4266d7fff8ab4e2aa869", null ],
     [ "CBGetMessage", "_c_b_message_8h.html#a4f5bbe55ee316d812474ba6be851ae95", null ],
     [ "CBGetMessageVT", "_c_b_message_8h.html#a4f9cd5c715d68f689b1368e467369609", null ],
-    [ "CBInitMessage", "_c_b_message_8h.html#a5264a96aa18169aa0754dbe2f8ea86f0", null ],
+    [ "CBInitMessage", "_c_b_message_8h.html#a0c246231717b6fb2bf61b46b95f4f54e", null ],
     [ "CBMessageBitcoinSerialise", "_c_b_message_8h.html#a6e86eed223b526d76d581969b4c36f43", null ],
     [ "CBMessageGetLength", "_c_b_message_8h.html#afa1de2f685b5d67a57c8e11ad793eaa2", null ],
     [ "CBMessageMaybeParse", "_c_b_message_8h.html#a9b7eefe034fba3e90b4e62c4d5046a39", null ],
@@ -22,6 +22,6 @@ var _c_b_message_8h =
     [ "CBMessageSetChecksum", "_c_b_message_8h.html#a2b9b359e5a376704224aa8b33e25579a", null ],
     [ "CBMessageUnCache", "_c_b_message_8h.html#a280ab8d20ea0ccc367cb4d97d9eb096c", null ],
     [ "CBMessageUnsafeBitcoinSerialise", "_c_b_message_8h.html#a9ad38c76cdaf8c4b362a3498163f7845", null ],
-    [ "CBNewMessage", "_c_b_message_8h.html#a9389e9764342c9b4d6e22dbfdb8be1cf", null ],
+    [ "CBNewMessage", "_c_b_message_8h.html#ae6328cba4a4377c2e21234edec1a2745", null ],
     [ "CBSetMessageVT", "_c_b_message_8h.html#a3ef4a716122687bfb6accb7386e1543c", null ]
 ];

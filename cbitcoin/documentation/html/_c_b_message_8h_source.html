@@ -116,103 +116,102 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00003"></a>00003 <span class="comment">//  cbitcoin</span>
 <a name="l00004"></a>00004 <span class="comment">//</span>
 <a name="l00005"></a>00005 <span class="comment">//  Created by Matthew Mitchell on 27/04/2012.</span>
-<a name="l00006"></a>00006 <span class="comment">//  Last modified by Matthew Mitchell on 01/05/2012.</span>
-<a name="l00007"></a>00007 <span class="comment">//  Copyright (c) 2012 Matthew Mitchell</span>
-<a name="l00008"></a>00008 <span class="comment">//  </span>
-<a name="l00009"></a>00009 <span class="comment">//  This file is part of cbitcoin.</span>
-<a name="l00010"></a>00010 <span class="comment">//</span>
-<a name="l00011"></a>00011 <span class="comment">//  cbitcoin is free software: you can redistribute it and/or modify</span>
-<a name="l00012"></a>00012 <span class="comment">//  it under the terms of the GNU General Public License as published by</span>
-<a name="l00013"></a>00013 <span class="comment">//  the Free Software Foundation, either version 3 of the License, or</span>
-<a name="l00014"></a>00014 <span class="comment">//  (at your option) any later version.</span>
-<a name="l00015"></a>00015 <span class="comment">//  </span>
-<a name="l00016"></a>00016 <span class="comment">//  cbitcoin is distributed in the hope that it will be useful,</span>
-<a name="l00017"></a>00017 <span class="comment">//  but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
-<a name="l00018"></a>00018 <span class="comment">//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
-<a name="l00019"></a>00019 <span class="comment">//  GNU General Public License for more details.</span>
-<a name="l00020"></a>00020 <span class="comment">//  </span>
-<a name="l00021"></a>00021 <span class="comment">//  You should have received a copy of the GNU General Public License</span>
-<a name="l00022"></a>00022 <span class="comment">//  along with cbitcoin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
-<a name="l00023"></a>00023 
-<a name="l00029"></a>00029 <span class="preprocessor">#ifndef CBMESSAGEH</span>
-<a name="l00030"></a>00030 <span class="preprocessor"></span><span class="preprocessor">#define CBMESSAGEH</span>
-<a name="l00031"></a>00031 <span class="preprocessor"></span>
-<a name="l00032"></a>00032 <span class="comment">//  Includes</span>
-<a name="l00033"></a>00033 
-<a name="l00034"></a>00034 <span class="preprocessor">#include &lt;stdlib.h&gt;</span>
-<a name="l00035"></a>00035 <span class="preprocessor">#include &lt;stdbool.h&gt;</span>
-<a name="l00036"></a>00036 <span class="preprocessor">#include &quot;<a class="code" href="_c_b_sha256_hash_8h.html" title="Stores SHA-256 hashes as byte arrays. Inherits CBByteArray.">CBSha256Hash.h</a>&quot;</span>
-<a name="l00037"></a>00037 <span class="preprocessor">#include &quot;<a class="code" href="_c_b_var_int_8h.html" title="Simple structure for variable size integers information.">CBVarInt.h</a>&quot;</span>
-<a name="l00038"></a>00038 
-<a name="l00042"></a><a class="code" href="struct_c_b_message_v_t.html">00042</a> <span class="keyword">typedef</span> <span class="keyword">struct</span>{
-<a name="l00043"></a><a class="code" href="struct_c_b_message_v_t.html#a693991244622ba991fb19434c0c65e6d">00043</a>         <a class="code" href="struct_c_b_object_v_t.html" title="Virtual function table for CBObject.">CBObjectVT</a> <a class="code" href="struct_c_b_message_v_t.html#a693991244622ba991fb19434c0c65e6d">base</a>; 
-<a name="l00044"></a><a class="code" href="struct_c_b_message_v_t.html#a0e880c80ba59b9c85064e4d8317e3937">00044</a>         void (*maybeParse)(<span class="keywordtype">void</span> *); 
-<a name="l00045"></a><a class="code" href="struct_c_b_message_v_t.html#ac7f6365fca5a2e8f905d12eec313533e">00045</a>         void (*parse)(<span class="keywordtype">void</span> *); 
-<a name="l00046"></a><a class="code" href="struct_c_b_message_v_t.html#af2aafeea778a4476cba84b27fdc3ec7f">00046</a>         void (*parseLite)(<span class="keywordtype">void</span> *); 
-<a name="l00047"></a><a class="code" href="struct_c_b_message_v_t.html#a827e3640a02177f85408b911a99e49da">00047</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * (*processSerialisation)(<span class="keywordtype">void</span> *); 
-<a name="l00048"></a><a class="code" href="struct_c_b_message_v_t.html#ab4cd3b5cf7b2af2c13ec42e4bc172f5a">00048</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * (*readBytes)(<span class="keywordtype">void</span> *,int); 
-<a name="l00049"></a><a class="code" href="struct_c_b_message_v_t.html#a18e9a3b636a393f4845c6de724225223">00049</a>         u_int64_t (*readVarInt)(<span class="keywordtype">void</span> *); 
-<a name="l00050"></a><a class="code" href="struct_c_b_message_v_t.html#a9adf9ae862b42a727b5f3bc2aa3d7b9a">00050</a>         void (*unCache)(<span class="keywordtype">void</span> *); 
-<a name="l00051"></a><a class="code" href="struct_c_b_message_v_t.html#a737a1420a3b85bf17646f67f71bece4b">00051</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * (*unsafeSerialise)(<span class="keywordtype">void</span> *); 
-<a name="l00052"></a>00052 }<a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a>;
-<a name="l00053"></a>00053 
-<a name="l00057"></a><a class="code" href="struct_c_b_message.html">00057</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a>{
-<a name="l00058"></a><a class="code" href="struct_c_b_message.html#a85c7cc70d743217b3789a64a74756995">00058</a>         <a class="code" href="struct_c_b_object.html" title="Base structure for all other structures.">CBObject</a> <a class="code" href="struct_c_b_message.html#a85c7cc70d743217b3789a64a74756995">base</a>; 
-<a name="l00059"></a><a class="code" href="struct_c_b_message.html#af3b2b8ffe2b1effcf3983354beb28099">00059</a>         <span class="keywordtype">int</span> <a class="code" href="struct_c_b_message.html#af3b2b8ffe2b1effcf3983354beb28099">cursor</a>; 
-<a name="l00060"></a><a class="code" href="struct_c_b_message.html#a9f59b34b1f25fe00023291b678246bcc">00060</a>         <span class="keywordtype">int</span> <a class="code" href="struct_c_b_message.html#a9f59b34b1f25fe00023291b678246bcc">length</a>; 
-<a name="l00061"></a><a class="code" href="struct_c_b_message.html#a43112a214169a8345f988d1d1341102f">00061</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * <a class="code" href="struct_c_b_message.html#a43112a214169a8345f988d1d1341102f">bytes</a>; 
-<a name="l00062"></a>00062         <span class="keywordtype">bool</span> parsed;
-<a name="l00063"></a>00063         <span class="keywordtype">bool</span> recached;
-<a name="l00064"></a><a class="code" href="struct_c_b_message.html#a1108359840ff643943e08d9c8cd9a648">00064</a>         <span class="keywordtype">bool</span> <a class="code" href="struct_c_b_message.html#a1108359840ff643943e08d9c8cd9a648">parseLazy</a>; 
-<a name="l00065"></a><a class="code" href="struct_c_b_message.html#a24a62a1db73189272958652fa4ef8b8d">00065</a>         <span class="keywordtype">bool</span> <a class="code" href="struct_c_b_message.html#a24a62a1db73189272958652fa4ef8b8d">parseRetain</a>; 
-<a name="l00066"></a><a class="code" href="struct_c_b_message.html#a13693258a12fcb5828fbc1eb6e9e9e66">00066</a>         <span class="keywordtype">int</span> <a class="code" href="struct_c_b_message.html#a13693258a12fcb5828fbc1eb6e9e9e66">protocolVersion</a>; 
-<a name="l00067"></a>00067         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * checksum;
-<a name="l00068"></a><a class="code" href="struct_c_b_message.html#a2aec9f694830e518722ab4bc4e275527">00068</a>         <span class="keywordtype">void</span> * <a class="code" href="struct_c_b_message.html#a2aec9f694830e518722ab4bc4e275527">params</a>; 
-<a name="l00069"></a><a class="code" href="struct_c_b_message.html#a4f3c89642b33624d384d773b0b82c894">00069</a>         <a class="code" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> * <a class="code" href="struct_c_b_message.html#a4f3c89642b33624d384d773b0b82c894">events</a>; 
-<a name="l00070"></a>00070 } <a class="code" href="_c_b_message_8h.html#a7158c1681f18a42f90d0a5a01d6e15bc" title="Structure for CBMessage objects.">CBMessage</a>;
-<a name="l00071"></a>00071 
-<a name="l00076"></a>00076 <a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * CBNewMessage(<span class="keywordtype">void</span> * params,<a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * bytes,<span class="keywordtype">int</span> length,<span class="keywordtype">int</span> protocolVersion,<span class="keywordtype">bool</span> parseLazy,<span class="keywordtype">bool</span> parseRetain,<a class="code" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> * events);
-<a name="l00077"></a>00077 
-<a name="l00082"></a>00082 <a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a> * CBCreateMessageVT(<span class="keywordtype">void</span>);
-<a name="l00083"></a>00083 
-<a name="l00088"></a>00088 <span class="keywordtype">void</span> CBSetMessageVT(<a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a> * VT);
-<a name="l00089"></a>00089 
-<a name="l00095"></a>00095 <a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a> * CBGetMessageVT(<span class="keywordtype">void</span> * <span class="keyword">self</span>);
-<a name="l00096"></a>00096 
-<a name="l00102"></a>00102 <a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * CBGetMessage(<span class="keywordtype">void</span> * <span class="keyword">self</span>);
-<a name="l00103"></a>00103 
-<a name="l00109"></a>00109 <span class="keywordtype">bool</span> CBInitMessage(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>,<span class="keywordtype">void</span> * params,<a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * bytes,<span class="keywordtype">int</span> length,<span class="keywordtype">int</span> protocolVersion,<span class="keywordtype">bool</span> parseLazy,<span class="keywordtype">bool</span> parseRetain,<a class="code" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> * events);
-<a name="l00110"></a>00110 
-<a name="l00115"></a>00115 <span class="keywordtype">void</span> CBFreeMessage(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00116"></a>00116 
-<a name="l00121"></a>00121 <span class="keywordtype">void</span> CBFreeProcessMessage(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00122"></a>00122 
-<a name="l00123"></a>00123 <span class="comment">//  Functions</span>
-<a name="l00124"></a>00124 
-<a name="l00130"></a>00130 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageBitcoinSerialise(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00136"></a>00136 <span class="keywordtype">int</span> CBMessageGetLength(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00137"></a>00137 <span class="keywordtype">void</span> CBMessageMaybeParse(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00138"></a>00138 <span class="keywordtype">void</span> CBMessageParse(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00139"></a>00139 <span class="keywordtype">void</span> CBMessageParseLite(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00145"></a>00145 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageProcessBitcoinSerialise(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00151"></a>00151 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageReadByteArray(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00158"></a>00158 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageReadBytes(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>,<span class="keywordtype">int</span> length);
-<a name="l00164"></a>00164 <a class="code" href="struct_c_b_sha256_hash.html" title="Structure for CBSha256Hash objects.">CBSha256Hash</a> * CBMessageReadHash(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00170"></a>00170 u_int32_t CBMessageReadUInt32(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00176"></a>00176 u_int64_t CBMessageReadUInt64(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00182"></a>00182 u_int64_t CBMessageReadVarInt(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00189"></a>00189 <span class="keywordtype">bool</span> CBMessageSetChecksum(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>,<a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * checksum);
-<a name="l00194"></a>00194 <span class="keywordtype">void</span> CBMessageUnCache(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00200"></a>00200 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageUnsafeBitcoinSerialise(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
-<a name="l00201"></a>00201 
-<a name="l00202"></a>00202 <span class="preprocessor">#endif</span>
+<a name="l00006"></a>00006 <span class="comment">//  Copyright (c) 2012 Matthew Mitchell</span>
+<a name="l00007"></a>00007 <span class="comment">//  </span>
+<a name="l00008"></a>00008 <span class="comment">//  This file is part of cbitcoin.</span>
+<a name="l00009"></a>00009 <span class="comment">//</span>
+<a name="l00010"></a>00010 <span class="comment">//  cbitcoin is free software: you can redistribute it and/or modify</span>
+<a name="l00011"></a>00011 <span class="comment">//  it under the terms of the GNU General Public License as published by</span>
+<a name="l00012"></a>00012 <span class="comment">//  the Free Software Foundation, either version 3 of the License, or</span>
+<a name="l00013"></a>00013 <span class="comment">//  (at your option) any later version.</span>
+<a name="l00014"></a>00014 <span class="comment">//  </span>
+<a name="l00015"></a>00015 <span class="comment">//  cbitcoin is distributed in the hope that it will be useful,</span>
+<a name="l00016"></a>00016 <span class="comment">//  but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<a name="l00017"></a>00017 <span class="comment">//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<a name="l00018"></a>00018 <span class="comment">//  GNU General Public License for more details.</span>
+<a name="l00019"></a>00019 <span class="comment">//  </span>
+<a name="l00020"></a>00020 <span class="comment">//  You should have received a copy of the GNU General Public License</span>
+<a name="l00021"></a>00021 <span class="comment">//  along with cbitcoin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+<a name="l00022"></a>00022 
+<a name="l00028"></a>00028 <span class="preprocessor">#ifndef CBMESSAGEH</span>
+<a name="l00029"></a>00029 <span class="preprocessor"></span><span class="preprocessor">#define CBMESSAGEH</span>
+<a name="l00030"></a>00030 <span class="preprocessor"></span>
+<a name="l00031"></a>00031 <span class="comment">//  Includes</span>
+<a name="l00032"></a>00032 
+<a name="l00033"></a>00033 <span class="preprocessor">#include &lt;stdlib.h&gt;</span>
+<a name="l00034"></a>00034 <span class="preprocessor">#include &lt;stdbool.h&gt;</span>
+<a name="l00035"></a>00035 <span class="preprocessor">#include &quot;<a class="code" href="_c_b_sha256_hash_8h.html" title="Stores SHA-256 hashes as byte arrays. Inherits CBByteArray.">CBSha256Hash.h</a>&quot;</span>
+<a name="l00036"></a>00036 <span class="preprocessor">#include &quot;<a class="code" href="_c_b_var_int_8h.html" title="Simple structure for variable size integers information.">CBVarInt.h</a>&quot;</span>
+<a name="l00037"></a>00037 
+<a name="l00041"></a><a class="code" href="struct_c_b_message_v_t.html">00041</a> <span class="keyword">typedef</span> <span class="keyword">struct</span>{
+<a name="l00042"></a><a class="code" href="struct_c_b_message_v_t.html#a693991244622ba991fb19434c0c65e6d">00042</a>         <a class="code" href="struct_c_b_object_v_t.html" title="Virtual function table for CBObject.">CBObjectVT</a> <a class="code" href="struct_c_b_message_v_t.html#a693991244622ba991fb19434c0c65e6d">base</a>; 
+<a name="l00043"></a><a class="code" href="struct_c_b_message_v_t.html#a0e880c80ba59b9c85064e4d8317e3937">00043</a>         void (*maybeParse)(<span class="keywordtype">void</span> *); 
+<a name="l00044"></a><a class="code" href="struct_c_b_message_v_t.html#ac7f6365fca5a2e8f905d12eec313533e">00044</a>         void (*parse)(<span class="keywordtype">void</span> *); 
+<a name="l00045"></a><a class="code" href="struct_c_b_message_v_t.html#af2aafeea778a4476cba84b27fdc3ec7f">00045</a>         void (*parseLite)(<span class="keywordtype">void</span> *); 
+<a name="l00046"></a><a class="code" href="struct_c_b_message_v_t.html#a827e3640a02177f85408b911a99e49da">00046</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * (*processSerialisation)(<span class="keywordtype">void</span> *); 
+<a name="l00047"></a><a class="code" href="struct_c_b_message_v_t.html#ab4cd3b5cf7b2af2c13ec42e4bc172f5a">00047</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * (*readBytes)(<span class="keywordtype">void</span> *,int); 
+<a name="l00048"></a><a class="code" href="struct_c_b_message_v_t.html#a18e9a3b636a393f4845c6de724225223">00048</a>         u_int64_t (*readVarInt)(<span class="keywordtype">void</span> *); 
+<a name="l00049"></a><a class="code" href="struct_c_b_message_v_t.html#a9adf9ae862b42a727b5f3bc2aa3d7b9a">00049</a>         void (*unCache)(<span class="keywordtype">void</span> *); 
+<a name="l00050"></a><a class="code" href="struct_c_b_message_v_t.html#a737a1420a3b85bf17646f67f71bece4b">00050</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * (*unsafeSerialise)(<span class="keywordtype">void</span> *); 
+<a name="l00051"></a>00051 }<a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a>;
+<a name="l00052"></a>00052 
+<a name="l00056"></a><a class="code" href="struct_c_b_message.html">00056</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a>{
+<a name="l00057"></a><a class="code" href="struct_c_b_message.html#a85c7cc70d743217b3789a64a74756995">00057</a>         <a class="code" href="struct_c_b_object.html" title="Base structure for all other structures.">CBObject</a> <a class="code" href="struct_c_b_message.html#a85c7cc70d743217b3789a64a74756995">base</a>; 
+<a name="l00058"></a><a class="code" href="struct_c_b_message.html#af3b2b8ffe2b1effcf3983354beb28099">00058</a>         <span class="keywordtype">int</span> <a class="code" href="struct_c_b_message.html#af3b2b8ffe2b1effcf3983354beb28099">cursor</a>; 
+<a name="l00059"></a><a class="code" href="struct_c_b_message.html#a9f59b34b1f25fe00023291b678246bcc">00059</a>         <span class="keywordtype">int</span> <a class="code" href="struct_c_b_message.html#a9f59b34b1f25fe00023291b678246bcc">length</a>; 
+<a name="l00060"></a><a class="code" href="struct_c_b_message.html#a43112a214169a8345f988d1d1341102f">00060</a>         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * <a class="code" href="struct_c_b_message.html#a43112a214169a8345f988d1d1341102f">bytes</a>; 
+<a name="l00061"></a>00061         <span class="keywordtype">bool</span> parsed;
+<a name="l00062"></a>00062         <span class="keywordtype">bool</span> recached;
+<a name="l00063"></a><a class="code" href="struct_c_b_message.html#a1108359840ff643943e08d9c8cd9a648">00063</a>         <span class="keywordtype">bool</span> <a class="code" href="struct_c_b_message.html#a1108359840ff643943e08d9c8cd9a648">parseLazy</a>; 
+<a name="l00064"></a><a class="code" href="struct_c_b_message.html#a24a62a1db73189272958652fa4ef8b8d">00064</a>         <span class="keywordtype">bool</span> <a class="code" href="struct_c_b_message.html#a24a62a1db73189272958652fa4ef8b8d">parseRetain</a>; 
+<a name="l00065"></a><a class="code" href="struct_c_b_message.html#a13693258a12fcb5828fbc1eb6e9e9e66">00065</a>         <span class="keywordtype">int</span> <a class="code" href="struct_c_b_message.html#a13693258a12fcb5828fbc1eb6e9e9e66">protocolVersion</a>; 
+<a name="l00066"></a>00066         <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * checksum;
+<a name="l00067"></a><a class="code" href="struct_c_b_message.html#a2aec9f694830e518722ab4bc4e275527">00067</a>         <span class="keywordtype">void</span> * <a class="code" href="struct_c_b_message.html#a2aec9f694830e518722ab4bc4e275527">params</a>; 
+<a name="l00068"></a><a class="code" href="struct_c_b_message.html#aa72ede1b7ab88e5ce4809f9e7df86c7d">00068</a>         <a class="code" href="struct_c_b_events.html" title="Structure holding event callback function pointers.">CBEvents</a> * <a class="code" href="struct_c_b_message.html#aa72ede1b7ab88e5ce4809f9e7df86c7d">events</a>; 
+<a name="l00069"></a>00069 } <a class="code" href="_c_b_message_8h.html#a7158c1681f18a42f90d0a5a01d6e15bc" title="Structure for CBMessage objects.">CBMessage</a>;
+<a name="l00070"></a>00070 
+<a name="l00075"></a>00075 <a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * CBNewMessage(<span class="keywordtype">void</span> * params,<a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * bytes,<span class="keywordtype">int</span> length,<span class="keywordtype">int</span> protocolVersion,<span class="keywordtype">bool</span> parseLazy,<span class="keywordtype">bool</span> parseRetain,<a class="code" href="struct_c_b_events.html" title="Structure holding event callback function pointers.">CBEvents</a> * events);
+<a name="l00076"></a>00076 
+<a name="l00081"></a>00081 <a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a> * CBCreateMessageVT(<span class="keywordtype">void</span>);
+<a name="l00082"></a>00082 
+<a name="l00087"></a>00087 <span class="keywordtype">void</span> CBSetMessageVT(<a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a> * VT);
+<a name="l00088"></a>00088 
+<a name="l00094"></a>00094 <a class="code" href="struct_c_b_message_v_t.html" title="Virtual function table for CBMessage.">CBMessageVT</a> * CBGetMessageVT(<span class="keywordtype">void</span> * <span class="keyword">self</span>);
+<a name="l00095"></a>00095 
+<a name="l00101"></a>00101 <a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * CBGetMessage(<span class="keywordtype">void</span> * <span class="keyword">self</span>);
+<a name="l00102"></a>00102 
+<a name="l00108"></a>00108 <span class="keywordtype">bool</span> CBInitMessage(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>,<span class="keywordtype">void</span> * params,<a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * bytes,<span class="keywordtype">int</span> length,<span class="keywordtype">int</span> protocolVersion,<span class="keywordtype">bool</span> parseLazy,<span class="keywordtype">bool</span> parseRetain,<a class="code" href="struct_c_b_events.html" title="Structure holding event callback function pointers.">CBEvents</a> * events);
+<a name="l00109"></a>00109 
+<a name="l00114"></a>00114 <span class="keywordtype">void</span> CBFreeMessage(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00115"></a>00115 
+<a name="l00120"></a>00120 <span class="keywordtype">void</span> CBFreeProcessMessage(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00121"></a>00121 
+<a name="l00122"></a>00122 <span class="comment">//  Functions</span>
+<a name="l00123"></a>00123 
+<a name="l00129"></a>00129 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageBitcoinSerialise(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00135"></a>00135 <span class="keywordtype">int</span> CBMessageGetLength(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00136"></a>00136 <span class="keywordtype">void</span> CBMessageMaybeParse(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00137"></a>00137 <span class="keywordtype">void</span> CBMessageParse(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00138"></a>00138 <span class="keywordtype">void</span> CBMessageParseLite(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00144"></a>00144 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageProcessBitcoinSerialise(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00150"></a>00150 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageReadByteArray(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00157"></a>00157 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageReadBytes(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>,<span class="keywordtype">int</span> length);
+<a name="l00163"></a>00163 <a class="code" href="struct_c_b_sha256_hash.html" title="Structure for CBSha256Hash objects.">CBSha256Hash</a> * CBMessageReadHash(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00169"></a>00169 u_int32_t CBMessageReadUInt32(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00175"></a>00175 u_int64_t CBMessageReadUInt64(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00181"></a>00181 u_int64_t CBMessageReadVarInt(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00188"></a>00188 <span class="keywordtype">bool</span> CBMessageSetChecksum(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>,<a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * checksum);
+<a name="l00193"></a>00193 <span class="keywordtype">void</span> CBMessageUnCache(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00199"></a>00199 <a class="code" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> * CBMessageUnsafeBitcoinSerialise(<a class="code" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> * <span class="keyword">self</span>);
+<a name="l00200"></a>00200 
+<a name="l00201"></a>00201 <span class="preprocessor">#endif</span>
 </pre></div></div><!-- contents -->
 </div>
   <div id="nav-path" class="navpath">
     <ul>
       <li class="navelem"><a class="el" href="_c_b_message_8h.html">CBMessage.h</a>      </li>
 
-    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
+    <li class="footer">Generated on Wed May 16 2012 02:30:31 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>

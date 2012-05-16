@@ -118,6 +118,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <p>Represents a key, begining with a version byte and ending with a checksum. Inherits <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="_c_b_byte_array_8h_source.html">CBByteArray.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="_c_b_base58_8h_source.html">CBBase58.h</a>&quot;</code><br/>
 </div>
 <p><a href="_c_b_version_checksum_bytes_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -129,8 +130,10 @@ Data Structures</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure for <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> objects.  <a href="struct_c_b_version_checksum_bytes.html#details">More...</a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a54fa9def3d34d7b932ef670e4a07f1c7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a54fa9def3d34d7b932ef670e4a07f1c7">CBNewVersionChecksumBytesFromString</a> (char *string, <a class="el" href="struct_c_b_engine.html">CBEngine</a> *events)</td></tr>
-<tr class="memdesc:a54fa9def3d34d7b932ef670e4a07f1c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a string.  <a href="#a54fa9def3d34d7b932ef670e4a07f1c7"></a><br/></td></tr>
+<tr class="memitem:a19935b23103863e7a626252099537ba8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a19935b23103863e7a626252099537ba8">CBNewVersionChecksumBytesFromString</a> (char *string, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events, <a class="el" href="struct_c_b_dependencies.html">CBDependencies</a> *dependencies)</td></tr>
+<tr class="memdesc:a19935b23103863e7a626252099537ba8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a base-58 encoded string. The base-58 string will be validated by it's checksum. This returns NULL if the string is invalid. The CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT error is given if the decoded data is less than 4 bytes. CB_ERROR_BASE58_DECODE_CHECK_INVALID is given if the checksum does not match.  <a href="#a19935b23103863e7a626252099537ba8"></a><br/></td></tr>
+<tr class="memitem:a231f45f46cb34726b4ee48b5b6f091db"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a231f45f46cb34726b4ee48b5b6f091db">CBNewVersionChecksumBytesFromBytes</a> (u_int8_t *bytes, u_int32_t size, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events)</td></tr>
+<tr class="memdesc:a231f45f46cb34726b4ee48b5b6f091db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from bytes.  <a href="#a231f45f46cb34726b4ee48b5b6f091db"></a><br/></td></tr>
 <tr class="memitem:ad7e3724fb0ffb8b105217a54c43d5812"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_version_checksum_bytes_v_t.html">CBVersionChecksumBytesVT</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#ad7e3724fb0ffb8b105217a54c43d5812">CBCreateVersionChecksumBytesVT</a> (void)</td></tr>
 <tr class="memdesc:ad7e3724fb0ffb8b105217a54c43d5812"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_version_checksum_bytes_v_t.html" title="Virtual function table for CBVersionChecksumBytes.">CBVersionChecksumBytesVT</a>.  <a href="#ad7e3724fb0ffb8b105217a54c43d5812"></a><br/></td></tr>
 <tr class="memitem:a9c165b38bc140558f023d758d2f4b19c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a9c165b38bc140558f023d758d2f4b19c">CBSetVersionChecksumBytesVT</a> (<a class="el" href="struct_c_b_version_checksum_bytes_v_t.html">CBVersionChecksumBytesVT</a> *VT)</td></tr>
@@ -139,12 +142,16 @@ Functions</h2></td></tr>
 <tr class="memdesc:af0342f05c77aaba9b1b03f3d80b7c607"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the <a class="el" href="struct_c_b_version_checksum_bytes_v_t.html" title="Virtual function table for CBVersionChecksumBytes.">CBVersionChecksumBytesVT</a>. Use this to avoid casts.  <a href="#af0342f05c77aaba9b1b03f3d80b7c607"></a><br/></td></tr>
 <tr class="memitem:a0643f9ed78bb46c3e2255307480d79dc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a0643f9ed78bb46c3e2255307480d79dc">CBGetVersionChecksumBytes</a> (void *self)</td></tr>
 <tr class="memdesc:a0643f9ed78bb46c3e2255307480d79dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> from another object. Use this to avoid casts.  <a href="#a0643f9ed78bb46c3e2255307480d79dc"></a><br/></td></tr>
-<tr class="memitem:a74f1a871c5961d46fcd57bb80a197df4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a74f1a871c5961d46fcd57bb80a197df4">CBInitVersionChecksumBytesFromString</a> (<a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *self, char *string, <a class="el" href="struct_c_b_engine.html">CBEngine</a> *events)</td></tr>
-<tr class="memdesc:a74f1a871c5961d46fcd57bb80a197df4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a string.  <a href="#a74f1a871c5961d46fcd57bb80a197df4"></a><br/></td></tr>
+<tr class="memitem:a50763102b7958fff7248a74f5ee97bc9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a50763102b7958fff7248a74f5ee97bc9">CBInitVersionChecksumBytesFromString</a> (<a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *self, char *string, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events, <a class="el" href="struct_c_b_dependencies.html">CBDependencies</a> *dependencies)</td></tr>
+<tr class="memdesc:a50763102b7958fff7248a74f5ee97bc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a string.  <a href="#a50763102b7958fff7248a74f5ee97bc9"></a><br/></td></tr>
+<tr class="memitem:afb8b44135b7836ced5c18a5338cfb016"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#afb8b44135b7836ced5c18a5338cfb016">CBInitVersionChecksumBytesFromBytes</a> (<a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *self, u_int8_t *bytes, u_int32_t size, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events)</td></tr>
+<tr class="memdesc:afb8b44135b7836ced5c18a5338cfb016"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from bytes.  <a href="#afb8b44135b7836ced5c18a5338cfb016"></a><br/></td></tr>
 <tr class="memitem:ab1d860b21c648373cb0404aa408138ce"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#ab1d860b21c648373cb0404aa408138ce">CBFreeVersionChecksumBytes</a> (<a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *self)</td></tr>
 <tr class="memdesc:ab1d860b21c648373cb0404aa408138ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object.  <a href="#ab1d860b21c648373cb0404aa408138ce"></a><br/></td></tr>
 <tr class="memitem:a80e39b97d7634e79ec3f4a1723eeb292"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a80e39b97d7634e79ec3f4a1723eeb292">CBFreeProcessVersionChecksumBytes</a> (<a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *self)</td></tr>
 <tr class="memdesc:a80e39b97d7634e79ec3f4a1723eeb292"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does the processing to free a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. Should be called by the children when freeing objects.  <a href="#a80e39b97d7634e79ec3f4a1723eeb292"></a><br/></td></tr>
+<tr class="memitem:a783fc2a59fff0842f698919a5850d21b"><td class="memItemLeft" align="right" valign="top">u_int8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_version_checksum_bytes_8h.html#a783fc2a59fff0842f698919a5850d21b">CBVersionChecksumBytesGetVersion</a> (<a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *self)</td></tr>
+<tr class="memdesc:a783fc2a59fff0842f698919a5850d21b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the version for a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object.  <a href="#a783fc2a59fff0842f698919a5850d21b"></a><br/></td></tr>
 </table>
 <hr/><a name="details" id="details"></a><h2>Detailed Description</h2>
 <div class="textblock"><p>Represents a key, begining with a version byte and ending with a checksum. Inherits <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>. </p>
@@ -271,12 +278,63 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a74f1a871c5961d46fcd57bb80a197df4"></a>
+<a class="anchor" id="afb8b44135b7836ced5c18a5338cfb016"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="_c_b_version_checksum_bytes_8h.html#a74f1a871c5961d46fcd57bb80a197df4">CBInitVersionChecksumBytesFromString</a> </td>
+          <td class="memname">bool <a class="el" href="_c_b_version_checksum_bytes_8h.html#afb8b44135b7836ced5c18a5338cfb016">CBInitVersionChecksumBytesFromBytes</a> </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td>
+          <td class="paramname"><em>self</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u_int8_t *&#160;</td>
+          <td class="paramname"><em>bytes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u_int32_t&#160;</td>
+          <td class="paramname"><em>size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
+          <td class="paramname"><em>events</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Initialises a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from bytes. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object to initialise. </td></tr>
+    <tr><td class="paramname">bytes</td><td>The bytes for the <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </td></tr>
+    <tr><td class="paramname">size</td><td>The size of the byte data. </td></tr>
+    <tr><td class="paramname">events</td><td>A <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> for errors. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>true on success, false on failure. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a50763102b7958fff7248a74f5ee97bc9"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="_c_b_version_checksum_bytes_8h.html#a50763102b7958fff7248a74f5ee97bc9">CBInitVersionChecksumBytesFromString</a> </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td>
           <td class="paramname"><em>self</em>, </td>
@@ -290,8 +348,14 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="struct_c_b_engine.html">CBEngine</a> *&#160;</td>
-          <td class="paramname"><em>events</em>&#160;</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
+          <td class="paramname"><em>events</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_dependencies.html">CBDependencies</a> *&#160;</td>
+          <td class="paramname"><em>dependencies</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -305,8 +369,9 @@ Functions</h2></td></tr>
 <p>Initialises a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a string. </p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object to initialise </td></tr>
+    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object to initialise. </td></tr>
     <tr><td class="paramname">string</td><td>A string to make a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </td></tr>
+    <tr><td class="paramname">version</td><td>The network version for this address. </td></tr>
   </table>
   </dd>
 </dl>
@@ -314,20 +379,26 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a54fa9def3d34d7b932ef670e4a07f1c7"></a>
+<a class="anchor" id="a231f45f46cb34726b4ee48b5b6f091db"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a>* <a class="el" href="_c_b_version_checksum_bytes_8h.html#a54fa9def3d34d7b932ef670e4a07f1c7">CBNewVersionChecksumBytesFromString</a> </td>
+          <td class="memname"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a>* <a class="el" href="_c_b_version_checksum_bytes_8h.html#a231f45f46cb34726b4ee48b5b6f091db">CBNewVersionChecksumBytesFromBytes</a> </td>
           <td>(</td>
-          <td class="paramtype">char *&#160;</td>
-          <td class="paramname"><em>string</em>, </td>
+          <td class="paramtype">u_int8_t *&#160;</td>
+          <td class="paramname"><em>bytes</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="struct_c_b_engine.html">CBEngine</a> *&#160;</td>
+          <td class="paramtype">u_int32_t&#160;</td>
+          <td class="paramname"><em>size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
           <td class="paramname"><em>events</em>&#160;</td>
         </tr>
         <tr>
@@ -339,15 +410,59 @@ Functions</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Creates a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a string. </p>
+<p>Creates a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from bytes. </p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">string</td><td>A string to make a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </td></tr>
+    <tr><td class="paramname">bytes</td><td>The bytes for the <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </td></tr>
+    <tr><td class="paramname">size</td><td>The size of the byte data. </td></tr>
     <tr><td class="paramname">events</td><td>A <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> for errors. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns:</dt><dd>A new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a19935b23103863e7a626252099537ba8"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a>* <a class="el" href="_c_b_version_checksum_bytes_8h.html#a19935b23103863e7a626252099537ba8">CBNewVersionChecksumBytesFromString</a> </td>
+          <td>(</td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
+          <td class="paramname"><em>events</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_dependencies.html">CBDependencies</a> *&#160;</td>
+          <td class="paramname"><em>dependencies</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Creates a new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object from a base-58 encoded string. The base-58 string will be validated by it's checksum. This returns NULL if the string is invalid. The CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT error is given if the decoded data is less than 4 bytes. CB_ERROR_BASE58_DECODE_CHECK_INVALID is given if the checksum does not match. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">string</td><td>A base-58 encoded string to make a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </td></tr>
+    <tr><td class="paramname">events</td><td>A <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> for errors. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>A new <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object or NULL on failure. </dd></dl>
 
 </div>
 </div>
@@ -376,13 +491,39 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="a783fc2a59fff0842f698919a5850d21b"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">u_int8_t <a class="el" href="_c_b_version_checksum_bytes_8h.html#a783fc2a59fff0842f698919a5850d21b">CBVersionChecksumBytesGetVersion</a> </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_version_checksum_bytes.html">CBVersionChecksumBytes</a> *&#160;</td>
+          <td class="paramname"><em>self</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Gets the version for a <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_version_checksum_bytes.html" title="Structure for CBVersionChecksumBytes objects.">CBVersionChecksumBytes</a> object. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>The version code. The Macros CB_PRODUCTION_NETWORK and CB_TEST_NETWORK should correspond to this. </dd></dl>
+
+</div>
+</div>
 </div><!-- contents -->
 </div>
   <div id="nav-path" class="navpath">
     <ul>
       <li class="navelem"><a class="el" href="_c_b_version_checksum_bytes_8h.html">CBVersionChecksumBytes.h</a>      </li>
 
-    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
+    <li class="footer">Generated on Wed May 16 2012 02:30:32 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>

@@ -117,7 +117,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 <p>Provides an interface to a memory block as bytes. Many CBByteArrays can refer to the same memory block with different offsets and lengths. Inherits <a class="el" href="struct_c_b_object.html" title="Base structure for all other structures.">CBObject</a>.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;<a class="el" href="_c_b_engine_8h_source.html">CBEngine.h</a>&quot;</code><br/>
+<div class="textblock"><code>#include &quot;<a class="el" href="_c_b_object_8h_source.html">CBObject.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="_c_b_events_8h_source.html">CBEvents.h</a>&quot;</code><br/>
 <code>#include &lt;stdbool.h&gt;</code><br/>
 <code>#include &lt;string.h&gt;</code><br/>
 </div>
@@ -133,10 +134,12 @@ Data Structures</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure for <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> objects.  <a href="struct_c_b_byte_array.html#details">More...</a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ace6d975a3267b8734908623bfdbbcabf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#ace6d975a3267b8734908623bfdbbcabf">CBNewByteArrayOfSize</a> (int size, <a class="el" href="struct_c_b_engine.html">CBEngine</a> *events)</td></tr>
-<tr class="memdesc:ace6d975a3267b8734908623bfdbbcabf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an empty <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object.  <a href="#ace6d975a3267b8734908623bfdbbcabf"></a><br/></td></tr>
-<tr class="memitem:a859febfe5ad9569fa9d0f996fbb81a81"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a859febfe5ad9569fa9d0f996fbb81a81">CBNewByteArraySubReference</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *ref, int offset, int length)</td></tr>
-<tr class="memdesc:a859febfe5ad9569fa9d0f996fbb81a81"><td class="mdescLeft">&#160;</td><td class="mdescRight">References a subsection of an <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>.  <a href="#a859febfe5ad9569fa9d0f996fbb81a81"></a><br/></td></tr>
+<tr class="memitem:a5fe2d7a160b34d6dd512eec9b0932c6e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a5fe2d7a160b34d6dd512eec9b0932c6e">CBNewByteArrayOfSize</a> (u_int32_t size, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events)</td></tr>
+<tr class="memdesc:a5fe2d7a160b34d6dd512eec9b0932c6e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an empty <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object.  <a href="#a5fe2d7a160b34d6dd512eec9b0932c6e"></a><br/></td></tr>
+<tr class="memitem:abad170e840184076acf557f4293822a8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#abad170e840184076acf557f4293822a8">CBNewByteArraySubReference</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *ref, u_int32_t offset, u_int32_t length)</td></tr>
+<tr class="memdesc:abad170e840184076acf557f4293822a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">References a subsection of an <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>.  <a href="#abad170e840184076acf557f4293822a8"></a><br/></td></tr>
+<tr class="memitem:a460f4124f9ea8430264b7cdf1432cde5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a460f4124f9ea8430264b7cdf1432cde5">CBNewByteArrayWithData</a> (u_int8_t *data, u_int32_t size, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events)</td></tr>
+<tr class="memdesc:a460f4124f9ea8430264b7cdf1432cde5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> using data.  <a href="#a460f4124f9ea8430264b7cdf1432cde5"></a><br/></td></tr>
 <tr class="memitem:a16c95d91fe956f70e1b1056054500285"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array_v_t.html">CBByteArrayVT</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a16c95d91fe956f70e1b1056054500285">CBCreateByteArrayVT</a> ()</td></tr>
 <tr class="memdesc:a16c95d91fe956f70e1b1056054500285"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_byte_array_v_t.html" title="Virtual function table for CBByteArray.">CBByteArrayVT</a>.  <a href="#a16c95d91fe956f70e1b1056054500285"></a><br/></td></tr>
 <tr class="memitem:a50d9260b9c5dc19879afdb1332af5e6d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a50d9260b9c5dc19879afdb1332af5e6d">CBSetByteArrayVT</a> (<a class="el" href="struct_c_b_byte_array_v_t.html">CBByteArrayVT</a> *VT)</td></tr>
@@ -145,10 +148,12 @@ Functions</h2></td></tr>
 <tr class="memdesc:a88178a1f4daf43e4291c64cf4060e2bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the <a class="el" href="struct_c_b_byte_array_v_t.html" title="Virtual function table for CBByteArray.">CBByteArrayVT</a>. Use this to avoid casts.  <a href="#a88178a1f4daf43e4291c64cf4060e2bb"></a><br/></td></tr>
 <tr class="memitem:a01a3575ad3bc96eae5a96a552955a607"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a01a3575ad3bc96eae5a96a552955a607">CBGetByteArray</a> (void *self)</td></tr>
 <tr class="memdesc:a01a3575ad3bc96eae5a96a552955a607"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets a <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> from another object. Use this to avoid casts.  <a href="#a01a3575ad3bc96eae5a96a552955a607"></a><br/></td></tr>
-<tr class="memitem:aeeb9ced8dc4eaa31349f53b925e0cf17"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#aeeb9ced8dc4eaa31349f53b925e0cf17">CBInitByteArrayOfSize</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, int size, <a class="el" href="struct_c_b_engine.html">CBEngine</a> *events)</td></tr>
-<tr class="memdesc:aeeb9ced8dc4eaa31349f53b925e0cf17"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises an empty <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object.  <a href="#aeeb9ced8dc4eaa31349f53b925e0cf17"></a><br/></td></tr>
-<tr class="memitem:a9d75452b3ecb9b0fec369220a8830dcf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a9d75452b3ecb9b0fec369220a8830dcf">CBInitByteArraySubReference</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, <a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *ref, int offset, int length)</td></tr>
-<tr class="memdesc:a9d75452b3ecb9b0fec369220a8830dcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a reference <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> to a subsection of an <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>.  <a href="#a9d75452b3ecb9b0fec369220a8830dcf"></a><br/></td></tr>
+<tr class="memitem:add344f09dadbf0293cf2f8619acecbff"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#add344f09dadbf0293cf2f8619acecbff">CBInitByteArrayOfSize</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, u_int32_t size, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events)</td></tr>
+<tr class="memdesc:add344f09dadbf0293cf2f8619acecbff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises an empty <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object.  <a href="#add344f09dadbf0293cf2f8619acecbff"></a><br/></td></tr>
+<tr class="memitem:a50e666c50babca1eafef652637bc1a63"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a50e666c50babca1eafef652637bc1a63">CBInitByteArraySubReference</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, <a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *ref, u_int32_t offset, u_int32_t length)</td></tr>
+<tr class="memdesc:a50e666c50babca1eafef652637bc1a63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a reference <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> to a subsection of an <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>.  <a href="#a50e666c50babca1eafef652637bc1a63"></a><br/></td></tr>
+<tr class="memitem:a7d5bbecc078d93602b932e0fb4059dd1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a7d5bbecc078d93602b932e0fb4059dd1">CBInitByteArrayWithData</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, u_int8_t *data, u_int32_t size, <a class="el" href="struct_c_b_events.html">CBEvents</a> *events)</td></tr>
+<tr class="memdesc:a7d5bbecc078d93602b932e0fb4059dd1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> using data.  <a href="#a7d5bbecc078d93602b932e0fb4059dd1"></a><br/></td></tr>
 <tr class="memitem:aaa256df64b993c08f9ae5c6f0491ebc5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#aaa256df64b993c08f9ae5c6f0491ebc5">CBFreeByteArray</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self)</td></tr>
 <tr class="memdesc:aaa256df64b993c08f9ae5c6f0491ebc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees a <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object.  <a href="#aaa256df64b993c08f9ae5c6f0491ebc5"></a><br/></td></tr>
 <tr class="memitem:ac8d17896519a52aa564cea1b749890b2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#ac8d17896519a52aa564cea1b749890b2">CBFreeProcessByteArray</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self)</td></tr>
@@ -161,6 +166,8 @@ Functions</h2></td></tr>
 <tr class="memdesc:ab544faec82ff809a5c22547b45e7a142"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a byte from the <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object. A byte will be returned from self-&gt;offset+index in the underlying data.  <a href="#ab544faec82ff809a5c22547b45e7a142"></a><br/></td></tr>
 <tr class="memitem:a9963391b58cfe590b4b1b7da5488f973"><td class="memItemLeft" align="right" valign="top">u_int8_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a9963391b58cfe590b4b1b7da5488f973">CBByteArrayGetData</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self)</td></tr>
 <tr class="memdesc:a9963391b58cfe590b4b1b7da5488f973"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a pointer to the underlying data starting at self-&gt;offset.  <a href="#a9963391b58cfe590b4b1b7da5488f973"></a><br/></td></tr>
+<tr class="memitem:abc33819525bf5fd63b79aed526a98a28"><td class="memItemLeft" align="right" valign="top">u_int8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#abc33819525bf5fd63b79aed526a98a28">CBByteArrayGetLastByte</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self)</td></tr>
+<tr class="memdesc:abc33819525bf5fd63b79aed526a98a28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the last byte from the <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object. A byte will be returned from self-&gt;offset+self-&gt;length in the underlying data.  <a href="#abc33819525bf5fd63b79aed526a98a28"></a><br/></td></tr>
 <tr class="memitem:a96c33edb50f3afe83c9f6bb5d41741a4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a96c33edb50f3afe83c9f6bb5d41741a4">CBByteArrayInsertByte</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, int index, u_int8_t byte)</td></tr>
 <tr class="memdesc:a96c33edb50f3afe83c9f6bb5d41741a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert a byte into array. This will be inserted at self-&gt;offset+index in the underlying data.  <a href="#a96c33edb50f3afe83c9f6bb5d41741a4"></a><br/></td></tr>
 <tr class="memitem:a2d752896e28713937a292f3d331a4ba5"><td class="memItemLeft" align="right" valign="top">u_int16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_c_b_byte_array_8h.html#a2d752896e28713937a292f3d331a4ba5">CBByteArrayReadUInt16</a> (<a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *self, int offset)</td></tr>
@@ -299,6 +306,32 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns:</dt><dd>The pointer </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="abc33819525bf5fd63b79aed526a98a28"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">u_int8_t <a class="el" href="_c_b_byte_array_8h.html#abc33819525bf5fd63b79aed526a98a28">CBByteArrayGetLastByte</a> </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td>
+          <td class="paramname"><em>self</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Get the last byte from the <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object. A byte will be returned from self-&gt;offset+self-&gt;length in the underlying data. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>The last byte </dd></dl>
 
 </div>
 </div>
@@ -646,12 +679,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="aeeb9ced8dc4eaa31349f53b925e0cf17"></a>
+<a class="anchor" id="add344f09dadbf0293cf2f8619acecbff"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="_c_b_byte_array_8h.html#aeeb9ced8dc4eaa31349f53b925e0cf17">CBInitByteArrayOfSize</a> </td>
+          <td class="memname">bool <a class="el" href="_c_b_byte_array_8h.html#add344f09dadbf0293cf2f8619acecbff">CBInitByteArrayOfSize</a> </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td>
           <td class="paramname"><em>self</em>, </td>
@@ -659,13 +692,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">u_int32_t&#160;</td>
           <td class="paramname"><em>size</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="struct_c_b_engine.html">CBEngine</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
           <td class="paramname"><em>events</em>&#160;</td>
         </tr>
         <tr>
@@ -690,12 +723,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a9d75452b3ecb9b0fec369220a8830dcf"></a>
+<a class="anchor" id="a50e666c50babca1eafef652637bc1a63"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="_c_b_byte_array_8h.html#a9d75452b3ecb9b0fec369220a8830dcf">CBInitByteArraySubReference</a> </td>
+          <td class="memname">bool <a class="el" href="_c_b_byte_array_8h.html#a50e666c50babca1eafef652637bc1a63">CBInitByteArraySubReference</a> </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td>
           <td class="paramname"><em>self</em>, </td>
@@ -709,13 +742,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">u_int32_t&#160;</td>
           <td class="paramname"><em>offset</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">u_int32_t&#160;</td>
           <td class="paramname"><em>length</em>&#160;</td>
         </tr>
         <tr>
@@ -730,6 +763,7 @@ Functions</h2></td></tr>
 <p>Initialises a reference <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> to a subsection of an <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>. </p>
 <dl class="params"><dt><b>Parameters:</b></dt><dd>
   <table class="params">
+    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object to initialise </td></tr>
     <tr><td class="paramname">ref</td><td>The <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object to reference. </td></tr>
     <tr><td class="paramname">offset</td><td>The offset to the start of the reference. </td></tr>
     <tr><td class="paramname">length</td><td>The length of the reference. </td></tr>
@@ -740,20 +774,71 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ace6d975a3267b8734908623bfdbbcabf"></a>
+<a class="anchor" id="a7d5bbecc078d93602b932e0fb4059dd1"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a>* <a class="el" href="_c_b_byte_array_8h.html#ace6d975a3267b8734908623bfdbbcabf">CBNewByteArrayOfSize</a> </td>
+          <td class="memname">bool <a class="el" href="_c_b_byte_array_8h.html#a7d5bbecc078d93602b932e0fb4059dd1">CBInitByteArrayWithData</a> </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td>
+          <td class="paramname"><em>self</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u_int8_t *&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u_int32_t&#160;</td>
           <td class="paramname"><em>size</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="struct_c_b_engine.html">CBEngine</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
+          <td class="paramname"><em>events</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Creates a new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> using data. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">self</td><td>The <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object to initialise </td></tr>
+    <tr><td class="paramname">data</td><td>The data. This should be dynamically allocated. The new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object will take care of it's memory management so do not free this data once passed into this constructor. </td></tr>
+    <tr><td class="paramname">size</td><td>Size in bytes for the new array. </td></tr>
+    <tr><td class="paramname">events</td><td><a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> for errors. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>true on success, false on failure. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a5fe2d7a160b34d6dd512eec9b0932c6e"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a>* <a class="el" href="_c_b_byte_array_8h.html#a5fe2d7a160b34d6dd512eec9b0932c6e">CBNewByteArrayOfSize</a> </td>
+          <td>(</td>
+          <td class="paramtype">u_int32_t&#160;</td>
+          <td class="paramname"><em>size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
           <td class="paramname"><em>events</em>&#160;</td>
         </tr>
         <tr>
@@ -777,12 +862,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a859febfe5ad9569fa9d0f996fbb81a81"></a>
+<a class="anchor" id="abad170e840184076acf557f4293822a8"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a>* <a class="el" href="_c_b_byte_array_8h.html#a859febfe5ad9569fa9d0f996fbb81a81">CBNewByteArraySubReference</a> </td>
+          <td class="memname"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a>* <a class="el" href="_c_b_byte_array_8h.html#abad170e840184076acf557f4293822a8">CBNewByteArraySubReference</a> </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a> *&#160;</td>
           <td class="paramname"><em>ref</em>, </td>
@@ -790,13 +875,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">u_int32_t&#160;</td>
           <td class="paramname"><em>offset</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">u_int32_t&#160;</td>
           <td class="paramname"><em>length</em>&#160;</td>
         </tr>
         <tr>
@@ -818,6 +903,50 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns:</dt><dd>The new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a>. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a460f4124f9ea8430264b7cdf1432cde5"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a>* <a class="el" href="_c_b_byte_array_8h.html#a460f4124f9ea8430264b7cdf1432cde5">CBNewByteArrayWithData</a> </td>
+          <td>(</td>
+          <td class="paramtype">u_int8_t *&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u_int32_t&#160;</td>
+          <td class="paramname"><em>size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_c_b_events.html">CBEvents</a> *&#160;</td>
+          <td class="paramname"><em>events</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Creates a new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> using data. </p>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>The data. This should be dynamically allocated. The new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object will take care of it's memory management so do not free this data once passed into this constructor. </td></tr>
+    <tr><td class="paramname">size</td><td>Size in bytes for the new array. </td></tr>
+    <tr><td class="paramname">events</td><td><a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> for errors. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns:</dt><dd>The new <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> object. </dd></dl>
 
 </div>
 </div>
@@ -852,7 +981,7 @@ Functions</h2></td></tr>
     <ul>
       <li class="navelem"><a class="el" href="_c_b_byte_array_8h.html">CBByteArray.h</a>      </li>
 
-    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
+    <li class="footer">Generated on Wed May 16 2012 02:30:31 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>

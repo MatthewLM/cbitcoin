@@ -115,13 +115,15 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="textblock">Here are the data structures with brief descriptions:</div><table>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_address.html">CBAddress</a></td><td class="indexvalue">Structure for <a class="el" href="struct_c_b_address.html" title="Structure for CBAddress objects.">CBAddress</a> objects </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_address_v_t.html">CBAddressVT</a></td><td class="indexvalue">Virtual function table for <a class="el" href="struct_c_b_address.html" title="Structure for CBAddress objects.">CBAddress</a> </td></tr>
-  <tr><td class="indexkey"><a class="el" href="struct_c_b_big_int.html">CBBigInt</a></td><td class="indexvalue">Contains byte data with the length of this data to represent a large integer. You MUST ensure that the first byte contains the first set bit. Ensure this with CBBigIntNormalise </td></tr>
+  <tr><td class="indexkey"><a class="el" href="struct_c_b_big_int.html">CBBigInt</a></td><td class="indexvalue">Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_block.html">CBBlock</a></td><td class="indexvalue">Structure for <a class="el" href="struct_c_b_block.html" title="Structure for CBBlock objects.">CBBlock</a> objects </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_block_v_t.html">CBBlockVT</a></td><td class="indexvalue">Virtual function table for <a class="el" href="struct_c_b_block.html" title="Structure for CBBlock objects.">CBBlock</a> </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_byte_array.html">CBByteArray</a></td><td class="indexvalue">Structure for <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> objects </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_byte_array_v_t.html">CBByteArrayVT</a></td><td class="indexvalue">Virtual function table for <a class="el" href="struct_c_b_byte_array.html" title="Structure for CBByteArray objects.">CBByteArray</a> </td></tr>
+  <tr><td class="indexkey"><a class="el" href="struct_c_b_dependencies.html">CBDependencies</a></td><td class="indexvalue">Structure holding event callback function pointers </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_engine.html">CBEngine</a></td><td class="indexvalue">Structure for <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> objects </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_engine_v_t.html">CBEngineVT</a></td><td class="indexvalue">Virtual function table for <a class="el" href="struct_c_b_engine.html" title="Structure for CBEngine objects.">CBEngine</a> </td></tr>
+  <tr><td class="indexkey"><a class="el" href="struct_c_b_events.html">CBEvents</a></td><td class="indexvalue">Structure holding event callback function pointers </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_message.html">CBMessage</a></td><td class="indexvalue">Structure for <a class="el" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> objects </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_message_v_t.html">CBMessageVT</a></td><td class="indexvalue">Virtual function table for <a class="el" href="struct_c_b_message.html" title="Structure for CBMessage objects.">CBMessage</a> </td></tr>
   <tr><td class="indexkey"><a class="el" href="struct_c_b_network_parameters.html">CBNetworkParameters</a></td><td class="indexvalue">Structure for <a class="el" href="struct_c_b_network_parameters.html" title="Structure for CBNetworkParameters objects.">CBNetworkParameters</a> objects </td></tr>
@@ -150,7 +152,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div id="nav-path" class="navpath">
     <ul>
 
-    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
+    <li class="footer">Generated on Wed May 16 2012 02:30:32 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>

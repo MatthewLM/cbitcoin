@@ -4,7 +4,7 @@ var struct_c_b_message =
     [ "bytes", "struct_c_b_message.html#a43112a214169a8345f988d1d1341102f", null ],
     [ "checksum", "struct_c_b_message.html#aae84df1fce1366e52ff9a6b9c9a2c50a", null ],
     [ "cursor", "struct_c_b_message.html#af3b2b8ffe2b1effcf3983354beb28099", null ],
-    [ "events", "struct_c_b_message.html#a4f3c89642b33624d384d773b0b82c894", null ],
+    [ "events", "struct_c_b_message.html#aa72ede1b7ab88e5ce4809f9e7df86c7d", null ],
     [ "length", "struct_c_b_message.html#a9f59b34b1f25fe00023291b678246bcc", null ],
     [ "params", "struct_c_b_message.html#a2aec9f694830e518722ab4bc4e275527", null ],
     [ "parsed", "struct_c_b_message.html#a45084d4f88de51901190de4d95c9e90b", null ],

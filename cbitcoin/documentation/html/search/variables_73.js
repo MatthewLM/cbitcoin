@@ -7,6 +7,7 @@ var searchData=
   ['segments',['segments',['../struct_c_b_script.html#a9c30756de5930260647ea62fb699085a',1,'CBScript']]],
   ['segmentslen',['segmentsLen',['../struct_c_b_script.html#ac2e8039eafca05d7360ccc36ff5a2d6c',1,'CBScript']]],
   ['sequence',['sequence',['../struct_c_b_transaction_input.html#a314e2b5c91643bb78ecde3baf231edbc',1,'CBTransactionInput']]],
+  ['sha256',['sha256',['../struct_c_b_dependencies.html#a492ef25d8c88673175dc7223f0fcb967',1,'CBDependencies']]],
   ['shareddata',['sharedData',['../struct_c_b_byte_array.html#a5c2501d705697aa7f80f7e693ca2b523',1,'CBByteArray']]],
   ['spentby',['spentBy',['../struct_c_b_transaction_output.html#a9318ff5b720f932036f6c19b99a3c496',1,'CBTransactionOutput']]],
   ['subcopy',['subCopy',['../struct_c_b_byte_array_v_t.html#a9645f281b6d8595a34430a61151c92ee',1,'CBByteArrayVT']]]

@@ -125,23 +125,23 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <li>CBAddVTToObject()
 : <a class="el" href="_c_b_object_8h.html#a665c28b3e8b024151a26387caca8152a">CBObject.h</a>
 </li>
-<li>CBBase2MSBPos()
-: <a class="el" href="_c_b_big_int_8h.html#ab2c58d382d31b562e3b1803cee14a1da">CBBigInt.h</a>
-</li>
-<li>CBBigIntCompare()
-: <a class="el" href="_c_b_big_int_8h.html#af94d13b45dd3ae838989445082556afd">CBBigInt.h</a>
-</li>
 <li>CBBigIntCompareToUInt8()
 : <a class="el" href="_c_b_big_int_8h.html#a78401335e10bf64a0b3f03931b3d95b7">CBBigInt.h</a>
+</li>
+<li>CBBigIntEqualsAdditionByCBBigInt()
+: <a class="el" href="_c_b_big_int_8h.html#abb11a9e1f43f7a764519535d68a4c2ab">CBBigInt.h</a>
 </li>
 <li>CBBigIntEqualsDivisionByUInt8()
 : <a class="el" href="_c_b_big_int_8h.html#a4cd5177336ff6df524f29f5cf9fd1ab8">CBBigInt.h</a>
 </li>
-<li>CBBigIntEqualsRightShiftByUInt8()
-: <a class="el" href="_c_b_big_int_8h.html#aa0fd20614ca8d345e2bd37f93347fae4">CBBigInt.h</a>
+<li>CBBigIntEqualsMultiplicationByUInt8()
+: <a class="el" href="_c_b_big_int_8h.html#a511e741fdf4d0f837618c2a9c85b8e43">CBBigInt.h</a>
 </li>
 <li>CBBigIntEqualsSubtractionByUInt8()
 : <a class="el" href="_c_b_big_int_8h.html#adcbec36bb6e3e056f6736ca6c1696a2b">CBBigInt.h</a>
+</li>
+<li>CBBigIntFromPowUInt8()
+: <a class="el" href="_c_b_big_int_8h.html#a10a8bc54686147b0639d587f4933a4bc">CBBigInt.h</a>
 </li>
 <li>CBBigIntModuloWithUInt8()
 : <a class="el" href="_c_b_big_int_8h.html#a0240e50a97e130a0d3f1f1178ec39e16">CBBigInt.h</a>
@@ -160,6 +160,9 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </li>
 <li>CBByteArrayGetData()
 : <a class="el" href="_c_b_byte_array_8h.html#a9963391b58cfe590b4b1b7da5488f973">CBByteArray.h</a>
+</li>
+<li>CBByteArrayGetLastByte()
+: <a class="el" href="_c_b_byte_array_8h.html#abc33819525bf5fd63b79aed526a98a28">CBByteArray.h</a>
 </li>
 <li>CBByteArrayInsertByte()
 : <a class="el" href="_c_b_byte_array_8h.html#a96c33edb50f3afe83c9f6bb5d41741a4">CBByteArray.h</a>
@@ -219,16 +222,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 : <a class="el" href="_c_b_version_checksum_bytes_8h.html#ad7e3724fb0ffb8b105217a54c43d5812">CBVersionChecksumBytes.h</a>
 </li>
 <li>CBDecodeBase58()
-: <a class="el" href="_c_b_base58_8h.html#a010454b57eb32e672f39fd8000ca9060">CBBase58.h</a>
+: <a class="el" href="_c_b_base58_8h.html#a9c162d223445f70d14c7a6489d54d0ee">CBBase58.h</a>
 </li>
 <li>CBDecodeBase58Checked()
-: <a class="el" href="_c_b_base58_8h.html#a924de38d392b82deb67fcdcdd0e202ec">CBBase58.h</a>
+: <a class="el" href="_c_b_base58_8h.html#a9892fed34e9af387eb765c56eb39d241">CBBase58.h</a>
 </li>
 <li>CBEncodeBase58()
 : <a class="el" href="_c_b_base58_8h.html#a44e12f5464dcf784b3dc2644cecc055d">CBBase58.h</a>
-</li>
-<li>CBFloorLog2()
-: <a class="el" href="_c_b_big_int_8h.html#ae7673f85c74b6c4d297079439f2ec962">CBBigInt.h</a>
 </li>
 <li>CBFreeAddress()
 : <a class="el" href="_c_b_address_8h.html#afd40a4d9a591d9c26e9b673233cfa863">CBAddress.h</a>
@@ -386,26 +386,29 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <li>CBGetVersionChecksumBytesVT()
 : <a class="el" href="_c_b_version_checksum_bytes_8h.html#af0342f05c77aaba9b1b03f3d80b7c607">CBVersionChecksumBytes.h</a>
 </li>
-<li>CBInitAddress()
-: <a class="el" href="_c_b_address_8h.html#ae7dc1ad3b0752a013b8213001b276cdc">CBAddress.h</a>
+<li>CBInitAddressFromRIPEMD160Hash()
+: <a class="el" href="_c_b_address_8h.html#adc75497c35f331f09b2f9d4c8439ab8e">CBAddress.h</a>
 </li>
 <li>CBInitBlock()
 : <a class="el" href="_c_b_block_8h.html#a65e0cac5f13600419c3190cc3e35b2f4">CBBlock.h</a>
 </li>
 <li>CBInitByteArrayOfSize()
-: <a class="el" href="_c_b_byte_array_8h.html#aeeb9ced8dc4eaa31349f53b925e0cf17">CBByteArray.h</a>
+: <a class="el" href="_c_b_byte_array_8h.html#add344f09dadbf0293cf2f8619acecbff">CBByteArray.h</a>
 </li>
 <li>CBInitByteArraySubReference()
-: <a class="el" href="_c_b_byte_array_8h.html#a9d75452b3ecb9b0fec369220a8830dcf">CBByteArray.h</a>
+: <a class="el" href="_c_b_byte_array_8h.html#a50e666c50babca1eafef652637bc1a63">CBByteArray.h</a>
+</li>
+<li>CBInitByteArrayWithData()
+: <a class="el" href="_c_b_byte_array_8h.html#a7d5bbecc078d93602b932e0fb4059dd1">CBByteArray.h</a>
 </li>
 <li>CBInitEmptySha256Hash()
-: <a class="el" href="_c_b_sha256_hash_8h.html#a43da7f822e2542395284fd7218fed9b3">CBSha256Hash.h</a>
+: <a class="el" href="_c_b_sha256_hash_8h.html#a4ceb2caa67d3aa041bc8a7ec14bca835">CBSha256Hash.h</a>
 </li>
 <li>CBInitEngine()
 : <a class="el" href="_c_b_engine_8h.html#a45f3a71e85ec5326281951dc6f2cdf52">CBEngine.h</a>
 </li>
 <li>CBInitMessage()
-: <a class="el" href="_c_b_message_8h.html#a5264a96aa18169aa0754dbe2f8ea86f0">CBMessage.h</a>
+: <a class="el" href="_c_b_message_8h.html#a0c246231717b6fb2bf61b46b95f4f54e">CBMessage.h</a>
 </li>
 <li>CBInitNetworkParameters()
 : <a class="el" href="_c_b_network_parameters_8h.html#a85c33664e9a0ae72af0b343477680984">CBNetworkParameters.h</a>
@@ -414,22 +417,25 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 : <a class="el" href="_c_b_object_8h.html#a5af160b968cf9628091af30c4ed88908">CBObject.h</a>
 </li>
 <li>CBInitScript()
-: <a class="el" href="_c_b_script_8h.html#a27bbb5cbcb43bffc3915839ec9536847">CBScript.h</a>
+: <a class="el" href="_c_b_script_8h.html#ae28b8b0cd8d6eff16847fecbd4c63ee0">CBScript.h</a>
 </li>
 <li>CBInitSha256HashFromByteArrayAndHash()
-: <a class="el" href="_c_b_sha256_hash_8h.html#acbf3a1122fdadbca5a5d47e4ea6613be">CBSha256Hash.h</a>
+: <a class="el" href="_c_b_sha256_hash_8h.html#a1b618b86476bbc4449454e3afd412d2c">CBSha256Hash.h</a>
 </li>
 <li>CBInitTransaction()
 : <a class="el" href="_c_b_transaction_8h.html#ad37308e7733beca76986b46646fab10e">CBTransaction.h</a>
 </li>
 <li>CBInitTransactionInput()
-: <a class="el" href="_c_b_transaction_input_8h.html#a161721dc23c7896ed2a0ea3d1a26edb5">CBTransactionInput.h</a>
+: <a class="el" href="_c_b_transaction_input_8h.html#ad596bd0009e13cb44b2d513572050a3d">CBTransactionInput.h</a>
 </li>
 <li>CBInitTransactionOutputDeserialisation()
 : <a class="el" href="_c_b_transaction_output_8h.html#ada734c2f940ceb2c7c0821facfc21e44">CBTransactionOutput.h</a>
 </li>
+<li>CBInitVersionChecksumBytesFromBytes()
+: <a class="el" href="_c_b_version_checksum_bytes_8h.html#afb8b44135b7836ced5c18a5338cfb016">CBVersionChecksumBytes.h</a>
+</li>
 <li>CBInitVersionChecksumBytesFromString()
-: <a class="el" href="_c_b_version_checksum_bytes_8h.html#a74f1a871c5961d46fcd57bb80a197df4">CBVersionChecksumBytes.h</a>
+: <a class="el" href="_c_b_version_checksum_bytes_8h.html#a50763102b7958fff7248a74f5ee97bc9">CBVersionChecksumBytes.h</a>
 </li>
 <li>CBMessageBitcoinSerialise()
 : <a class="el" href="_c_b_message_8h.html#a6e86eed223b526d76d581969b4c36f43">CBMessage.h</a>
@@ -467,26 +473,29 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <li>CBMessageUnsafeBitcoinSerialise()
 : <a class="el" href="_c_b_message_8h.html#a9ad38c76cdaf8c4b362a3498163f7845">CBMessage.h</a>
 </li>
-<li>CBNewAddress()
-: <a class="el" href="_c_b_address_8h.html#a102291c72000ff8853d8234358519479">CBAddress.h</a>
+<li>CBNewAddressFromRIPEMD160Hash()
+: <a class="el" href="_c_b_address_8h.html#ae67c75069635c0e2156a4b374018ee22">CBAddress.h</a>
 </li>
 <li>CBNewBlock()
 : <a class="el" href="_c_b_block_8h.html#a54294f951e7d5585016d45c27b053aaa">CBBlock.h</a>
 </li>
 <li>CBNewByteArrayOfSize()
-: <a class="el" href="_c_b_byte_array_8h.html#ace6d975a3267b8734908623bfdbbcabf">CBByteArray.h</a>
+: <a class="el" href="_c_b_byte_array_8h.html#a5fe2d7a160b34d6dd512eec9b0932c6e">CBByteArray.h</a>
 </li>
 <li>CBNewByteArraySubReference()
-: <a class="el" href="_c_b_byte_array_8h.html#a859febfe5ad9569fa9d0f996fbb81a81">CBByteArray.h</a>
+: <a class="el" href="_c_b_byte_array_8h.html#abad170e840184076acf557f4293822a8">CBByteArray.h</a>
+</li>
+<li>CBNewByteArrayWithData()
+: <a class="el" href="_c_b_byte_array_8h.html#a460f4124f9ea8430264b7cdf1432cde5">CBByteArray.h</a>
 </li>
 <li>CBNewEmptySha256Hash()
-: <a class="el" href="_c_b_sha256_hash_8h.html#a7e1067222d810101248f8302b9ad10de">CBSha256Hash.h</a>
+: <a class="el" href="_c_b_sha256_hash_8h.html#ae88d5a39b46cff757ead8327cfea3a6f">CBSha256Hash.h</a>
 </li>
 <li>CBNewEngine()
 : <a class="el" href="_c_b_engine_8h.html#afae372fba649d3d28452a8c06cfaf7f4">CBEngine.h</a>
 </li>
 <li>CBNewMessage()
-: <a class="el" href="_c_b_message_8h.html#a9389e9764342c9b4d6e22dbfdb8be1cf">CBMessage.h</a>
+: <a class="el" href="_c_b_message_8h.html#ae6328cba4a4377c2e21234edec1a2745">CBMessage.h</a>
 </li>
 <li>CBNewNetworkParameters()
 : <a class="el" href="_c_b_network_parameters_8h.html#a1df75e4a2b067d5cc073bd8678b9430c">CBNetworkParameters.h</a>
@@ -495,31 +504,31 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 : <a class="el" href="_c_b_object_8h.html#afe9113e23d0b128a5fbf9d5f6a5ca9bd">CBObject.h</a>
 </li>
 <li>CBNewScript()
-: <a class="el" href="_c_b_script_8h.html#a561654132472f907175779252d061632">CBScript.h</a>
+: <a class="el" href="_c_b_script_8h.html#ae6122d6c28269fc6e1a69b1777eaf47f">CBScript.h</a>
 </li>
 <li>CBNewSha256HashFromByteArray()
-: <a class="el" href="_c_b_sha256_hash_8h.html#ae5cdc159f2adb6927b6c04dc5c6f987e">CBSha256Hash.h</a>
+: <a class="el" href="_c_b_sha256_hash_8h.html#aa16a01d6c74ff82f0ea0aecdaeccdb2c">CBSha256Hash.h</a>
 </li>
 <li>CBNewSha256HashFromByteArrayAndHash()
-: <a class="el" href="_c_b_sha256_hash_8h.html#a93cbc4a47e800ecd18d9052ff3875167">CBSha256Hash.h</a>
+: <a class="el" href="_c_b_sha256_hash_8h.html#a0ef32e3a8f34a565b5df3ed715bdaec1">CBSha256Hash.h</a>
 </li>
 <li>CBNewTransaction()
 : <a class="el" href="_c_b_transaction_8h.html#aa6f1a59c0f840b512f297cae86277297">CBTransaction.h</a>
 </li>
 <li>CBNewTransactionInput()
-: <a class="el" href="_c_b_transaction_input_8h.html#a1506efa7ff09408395acdf30a9371a5a">CBTransactionInput.h</a>
+: <a class="el" href="_c_b_transaction_input_8h.html#a303e41d75ed66af8734511e7fba2c598">CBTransactionInput.h</a>
 </li>
 <li>CBNewTransactionOutputDeserialisation()
 : <a class="el" href="_c_b_transaction_output_8h.html#ad9f2f4d8489f300086d897ab2fb55da5">CBTransactionOutput.h</a>
 </li>
 <li>CBNewUnsignedTransactionInput()
-: <a class="el" href="_c_b_transaction_input_8h.html#af100093e73ad559204911aee7e12908c">CBTransactionInput.h</a>
+: <a class="el" href="_c_b_transaction_input_8h.html#ac4d6919299b8a24a5e3a90644ba11859">CBTransactionInput.h</a>
+</li>
+<li>CBNewVersionChecksumBytesFromBytes()
+: <a class="el" href="_c_b_version_checksum_bytes_8h.html#a231f45f46cb34726b4ee48b5b6f091db">CBVersionChecksumBytes.h</a>
 </li>
 <li>CBNewVersionChecksumBytesFromString()
-: <a class="el" href="_c_b_version_checksum_bytes_8h.html#a54fa9def3d34d7b932ef670e4a07f1c7">CBVersionChecksumBytes.h</a>
-</li>
-<li>CBPowerOf2Log2()
-: <a class="el" href="_c_b_big_int_8h.html#addb45cea8dcd540dfef49d76571ad9aa">CBBigInt.h</a>
+: <a class="el" href="_c_b_version_checksum_bytes_8h.html#a19935b23103863e7a626252099537ba8">CBVersionChecksumBytes.h</a>
 </li>
 <li>CBReleaseObject()
 : <a class="el" href="_c_b_object_8h.html#a79269369246675f5052a5971195fc88d">CBObject.h</a>
@@ -590,13 +599,16 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <li>CBVarIntSizeOf()
 : <a class="el" href="_c_b_var_int_8h.html#afb07d3febbb33790963120e727898d98">CBVarInt.h</a>
 </li>
+<li>CBVersionChecksumBytesGetVersion()
+: <a class="el" href="_c_b_version_checksum_bytes_8h.html#a783fc2a59fff0842f698919a5850d21b">CBVersionChecksumBytes.h</a>
+</li>
 </ul>
 </div><!-- contents -->
 </div>
   <div id="nav-path" class="navpath">
     <ul>
 
-    <li class="footer">Generated on Thu May 10 2012 00:00:52 for cbitcoin by
+    <li class="footer">Generated on Wed May 16 2012 02:30:32 for cbitcoin by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.0 </li>
    </ul>
