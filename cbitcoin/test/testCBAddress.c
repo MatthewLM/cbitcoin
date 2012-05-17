@@ -1,5 +1,5 @@
 //
-//  testCBBase58.c
+//  testCBAddress.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 16/05/2012.
