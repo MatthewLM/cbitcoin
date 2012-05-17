@@ -94,7 +94,7 @@ void CBReleaseObject(CBObject ** self){
 	if ((*self)->references < 1){
 		CBGetObjectVT(*self)->free(*self); // Remembering to dereference self from CBObject ** to CBOject *
 	}
-	*self = NULL; //Assign NULL to the pointer now that the object is released from the pointers control.
+	*self = NULL; //Assign NULL to the pointer now that the object is released from the pointer's control.
 }
 void CBRetainObject(CBObject * self){
 	// Increment reference counter.
