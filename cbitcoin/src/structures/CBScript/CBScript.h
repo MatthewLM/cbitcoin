@@ -54,8 +54,6 @@ typedef struct{
 	CBObject base; /**< CBObject base structure */
 	CBByteArray * program;
 	int cursor;
-	CBByteArray ** segments; /**< Segments of parsed program */
-	int segmentsLen; /**< Number of segments */
 	CBNetworkParameters * params;
 	CBEvents * events;
 } CBScript;
@@ -113,12 +111,6 @@ void CBFreeProcessScript(CBScript * self);
 //  Functions
 
 /**
- @brief Adds program bytes into a new segment
- @param self The CBScript object with the program
- @param length The number of bytes
- */
-void CBScriptAddBytesToSegment(CBScript * self,u_int32_t length);
-/**
  @brief Gets a byte from the program and moves along the cursor
  @param self The CBScript object with the program
  @returns A byte.
@@ -142,11 +134,5 @@ u_int32_t CBScriptReadUInt32(CBScript * self);
  @returns A 64 bit integer
  */
 u_int64_t CBScriptReadUInt64(CBScript * self);
-/**
- @brief Returns whether or not the transaction was an IP to IP transaction.
- @param self The CBScript object to analyse.
- @returns true if it was an IP to IP transacton.
- */
-bool CBScriptIsIPTransaction(CBScript * self);
 
 #endif
