@@ -52,7 +52,6 @@ cbitcoin should contain the following header for each file:
 	//  cbitcoin
 	//
 	//  Created by Full Name on DD/MM/YYYY.
-	//  Last modified by Full Name on DD/MM/YYYY.
 	//  Copyright (c) 2012 Matthew Mitchell
 	//  
 	//  This file is part of cbitcoin.
