@@ -47,11 +47,9 @@ void CBSetScriptVT(CBScriptVT * VT){
 	CBSetObjectVT((CBObjectVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeScript;
 	VT->getByte = (u_int8_t (*)(void *))CBScriptGetByte;
-	VT->addBytesToSegment = (void (*)(void *,u_int32_t))CBScriptAddBytesToSegment;
 	VT->readUInt16 = (u_int16_t (*)(void *))CBScriptReadUInt16;
 	VT->readUInt32 = (u_int32_t (*)(void *))CBScriptReadUInt32;
 	VT->readUInt64 = (u_int64_t (*)(void *))CBScriptReadUInt64;
-	VT->isIPTransaction = (bool (*)(void *))CBScriptIsIPTransaction;
 }
 
 //  Virtual Table Getter
@@ -89,9 +87,6 @@ void CBFreeScript(CBScript * self){
 void CBFreeProcessScript(CBScript * self){
 	CBGetObjectVT(self->params)->release(&self->params);
 	CBGetObjectVT(self->program)->release(&self->program);
-	for (int x = 0; x < self->segmentsLen; x++) {
-		CBGetObjectVT(self->segments[x])->release(self->segments + x);
-	}
 	CBFreeProcessObject(CBGetObject(self));
 }
 

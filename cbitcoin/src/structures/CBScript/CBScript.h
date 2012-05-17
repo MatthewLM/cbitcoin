@@ -40,11 +40,9 @@
 typedef struct{
 	CBObjectVT base; /**< CBObjectVT base structure */
 	u_int8_t (*getByte)(void *); /**< Pointer to the function used to get a byte from the program and move along the cursor. */
-	void (*addBytesToSegment)(void *,u_int32_t); /**< Pointer to the function used to add bytes into a new segment. */
 	u_int16_t (*readUInt16)(void *); /**< Pointer to the function used to get a 16 bit integer from the program and move along the cursor. */
 	u_int32_t (*readUInt32)(void *); /**< Pointer to the function used to get a 32 bit integer from the program and move along the cursor. */
 	u_int64_t (*readUInt64)(void *); /**< Pointer to the function used to get a 64 bit integer from the program and move along the cursor. */
-	bool (*isIPTransaction)(void *); /**< Pointer to the function that returns true if the script was for a IP transaction */
 }CBScriptVT;
 
 /**
