@@ -76,7 +76,7 @@ typedef enum{
     CB_SCRIPT_OP_14 = 0x5e,
     CB_SCRIPT_OP_15 = 0x5f,
     CB_SCRIPT_OP_16 = 0x60,
-    CB_SCRIPT_OP_NCB_SCRIPT_OP = 0x61,
+    CB_SCRIPT_OP_NOP = 0x61,
     CB_SCRIPT_OP_VER = 0x62,
     CB_SCRIPT_OP_IF = 0x63,
     CB_SCRIPT_OP_NOTIF = 0x64,
@@ -88,7 +88,7 @@ typedef enum{
     CB_SCRIPT_OP_RETURN = 0x6a,
     CB_SCRIPT_OP_TOALTSTACK = 0x6b,
     CB_SCRIPT_OP_FROMALTSTACK = 0x6c,
-    CB_SCRIPT_OP_2DR_OP = 0x6d,
+    CB_SCRIPT_OP_2DROP = 0x6d,
     CB_SCRIPT_OP_2DUP = 0x6e,
     CB_SCRIPT_OP_3DUP = 0x6f,
     CB_SCRIPT_OP_2OVER = 0x70,
@@ -176,6 +176,6 @@ typedef enum{
 	CB_COMPARE_MORE_THAN = 1,
 	CB_COMPARE_EQUAL = 0,
 	CB_COMPARE_LESS_THAN = -1,
-}CBCompare;
+}CBCompare; 
 
 #endif
