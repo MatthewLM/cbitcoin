@@ -24,20 +24,22 @@
 
 //  Virtual Table Store
 
-static CBAddressVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructors
 
 CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	CBAddress * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateAddressVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateAddressVT);
 	CBInitAddressFromRIPEMD160Hash(self,network,hash,cacheString,events,dependencies);
 	return self;
 }
 CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	CBAddress * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateAddressVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateAddressVT);
 	bool ok = CBInitAddressFromString(self,string,cacheString,events,dependencies);
 	if (!ok) {
 		return NULL;
@@ -102,7 +104,7 @@ void CBFreeAddress(CBAddress * self){
 	CBFree();
 }
 void CBFreeProcessAddress(CBAddress * self){
-	CBFreeProcessObject(CBGetObject(self));
+	CBFreeProcessVersionChecksumBytes(CBGetVersionChecksumBytes(self));
 }
 
 //  Functions
