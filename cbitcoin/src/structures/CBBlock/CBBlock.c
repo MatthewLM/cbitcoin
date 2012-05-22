@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBBlockVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBBlock * CBNewBlock(){
 	CBBlock * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateBlockVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateBlockVT);
 	CBInitBlock(self);
 	return self;
 }
