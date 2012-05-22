@@ -32,7 +32,7 @@ static int objectNum = 0;
 CBObject * CBNewObject(){
 	CBObject * self = malloc(sizeof(*self));
 	objectNum++;
-	CBAddVTToObject(self, VTStore, &CBCreateObjectVT);
+	CBAddVTToObject(self, &VTStore, &CBCreateObjectVT);
 	CBInitObject(self);
 	return self;
 }
@@ -81,12 +81,12 @@ void CBFreeProcessObject(CBObject * self){
 
 //  Functions
 
-void CBAddVTToObject(CBObject * self,void * VTStore,void * getVT){
+void CBAddVTToObject(CBObject * self,void ** VTStore,void * getVT){
 	// Set the methods pointer and create a new virtual table store if needed by getting the functions with get_methods
-	if (!VTStore) {
-		VTStore = ((void * (*)())getVT)();
+	if (!*VTStore) {
+		*VTStore = ((void * (*)())getVT)();
 	}
-	self->VT = VTStore;
+	self->VT = *VTStore;
 }
 void CBReleaseObject(CBObject ** self){
 	// Decrement reference counter. Free if no more references.
