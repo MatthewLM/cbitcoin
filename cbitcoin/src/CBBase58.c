@@ -125,8 +125,8 @@ char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len){
 	u_int8_t * temp = malloc(len);
 	// Encode
 	u_int8_t mod;
-	for (;CBBigIntCompareToUInt8(bi, 58) >= 0;x++) {
-		mod = CBBigIntModuloWithUInt8(bi, 58);
+	for (;CBBigIntCompareTo58(bi) >= 0;x++) {
+		mod = CBBigIntModuloWith58(bi);
 		if (size < x + 3) {
 			str = realloc(str, x + 3);
 			size = x + 3;
@@ -134,7 +134,7 @@ char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len){
 		str[x] = base58Characters[mod];
 		CBBigIntEqualsSubtractionByUInt8(&bi, mod);
 		memset(temp, 0, len);
-		CBBigIntEqualsDivisionByUInt8(&bi, 58,temp);
+		CBBigIntEqualsDivisionBy58(&bi, temp);
 	}
 	str[x] = base58Characters[bi.data[bi.length-1]];
 	x++;

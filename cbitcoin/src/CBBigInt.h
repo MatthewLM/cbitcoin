@@ -43,12 +43,11 @@ typedef struct{
 }CBBigInt;
 
 /**
- @brief Compares a CBBigInt to an 8 bit integer. You can replicate "a op b" as "CBBigIntCompareToUInt8(a,b) op 0" replacing "op" with a comparison operator.
+ @brief Compares a CBBigInt to an 8 bit integer. You can replicate "a op 58" as "CBBigIntCompareToUInt8(a,58) op 0" replacing "op" with a comparison operator.
  @param a The first CBBigInt
- @param b An 8 bit integer
  @returns The result of the comparison as a CBCompare constant. Returns what a is in relation to b.
  */
-CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b);
+CBCompare CBBigIntCompareTo58(CBBigInt a);
 /**
  @brief Calculates the result of an addition of a CBBigInt structure by another CBBigInt structure and the first CBBigInt becomes this new figure. Like "a += b".
  @param a A pointer to the CBBigInt
@@ -56,12 +55,11 @@ CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b);
  */
 void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b);
 /**
- @brief Calculates the result of a division of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a /= b".
+ @brief Calculates the result of a division of a CBBigInt structure by 58 and the CBBigInt becomes this new figure. Like "a /= 58".
  @param a A pointer to the CBBigInt
- @param b An 8 bit integer
  @param ans A memory block the same size as the CBBigInt data memory block to store temporary data in calculations. Should be set with zeros.
  */
-void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans);
+void CBBigIntEqualsDivisionBy58(CBBigInt * a,u_int8_t * ans);
 /**
  @brief Calculates the result of a multiplication of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a *= b".
  @param a A pointer to the CBBigInt
@@ -76,12 +74,11 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
  */
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b);
 /**
- @brief Returns the result of a modulo of a CBBigInt structure and an 8 bit integer. Like "a % b".
+ @brief Returns the result of a modulo of a CBBigInt structure and 58. Like "a % 58".
  @param a The CBBigInt
- @param b An 8 bit integer
  @returns The result of the modulo operation as an 8 bit integer.
  */
-u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b);
+u_int8_t CBBigIntModuloWith58(CBBigInt a);
 /**
  @brief Makes a new CBBigInt from an exponentiation of an unsigned 8 bit intger with another unsigned 8 bit integer. Like "a^b". Data must be freed.
  @param a The base

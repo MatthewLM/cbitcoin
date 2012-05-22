@@ -28,13 +28,12 @@
 #include "CBBigInt.h"
 #include <assert.h>
 
-CBCompare CBBigIntCompareToUInt8(CBBigInt a,u_int8_t b){
-	for (u_int8_t x = a.length - 1;x > 0; x--)
-		if (a.data[x]) 
-			return CB_COMPARE_MORE_THAN;
-	if (a.data[0] > b)
+CBCompare CBBigIntCompareTo58(CBBigInt a){
+	if(a.length > 1)
 		return CB_COMPARE_MORE_THAN;
-	else if (a.data[0] < b)
+	if (a.data[0] > 58)
+		return CB_COMPARE_MORE_THAN;
+	else if (a.data[0] < 58)
 		return CB_COMPARE_LESS_THAN;
 	return CB_COMPARE_EQUAL;
 }
@@ -59,7 +58,7 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	assert(a->data[a->length-1]);
 }
-void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
+void CBBigIntEqualsDivisionBy58(CBBigInt * a,u_int8_t * ans){
 	if (a->length == 1 && !a->data[0]) { // "a" is zero
 		return;
 	}
@@ -68,8 +67,8 @@ void CBBigIntEqualsDivisionByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
 	for (u_int8_t x = a->length-1;; x--) {
 		temp <<= 8;
 		temp |= a->data[x];
-		ans[x] = temp / b;
-		temp -= ans[x] * b;
+		ans[x] = temp / 58;
+		temp -= ans[x] * 58;
 		if (!x)
 			break;
 	}
@@ -118,16 +117,14 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
 	CBBigIntNormalise(a);
 	assert(a->data[a->length-1]);
 }
-u_int8_t CBBigIntModuloWithUInt8(CBBigInt a,u_int8_t b){
-	if (!(b & (b - 1)))
-		return a.data[0] & b - 1; // For powers of two this can be done
-	// Wasn't a power of two. Use method presented here: http://stackoverflow.com/a/10441333/238411
+u_int8_t CBBigIntModuloWith58(CBBigInt a){
+	// Use method presented here: http://stackoverflow.com/a/10441333/238411
 	u_int16_t result = 0; // Prevents overflow in calculations
 	for(u_int8_t x = a.length - 1;; x--){
-		result *= (256 % b);
-		result %= b;
-		result += a.data[x] % b;
-		result %= b;
+		result *= (256 % 58);
+		result %= 58;
+		result += a.data[x] % 58;
+		result %= 58;
 		if (!x)
 			break;
 	}
