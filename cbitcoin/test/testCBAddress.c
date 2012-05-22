@@ -40,6 +40,7 @@ u_int8_t * sha256(u_int8_t * data,u_int16_t len){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
+	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
 	CBNetworkParameters * net = CBNewNetworkParameters();
@@ -120,5 +121,20 @@ int main(){
 	}
 	CBGetObjectVT(str)->release(&str);
 	CBGetObjectVT(add)->release(&add);
+	// Find "1got", speed test
+	hash = malloc(20);
+	while (1) {
+		for (int x = 0; x < 20; x++)
+			hash[x] = rand();
+		add = CBNewAddressFromRIPEMD160Hash(net, hash, true, &events, &dep);
+		str = CBGetVersionChecksumBytesVT(add)->getString(add);
+		if (!strncmp(str->string, "1got", 4)) {
+			printf("GOT STRING = %s\n",str->string);
+			break;
+		}
+		CBGetObjectVT(str)->release(&str);
+		CBGetObjectVT(add)->release(&add);
+	}
+	free(hash);
 	return 0;
 }
