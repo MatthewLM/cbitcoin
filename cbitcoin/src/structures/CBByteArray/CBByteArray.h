@@ -98,7 +98,7 @@ CBByteArray * CBNewByteArrayWithData(u_int8_t * data,u_int32_t size,CBEvents * e
  @brief Creates a new CBByteArrayVT.
  @returns A new CBByteArrayVT.
  */
-CBByteArrayVT * CBCreateByteArrayVT();
+CBByteArrayVT * CBCreateByteArrayVT(void);
 /**
  @brief Sets the CBByteArrayVT function pointers.
  @param VT The CBByteArrayVT to set.
