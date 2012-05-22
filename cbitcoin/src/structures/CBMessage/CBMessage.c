@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBObjectVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBMessage * CBNewMessage(void * params,CBByteArray * bytes,int length,int protocolVersion,bool parseLazy,bool parseRetain,CBEvents * events){
 	CBMessage * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, &CBCreateMessageVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, &CBCreateMessageVT);
 	if (CBInitMessage(self,params,bytes,length,protocolVersion,parseLazy,parseRetain,events))
 		return self;
 	return NULL; //Initialisation failure
