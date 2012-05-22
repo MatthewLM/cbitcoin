@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBEngineVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBEngine * CBNewEngine(){
 	CBEngine * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateEngineVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateEngineVT);
 	CBInitEngine(self);
 	return self;
 }
