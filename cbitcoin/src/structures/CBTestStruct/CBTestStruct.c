@@ -32,7 +32,7 @@ static int objectNum = 0;
 
 CBTestStruct * CBNewTestStruct(int a, int b){
 	CBTestStruct * self = malloc(sizeof(*self));
-	CBAddVTToObject((CBObject *)self, VTStore, CBCreateTestStructVT);
+	CBAddVTToObject((CBObject *)self, &VTStore, CBCreateTestStructVT);
 	objectNum++;
 	CBInitTestStruct(self,a,b);
 	return self;

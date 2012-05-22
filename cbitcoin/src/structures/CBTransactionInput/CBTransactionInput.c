@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBTransactionInputVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBSha256Hash * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateTransactionInputVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionInputVT);
 	CBInitTransactionInput(self,params,parentTransaction,scriptData,outPointerHash,outPointerIndex,events);
 	return self;
 }

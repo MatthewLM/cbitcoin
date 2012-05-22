@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBTransactionVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBTransaction * CBNewTransaction(){
 	CBTransaction * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateTransactionVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionVT);
 	CBInitTransaction(self);
 	return self;
 }

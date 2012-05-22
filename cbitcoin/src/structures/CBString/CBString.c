@@ -24,20 +24,22 @@
 
 //  Virtual Table Store
 
-static CBStringVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructors
 
 CBString * CBNewStringByCopyingCString(char * string){
 	CBString * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateStringVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateStringVT);
 	CBInitStringByCopyingCString(self,string);
 	return self;
 }
 CBString * CBNewStringByTakingCString(char * string){
+	objectNum++;
 	CBString * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateStringVT);
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateStringVT);
 	CBInitStringByTakingCString(self,string);
 	return self;
 }

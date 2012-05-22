@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBVersionChecksumBytesVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructors
 
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateVersionChecksumBytesVT);
 	bool ok = CBInitVersionChecksumBytesFromString(self,string,cacheString,events,dependencies);
 	if (!ok) {
 		return NULL;
@@ -40,7 +41,8 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBString * string,b
 }
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateVersionChecksumBytesVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateVersionChecksumBytesVT);
 	CBInitVersionChecksumBytesFromBytes(self,bytes,size,cacheString,events);
 	return self;
 }
@@ -108,7 +110,7 @@ void CBFreeVersionChecksumBytes(CBVersionChecksumBytes * self){
 }
 void CBFreeProcessVersionChecksumBytes(CBVersionChecksumBytes * self){
 	free(self->cached);
-	CBFreeProcessObject(CBGetObject(self));
+	CBFreeProcessByteArray(CBGetByteArray(self));
 }
 
 //  Functions

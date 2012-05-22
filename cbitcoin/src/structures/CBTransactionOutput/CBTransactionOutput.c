@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBTransactionOutputVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructors
 
 CBTransactionOutput * CBNewTransactionOutputDeserialisation(CBNetworkParameters * params, CBTransaction * parent, CBByteArray * payload,u_int32_t offset,bool parseLazy,bool parseRetain){
 	CBTransactionOutput * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateTransactionOutputVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionOutputVT);
 	CBInitTransactionOutputDeserialisation(self,params,parent,payload,offset,parseLazy,parseRetain);
 	return self;
 }
