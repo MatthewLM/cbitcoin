@@ -112,7 +112,7 @@ void CBFreeProcessObject(CBObject * self);
  @param VTStore The pointer to the memory for the virtual table. If NULL the virtual table will be created.
  @param getVT A pointer to the function that creates the virtual table for the object.
  */
-void CBAddVTToObject(CBObject * self,void * VTStore,void * getVT);
+void CBAddVTToObject(CBObject * self,void ** VTStore,void * getVT);
 
 /**
  @brief Releases a CBObject. The reference counter is decremented and if the reference count is returned to 0, the object will be freed. The pointer will be assigned to NULL.
