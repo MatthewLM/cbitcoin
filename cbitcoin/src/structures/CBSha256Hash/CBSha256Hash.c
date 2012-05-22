@@ -24,26 +24,29 @@
 
 //  Virtual Table Store
 
-static CBSha256HashVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructors
 
 CBSha256Hash * CBNewEmptySha256Hash(CBEvents * events){
 	CBSha256Hash * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateSha256HashVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateSha256HashVT);
 	CBInitEmptySha256Hash(self,events);
 	return self;
 }
 CBSha256Hash * CBNewSha256HashFromByteArray(CBByteArray * bytes,CBEvents * events){
 	CBSha256Hash * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateSha256HashVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateSha256HashVT);
 	CBInitSha256HashFromByteArrayAndHash(self,bytes,-1,events);
 	return self;
 }
 CBSha256Hash * CBNewSha256HashFromByteArrayAndHash(CBByteArray * bytes,int hash,CBEvents * events){
 	CBSha256Hash * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateSha256HashVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateSha256HashVT);
 	CBInitSha256HashFromByteArrayAndHash(self,bytes,hash,events);
 	return self;
 }
