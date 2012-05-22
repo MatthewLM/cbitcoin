@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Stores a bitcoin script which can be processed to determine if a transaction input is valid. Inherits CBObject
+ @brief Stores a bitcoin script which can be processed to determine if a transaction input is valid. A good resource is https://en.bitcoin.it/wiki/Script Inherits CBObject
 */
 
 #ifndef CBSCRIPTH
@@ -35,14 +35,29 @@
 #include <stdbool.h>
 
 /**
+ @brief Structure for a stack item
+ */
+
+typedef struct{
+	u_int8_t * data; /**< Data for this stack item */
+	u_int16_t length; /**< Length of this item */
+} CBScriptStackItem;
+
+/**
+ @brief Structure that holds byte data in a stack.
+ */
+
+typedef struct{
+	CBScriptStackItem * elements; /**< Elements in the stack */
+	u_int16_t length; /**< Length of the stack */
+} CBScriptStack;
+
+/**
  @brief Virtual function table for CBScript.
 */
 typedef struct{
 	CBObjectVT base; /**< CBObjectVT base structure */
-	u_int8_t (*getByte)(void *); /**< Pointer to the function used to get a byte from the program and move along the cursor. */
-	u_int16_t (*readUInt16)(void *); /**< Pointer to the function used to get a 16 bit integer from the program and move along the cursor. */
-	u_int32_t (*readUInt32)(void *); /**< Pointer to the function used to get a 32 bit integer from the program and move along the cursor. */
-	u_int64_t (*readUInt64)(void *); /**< Pointer to the function used to get a 64 bit integer from the program and move along the cursor. */
+	bool (*execute)(void *,CBScriptStack *); /**< Executes the script with the given stack. */
 }CBScriptVT;
 
 /**
@@ -109,28 +124,51 @@ void CBFreeProcessScript(CBScript * self);
 //  Functions
 
 /**
- @brief Gets a byte from the program and moves along the cursor
- @param self The CBScript object with the program
- @returns A byte.
+ @brief Frees a CBScriptStack
+ @param stack The stack to free
  */
-u_int8_t CBScriptGetByte(CBScript * self);
+void CBFreeScriptStack(CBScriptStack stack);
 /**
- @brief Reads a 16 bit integer from the program and moves along the cursor
- @param self The CBScript object with the program
- @returns A 16 bit integer
+ @brief Returns a new empty stack.
+ @returns The new empty stack.
  */
-u_int16_t CBScriptReadUInt16(CBScript * self);
+CBScriptStack CBNewEmptyScriptStack(void);
 /**
- @brief Reads a 32 bit integer from the program and moves along the cursor
- @param self The CBScript object with the program
- @returns A 32 bit integer
+ @brief Evaluates the top stack item as a bool. False if 0 or -0.
+ @param stack The stack.
+ @returns The boolean result.
  */
-u_int32_t CBScriptReadUInt32(CBScript * self);
+bool CBScriptStackEvalBool(CBScriptStack * stack);
 /**
- @brief Reads a 64 bit integer from the program and moves along the cursor
+ @brief Executes a bitcoin script.
  @param self The CBScript object with the program
- @returns A 64 bit integer
+ @param stack A pointer to the input stack for the program.
+ @returns True is the program ended with true, false otherwise or on script failure.
  */
-u_int64_t CBScriptReadUInt64(CBScript * self);
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack);
+/**
+ @brief Returns a copy of a stack item, "fromTop" from the top.
+ @param stack A pointer to the stack.
+ @param fromTop Number of items from the top to copy.
+ @returns A copy of the stack item which should be freed.
+ */
+CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack,u_int8_t fromTop);
+/**
+ @brief Removes the top item from the stack and returns it.
+ @param stack A pointer to the stack to pop the data.
+ @returns The top item. This must be freed.
+ */
+CBScriptStackItem CBScriptStackPopItem(CBScriptStack * stack);
+/**
+ @brief Push data onto the stack which is freed by the stack.
+ @param stack A pointer to the stack to push data onto.
+ @param data The item to push on the stack.
+ */
+void CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item);
+/**
+ @brief Removes top item from the stack.
+ @param stack A pointer to the stack to remove the data.
+ */
+void CBScriptStackRemoveItem(CBScriptStack * stack);
 
 #endif
