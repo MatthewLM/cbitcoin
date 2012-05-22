@@ -170,14 +170,15 @@ source.write("//\n\
 \n\
 //  Virtual Table Store\n\
 \n\
-static CB"+name+"VT * VTStore = NULL;\n\
+static void * VTStore = NULL;\n\
 static int objectNum = 0;\n\
 \n\
 //  Constructor\n\
 \n\
 CB"+name+" * CBNew"+name+"(){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
-\tCBAddVTToObject(CBGetObject(self), VTStore, CBCreate"+name+"VT);\n\
+\tobjectNum++;\n\
+\tCBAddVTToObject(CBGetObject(self), &VTStore, CBCreate"+name+"VT);\n\
 \tCBInit"+name+"(self);\n\
 \treturn self;\n\
 }\n\
