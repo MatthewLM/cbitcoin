@@ -24,26 +24,29 @@
 
 //  Virtual Table Store
 
-static CBByteArrayVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBByteArray * CBNewByteArrayOfSize(u_int32_t size,CBEvents * events){
 	CBByteArray * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateByteArrayVT);
 	CBInitByteArrayOfSize(self,size,events);
 	return self;
 }
 CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,u_int32_t offset,u_int32_t length){
 	CBByteArray * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateByteArrayVT);
 	CBInitByteArraySubReference(self, ref, offset, length);
 	return self;
 }
 CBByteArray * CBNewByteArrayWithData(u_int8_t * data,u_int32_t size,CBEvents * events){
 	CBByteArray * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), VTStore, CBCreateByteArrayVT);
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateByteArrayVT);
 	CBInitByteArrayWithData(self, data, size, events);
 	return self;
 }
@@ -88,7 +91,6 @@ bool CBInitByteArrayOfSize(CBByteArray * self,u_int32_t size,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = events;
-	CBGetObjectVT(self->events)->retain(self->events);
 	self->length = size;
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	self->sharedData->data = malloc(size);
@@ -100,7 +102,6 @@ bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,u_int32_t 
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = ref->events;
-	CBGetObjectVT(self->events)->retain(self->events);
 	self->sharedData = ref->sharedData;
 	self->sharedData->references++; // Since a new reference to the shared data is being made, an increase in the reference count must be made.
 	self->length = length;
@@ -126,7 +127,6 @@ void CBFreeByteArray(CBByteArray * self){
 	CBFree();
 }
 void CBFreeProcessByteArray(CBByteArray * self){
-	CBGetObjectVT(self->events)->release(&self->events);
 	self->sharedData->references--;
 	if (self->sharedData->references < 1) {
 		// Shared data now owned by nothing so free it 
