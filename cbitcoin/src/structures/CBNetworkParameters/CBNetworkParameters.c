@@ -24,14 +24,15 @@
 
 //  Virtual Table Store
 
-static CBNetworkParametersVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
 
 CBNetworkParameters * CBNewNetworkParameters(){
 	CBNetworkParameters * self = malloc(sizeof(*self));
-	CBAddVTToObject((CBObject *)self, VTStore, CBCreateNetworkParametersVT);
+	objectNum++;
+	CBAddVTToObject((CBObject *)self, &VTStore, CBCreateNetworkParametersVT);
 	CBInitNetworkParameters(self);
 	return self;
 }
