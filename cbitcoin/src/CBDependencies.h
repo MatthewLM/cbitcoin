@@ -34,7 +34,9 @@
  @brief Structure holding event callback function pointers.
  */
 typedef struct{
-	u_int8_t * (*sha256)(u_int8_t *,u_int16_t); /**< SHA-256 cryptographic hash function. The first argument is a pointer to the byte data. The second argument is the length of the data to hash. Should return a pointer to a 32-byte hash, allocated in the function. */
+	u_int8_t * (*sha256)(u_int8_t *,u_int16_t); /**< SHA-256 cryptographic hash function. The first argument is a pointer to the byte data. The second argument is the length of the data to hash. The function should return a pointer to a 32-byte hash, allocated in the function. */
+	u_int8_t * (*ripemd160)(u_int8_t *,u_int16_t); /**< RIPEMD-160 cryptographic hash function. The first argument is a pointer to the byte data. The second argument is the length of the data to hash. The function should return a pointer to a 20-byte hash, allocated in the function. */
+	u_int8_t * (*sha1)(u_int8_t *,u_int16_t); /**< SHA-1 cryptographic hash function. The first argument is a pointer to the byte data. The second argument is the length of the data to hash. The function should return a pointer to a 20-byte hash, allocated in the function. */
 }CBDependencies;
 
 #endif
