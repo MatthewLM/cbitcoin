@@ -20,6 +20,8 @@
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
+//  SEE HEADER FILE FOR DOCUMENTATION
+
 #include "CBBase58.h"
 
 CBBigInt CBDecodeBase58(char * str){

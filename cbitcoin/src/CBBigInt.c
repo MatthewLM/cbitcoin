@@ -25,6 +25,8 @@
 //  Services Pty Limited <www.di-mgt.com.au>, and is used with
 //  permission.
 
+//  SEE HEADER FILE FOR DOCUMENTATION
+
 #include "CBBigInt.h"
 #include <assert.h>
 

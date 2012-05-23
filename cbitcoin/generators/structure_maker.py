@@ -166,6 +166,8 @@ source.write("//\n\
 //  You should have received a copy of the GNU General Public License\n\
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.\n\
 \n\
+//  SEE HEADER FILE FOR DOCUMENTATION \n\
+\n\
 #include \"CB"+name+".h\"\n\
 \n\
 //  Virtual Table Store\n\
