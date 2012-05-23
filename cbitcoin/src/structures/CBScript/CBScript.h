@@ -32,6 +32,7 @@
 
 #include "CBByteArray.h"
 #include "CBNetworkParameters.h"
+#include "CBDependencies.h"
 #include <stdbool.h>
 
 /**
@@ -57,7 +58,7 @@ typedef struct{
 */
 typedef struct{
 	CBObjectVT base; /**< CBObjectVT base structure */
-	bool (*execute)(void *,CBScriptStack *); /**< Executes the script with the given stack. */
+	bool (*execute)(void *,CBScriptStack *,CBDependencies *); /**< Executes the script with the given stack and dependencies structure. */
 }CBScriptVT;
 
 /**
@@ -134,18 +135,13 @@ void CBFreeScriptStack(CBScriptStack stack);
  */
 CBScriptStack CBNewEmptyScriptStack(void);
 /**
- @brief Evaluates the top stack item as a bool. False if 0 or -0.
- @param stack The stack.
- @returns The boolean result.
- */
-bool CBScriptStackEvalBool(CBScriptStack * stack);
-/**
  @brief Executes a bitcoin script.
  @param self The CBScript object with the program
  @param stack A pointer to the input stack for the program.
+ @param dependencies A pointer to a CBDependencies structure object.
  @returns True is the program ended with true, false otherwise or on script failure.
  */
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack);
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack,CBDependencies * dependencies);
 /**
  @brief Returns a copy of a stack item, "fromTop" from the top.
  @param stack A pointer to the stack.
@@ -153,6 +149,18 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack);
  @returns A copy of the stack item which should be freed.
  */
 CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack,u_int8_t fromTop);
+/**
+ @brief Evaluates the top stack item as a bool. False if 0 or -0.
+ @param stack The stack.
+ @returns The boolean result.
+ */
+bool CBScriptStackEvalBool(CBScriptStack * stack);
+/**
+ @brief Converts a CBScriptStackItem to an int64_t
+ @param item The CBScriptStackItem to convert
+ @returns A 64 bit signed integer.
+ */
+int64_t CBScriptStackItemToInt64(CBScriptStackItem item);
 /**
  @brief Removes the top item from the stack and returns it.
  @param stack A pointer to the stack to pop the data.
@@ -170,5 +178,12 @@ void CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item);
  @param stack A pointer to the stack to remove the data.
  */
 void CBScriptStackRemoveItem(CBScriptStack * stack);
+/**
+ @brief Converts a int64_t to a CBScriptStackItem
+ @param item Pass in a CBScriptStackItem for reallocating data.
+ @param i The 64 bit signed integer.
+ @returns A CBScriptStackItem.
+ */
+CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item,int64_t i);
 
 #endif
