@@ -74,7 +74,7 @@ CBBigInt CBDecodeBase58(char * str){
 CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dependencies){
 	CBBigInt bi = CBDecodeBase58(str);
 	if (bi.length < 4){
-		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"Error: The string passed into CBDecodeBase58Checked decoded into data that was too short.");
+		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short.");
 		bi.length = 1;
 		bi.data[0] -= 0;
 		return bi;
@@ -96,7 +96,7 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dep
 	}
 	free(checksum2);
 	if(!ok){
-		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"Error: The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
+		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;
 		bi.data[0] -= 0;
 		return bi;

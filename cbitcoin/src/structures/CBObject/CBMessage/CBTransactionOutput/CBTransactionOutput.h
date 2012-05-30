@@ -46,20 +46,23 @@ typedef struct{
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	int64_t value; /**< The transaction value */
-	CBByteArray * scriptData; /**< The output script byte data */
+	u_int64_t value; /**< The transaction value */
 	CBScript * scriptObject; /**< The output script object */
 	bool availableForSpending; /**< True is output can be spent */
 	void * spentBy; /**< CBTransactionInput that spent this output if any */
 	CBTransaction * parentTransaction; /**< Transaction containing this output */
-	u_int32_t scriptLen; /**< Length of script */
 } CBTransactionOutput;
 
 /**
  @brief Creates a new CBTransactionOutput object.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutputDeserialisation(CBNetworkParameters * params, CBTransaction * parent, CBByteArray * payload,u_int32_t offset,bool parseLazy,bool parseRetain);
+CBTransactionOutput * CBNewTransactionOutput(CBNetworkParameters * params, CBTransaction * parent, u_int64_t value, CBByteArray * scriptBytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
+/**
+ @brief Creates a new CBTransactionOutput object.
+ @returns A new CBTransactionOutput object.
+ */
+CBTransactionOutput * CBNewTransactionOutputFromData(CBNetworkParameters * params, CBTransaction * parent, CBByteArray * bytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
 
 /**
  @brief Creates a new CBTransactionOutputVT.
@@ -91,7 +94,13 @@ CBTransactionOutput * CBGetTransactionOutput(void * self);
  @param self The CBTransactionOutput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutputDeserialisation(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, CBByteArray * payload, u_int32_t offset,bool parseLazy,bool parseRetain);
+bool CBInitTransactionOutput(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, u_int64_t value, CBByteArray * scriptBytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
+/**
+ @brief Initialises a CBTransactionOutput object
+ @param self The CBTransactionOutput object to initialise
+ @returns true on success, false on failure.
+ */
+bool CBInitTransactionOutputByData(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, CBByteArray * bytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
 
 /**
  @brief Frees a CBTransactionOutput object.

@@ -21,7 +21,7 @@
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 /**
  @file
- @brief Simple structure for variable size integers information.
+ @brief Simple structure for variable size integers information. This is an annoying structure used in the bitcoin protocol. One has to wonder why it was ever used.
  */
 
 #ifndef CBVARINTH
@@ -45,10 +45,23 @@ typedef struct{
  */
 CBVarInt CBVarIntDecode(CBByteArray * bytes,u_int32_t offset);
 /**
- @brief Returns the variable integer byte size of an integer
- @param value The integer
+ @brief Encodes variable size integer into bytes.
+ @param bytes The byte array to encode a variable size integer into.
+ @param offset Offset to start decoding from.
+ @param varInt Variable integer structure.
+ */
+void CBVarIntEncode(CBByteArray * bytes,u_int32_t offset,CBVarInt varInt);
+/**
+ @brief Returns a variable integer from a 64 bit integer.
+ @param integer The 64 bit integer
+ @returns A CBVarInt.
+ */
+CBVarInt CBVarIntFromUInt64(u_int64_t integer);
+/**
+ @brief Returns the variable integer byte size of a 64 bit integer
+ @param value The 64 bit integer
  @returns The size of a variable integer for this integer.
  */
-u_int8_t CBVarIntSizeOf(u_int32_t value);
+u_int8_t CBVarIntSizeOf(u_int64_t value);
 
 #endif

@@ -371,5 +371,7 @@ int main(){
 	}
 	CBFreeScriptStack(stack);
 	CBGetObjectVT(script)->release(&script);
+	// C++ CLIENT TEST ONE
+	
 	return 0;
 }

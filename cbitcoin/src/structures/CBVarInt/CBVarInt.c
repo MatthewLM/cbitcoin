@@ -33,7 +33,7 @@ CBVarInt CBVarIntDecode(CBByteArray * bytes,u_int32_t offset){
 		result.size = 1;
 	} else if (first == 253) {
 		// 16 bits.
-		result.val = CBGetByteArrayVT(bytes)->getByte(bytes,offset+1) | (CBGetByteArrayVT(bytes)->getByte(bytes,offset+2) << 8);
+		result.val = CBGetByteArrayVT(bytes)->readUInt16(bytes,offset+1);
 		result.size = 2;
 	} else if (first == 254) {
 		// 32 bits.
@@ -46,8 +46,32 @@ CBVarInt CBVarIntDecode(CBByteArray * bytes,u_int32_t offset){
 	}
 	return result;
 }
-
-u_int8_t CBVarIntSizeOf(u_int32_t value){
+void CBVarIntEncode(CBByteArray * bytes,u_int32_t offset,CBVarInt varInt){
+	switch (varInt.size) {
+		case 1:
+			CBGetByteArrayVT(bytes)->setByte(bytes,offset,(u_int8_t)varInt.val);
+			break;
+		case 2:
+			CBGetByteArrayVT(bytes)->setByte(bytes,offset,253);
+			CBGetByteArrayVT(bytes)->setUInt16(bytes,offset+1,(u_int16_t)varInt.val);
+			break;
+		case 4:
+			CBGetByteArrayVT(bytes)->setByte(bytes,offset,254);
+			CBGetByteArrayVT(bytes)->setUInt32(bytes,offset+1,(u_int32_t)varInt.val);
+			break;
+		case 8:
+			CBGetByteArrayVT(bytes)->setByte(bytes,offset,255);
+			CBGetByteArrayVT(bytes)->setUInt64(bytes,offset+1,varInt.val);
+			break;
+	}
+}
+CBVarInt CBVarIntFromUInt64(u_int64_t integer){
+	CBVarInt varInt;
+	varInt.val = integer;
+	varInt.size = CBVarIntSizeOf(integer);
+	return varInt;
+}
+u_int8_t CBVarIntSizeOf(u_int64_t value){
 	if (value < 253)
 		return 1;
 	else if (value < 65536)

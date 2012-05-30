@@ -1,11 +1,11 @@
-cbitcoin - A Bitcoin Library For The C Programming Language
-===========================================================
+cbitcoin - A Bitcoin Library In The C Programming Language
+==========================================================
 
-cbitcoin is a bitcoin library in development that will use nothing but the standard C library. The aim for this project is to create a simple, portable and powerful library for bitcoin in C. The library should be easy to use but provide many configurable features. The library will be made purely for C99 with nothing but the standard library. This should make the library small, efficient and portable.
+cbitcoin is a bitcoin library in development that will use nothing but the standard C library. The aim for this project is to create a simple, portable and powerful library for bitcoin in C. The library should be easy to use but provide many configurable features. Using only standard C, the library should be small, efficient and portable. It may become useful for projects involving embedded devices.
 
-The library is being developed from the bitcoinj library. Once functionalities have been implemented from bitcoinj, remaining functionalities will be developed from the C++ bitcoin client. Network, threading and any requirements not available in the standard C library will be attached to cbitcoin using function pointers.
+THE LIBRARY IS STILL IN DEVELOPMENT AND IS MOSTLY INCOMPLETE.
 
-THE LIBRARY IS STILL IN DEVELOPMENT AND MOSTLY INCOMPLETE.
+**Send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9**
 
 Contributors
 ------------

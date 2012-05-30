@@ -31,11 +31,18 @@ static int objectNum = 0;
 
 //  Constructors
 
-CBTransactionOutput * CBNewTransactionOutputDeserialisation(CBNetworkParameters * params, CBTransaction * parent, CBByteArray * payload,u_int32_t offset,bool parseLazy,bool parseRetain){
+CBTransactionOutput * CBNewTransactionOutput(CBNetworkParameters * params, CBTransaction * parent, u_int64_t value, CBByteArray * scriptBytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events){
 	CBTransactionOutput * self = malloc(sizeof(*self));
 	objectNum++;
 	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionOutputVT);
-	CBInitTransactionOutputDeserialisation(self,params,parent,payload,offset,parseLazy,parseRetain);
+	CBInitTransactionOutput(self,params,parent,value,scriptBytes,protocolVersion,serialiseCache,events);
+	return self;
+}
+CBTransactionOutput * CBNewTransactionOutputFromData(CBNetworkParameters * params, CBTransaction * parent, CBByteArray * bytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events){
+	CBTransactionOutput * self = malloc(sizeof(*self));
+	objectNum++;
+	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionOutputVT);
+	CBInitTransactionOutputByData(self,params,parent,bytes,protocolVersion,serialiseCache,events);
 	return self;
 }
 
@@ -63,11 +70,19 @@ CBTransactionOutput * CBGetTransactionOutput(void * self){
 	return self;
 }
 
-//  Initialiser
+//  Initialisers
 
-bool CBInitTransactionOutputDeserialisation(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, CBByteArray * payload, u_int32_t offset,bool parseLazy,bool parseRetain){
-	if (!CBInitMessage(CBGetMessage(self), params, payload, offset, CB_PROTOCOL_VERSION, parseLazy, parseRetain, CB_BYTE_ARRAY_UNKNOWN_LENGTH))
+bool CBInitTransactionOutput(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, u_int64_t value, CBByteArray * scriptBytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events){
+	self->scriptObject = CBNewScript(params, scriptBytes, events);
+	self->value = value;
+	if (!CBInitMessageByObject(CBGetMessage(self), params, 8 + CBVarIntSizeOf(scriptBytes->length) + scriptBytes->length, protocolVersion, serialiseCache, events))
 		return false;
+	return true;
+}
+bool CBInitTransactionOutputByData(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, CBByteArray * bytes, u_int32_t protocolVersion,bool serialiseCache,CBEvents * events){
+	if (!CBInitMessageByData(CBGetMessage(self), params, bytes, protocolVersion, serialiseCache, events))
+		return false;
+	self->parentTransaction = parent;
 	return true;
 }
 

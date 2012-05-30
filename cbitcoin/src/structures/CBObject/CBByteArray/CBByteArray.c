@@ -64,15 +64,22 @@ void CBSetByteArrayVT(CBByteArrayVT * VT){
 	CBSetObjectVT((CBObjectVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeByteArray;
 	VT->copy = (void * (*)(void *))CBByteArrayCopy;
+	VT->copyArray = (void (*)(void *,u_int32_t,void *)) CBByteArrayCopyByteArray;
+	VT->copySubArray = (void (*)(void *,u_int32_t,void *,u_int32_t,u_int32_t)) CBByteArrayCopySubByteArray;
 	VT->getByte = (u_int8_t (*)(void *,u_int32_t))CBByteArrayGetByte;
 	VT->getData = (u_int8_t * (*)(void *))CBByteArrayGetData;
 	VT->getLastByte = (u_int8_t (*)(void *))CBByteArrayGetLastByte;
-	VT->insertByte = (void (*)(void *,u_int32_t,u_int8_t))CBByteArrayInsertByte;
+	VT->setByte = (void (*)(void *,u_int32_t,u_int8_t))CBByteArraySetByte;
+	VT->setUInt16 = (void (*)(void *,u_int32_t,u_int16_t))CBByteArraySetUInt16;
+	VT->setUInt32 = (void (*)(void *,u_int32_t,u_int32_t))CBByteArraySetUInt32;
+	VT->setUInt64 = (void (*)(void *,u_int32_t,u_int64_t))CBByteArraySetUInt64;
 	VT->readUInt16 = (u_int16_t (*)(void *,u_int32_t))CBByteArrayReadUInt16;
 	VT->readUInt32 = (u_int32_t (*)(void *,u_int32_t))CBByteArrayReadUInt32;
 	VT->readUInt64 = (u_int64_t (*)(void *,u_int32_t))CBByteArrayReadUInt64;
+	VT->releaseSharedData = (void (*)(void *))CBByteArrayReleaseSharedData;
 	VT->reverse = (void (*)(void *))CBByteArrayReverseBytes;
 	VT->subCopy = (void * (*)(void *,u_int32_t,u_int32_t))CBByteArraySubCopy;
+	VT->subRef = (void * (*)(void *,u_int32_t,u_int32_t))CBByteArraySubReference;
 }
 
 //  Virtual Table Getter
@@ -129,30 +136,32 @@ void CBFreeByteArray(CBByteArray * self){
 	CBFree();
 }
 void CBFreeProcessByteArray(CBByteArray * self){
+	CBGetByteArrayVT(self)->releaseSharedData(self);
+	CBFreeProcessObject(CBGetObject(self));
+}
+void CBByteArrayReleaseSharedData(CBByteArray * self){
 	self->sharedData->references--;
 	if (self->sharedData->references < 1) {
 		// Shared data now owned by nothing so free it 
 		free(self->sharedData->data);
 		free(self->sharedData);
 	}
-	CBFreeProcessObject(CBGetObject(self));
 }
 
 //  Functions
 
-void CBByteArrayAdjustLength(CBByteArray * self, int adjustment){
-	if (self->length != CB_BYTE_ARRAY_UNKNOWN_LENGTH)
-		if (adjustment == CB_BYTE_ARRAY_UNKNOWN_LENGTH)
-			self->length = CB_BYTE_ARRAY_UNKNOWN_LENGTH;
-		else
-			self->length += adjustment;
-}
 CBByteArray * CBByteArrayCopy(CBByteArray * self){
 	CBByteArray * new = CBNewByteArrayOfSize(self->length,self->events);
-	memcpy(new->sharedData->data,self->sharedData->data + self->offset,self->length);
+	memmove(new->sharedData->data,self->sharedData->data + self->offset,self->length);
 	return new;
 }
-u_int8_t CBByteArrayGetByte(CBByteArray * self,int index){
+void CBByteArrayCopyByteArray(CBByteArray * self,u_int32_t writeOffset,CBByteArray * source){
+	memmove(self->sharedData->data + self->offset + writeOffset,source->sharedData->data + source->offset,source->length);
+}
+void CBByteArrayCopySubByteArray(CBByteArray * self,u_int32_t writeOffset,CBByteArray * source,u_int32_t readOffset,u_int32_t length){
+	memmove(self->sharedData->data + self->offset + writeOffset,source->sharedData->data + source->offset + readOffset,length);
+}
+u_int8_t CBByteArrayGetByte(CBByteArray * self,u_int32_t index){
 	return self->sharedData->data[self->offset+index];
 }
 u_int8_t * CBByteArrayGetData(CBByteArray * self){
@@ -161,41 +170,70 @@ u_int8_t * CBByteArrayGetData(CBByteArray * self){
 u_int8_t CBByteArrayGetLastByte(CBByteArray * self){
 	return self->sharedData->data[self->offset+self->length];
 }
-void CBByteArrayInsertByte(CBByteArray * self,int index,u_int8_t byte){
+void CBByteArraySetByte(CBByteArray * self,u_int32_t index,u_int8_t byte){
 	self->sharedData->data[self->offset+index] = byte;
 }
-u_int16_t CBByteArrayReadUInt16(CBByteArray * self,int offset){
-	u_int16_t result = (u_int16_t)CBGetByteArrayVT(self)->getByte(self,offset) << 8;
-	result |= CBGetByteArrayVT(self)->getByte(self,offset+1);
+void CBByteArraySetUInt16(CBByteArray * self,u_int32_t offset,u_int16_t integer){
+	self->sharedData->data[self->offset+offset] = integer;
+	self->sharedData->data[self->offset+offset + 1] = integer >> 8;
+}
+void CBByteArraySetUInt32(CBByteArray * self,u_int32_t offset,u_int32_t integer){
+	self->sharedData->data[self->offset+offset] = integer;
+	self->sharedData->data[self->offset+offset + 1] = integer >> 8;
+	self->sharedData->data[self->offset+offset + 2] = integer >> 16;
+	self->sharedData->data[self->offset+offset + 3] = integer >> 24;
+}
+void CBByteArraySetUInt64(CBByteArray * self,u_int32_t offset,u_int64_t integer){
+	self->sharedData->data[self->offset+offset] = integer;
+	self->sharedData->data[self->offset+offset + 1] = integer >> 8;
+	self->sharedData->data[self->offset+offset + 2] = integer >> 16;
+	self->sharedData->data[self->offset+offset + 3] = integer >> 24;
+	self->sharedData->data[self->offset+offset + 4] = integer >> 32;
+	self->sharedData->data[self->offset+offset + 5] = integer >> 40;
+	self->sharedData->data[self->offset+offset + 6] = integer >> 48;
+	self->sharedData->data[self->offset+offset + 7] = integer >> 56;
+}
+u_int16_t CBByteArrayReadUInt16(CBByteArray * self,u_int32_t offset){
+	u_int16_t result = CBGetByteArrayVT(self)->getByte(self,offset);
+	result |= (u_int16_t)CBGetByteArrayVT(self)->getByte(self,offset+1) << 8;
 	return result;
 }
-u_int32_t CBByteArrayReadUInt32(CBByteArray * self,int offset){
-	u_int32_t result = (u_int32_t)CBGetByteArrayVT(self)->getByte(self,offset) << 24;
-	result |= (u_int32_t)CBGetByteArrayVT(self)->getByte(self,offset+1) << 16;
-	result |= (u_int32_t)CBGetByteArrayVT(self)->getByte(self,offset+2) << 8;
-	result |= CBGetByteArrayVT(self)->getByte(self,offset+3);
+u_int32_t CBByteArrayReadUInt32(CBByteArray * self,u_int32_t offset){
+	u_int32_t result = CBGetByteArrayVT(self)->getByte(self,offset);
+	result |= (u_int32_t)CBGetByteArrayVT(self)->getByte(self,offset+1) << 8;
+	result |= (u_int32_t)CBGetByteArrayVT(self)->getByte(self,offset+2) << 16;
+	result |= (u_int32_t)CBGetByteArrayVT(self)->getByte(self,offset+3) << 24;
 	return result;
 }
-u_int64_t CBByteArrayReadUInt64(CBByteArray * self,int offset){
-	u_int64_t result = (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset) << 56;
-	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+1) << 48;
-	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+2) << 40;
-	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+3) << 32;
-	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+4) << 24;
-	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+5) << 16;
-	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+6) << 8;
-	result |= CBGetByteArrayVT(self)->getByte(self,offset+7);
+u_int64_t CBByteArrayReadUInt64(CBByteArray * self,u_int32_t offset){
+	u_int64_t result = CBGetByteArrayVT(self)->getByte(self,offset);
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+1) << 8;
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+2) << 16;
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+3) << 24;
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+4) << 32;
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+5) << 40;
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+6) << 48;
+	result |= (u_int64_t)CBGetByteArrayVT(self)->getByte(self,offset+7) << 56;
 	return result;
 }
 void CBByteArrayReverseBytes(CBByteArray * self){
 	for (int x = 0; x < self->length / 2; x++) {
 		u_int8_t temp = CBGetByteArrayVT(self)->getByte(self,x);
-		CBGetByteArrayVT(self)->insertByte(self,x,CBGetByteArrayVT(self)->getByte(self,self->length-x-1));
-		CBGetByteArrayVT(self)->insertByte(self,self->length-x-1,temp);
+		CBGetByteArrayVT(self)->setByte(self,x,CBGetByteArrayVT(self)->getByte(self,self->length-x-1));
+		CBGetByteArrayVT(self)->setByte(self,self->length-x-1,temp);
 	}
 }
-CBByteArray * CBByteArraySubCopy(CBByteArray * self,int offset,int length){
+void CBByteArrayChangeReference(CBByteArray * self,CBByteArray * ref,u_int32_t offset){
+	CBGetByteArrayVT(self)->releaseSharedData(self); // Release last shared data.
+	self->sharedData = ref->sharedData;
+	self->sharedData->references++; // Since a new reference to the shared data is being made, an increase in the reference count must be made.
+	self->offset = ref->offset + offset; // New offset for shared data
+}
+CBByteArray * CBByteArraySubCopy(CBByteArray * self,u_int32_t offset,u_int32_t length){
 	CBByteArray * new = CBNewByteArrayOfSize(length,self->events);
 	memcpy(new->sharedData->data,self->sharedData->data + self->offset + offset,length);
 	return new;
+}
+CBByteArray * CBByteArraySubReference(CBByteArray * self,u_int32_t offset,u_int32_t length){
+	return CBNewByteArraySubReference(self, offset, length);
 }
