@@ -42,7 +42,7 @@
  @brief Virtual function table for CBObject.
  */
 typedef struct{
-	void (*free)(void *); /**< Pointer to the function used to free a CBObject. */
+	void (*free)(void *); /**< Pointer to the function used to free a CBObject. Call release to release references and do not call this. */
 	void (*release)(void *); /**< Pointer to the function used to release (calling free if necessary) a CBObject by reference. Must exist with each retain to free memory. An additional call to release should exist for each object created. */
 	void (*retain)(void *); /**< Pointer to the function used to retain a CBObject. Always call release when done with an object. */
 }CBObjectVT;
