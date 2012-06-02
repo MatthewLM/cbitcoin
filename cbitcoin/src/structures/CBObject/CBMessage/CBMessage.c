@@ -31,11 +31,11 @@ static int objectNum = 0;
 
 //  Constructor
 
-CBMessage * CBNewMessageByObject(void * params,u_int32_t length,u_int32_t protocolVersion,CBEvents * events){
+CBMessage * CBNewMessageByObject(void * params,CBEvents * events){
 	CBMessage * self = malloc(sizeof(*self));
 	objectNum++;
 	CBAddVTToObject(CBGetObject(self), &VTStore, &CBCreateMessageVT);
-	if (CBInitMessageByObject(self,params,length,protocolVersion,events))
+	if (CBInitMessageByObject(self,params,events))
 		return self;
 	return NULL; //Initialisation failure
 }
@@ -50,8 +50,8 @@ CBMessageVT * CBCreateMessageVT(){
 void CBSetMessageVT(CBMessageVT * VT){
 	CBSetObjectVT((CBObjectVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeMessage;
-	VT->deserialise = (bool (*)(void *)) CBMessageBitcoinDeserialise;
-	VT->serialise = (bool (*)(void *))CBMessageBitcoinSerialise;
+	VT->deserialise = (u_int32_t (*)(void *)) CBMessageBitcoinDeserialise;
+	VT->serialise = (u_int32_t (*)(void *))CBMessageBitcoinSerialise;
 }
 
 //  Virtual Table Getter
@@ -68,23 +68,20 @@ CBMessage * CBGetMessage(void * self){
 
 //  Initialiser
 
-bool CBInitMessageByObject(CBMessage * self,void * params,u_int32_t length,u_int32_t protocolVersion,CBEvents * events){
+bool CBInitMessageByObject(CBMessage * self,void * params,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->params = params;
 	self->bytes = NULL;
-	self->length = length;
-	self->protocolVersion = protocolVersion;
 	self->events = events;
 	return true;
 }
-bool CBInitMessageByData(CBMessage * self,void * params,CBByteArray * data,u_int32_t protocolVersion,CBEvents * events){
+bool CBInitMessageByData(CBMessage * self,void * params,CBByteArray * data,CBEvents * events){
 	if (!CBInitObject(CBGetObject(self)))
 		return false;
 	self->params = params;
 	self->bytes = data;
 	CBGetObjectVT(data)->retain(data); // Retain data for this object.
-	self->protocolVersion = protocolVersion;
 	self->events = events;
 	return true;
 }
@@ -96,18 +93,19 @@ void CBFreeMessage(CBMessage * self){
 	CBFree();
 }
 void CBFreeProcessMessage(CBMessage * self){
+	if (self->bytes) CBGetObjectVT(self->bytes)->release(&self->bytes);
 	CBFreeProcessObject(CBGetObject(self));
 }
 
 //  Functions
 
-bool CBMessageBitcoinDeserialise(CBMessage * self){
-	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_DESERIALISATION_IMPLEMENTATION,"CBMessageProcessBitcoinDeserialise has not been overriden. Returning no data.");
-	return false;
+u_int32_t CBMessageBitcoinDeserialise(CBMessage * self){
+	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_DESERIALISATION_IMPLEMENTATION,"CBMessageBitcoinDeserialise has not been overriden. Returning 0.");
+	return 0;
 }
-bool CBMessageBitcoinSerialise(CBMessage * self){
-	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,"CBMessageProcessBitcoinSerialise has not been overriden. Returning no data.");
-	return false;
+u_int32_t CBMessageBitcoinSerialise(CBMessage * self){
+	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,"CBMessageBitcoinSerialise has not been overriden. Returning 0.");
+	return 0;
 }
 bool CBMessageSetChecksum(CBMessage * self,CBByteArray * checksum){
 	if (checksum->length != 4) {
