@@ -27,7 +27,7 @@
 
 //  Virtual Table Store
 
-static CBTestStructVT * VTStore = NULL;
+static void * VTStore = NULL;
 static int objectNum = 0;
 
 //  Constructor
