@@ -45,8 +45,8 @@ typedef struct{
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	u_int64_t version;
-	CBSha256Hash prevBlockHash;
-	CBSha256Hash merkleRoot;
+	CBByteArray * prevBlockHash;
+	CBByteArray * merkleRoot;
 	u_int64_t time;
 	u_int64_t difficultyTarget; 
 	u_int64_t nonce;
