@@ -31,25 +31,25 @@ static int objectNum = 0;
 
 //  Constructors
 
-CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events){
+CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
 	objectNum++;
 	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionInputVT);
-	CBInitTransactionInput(self,params,parentTransaction,scriptData,outPointerHash,outPointerIndex,protocolVersion,events);
+	CBInitTransactionInput(self,params,parentTransaction,scriptData,outPointerHash,outPointerIndex,events);
 	return self;
 }
-CBTransactionInput * CBNewTransactionInputFromData(CBNetworkParameters * params, CBByteArray * data,u_int32_t protocolVersion,CBEvents * events){
+CBTransactionInput * CBNewTransactionInputFromData(CBNetworkParameters * params, CBByteArray * data, void * parentTransaction,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
 	objectNum++;
 	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionInputVT);
-	CBInitMessageByData(CBGetMessage(self), params, data, protocolVersion, events);
+	CBInitTransactionInputFromData(self, params, data, parentTransaction, events);
 	return self;
 }
-CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events){
+CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
 	objectNum++;
 	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateTransactionInputVT);
-	CBInitUnsignedTransactionInput(self,params,parentTransaction,outPointerHash,outPointerIndex, protocolVersion, events);
+	CBInitUnsignedTransactionInput(self,params,parentTransaction,outPointerHash,outPointerIndex, events);
 	return self;
 }
 
@@ -63,8 +63,8 @@ CBTransactionInputVT * CBCreateTransactionInputVT(){
 void CBSetTransactionInputVT(CBTransactionInputVT * VT){
 	CBSetMessageVT((CBMessageVT *)VT);
 	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeTransactionInput;
-	((CBMessageVT *)VT)->serialise = (bool (*)(void *))CBTransactionInputSerialise;
-	((CBMessageVT *)VT)->deserialise = (bool (*)(void *))CBTransactionInputDeserialise;
+	((CBMessageVT *)VT)->serialise = (u_int32_t (*)(void *))CBTransactionInputSerialise;
+	((CBMessageVT *)VT)->deserialise = (u_int32_t (*)(void *))CBTransactionInputDeserialise;
 }
 
 //  Virtual Table Getter
@@ -81,25 +81,33 @@ CBTransactionInput * CBGetTransactionInput(void * self){
 
 //  Initialisers
 
-bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events){
+bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction, CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	self->scriptObject = CBNewScript(params, scriptData, events);
 	self->outPointerHash = outPointerHash;
 	CBGetObjectVT(outPointerHash)->retain(outPointerHash);
 	self->outPointerIndex = outPointerIndex;
 	self->sequence = CB_TRANSACTION_INPUT_FINAL;
 	self->parentTransaction = parentTransaction;
-	if (!CBInitMessageByObject(CBGetMessage(self), params, 40 + CBVarIntSizeOf(scriptData->length) + scriptData->length, protocolVersion, events))
+	if (!CBInitMessageByObject(CBGetMessage(self), params, events))
 		return false;
 	return true;
 }
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events){
+bool CBInitTransactionInputFromData(CBTransactionInput * self,CBNetworkParameters * params, CBByteArray * data, void * parentTransaction,CBEvents * events){
+	self->scriptObject = NULL;
+	self->outPointerHash = NULL;
+	self->parentTransaction = parentTransaction;
+	if (!CBInitMessageByData(CBGetMessage(self), params, data, events))
+		return false;
+	return true;
+}
+bool CBInitUnsignedTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events){
 	self->scriptObject = NULL;
 	self->outPointerHash = outPointerHash;
 	CBGetObjectVT(outPointerHash)->retain(outPointerHash);
 	self->outPointerIndex = outPointerIndex;
 	self->sequence = CB_TRANSACTION_INPUT_FINAL;
 	self->parentTransaction = parentTransaction;
-	if (!CBInitMessageByObject(CBGetMessage(self), params, 41, protocolVersion, events))
+	if (!CBInitMessageByObject(CBGetMessage(self), params, events))
 		return false;
 	return true;
 }
@@ -111,54 +119,56 @@ void CBFreeTransactionInput(CBTransactionInput * self){
 	CBFree();
 }
 void CBFreeProcessTransactionInput(CBTransactionInput * self){
-	CBGetObjectVT(self->scriptObject)->release(&self->scriptObject);
-	CBGetObjectVT(self->outPointerHash)->release(&self->outPointerHash);
-	CBGetObjectVT(self->parentTransaction)->release(&self->parentTransaction);
+	if (self->scriptObject) CBGetObjectVT(self->scriptObject)->release(&self->scriptObject);
+	if (self->outPointerHash) CBGetObjectVT(self->outPointerHash)->release(&self->outPointerHash);
+	if (self->parentTransaction) CBGetObjectVT(self->parentTransaction)->release(&self->parentTransaction);
 	CBFreeProcessMessage(CBGetMessage(self));
 }
 
 //  Functions
 
-bool CBTransactionInputDeserialise(CBTransactionInput * self){
+u_int32_t CBTransactionInputDeserialise(CBTransactionInput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBTransactionInput with no bytes.");
-		return false;
+		return 0;
 	}
-	if (!bytes->length < 41) {
+	if (bytes->length < 41) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBTransactionInput with less than 41 bytes.");
-		return false;
+		return 0;
 	}
 	CBVarInt scriptLen = CBVarIntDecode(bytes, 36);
-	if (bytes->length < 40 + scriptLen.size + scriptLen.val) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBTransactionInput with less bytes than needed according to the length for the script.");
-		return false;
+	u_int32_t reqLen = (u_int32_t)(40 + scriptLen.size + scriptLen.val);
+	if (bytes->length < reqLen) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBTransactionInput with less bytes than needed according to the length for the script. %i < %i",bytes->length, reqLen);
+		return 0;
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->outPointerHash = CBGetByteArrayVT(bytes)->subRef(bytes,0,32);
 	self->outPointerIndex = CBGetByteArrayVT(bytes)->readUInt32(bytes,32);
 	self->scriptObject = CBNewScript(CBGetMessage(self)->params, CBGetByteArrayVT(bytes)->subRef(bytes,36 + scriptLen.size,(u_int32_t) scriptLen.val), CBGetMessage(self)->events);
 	self->sequence = CBGetByteArrayVT(bytes)->readUInt32(bytes,(u_int32_t) (36 + scriptLen.size + scriptLen.val));
-	return true;
+	return reqLen;
 }
-bool CBTransactionInputSerialise(CBTransactionInput * self){
+u_int32_t CBTransactionInputSerialise(CBTransactionInput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBTransactionInput with no bytes.");
-		return false;
+		return 0;
 	}
 	CBVarInt scriptLen = CBVarIntFromUInt64(self->scriptObject->program->length);
-	if (!bytes->length < 40 + scriptLen.size + self->scriptObject->program->length) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransactionInput with less bytes than required.");
-		return false;
+	u_int32_t reqLen = 40 + scriptLen.size + self->scriptObject->program->length;
+	if (bytes->length < reqLen) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransactionInput with less bytes than required. %i < %i\n",bytes->length, reqLen);
+		return 0;
 	}
 	if (!self->outPointerHash){
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionInput without outPointerHash.");
-		return false;
+		return 0;
 	}
 	if (!self->scriptObject){
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionInput without scriptObject.");
-		return false;
+		return 0;
 	}
 	// Serialise data into the CBByteArray and rereference objects to this CBByteArray to save memory.
 	CBGetByteArrayVT(bytes)->copyArray(bytes,0,self->outPointerHash);
@@ -168,6 +178,6 @@ bool CBTransactionInputSerialise(CBTransactionInput * self){
 	CBGetByteArrayVT(bytes)->copyArray(bytes,36 + scriptLen.size,self->scriptObject->program);
 	CBGetByteArrayVT(self->scriptObject->program)->changeRef(self->scriptObject->program,bytes,36 + scriptLen.size);
 	CBGetByteArrayVT(bytes)->setUInt32(bytes,36 + scriptLen.size + self->scriptObject->program->length,self->sequence);
-	return true;
+	return reqLen;
 }
 

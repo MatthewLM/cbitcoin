@@ -57,18 +57,18 @@ typedef struct{
  @brief Creates a new CBTransactionInput object.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events);
+CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 /**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInputFromData(CBNetworkParameters * params, CBByteArray * data,u_int32_t protocolVersion,CBEvents * events);
+CBTransactionInput * CBNewTransactionInputFromData(CBNetworkParameters * params, CBByteArray * data, void * parentTransaction,CBEvents * events);
 /**
  @brief Creates a new unsigned CBTransactionInput object and links it to a given output.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events);
+CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 
 /**
  @brief Creates a new CBTransactionInputVT.
@@ -100,13 +100,20 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events);
+bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
+/**
+ @brief Initialises a new CBTransactionInput object from the byte data.
+ @param self The CBTransactionInput object to initialise
+ @param data The byte data.
+ @returns true on success, false on failure.
+ */
+bool CBInitTransactionInputFromData(CBTransactionInput * self,CBNetworkParameters * params, CBByteArray * data, void * parentTransaction,CBEvents * events);
 /**
  @brief Initialises an unsigned CBTransactionInput object.
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,u_int32_t protocolVersion,CBEvents * events);
+bool CBInitUnsignedTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 
 /**
  @brief Frees a CBTransactionInput object.
@@ -124,15 +131,16 @@ void CBFreeProcessTransactionInput(CBTransactionInput * self);
 
 /**
  @brief Deserialises a CBTransactionInput so that it can be used as an object.
- @param self The CBMessage object
- @returns true on success, false on failure.
+ @param self The CBTransactionInput object
+ @returns The length read on success, false on failure.
  */
-bool CBTransactionInputDeserialise(CBTransactionInput * self);
+u_int32_t CBTransactionInputDeserialise(CBTransactionInput * self);
 /**
  @brief Serialises a CBTransactionInput to the byte data.
- @param self The CBMessage object
+ @param self The CBTransactionInput object
  @param bytes The bytes to fill. Should be the full length needed.
+ @returns The length written on success, false on failure.
  */
-bool CBTransactionInputSerialise(CBTransactionInput * self);
+u_int32_t CBTransactionInputSerialise(CBTransactionInput * self);
 
 #endif

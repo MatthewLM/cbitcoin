@@ -32,7 +32,6 @@
 
 #include "CBMessage.h"
 #include "CBScript.h"
-#include "CBTransaction.h"
 
 /**
  @brief Virtual function table for CBTransactionOutput.
@@ -48,21 +47,20 @@ typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	u_int64_t value; /**< The transaction value */
 	CBScript * scriptObject; /**< The output script object */
-	bool availableForSpending; /**< True is output can be spent */
 	void * spentBy; /**< CBTransactionInput that spent this output if any */
-	CBTransaction * parentTransaction; /**< Transaction containing this output */
+	void * parentTransaction; /**< Transaction containing this output */
 } CBTransactionOutput;
 
 /**
  @brief Creates a new CBTransactionOutput object.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutput(CBNetworkParameters * params, CBTransaction * parent, u_int64_t value, CBByteArray * scriptBytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
+CBTransactionOutput * CBNewTransactionOutput(CBNetworkParameters * params, void * parent, u_int64_t value, CBByteArray * scriptBytes,CBEvents * events);
 /**
- @brief Creates a new CBTransactionOutput object.
+ @brief Creates a new CBTransactionOutput object from byte data. Should be serialised for object data.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutputFromData(CBNetworkParameters * params, CBTransaction * parent, CBByteArray * bytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
+CBTransactionOutput * CBNewTransactionOutputFromData(CBNetworkParameters * params, CBByteArray * data, void * parent,CBEvents * events);
 
 /**
  @brief Creates a new CBTransactionOutputVT.
@@ -94,13 +92,13 @@ CBTransactionOutput * CBGetTransactionOutput(void * self);
  @param self The CBTransactionOutput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutput(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, u_int64_t value, CBByteArray * scriptBytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
+bool CBInitTransactionOutput(CBTransactionOutput * self,CBNetworkParameters * params, void * parent, u_int64_t value, CBByteArray * scriptBytes,CBEvents * events);
 /**
  @brief Initialises a CBTransactionOutput object
  @param self The CBTransactionOutput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutputByData(CBTransactionOutput * self,CBNetworkParameters * params, CBTransaction * parent, CBByteArray * bytes,u_int32_t protocolVersion,bool serialiseCache,CBEvents * events);
+bool CBInitTransactionOutputFromData(CBTransactionOutput * self,CBNetworkParameters * params, CBByteArray * data, void * parent,CBEvents * events);
 
 /**
  @brief Frees a CBTransactionOutput object.
@@ -115,5 +113,19 @@ void CBFreeTransactionOutput(CBTransactionOutput * self);
 void CBFreeProcessTransactionOutput(CBTransactionOutput * self);
  
 //  Functions
+
+/**
+ @brief Deserialises a CBTransactionOutput so that it can be used as an object.
+ @param self The CBTransactionOutput object
+ @returns The length read on success, false on failure.
+ */
+u_int32_t CBTransactionOutputDeserialise(CBTransactionOutput * self);
+/**
+ @brief Serialises a CBTransactionOutput to the byte data.
+ @param self The CBTransactionOutput object
+ @param bytes The bytes to fill. Should be the full length needed.
+ @returns The length written on success, false on failure.
+ */
+u_int32_t CBTransactionOutputSerialise(CBTransactionOutput * self);
 
 #endif

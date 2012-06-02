@@ -31,12 +31,16 @@
 //  Includes
 
 #include "CBMessage.h"
+#include "CBTransactionInput.h"
+#include "CBTransactionOutput.h"
 
 /**
  @brief Virtual function table for CBTransaction.
 */
 typedef struct{
 	CBMessageVT base; /**< CBMessageVT base structure */
+	void (*addInput)(void *, CBTransactionInput *); /**< Pointer to the function used to add an output to the transaction. */
+	void (*addOutput)(void *, CBTransactionOutput *); /**< Pointer to the function used to add an output to the transaction. */
 }CBTransactionVT;
 
 /**
@@ -44,15 +48,24 @@ typedef struct{
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int64_t version;
-	
+	u_int32_t protocolVersion; /**< Version of the bitcoin protocol. */
+	u_int32_t inputNum; /**< Number of CBTransactionInputs */
+	CBTransactionInput ** inputs;
+	u_int32_t outputNum; /**< Number of CBTransactionOutputs */
+	CBTransactionOutput ** outputs;
+	u_int32_t lockTime; /**< Time for the transaction to be valid */
 } CBTransaction;
 
 /**
- @brief Creates a new CBTransaction object.
+ @brief Creates a new CBTransaction object with no inputs or outputs.
  @returns A new CBTransaction object.
  */
-CBTransaction * CBNewTransaction(void);
+CBTransaction * CBNewTransaction(CBNetworkParameters * params, u_int32_t lockTime, u_int32_t protocolVersion, CBEvents * events);
+/**
+ @brief Creates a new CBTransaction object from byte data. Should be serialised for object data.
+ @returns A new CBTransaction object.
+ */
+CBTransaction * CBNewTransactionFromData(CBNetworkParameters * params, CBByteArray * bytes, CBEvents * events);
 
 /**
  @brief Creates a new CBTransactionVT.
@@ -84,7 +97,14 @@ CBTransaction * CBGetTransaction(void * self);
  @param self The CBTransaction object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransaction(CBTransaction * self);
+bool CBInitTransaction(CBTransaction * self,CBNetworkParameters * params, u_int32_t lockTime, u_int32_t protocolVersion, CBEvents * events);
+/**
+ @brief Initialises a new CBTransaction object from the byte data.
+ @param self The CBTransaction object to initialise
+ @param data The byte data.
+ @returns true on success, false on failure.
+ */
+bool CBInitTransactionFromData(CBTransaction * self,CBNetworkParameters * params, CBByteArray * data,CBEvents * events);
 
 /**
  @brief Frees a CBTransaction object.
@@ -99,5 +119,31 @@ void CBFreeTransaction(CBTransaction * self);
 void CBFreeProcessTransaction(CBTransaction * self);
  
 //  Functions
+
+/**
+ @brief Adds an CBTransactionInput to the CBTransaction.
+ @param self The CBTransaction object.
+ @param input The CBTransactionInput object.
+ */
+void CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
+/**
+ @brief Adds an CBTransactionInput to the CBTransaction.
+ @param self The CBTransaction object.
+ @param input The CBTransactionOutput object.
+ */
+void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
+/**
+ @brief Deserialises a CBTransaction so that it can be used as an object.
+ @param self The CBTransaction object
+ @returns true on success, false on failure.
+ */
+u_int32_t CBTransactionDeserialise(CBTransaction * self);
+/**
+ @brief Serialises a CBTransaction to the byte data.
+ @param self The CBTransaction object
+ @param bytes The bytes to fill. Should be the full length needed.
+ @returns true on success, false on failure.
+ */
+u_int32_t CBTransactionSerialise(CBTransaction * self);
 
 #endif
