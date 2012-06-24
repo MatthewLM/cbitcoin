@@ -71,7 +71,7 @@ CBBigInt CBDecodeBase58(char * str){
 	}
 	return bi;
 }
-CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dependencies){
+CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 	CBBigInt bi = CBDecodeBase58(str);
 	if (bi.length < 4){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short.");
@@ -85,8 +85,8 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dep
 		reversed[bi.length-1-x] = bi.data[x];
 	}
 	// The checksum uses SHA-256, twice, for some reason unknown to man.
-	u_int8_t * checksum = dependencies->sha256(reversed,bi.length-4);
-	u_int8_t * checksum2 = dependencies->sha256(checksum,32);
+	u_int8_t * checksum = CBSha256(reversed,bi.length-4);
+	u_int8_t * checksum2 = CBSha256(checksum,32);
 	free(checksum);
 	bool ok = true;
 	for (u_int8_t x = 0; x < 4; x++) {

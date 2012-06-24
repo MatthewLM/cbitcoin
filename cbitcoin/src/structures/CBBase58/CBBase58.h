@@ -46,7 +46,7 @@ CBBigInt CBDecodeBase58(char * str);
  @param str Base 58 string to decode.
  @returns Byte data as a CBBigInt. Is zero on failure. Checksum is included in returned data.
  */
-CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events,CBDependencies * dependencies);
+CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events);
 /**
  @brief Encodes byte data into base 58.
  @param bytes Pointer to byte data to encode. Will almost certainly be modified. Copy data beforehand if needed.
