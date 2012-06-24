@@ -30,51 +30,35 @@
 
 //  Includes
 
-#include "CBMessage.h"
-
-/**
- @brief Virtual function table for CBBlock.
-*/
-typedef struct{
-	CBMessageVT base; /**< CBMessageVT base structure */
-}CBBlockVT;
+#include "CBTransaction.h"
 
 /**
  @brief Structure for CBBlock objects. @see CBBlock.h
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int64_t version;
-	CBByteArray * prevBlockHash;
-	CBByteArray * merkleRoot;
-	u_int64_t time;
-	u_int64_t difficultyTarget; 
-	u_int64_t nonce;
+	u_int32_t version;
+	CBByteArray * prevBlockHash; /**< The previous block hash. */
+	CBByteArray * merkleRoot; /**< The merkle tree root hash. */
+	u_int32_t time; /**< Timestamp for the block. The network uses 32 bits which will require a future protocol change. */
+	u_int32_t difficulty; /**< The calculated difficulty for this block. */
+	u_int32_t nounce; /**< Nounce used in generating the block. */
+	u_int32_t transactionNum; /**< Number of transactions in the block. */
+	CBTransaction ** transactions; /**< The transactions included in this block. NULL if only the header has been received. */
 } CBBlock;
 
 /**
- @brief Creates a new CBBlock object.
+ @brief Creates a new CBBlock object. Set the members after creating the block object.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlock(void);
+CBBlock * CBNewBlock(void * params,CBEvents * events);
 
 /**
- @brief Creates a new CBBlockVT.
- @returns A new CBBlockVT.
+ @brief Creates a new CBBlock object.
+ @param data Serialised block data.
+ @returns A new CBBlock object.
  */
-CBBlockVT * CBCreateBlockVT(void);
-/**
- @brief Sets the CBBlockVT function pointers.
- @param VT The CBBlockVT to set.
- */
-void CBSetBlockVT(CBBlockVT * VT);
-
-/**
- @brief Gets the CBBlockVT. Use this to avoid casts.
- @param self The object to obtain the CBBlockVT from.
- @returns The CBBlockVT.
- */
-CBBlockVT * CBGetBlockVT(void * self);
+CBBlock * CBNewBlockFromData(void * params,CBByteArray * data,CBEvents * events);
 
 /**
  @brief Gets a CBBlock from another object. Use this to avoid casts.
@@ -88,20 +72,34 @@ CBBlock * CBGetBlock(void * self);
  @param self The CBBlock object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitBlock(CBBlock * self);
+bool CBInitBlock(CBBlock * self,void * params,CBEvents * events);
+/**
+ @brief Initialises a CBBlock object from serialised data
+ @param self The CBBlock object to initialise
+ @param data The serialised data
+ @returns true on success, false on failure.
+ */
+bool CBInitBlockFromData(CBBlock * self,void * params,CBByteArray * data,CBEvents * events);
 
 /**
  @brief Frees a CBBlock object.
  @param self The CBBlock object to free.
  */
-void CBFreeBlock(CBBlock * self);
-
-/**
- @brief Does the processing to free a CBBlock object. Should be called by the children when freeing objects.
- @param self The CBBlock object to free.
- */
-void CBFreeProcessBlock(CBBlock * self);
+void CBFreeBlock(void * vself);
  
 //  Functions
+
+/**
+ @brief Deserialises a CBBlock so that it can be used as an object.
+ @param self The CBBlock object
+ @returns The length read on success, 0 on failure.
+ */
+u_int32_t CBBlockDeserialise(CBBlock * self);
+/**
+ @brief Serialises a CBBlock to the byte data.
+ @param self The CBBlock object
+ @returns The length read on success, 0 on failure.
+ */
+u_int32_t CBBlockSerialise(CBBlock * self);
 
 #endif
