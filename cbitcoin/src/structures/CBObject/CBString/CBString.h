@@ -34,13 +34,6 @@
 #include <string.h>
 
 /**
- @brief Virtual function table for CBString.
-*/
-typedef struct{
-	CBObjectVT base; /**< CBObjectVT base structure */
-}CBStringVT;
-
-/**
  @brief Structure for CBString objects. @see CBString.h
 */
 typedef struct{
@@ -60,24 +53,6 @@ CBString * CBNewStringByCopyingCString(char * string);
  @returns A new CBString object.
  */
 CBString * CBNewStringByTakingCString(char * string);
-
-/**
- @brief Creates a new CBStringVT.
- @returns A new CBStringVT.
- */
-CBStringVT * CBCreateStringVT(void);
-/**
- @brief Sets the CBStringVT function pointers.
- @param VT The CBStringVT to set.
- */
-void CBSetStringVT(CBStringVT * VT);
-
-/**
- @brief Gets the CBStringVT. Use this to avoid casts.
- @param self The object to obtain the CBStringVT from.
- @returns The CBStringVT.
- */
-CBStringVT * CBGetStringVT(void * self);
 
 /**
  @brief Gets a CBString from another object. Use this to avoid casts.
@@ -105,13 +80,7 @@ bool CBInitStringByTakingCString(CBString * self,char * string);
  @brief Frees a CBString object.
  @param self The CBString object to free.
  */
-void CBFreeString(CBString * self);
-
-/**
- @brief Does the processing to free a CBString object. Should be called by the children when freeing objects.
- @param self The CBString object to free.
- */
-void CBFreeProcessString(CBString * self);
+void CBFreeString(void * self);
  
 //  Functions
 

@@ -24,44 +24,19 @@
 
 #include "CBString.h"
 
-//  Virtual Table Store
-
-static void * VTStore = NULL;
-static int objectNum = 0;
-
 //  Constructors
 
 CBString * CBNewStringByCopyingCString(char * string){
 	CBString * self = malloc(sizeof(*self));
-	objectNum++;
-	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateStringVT);
+	CBGetObject(self)->free = CBFreeString;
 	CBInitStringByCopyingCString(self,string);
 	return self;
 }
 CBString * CBNewStringByTakingCString(char * string){
-	objectNum++;
 	CBString * self = malloc(sizeof(*self));
-	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateStringVT);
+	CBGetObject(self)->free = CBFreeString;
 	CBInitStringByTakingCString(self,string);
 	return self;
-}
-
-//  Virtual Table Creation
-
-CBStringVT * CBCreateStringVT(){
-	CBStringVT * VT = malloc(sizeof(*VT));
-	CBSetStringVT(VT);
-	return VT;
-}
-void CBSetStringVT(CBStringVT * VT){
-	CBSetObjectVT((CBObjectVT *)VT);
-	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeString;
-}
-
-//  Virtual Table Getter
-
-CBStringVT * CBGetStringVT(void * self){
-	return ((CBStringVT *)(CBGetObject(self))->VT);
 }
 
 //  Object Getter
@@ -88,11 +63,8 @@ bool CBInitStringByTakingCString(CBString * self,char * string){
 
 //  Destructor
 
-void CBFreeString(CBString * self){
-	CBFreeProcessString(self);
-	CBFree();
-}
-void CBFreeProcessString(CBString * self){
+void CBFreeString(void * vself){
+	CBString * self = vself;
 	CBFreeProcessObject(CBGetObject(self));
 	free(self->string);
 }
