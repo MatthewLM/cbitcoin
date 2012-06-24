@@ -36,13 +36,6 @@
 #include "CBNetworkParameters.h"
 
 /**
- @brief Virtual function table for CBAddress.
-*/
-typedef struct{
-	CBVersionChecksumBytesVT base; /**< CBVersionChecksumBytesVT base structure */
-}CBAddressVT;
-
-/**
  @brief Structure for CBAddress objects. @see CBAddress.h
 */
 typedef struct{
@@ -58,35 +51,16 @@ typedef struct{
  @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBAddress object.
  */
-CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies);
+CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events);
 /**
  @brief Creates a new CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
  @param string The base-58 encoded CBString.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
- @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBAddress object. Returns NULL on failure such as an invalid bitcoin address.
  */
-CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies);
-
-/**
- @brief Creates a new CBAddressVT.
- @returns A new CBAddressVT.
- */
-CBAddressVT * CBCreateAddressVT(void);
-/**
- @brief Sets the CBAddressVT function pointers.
- @param VT The CBAddressVT to set.
- */
-void CBSetAddressVT(CBAddressVT * VT);
-
-/**
- @brief Gets the CBAddressVT. Use this to avoid casts.
- @param self The object to obtain the CBAddressVT from.
- @returns The CBAddressVT.
- */
-CBAddressVT * CBGetAddressVT(void * self);
+CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events);
 
 /**
  @brief Gets a CBAddress from another object. Use this to avoid casts.
@@ -102,32 +76,24 @@ CBAddress * CBGetAddress(void * self);
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
- @param dependencies Takes the SHA-256 function for the checksum.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies);
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events);
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
  @param string The base-58 encoded CBString.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events Events for errors.
- @param dependencies Takes the SHA-256 function for the checksum.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromString(CBAddress * self,CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies);
+bool CBInitAddressFromString(CBAddress * self,CBString * string,bool cacheString,CBEvents * events);
 
 /**
  @brief Frees a CBAddress object.
  @param self The CBAddress object to free.
  */
-void CBFreeAddress(CBAddress * self);
-
-/**
- @brief Does the processing to free a CBAddress object. Should be called by the children when freeing objects.
- @param self The CBAddress object to free.
- */
-void CBFreeProcessAddress(CBAddress * self);
+void CBFreeAddress(void * self);
  
 //  Functions
 

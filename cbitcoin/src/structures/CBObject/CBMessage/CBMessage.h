@@ -35,15 +35,6 @@
 #include "CBVarInt.h"
 
 /**
- @brief Virtual function table for CBMessage.
- */
-typedef struct{
-	CBObjectVT base; /**< CBObjectVT base structure */
-	u_int32_t (*deserialise)(void *); /**< Pointer to the function used to deserialise message data into the object. Returns the length of the byte data read on success and 0 on failure. Deserialisation should reference the byte data wherever possible except where integer endian conversions are needed which is done by the CBByteArray read functions. */
-	u_int32_t (*serialise)(void *); /**< Pointer to the function used to serialise message data as a CBByteArray. Serialisation is not done if it has been done already. self->bytes should be assigned to a suitable CBByteArray at some point before serialisation, a retain must be done for this object. This function should return the length of the written data on sucessful serialisation and false otherwise. */
-}CBMessageVT;
-
-/**
  @brief Structure for CBMessage objects. @see CBMessage.h
  */
 typedef struct CBMessage{
@@ -59,25 +50,6 @@ typedef struct CBMessage{
  @returns A new CBMessage object.
  */
 CBMessage * CBNewMessageByObject(void * params,CBEvents * events);
-
-/**
- @brief Creates a new CBMessageVT.
- @returns A new CBMessageVT.
- */
-CBMessageVT * CBCreateMessageVT(void);
-
-/**
- @brief Sets the CBMessageVT function pointers.
- @param VT The CBMessageVT to set.
- */
-void CBSetMessageVT(CBMessageVT * VT);
-
-/**
- @brief Gets the CBMessageVT. Use this to avoid casts.
- @param self The object to obtain the CBMessageVT from.
- @returns The CBMessageVT.
- */
-CBMessageVT * CBGetMessageVT(void * self);
 
 /**
  @brief Gets a CBMessage from another object. Use this to avoid casts.
@@ -104,7 +76,7 @@ bool CBInitMessageByData(CBMessage * self,void * params,CBByteArray * data,CBEve
  @brief Frees a CBMessage object.
  @param self The CBMessage object to free.
  */
-void CBFreeMessage(CBMessage * self);
+void CBFreeMessage(void * self);
 
 /**
  @brief Does the processing to free a CBMessage object. Should be called by the children when freeing objects.
@@ -113,26 +85,5 @@ void CBFreeMessage(CBMessage * self);
 void CBFreeProcessMessage(CBMessage * self);
 
 //  Functions
-
-/**
- @brief This should be overriden with a function that deserialises the byte data into the object. If this is not overriden then an error will be issued.
- @param self The CBMessage object
- @returns 0
- */
-u_int32_t CBMessageBitcoinDeserialise(CBMessage * self);
-/**
- @brief This should be overriden with a function that fills "bytes" with the serialised data. If this is not overriden then an error will be issued.
- @param self The CBMessage object
- @param bytes The bytes that are filled for overriding functions.
- @returns 0
- */
-u_int32_t CBMessageBitcoinSerialise(CBMessage * self);
-/**
- @brief Set a message checksum, giving the error CB_ERROR_MESSAGE_CHECKSUM_BAD_SIZE if the size is not 4 bytes.
- @param self The CBMessage object
- @param checksum The checksum
- @returns true on success, false on failure.
- */
-bool CBMessageSetChecksum(CBMessage * self,CBByteArray * checksum);
 
 #endif

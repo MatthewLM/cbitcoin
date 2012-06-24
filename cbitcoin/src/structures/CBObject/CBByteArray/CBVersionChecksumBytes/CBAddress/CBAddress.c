@@ -24,47 +24,22 @@
 
 #include "CBAddress.h"
 
-//  Virtual Table Store
-
-static void * VTStore = NULL;
-static int objectNum = 0;
-
 //  Constructors
 
-CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies){
+CBAddress * CBNewAddressFromRIPEMD160Hash(CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events){
 	CBAddress * self = malloc(sizeof(*self));
-	objectNum++;
-	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateAddressVT);
-	CBInitAddressFromRIPEMD160Hash(self,network,hash,cacheString,events,dependencies);
+	CBGetObject(self)->free = CBFreeAddress;
+	CBInitAddressFromRIPEMD160Hash(self,network,hash,cacheString,events);
 	return self;
 }
-CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
+CBAddress * CBNewAddressFromString(CBString * string,bool cacheString,CBEvents * events){
 	CBAddress * self = malloc(sizeof(*self));
-	objectNum++;
-	CBAddVTToObject(CBGetObject(self), &VTStore, CBCreateAddressVT);
-	bool ok = CBInitAddressFromString(self,string,cacheString,events,dependencies);
+	CBGetObject(self)->free = CBFreeAddress;
+	bool ok = CBInitAddressFromString(self,string,cacheString,events);
 	if (!ok) {
 		return NULL;
 	}
 	return self;
-}
-
-//  Virtual Table Creation
-
-CBAddressVT * CBCreateAddressVT(){
-	CBAddressVT * VT = malloc(sizeof(*VT));
-	CBSetAddressVT(VT);
-	return VT;
-}
-void CBSetAddressVT(CBAddressVT * VT){
-	CBSetVersionChecksumBytesVT((CBVersionChecksumBytesVT *)VT);
-	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeAddress;
-}
-
-//  Virtual Table Getter
-
-CBAddressVT * CBGetAddressVT(void * self){
-	return ((CBAddressVT *)(CBGetObject(self))->VT);
 }
 
 //  Object Getter
@@ -75,7 +50,7 @@ CBAddress * CBGetAddress(void * self){
 
 //  Initialiser
 
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events,CBDependencies * dependencies){
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * network,u_int8_t * hash,bool cacheString,CBEvents * events){
 	// Build address and then complete intitialisation with CBVersionChecksumBytes
 	u_int8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
 	// Set network byte
@@ -83,8 +58,8 @@ bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * netwo
 	// Move hash
 	memmove(data+1, hash, 20);
 	// Make checksum and move it into address
-	u_int8_t * checksum = dependencies->sha256(data,21);
-	u_int8_t * checksum2 = dependencies->sha256(checksum,32);
+	u_int8_t * checksum = CBSha256(data,21);
+	u_int8_t * checksum2 = CBSha256(checksum,32);
 	free(checksum);
 	memmove(data+21, checksum2, 4);
 	free(checksum2);
@@ -93,20 +68,16 @@ bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,CBNetworkParameters * netwo
 		return false;
 	return true;
 }
-bool CBInitAddressFromString(CBAddress * self,CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies){
-	if (!CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string,cacheString, events, dependencies))
+bool CBInitAddressFromString(CBAddress * self,CBString * string,bool cacheString,CBEvents * events){
+	if (!CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string,cacheString, events))
 		return false;
 	return true;
 }
 
 //  Destructor
 
-void CBFreeAddress(CBAddress * self){
-	CBFreeProcessAddress(self);
-	CBFree();
-}
-void CBFreeProcessAddress(CBAddress * self){
-	CBFreeProcessVersionChecksumBytes(CBGetVersionChecksumBytes(self));
+void CBFreeAddress(void * self){
+	CBFreeVersionChecksumBytes(CBGetVersionChecksumBytes(self));
 }
 
 //  Functions

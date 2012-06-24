@@ -34,13 +34,6 @@
 #include <stdbool.h>
 
 /**
- @brief Virtual function table for CBNetworkParameters.
- */
-typedef struct{
-	CBObjectVT base; /**< CBObjectVT base structure */
-}CBNetworkParametersVT;
-
-/**
  @brief Structure for CBNetworkParameters objects. @see CBNetworkParameters.h
  */
 typedef struct{
@@ -53,25 +46,6 @@ typedef struct{
  @returns A new CBNetworkParameters object.
  */
 CBNetworkParameters * CBNewNetworkParameters(void);
-
-/**
- @brief Creates a new CBNetworkParametersVT.
- @returns A new CBNetworkParametersVT.
- */
-CBNetworkParametersVT * CBCreateNetworkParametersVT(void);
-
-/**
- @brief Sets the CBNetworkParametersVT function pointers.
- @param VT The CBNetworkParametersVT to set.
- */
-void CBSetNetworkParametersVT(CBNetworkParametersVT * VT);
-
-/**
- @brief Gets the CBNetworkParametersVT. Use this to avoid casts.
- @param self The object to obtain the CBNetworkParametersVT from.
- @returns The CBNetworkParametersVT.
- */
-CBNetworkParametersVT * CBGetNetworkParametersVT(void * self);
 
 /**
  @brief Gets a CBNetworkParameters from another object. Use this to avoid casts.
@@ -91,13 +65,7 @@ bool CBInitNetworkParameters(CBNetworkParameters * self);
  @brief Frees a CBNetworkParameters object.
  @param self The CBNetworkParameters object to free.
  */
-void CBFreeNetworkParameters(CBNetworkParameters * self);
-
-/**
- @brief Does the processing to free a CBNetworkParameters object. Should be called by the children when freeing objects.
- @param self The CBNetworkParameters object to free.
- */
-void CBFreeProcessNetworkParameters(CBNetworkParameters * self);
+void CBFreeNetworkParameters(void * self);
 
 //  Functions
 

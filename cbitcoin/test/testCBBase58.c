@@ -29,7 +29,7 @@ void err(CBError a,char * b,...){
 	printf("%s\n",b);
 }
 
-u_int8_t * sha256(u_int8_t * data,u_int16_t len){
+u_int8_t * CBSha256(u_int8_t * data,u_int16_t len){
 	u_int8_t * hash = malloc(SHA256_DIGEST_LENGTH);
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
@@ -45,11 +45,9 @@ int main(){
 	// Test checked decode
 	CBEvents events;
 	events.onErrorReceived = err;
-	CBDependencies d;
-	d.sha256 = sha256;
-	CBDecodeBase58Checked("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", &events, &d); // Valid
+	CBDecodeBase58Checked("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", &events); // Valid
 	printf("END VALID\n");
-	CBDecodeBase58Checked("1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", &events, &d); // Invalid
+	CBDecodeBase58Checked("1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", &events); // Invalid
 	unsigned char * test = malloc(29);
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989

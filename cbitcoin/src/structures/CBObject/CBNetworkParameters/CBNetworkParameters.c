@@ -24,37 +24,13 @@
 
 #include "CBNetworkParameters.h"
 
-//  Virtual Table Store
-
-static void * VTStore = NULL;
-static int objectNum = 0;
-
 //  Constructor
 
 CBNetworkParameters * CBNewNetworkParameters(){
 	CBNetworkParameters * self = malloc(sizeof(*self));
-	objectNum++;
-	CBAddVTToObject((CBObject *)self, &VTStore, CBCreateNetworkParametersVT);
+	CBGetObject(self)->free = CBFreeNetworkParameters;
 	CBInitNetworkParameters(self);
 	return self;
-}
-
-//  Virtual Table Creation
-
-CBNetworkParametersVT * CBCreateNetworkParametersVT(){
-	CBNetworkParametersVT * VT = malloc(sizeof(*VT));
-	CBSetNetworkParametersVT(VT);
-	return VT;
-}
-void CBSetNetworkParametersVT(CBNetworkParametersVT * VT){
-	CBSetObjectVT((CBObjectVT *)VT);
-	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeNetworkParameters;
-}
-
-//  Virtual Table Getter
-
-CBNetworkParametersVT * CBGetNetworkParametersVT(void * self){
-	return ((CBNetworkParametersVT *)(CBGetObject(self))->VT);
 }
 
 //  Object Getter
@@ -73,11 +49,7 @@ bool CBInitNetworkParameters(CBNetworkParameters * self){
 
 //  Destructor
 
-void CBFreeNetworkParameters(CBNetworkParameters * self){
-	CBFreeProcessNetworkParameters(self);
-	CBFree();
-}
-void CBFreeProcessNetworkParameters(CBNetworkParameters * self){
+void CBFreeNetworkParameters(void * self){
 	CBFreeProcessObject(CBGetObject(self));
 }
 

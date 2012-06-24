@@ -24,38 +24,13 @@
 
 #include "CBObject.h"
 
-//  Virtual Table Store
-
-static void * VTStore = NULL;
-static int objectNum = 0;
-
 //  Constructor
 
 CBObject * CBNewObject(){
 	CBObject * self = malloc(sizeof(*self));
-	objectNum++;
-	CBAddVTToObject(self, &VTStore, &CBCreateObjectVT);
+	self->free = CBFreeObject;
 	CBInitObject(self);
 	return self;
-}
-
-//  Virtual Table Creation
-
-CBObjectVT * CBCreateObjectVT(){
-	CBObjectVT * VT = malloc(sizeof(*VT));
-	CBSetObjectVT(VT);
-	return VT;
-}
-void CBSetObjectVT(CBObjectVT * VT){
-	VT->free = (void (*)(void *))CBFreeObject;
-	VT->release = (void (*)(void *))CBReleaseObject;
-	VT->retain = (void (*)(void *))CBRetainObject;
-}
-
-//  Virtual Table Getter
-
-CBObjectVT * CBGetObjectVT(void * self){
-	return ((CBObjectVT *)((CBObject *)self)->VT);
 }
 
 //  Object Getter
@@ -73,32 +48,22 @@ bool CBInitObject(CBObject * self){
 
 //  Destructor
 
-void CBFreeObject(CBObject * self){
-	CBFreeProcessObject(self);
-	CBFree();
-}
-void CBFreeProcessObject(CBObject * self){
+void CBFreeObject(void * self){
 	free(self);
 }
 
 //  Functions
 
-void CBAddVTToObject(CBObject * self,void ** VTStore,void * getVT){
-	// Set the methods pointer and create a new virtual table store if needed by getting the functions with get_methods
-	if (!*VTStore) {
-		*VTStore = ((void * (*)())getVT)();
-	}
-	self->VT = *VTStore;
-}
-void CBReleaseObject(CBObject ** self){
+void CBReleaseObject(void * self){
+	CBObject * obj = *((CBObject **) self);
 	// Decrement reference counter. Free if no more references.
-	(*self)->references--;
-	if ((*self)->references < 1){
-		CBGetObjectVT(*self)->free(*self); // Remembering to dereference self from CBObject ** to CBOject *
+	obj->references--;
+	if (obj->references < 1){
+		obj->free(obj); // Remembering to dereference self from CBObject ** to CBOject *
 	}
-	*self = NULL; //Assign NULL to the pointer now that the object is released from the pointer's control.
+	*(void **)self = NULL; //Assign NULL to the pointer now that the object is released from the pointer's control.
 }
-void CBRetainObject(CBObject * self){
+void CBRetainObject(void * self){
 	// Increment reference counter.
-	self->references++;
+	((CBObject *)self)->references++;
 }

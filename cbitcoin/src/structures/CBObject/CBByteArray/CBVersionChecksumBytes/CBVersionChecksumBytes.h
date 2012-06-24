@@ -35,15 +35,6 @@
 #include "CBString.h"
 
 /**
- @brief Virtual function table for CBVersionChecksumBytes.
-*/
-typedef struct{
-	CBByteArrayVT base; /**< CBByteArrayVT base structure */
-	u_int8_t (*getVersion)(void *); /**< A function pointer to the function to get the version from a CBVersionChecksumBytes */
-	CBString * (*getString)(void *); /**< A function pointer to the function to get a string representation of a CBVersionChecksumBytes */
-}CBVersionChecksumBytesVT;
-
-/**
  @brief Structure for CBVersionChecksumBytes objects. @see CBVersionChecksumBytes.h
 */
 typedef struct{
@@ -57,10 +48,9 @@ typedef struct{
  @param string A base-58 encoded CBString to make a CBVersionChecksumBytes object.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events A CBEngine for errors.
- @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBVersionChecksumBytes object or NULL on failure.
  */
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies);
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBString * string,bool cacheString,CBEvents * events);
 /**
  @brief Creates a new CBVersionChecksumBytes object from bytes.
  @param bytes The bytes for the CBVersionChecksumBytes object.
@@ -70,24 +60,6 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBString * string,b
  @returns A new CBVersionChecksumBytes object.
  */
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events);
-
-/**
- @brief Creates a new CBVersionChecksumBytesVT.
- @returns A new CBVersionChecksumBytesVT.
- */
-CBVersionChecksumBytesVT * CBCreateVersionChecksumBytesVT(void);
-/**
- @brief Sets the CBVersionChecksumBytesVT function pointers.
- @param VT The CBVersionChecksumBytesVT to set.
- */
-void CBSetVersionChecksumBytesVT(CBVersionChecksumBytesVT * VT);
-
-/**
- @brief Gets the CBVersionChecksumBytesVT. Use this to avoid casts.
- @param self The object to obtain the CBVersionChecksumBytesVT from.
- @returns The CBVersionChecksumBytesVT.
- */
-CBVersionChecksumBytesVT * CBGetVersionChecksumBytesVT(void * self);
 
 /**
  @brief Gets a CBVersionChecksumBytes from another object. Use this to avoid casts.
@@ -102,10 +74,9 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self);
  @param string A CBString to make a CBVersionChecksumBytes object.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events A CBEngine for errors.
- @param dependencies Takes the SHA-256 function for the checksum.
  @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBString * string,bool cacheString,CBEvents * events,CBDependencies * dependencies);
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBString * string,bool cacheString,CBEvents * events);
 /**
  @brief Initialises a new CBVersionChecksumBytes object from bytes.
  @param self The CBVersionChecksumBytes object to initialise.
@@ -121,13 +92,7 @@ bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t 
  @brief Frees a CBVersionChecksumBytes object.
  @param self The CBVersionChecksumBytes object to free.
  */
-void CBFreeVersionChecksumBytes(CBVersionChecksumBytes * self);
-
-/**
- @brief Does the processing to free a CBVersionChecksumBytes object. Should be called by the children when freeing objects.
- @param self The CBVersionChecksumBytes object to free.
- */
-void CBFreeProcessVersionChecksumBytes(CBVersionChecksumBytes * self);
+void CBFreeVersionChecksumBytes(void * self);
  
 //  Functions
 

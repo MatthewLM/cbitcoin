@@ -24,40 +24,14 @@
 
 #include "CBMessage.h"
 
-//  Virtual Table Store
-
-static void * VTStore = NULL;
-static int objectNum = 0;
-
 //  Constructor
 
 CBMessage * CBNewMessageByObject(void * params,CBEvents * events){
 	CBMessage * self = malloc(sizeof(*self));
-	objectNum++;
-	CBAddVTToObject(CBGetObject(self), &VTStore, &CBCreateMessageVT);
+	CBGetObject(self)->free = CBFreeMessage;
 	if (CBInitMessageByObject(self,params,events))
 		return self;
 	return NULL; //Initialisation failure
-}
-
-//  Virtual Table Creation
-
-CBMessageVT * CBCreateMessageVT(){
-	CBMessageVT * VT = malloc(sizeof(*VT));
-	CBSetMessageVT(VT);
-	return VT;
-}
-void CBSetMessageVT(CBMessageVT * VT){
-	CBSetObjectVT((CBObjectVT *)VT);
-	((CBObjectVT *)VT)->free = (void (*)(void *))CBFreeMessage;
-	VT->deserialise = (u_int32_t (*)(void *)) CBMessageBitcoinDeserialise;
-	VT->serialise = (u_int32_t (*)(void *))CBMessageBitcoinSerialise;
-}
-
-//  Virtual Table Getter
-
-CBMessageVT * CBGetMessageVT(void * self){
-	return ((CBMessageVT *)(CBGetObject(self))->VT);
 }
 
 //  Object Getter
@@ -81,37 +55,21 @@ bool CBInitMessageByData(CBMessage * self,void * params,CBByteArray * data,CBEve
 		return false;
 	self->params = params;
 	self->bytes = data;
-	CBGetObjectVT(data)->retain(data); // Retain data for this object.
+	CBRetainObject(data); // Retain data for this object.
 	self->events = events;
 	return true;
 }
 
 //  Destructor
 
-void CBFreeMessage(CBMessage * self){
+void CBFreeMessage(void * self){
 	CBFreeProcessMessage(self);
-	CBFree();
 }
 void CBFreeProcessMessage(CBMessage * self){
-	if (self->bytes) CBGetObjectVT(self->bytes)->release(&self->bytes);
+	if (self->bytes) CBReleaseObject(&self->bytes);
 	CBFreeProcessObject(CBGetObject(self));
 }
 
 //  Functions
 
-u_int32_t CBMessageBitcoinDeserialise(CBMessage * self){
-	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_DESERIALISATION_IMPLEMENTATION,"CBMessageBitcoinDeserialise has not been overriden. Returning 0.");
-	return 0;
-}
-u_int32_t CBMessageBitcoinSerialise(CBMessage * self){
-	self->events->onErrorReceived(CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,"CBMessageBitcoinSerialise has not been overriden. Returning 0.");
-	return 0;
-}
-bool CBMessageSetChecksum(CBMessage * self,CBByteArray * checksum){
-	if (checksum->length != 4) {
-		self->events->onErrorReceived(CB_ERROR_MESSAGE_CHECKSUM_BAD_SIZE,"Tried to set a checksum to a message that was %i bytes in length. Checksums should be 4 bytes long.",checksum->length);
-		return false;
-	}
-	self->checksum = checksum;
-	return true;
-}
+

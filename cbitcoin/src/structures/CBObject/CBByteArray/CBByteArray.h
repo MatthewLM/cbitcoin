@@ -44,33 +44,6 @@ typedef struct{
 }CBSharedData;
 
 /**
- @brief Virtual function table for CBByteArray.
-*/
-typedef struct{
-	CBObjectVT base; /**< CBObjectVT base structure */
-	void (*changeRef)(void *,void *,u_int32_t); /**< Pointer to the function used to change the reference of a byte array to the shared data of another byte array. */
-	void * (*copy)(void *); /**< Pointer to the function used to copy a byte array */
-	void (*copyArray)(void *,u_int32_t,void *); /**< Pointer to the function used to copy another CBByteArray to the byte array. */
-	void (*copySubArray)(void *,u_int32_t,void *,u_int32_t,u_int32_t); /**< Pointer to the function used to copy a section of another CBByteArray to the byte array. */
-	bool (*equals)(void *,void *); /**< Pointer to the function used to compare two CBByteArrays and return true if they are the same. */
-	u_int8_t (*getByte)(void *,u_int32_t); /**< Pointer to the function used to get a byte from a byte array */
-	u_int8_t * (*getData)(void *); /**< Pointer to the function used to get a pointer to the underlying data at the byte array offset */
-	u_int8_t (*getLastByte)(void *); /**< Pointer to the function used to get the last byte in the array */
-	void (*setByte)(void *,u_int32_t,u_int8_t); /**< Pointer to the function used to set a byte in a byte array */
-	void (*setBytes)(void *,u_int32_t,u_int8_t *,u_int8_t); /**< Pointer to the function used to copy bytes into the byte array. */
-	void (*setUInt16)(void *,u_int32_t,u_int16_t); /**< Pointer to the function used to set a 16 bit integer in the byte array */
-	void (*setUInt32)(void *,u_int32_t,u_int32_t); /**< Pointer to the function used to set a 32 bit integer in the byte array */
-	void (*setUInt64)(void *,u_int32_t,u_int64_t); /**< Pointer to the function used to set a 64 bit integer in the byte array */
-	u_int16_t (*readUInt16)(void *,u_int32_t); /**< Pointer to the function used to read a 16 bit integer from the byte array */
-	u_int32_t (*readUInt32)(void *,u_int32_t); /**< Pointer to the function used to read a 32 bit integer from the byte array */
-	u_int64_t (*readUInt64)(void *,u_int32_t); /**< Pointer to the function used to read a 64 bit integer from the byte array */
-	void (*releaseSharedData)(void *); /**< Pointer to the function used to release the shared data the byte array holds. */
-	void (*reverse)(void *); /**< Pointer to the function used to reverse the byte array */
-	void * (*subCopy)(void *,u_int32_t,u_int32_t); /**< Pointer to the function used to copy a byte array at an offset for a given length. The CBByteArray is a new byte array. */
-	void * (*subRef)(void *,u_int32_t,u_int32_t); /**< Pointer to the function used to reference a byte array at an offset for a given length. The returned CBByteArray is a reference of byte array. */
-}CBByteArrayVT;
-
-/**
  @brief Structure for CBByteArray objects. @see CBByteArray.h
 */
 typedef struct{
@@ -88,6 +61,13 @@ typedef struct{
  @returns An empty CBByteArray object.
  */
 CBByteArray * CBNewByteArrayOfSize(u_int32_t size,CBEvents * events);
+/**
+ @brief Creates a CBByteArray object referencing another CBByteArrayObject
+ @param ref The CBByteArray to reference.
+ @param offset The offset to the start of the reference in the reference CBByteArray.
+ @param length The length of the new CBByteArray. If 0 the length is set to be the same as the reference CBByteArray.
+ @returns An empty CBByteArray object.
+ */
 CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,u_int32_t offset,u_int32_t length);
 /**
  @brief Creates a new CBByteArray using data.
@@ -105,23 +85,6 @@ CBByteArray * CBNewByteArrayWithData(u_int8_t * data,u_int32_t size,CBEvents * e
  @returns The new CBByteArray object.
  */
 CBByteArray * CBNewByteArrayWithDataCopy(u_int8_t * data,u_int32_t size,CBEvents * events);
-/**
- @brief Creates a new CBByteArrayVT.
- @returns A new CBByteArrayVT.
- */
-CBByteArrayVT * CBCreateByteArrayVT(void);
-/**
- @brief Sets the CBByteArrayVT function pointers.
- @param VT The CBByteArrayVT to set.
- */
-void CBSetByteArrayVT(CBByteArrayVT * VT);
-
-/**
- @brief Gets the CBByteArrayVT. Use this to avoid casts.
- @param self The object to obtain the CBByteArrayVT from.
- @returns The CBByteArrayVT.
- */
-CBByteArrayVT * CBGetByteArrayVT(void * self);
 
 /**
  @brief Gets a CBByteArray from another object. Use this to avoid casts.
@@ -140,10 +103,10 @@ CBByteArray * CBGetByteArray(void * self);
 bool CBInitByteArrayOfSize(CBByteArray * self,u_int32_t size,CBEvents * events);
 /**
  @brief Initialises a reference CBByteArray to a subsection of an CBByteArray.
- @param self The CBByteArray object to initialise
+ @param self The CBByteArray object to initialise.
  @param ref The CBByteArray object to reference.
  @param offset The offset to the start of the reference.
- @param length The length of the reference.
+ @param length The length of the reference. If 0 the length is set to be the same as the reference CBByteArray.
  @returns true on success, false on failure.
  */
 bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,u_int32_t offset,u_int32_t length);
@@ -165,17 +128,13 @@ bool CBInitByteArrayWithData(CBByteArray * self,u_int8_t * data,u_int32_t size,C
  @returns true on success, false on failure.
  */
 bool CBInitByteArrayWithDataCopy(CBByteArray * self,u_int8_t * data,u_int32_t size,CBEvents * events);
+
 /**
  @brief Frees a CBByteArray object.
  @param self The CBByteArray object to free.
  */
-void CBFreeByteArray(CBByteArray * self);
+void CBFreeByteArray(void * self);
 
-/**
- @brief Does the processing to free a CBByteArray object. Should be called by the children when freeing objects. This function will decrement the reference counter for the underlying shared data and free this data if no further CBByteArrays hold it.
- @param self The CBByteArray object to free.
- */
-void CBFreeProcessByteArray(CBByteArray * self);
 /**
  @brief Releases a reference to shared byte data and frees the data if necessary.
  @param self The CBByteArray object with the CBSharedData
