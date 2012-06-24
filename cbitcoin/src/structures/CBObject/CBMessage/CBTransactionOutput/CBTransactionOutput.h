@@ -34,13 +34,6 @@
 #include "CBScript.h"
 
 /**
- @brief Virtual function table for CBTransactionOutput.
-*/
-typedef struct{
-	CBMessageVT base; /**< CBMessageVT base structure */
-}CBTransactionOutputVT;
-
-/**
  @brief Structure for CBTransactionOutput objects. @see CBTransactionOutput.h
 */
 typedef struct{
@@ -55,30 +48,12 @@ typedef struct{
  @brief Creates a new CBTransactionOutput object.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutput(CBNetworkParameters * params, void * parent, u_int64_t value, CBByteArray * scriptBytes,CBEvents * events);
+CBTransactionOutput * CBNewTransactionOutput(CBNetworkParameters * params, void * parent, u_int64_t value, CBScript * script,CBEvents * events);
 /**
  @brief Creates a new CBTransactionOutput object from byte data. Should be serialised for object data.
  @returns A new CBTransactionOutput object.
  */
 CBTransactionOutput * CBNewTransactionOutputFromData(CBNetworkParameters * params, CBByteArray * data, void * parent,CBEvents * events);
-
-/**
- @brief Creates a new CBTransactionOutputVT.
- @returns A new CBTransactionOutputVT.
- */
-CBTransactionOutputVT * CBCreateTransactionOutputVT(void);
-/**
- @brief Sets the CBTransactionOutputVT function pointers.
- @param VT The CBTransactionOutputVT to set.
- */
-void CBSetTransactionOutputVT(CBTransactionOutputVT * VT);
-
-/**
- @brief Gets the CBTransactionOutputVT. Use this to avoid casts.
- @param self The object to obtain the CBTransactionOutputVT from.
- @returns The CBTransactionOutputVT.
- */
-CBTransactionOutputVT * CBGetTransactionOutputVT(void * self);
 
 /**
  @brief Gets a CBTransactionOutput from another object. Use this to avoid casts.
@@ -88,14 +63,14 @@ CBTransactionOutputVT * CBGetTransactionOutputVT(void * self);
 CBTransactionOutput * CBGetTransactionOutput(void * self);
 
 /**
- @brief Initialises a CBTransactionOutput object
- @param self The CBTransactionOutput object to initialise
+ @brief Initialises a CBTransactionOutput object.
+ @param self The CBTransactionOutput object to initialise.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutput(CBTransactionOutput * self,CBNetworkParameters * params, void * parent, u_int64_t value, CBByteArray * scriptBytes,CBEvents * events);
+bool CBInitTransactionOutput(CBTransactionOutput * self,CBNetworkParameters * params, void * parent, u_int64_t value, CBScript * script,CBEvents * events);
 /**
- @brief Initialises a CBTransactionOutput object
- @param self The CBTransactionOutput object to initialise
+ @brief Initialises a CBTransactionOutput object.
+ @param self The CBTransactionOutput object to initialise.
  @returns true on success, false on failure.
  */
 bool CBInitTransactionOutputFromData(CBTransactionOutput * self,CBNetworkParameters * params, CBByteArray * data, void * parent,CBEvents * events);
@@ -104,27 +79,20 @@ bool CBInitTransactionOutputFromData(CBTransactionOutput * self,CBNetworkParamet
  @brief Frees a CBTransactionOutput object.
  @param self The CBTransactionOutput object to free.
  */
-void CBFreeTransactionOutput(CBTransactionOutput * self);
-
-/**
- @brief Does the processing to free a CBTransactionOutput object. Should be called by the children when freeing objects.
- @param self The CBTransactionOutput object to free.
- */
-void CBFreeProcessTransactionOutput(CBTransactionOutput * self);
+void CBFreeTransactionOutput(void * self);
  
 //  Functions
 
 /**
  @brief Deserialises a CBTransactionOutput so that it can be used as an object.
  @param self The CBTransactionOutput object
- @returns The length read on success, false on failure.
+ @returns The length read on success, 0 on failure.
  */
 u_int32_t CBTransactionOutputDeserialise(CBTransactionOutput * self);
 /**
  @brief Serialises a CBTransactionOutput to the byte data.
  @param self The CBTransactionOutput object
- @param bytes The bytes to fill. Should be the full length needed.
- @returns The length written on success, false on failure.
+ @returns The length written on success, 0 on failure.
  */
 u_int32_t CBTransactionOutputSerialise(CBTransactionOutput * self);
 

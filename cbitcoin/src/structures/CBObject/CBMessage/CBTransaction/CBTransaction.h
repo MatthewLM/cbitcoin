@@ -35,15 +35,6 @@
 #include "CBTransactionOutput.h"
 
 /**
- @brief Virtual function table for CBTransaction.
-*/
-typedef struct{
-	CBMessageVT base; /**< CBMessageVT base structure */
-	void (*addInput)(void *, CBTransactionInput *); /**< Pointer to the function used to add an output to the transaction. */
-	void (*addOutput)(void *, CBTransactionOutput *); /**< Pointer to the function used to add an output to the transaction. */
-}CBTransactionVT;
-
-/**
  @brief Structure for CBTransaction objects. @see CBTransaction.h
 */
 typedef struct{
@@ -66,24 +57,6 @@ CBTransaction * CBNewTransaction(CBNetworkParameters * params, u_int32_t lockTim
  @returns A new CBTransaction object.
  */
 CBTransaction * CBNewTransactionFromData(CBNetworkParameters * params, CBByteArray * bytes, CBEvents * events);
-
-/**
- @brief Creates a new CBTransactionVT.
- @returns A new CBTransactionVT.
- */
-CBTransactionVT * CBCreateTransactionVT(void);
-/**
- @brief Sets the CBTransactionVT function pointers.
- @param VT The CBTransactionVT to set.
- */
-void CBSetTransactionVT(CBTransactionVT * VT);
-
-/**
- @brief Gets the CBTransactionVT. Use this to avoid casts.
- @param self The object to obtain the CBTransactionVT from.
- @returns The CBTransactionVT.
- */
-CBTransactionVT * CBGetTransactionVT(void * self);
 
 /**
  @brief Gets a CBTransaction from another object. Use this to avoid casts.
@@ -110,13 +83,7 @@ bool CBInitTransactionFromData(CBTransaction * self,CBNetworkParameters * params
  @brief Frees a CBTransaction object.
  @param self The CBTransaction object to free.
  */
-void CBFreeTransaction(CBTransaction * self);
-
-/**
- @brief Does the processing to free a CBTransaction object. Should be called by the children when freeing objects.
- @param self The CBTransaction object to free.
- */
-void CBFreeProcessTransaction(CBTransaction * self);
+void CBFreeTransaction(void * self);
  
 //  Functions
 
@@ -135,15 +102,41 @@ void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
 /**
  @brief Deserialises a CBTransaction so that it can be used as an object.
  @param self The CBTransaction object
- @returns true on success, false on failure.
+ @returns The length read on success, 0 on failure.
  */
 u_int32_t CBTransactionDeserialise(CBTransaction * self);
 /**
+ @brief Gets the hash for signing or signature checking for a transaction input. The transaction input needs to contain the outPointerHash, outPointerIndex and sequence. If these are modifed afterwards then the signiture is invalid.
+ @param self The CBTransaction object.
+ @param prevOutSubScript The sub script from the output. Must be the correct one or the signiture will be invalid.
+ @param input The index of the input to sign.
+ @param signType The type of signature to get the data for.
+ @returns NULL on failure or the 32 byte data hash for signing or checking signatures.
+ */
+u_int8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArray * prevOutSubScript, u_int32_t input, CBSignType signType);
+/**
  @brief Serialises a CBTransaction to the byte data.
- @param self The CBTransaction object
- @param bytes The bytes to fill. Should be the full length needed.
- @returns true on success, false on failure.
+ @param self The CBTransaction object.
+ @returns The length read on success, 0 on failure.
  */
 u_int32_t CBTransactionSerialise(CBTransaction * self);
+/**
+ @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
+ @param self The CBTransaction object.
+ @param input The CBTransactionInput object.
+ */
+void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input);
+/**
+ @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
+ @param self The CBTransaction object.
+ @param input The CBTransactionOutput object.
+ */
+void CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output);
+/**
+ @brief Validates a transaction has outputs and inputs, is below the maximum block size and has outputs that do not overflow. Further validation can be done by checking the transaction against input transactions. With simplified payment verification instead the validation is done through trusting miners but the basic validation can still be done for these basic checks.
+ @param self The transaction to validate. This should be deserialised.
+ @return true if valid for the basic criteria, false if invalid.
+ */
+bool CBTransactionValidateBasic(CBTransaction * self);
 
 #endif

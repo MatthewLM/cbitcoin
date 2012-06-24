@@ -35,13 +35,6 @@
 #include "CBTransactionOutput.h"
 
 /**
- @brief Virtual function table for CBTransactionInput.
-*/
-typedef struct{
-	CBMessageVT base; /**< CBMessageVT base structure */
-}CBTransactionInputVT;
-
-/**
  @brief Structure for CBTransactionInput objects. @see CBTransactionInput.h
 */
 typedef struct{
@@ -57,7 +50,7 @@ typedef struct{
  @brief Creates a new CBTransactionInput object.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
+CBTransactionInput * CBNewTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBScript * script,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 /**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
@@ -71,24 +64,6 @@ CBTransactionInput * CBNewTransactionInputFromData(CBNetworkParameters * params,
 CBTransactionInput * CBNewUnsignedTransactionInput(CBNetworkParameters * params, void * parentTransaction,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 
 /**
- @brief Creates a new CBTransactionInputVT.
- @returns A new CBTransactionInputVT.
- */
-CBTransactionInputVT * CBCreateTransactionInputVT(void);
-/**
- @brief Sets the CBTransactionInputVT function pointers.
- @param VT The CBTransactionInputVT to set.
- */
-void CBSetTransactionInputVT(CBTransactionInputVT * VT);
-
-/**
- @brief Gets the CBTransactionInputVT. Use this to avoid casts.
- @param self The object to obtain the CBTransactionInputVT from.
- @returns The CBTransactionInputVT.
- */
-CBTransactionInputVT * CBGetTransactionInputVT(void * self);
-
-/**
  @brief Gets a CBTransactionInput from another object. Use this to avoid casts.
  @param self The object to obtain the CBTransactionInput from.
  @returns The CBTransactionInput object.
@@ -100,7 +75,7 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBByteArray * scriptData,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
+bool CBInitTransactionInput(CBTransactionInput * self,CBNetworkParameters * params, void * parentTransaction,CBScript * script,CBByteArray * outPointerHash,u_int32_t outPointerIndex,CBEvents * events);
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise
@@ -119,27 +94,20 @@ bool CBInitUnsignedTransactionInput(CBTransactionInput * self,CBNetworkParameter
  @brief Frees a CBTransactionInput object.
  @param self The CBTransactionInput object to free.
  */
-void CBFreeTransactionInput(CBTransactionInput * self);
-
-/**
- @brief Does the processing to free a CBTransactionInput object. Should be called by the children when freeing objects.
- @param self The CBTransactionInput object to free.
- */
-void CBFreeProcessTransactionInput(CBTransactionInput * self);
+void CBFreeTransactionInput(void * self);
  
 //  Functions
 
 /**
  @brief Deserialises a CBTransactionInput so that it can be used as an object.
  @param self The CBTransactionInput object
- @returns The length read on success, false on failure.
+ @returns The length read on success, 0 on failure.
  */
 u_int32_t CBTransactionInputDeserialise(CBTransactionInput * self);
 /**
  @brief Serialises a CBTransactionInput to the byte data.
  @param self The CBTransactionInput object
- @param bytes The bytes to fill. Should be the full length needed.
- @returns The length written on success, false on failure.
+ @returns The length written on success, 0 on failure.
  */
 u_int32_t CBTransactionInputSerialise(CBTransactionInput * self);
 
