@@ -25,11 +25,6 @@
 
 //  Macros
 
-#define CBFree()    objectNum--; \
-					if (objectNum < 1) { \
-						free(VTStore); \
-						VTStore = NULL; \
-					}
 #define CB_MESSAGE_MAX_SIZE 0x02000000
 #define CB_BLOCK_HEADER_SIZE 80
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours
@@ -38,6 +33,9 @@
 #define CB_TEST_NETWORK 111 // The network for testing
 #define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
 #define CB_TRANSACTION_INPUT_OUT_POINTER_MESSAGE_LENGTH 36
+#define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
+#define CB_MAX_BLOCK_SIZE 1000000
+#define MAX_MONEY 2100000000000000
 
 //  Enums
 
@@ -54,6 +52,8 @@ typedef enum{
 	CB_ERROR_SHA_256_HASH_BAD_BYTE_ARRAY_LENGTH,
 	CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,
 	CB_ERROR_BASE58_DECODE_CHECK_INVALID,
+	CB_ERROR_TRANSACTION_FEW_INPUTS,
+	CB_ERROR_TRANSACTION_FEW_OUTPUTS,
 }CBError;
 
 typedef enum{
@@ -176,6 +176,13 @@ typedef enum{
     CB_SCRIPT_OP_PUBKEY = 0xfe,
     CB_SCRIPT_OP_INVALIDOPCODE = 0xff,
 }CBScriptOp;
+
+typedef enum{
+	CB_SIGHASH_ALL = 0x00000001,
+	CB_SIGHASH_NONE = 0x00000002,
+	CB_SIGHASH_SINGLE = 0x00000003,
+	CB_SIGHASH_ANYONECANPAY = 0x00000080,
+}CBSignType;
 
 typedef enum{
 	CB_COMPARE_MORE_THAN = 1,
