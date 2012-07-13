@@ -113,7 +113,8 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self){
 	self->inputNum = (u_int32_t)inputOutputLen.val;
 	self->inputs = malloc(sizeof(*self->inputs) * self->inputNum);
 	for (u_int32_t x = 0; x < self->inputNum; x++) {
-		CBTransactionInput * input = CBNewTransactionInputFromData(CBByteArraySubReference(bytes, cursor, bytes->length-cursor), CBGetMessage(self)->events);
+		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+		CBTransactionInput * input = CBNewTransactionInputFromData(data, CBGetMessage(self)->events);
 		u_int32_t len = CBTransactionInputDeserialise(input);
 		if (!len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be deserialised because of an error with the input number %u.",x);
@@ -124,10 +125,12 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self){
 			}
 			free(self->inputs);
 			self->inputs = NULL;
+			self->inputNum = 0;
 			return 0;
 		}
 		// The input was deserialised correctly. Now adjust the length and add it to the transaction.
-		CBGetMessage(input)->bytes->length = len;
+		data->length = len;
+		CBReleaseObject(&data);
 		self->inputs[x] = input;
 		cursor += len; // Move along to next input
 	}
@@ -136,7 +139,9 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self){
 		for (u_int8_t y = 0; y < self->inputNum; y++) {
 			CBReleaseObject(&self->inputs[y]);
 		}
+		free(self->inputs);
 		self->inputs = NULL;
+		self->inputNum = 0;
 		return 0;
 	}
 	inputOutputLen = CBVarIntDecode(bytes, cursor);
@@ -147,13 +152,15 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self){
 		}
 		free(self->inputs);
 		self->inputs = NULL;
+		self->inputNum = 0;
 		return 0;
 	}
 	cursor += inputOutputLen.size; // Move past output CBVarInt
 	self->outputNum = (u_int32_t)inputOutputLen.val;
 	self->outputs = malloc(sizeof(*self->outputs) * self->outputNum);
 	for (u_int32_t x = 0; x < self->outputNum; x++) {
-		CBTransactionOutput * output = CBNewTransactionOutputFromData(CBByteArraySubReference(bytes, cursor, bytes->length-cursor), CBGetMessage(self)->events);
+		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+		CBTransactionOutput * output = CBNewTransactionOutputFromData(data, CBGetMessage(self)->events);
 		u_int32_t len = CBTransactionOutputDeserialise(output);
 		if (!len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be deserialised because of an error with the output number %u.",x);
@@ -164,15 +171,18 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self){
 			}
 			free(self->inputs);
 			self->inputs = NULL;
+			self->inputNum = 0;
 			for (u_int8_t y = 0; y < x; y++) {
 				CBReleaseObject(&self->outputs[y]);
 			}
 			free(self->outputs);
 			self->outputs = NULL;
+			self->outputNum = 0;
 			return 0;
 		}
 		// The output was deserialised correctly. Now adjust the length and add it to the transaction.
-		CBGetMessage(output)->bytes->length = len;
+		data->length = len;
+		CBReleaseObject(&data);
 		self->outputs[x] = output;
 		cursor += len; // Move along to next output
 	}
@@ -182,10 +192,12 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self){
 			CBReleaseObject(&self->inputs[y]);
 		}
 		self->inputs = NULL;
+		self->inputNum = 0;
 		for (u_int8_t y = 0; y < self->outputNum; y++) {
 			CBReleaseObject(&self->outputs[y]);
 		}
 		self->outputs = NULL;
+		self->outputNum = 0;
 		return 0;
 	}
 	self->lockTime = CBByteArrayReadInt32(bytes, cursor);
@@ -321,6 +333,10 @@ u_int32_t CBTransactionSerialise(CBTransaction * self){
 		u_int32_t len = CBTransactionInputSerialise(self->inputs[x]);
 		if (!len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be serialised because of an error with the input number %u.",x);
+			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+			for (u_int32_t y = 0; y < x + 1; y++) {
+				CBReleaseObject(&CBGetMessage(self->inputs[y])->bytes);
+			}
 			return 0;
 		}
 		CBGetMessage(self->inputs[x])->bytes->length = len;
@@ -337,6 +353,13 @@ u_int32_t CBTransactionSerialise(CBTransaction * self){
 		u_int32_t len = CBTransactionOutputSerialise(self->outputs[x]);
 		if (!len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be serialised because of an error with the output number %u.",x);
+			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+			for (u_int32_t y = 0; y < self->inputNum; y++) {
+				CBReleaseObject(&CBGetMessage(self->inputs[y])->bytes);
+			}
+			for (u_int32_t y = 0; y < x + 1; y++) {
+				CBReleaseObject(&CBGetMessage(self->outputs[y])->bytes);
+			}
 			return 0;
 		}
 		CBGetMessage(self->outputs[x])->bytes->length = len;
@@ -344,6 +367,13 @@ u_int32_t CBTransactionSerialise(CBTransaction * self){
 	}
 	if (bytes->length < cursor + 4) { // Check room for lockTime.
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransaction with less bytes than required for the lockTime. %i < %i\n",bytes->length, cursor + 4);
+		// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+		for (u_int32_t y = 0; y < self->inputNum; y++) {
+			CBReleaseObject(&CBGetMessage(self->inputs[y])->bytes);
+		}
+		for (u_int32_t y = 0; y < self->outputNum; y++) {
+			CBReleaseObject(&CBGetMessage(self->inputs[y])->bytes);
+		}
 		return 0;
 	}
 	CBByteArraySetInt32(bytes, cursor, self->lockTime);
