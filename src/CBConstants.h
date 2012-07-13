@@ -29,15 +29,14 @@
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours from network time
 #define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
 #define CB_LIBRARY_VERSION 1 // Goes up in increments
-#define CB_LIBRARY_VERSION_STRING "1.0 alpha" // Features.Fixes alpha/beta
-#define CB_USER_AGENT_SEGMENT "cbitcoin:1.0(alpha)/"
+#define CB_LIBRARY_VERSION_STRING "1.0 pre-alpha" // Features.Non-features pre-alpha/alpha/beta
+#define CB_USER_AGENT_SEGMENT "cbitcoin:1.0(pre-alpha)/"
 #define CB_PRODUCTION_NETWORK 0 // The normal network for trading
 #define CB_TEST_NETWORK 111 // The network for testing
 #define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
 #define CB_TRANSACTION_INPUT_OUT_POINTER_MESSAGE_LENGTH 36
 #define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
 #define CB_MAX_MONEY 2100000000000000 // 21 million Bitcoins. Each bitcoin has 100 million satoshis (individual units).
-#define CB_SERVICE_FULL_BLOCKS 1 // Service for full blocks. Node maintains the entire blockchain.
 
 //  Enums
 
@@ -57,6 +56,16 @@ typedef enum{
 	CB_ERROR_TRANSACTION_FEW_INPUTS,
 	CB_ERROR_TRANSACTION_FEW_OUTPUTS,
 }CBError;
+
+typedef enum{
+	CB_SERVICE_FULL_BLOCKS = 1, // Service for full blocks. Node maintains the entire blockchain.
+}CBVersionServices;
+
+typedef enum{
+	CB_INVENTORY_ITEM_ERROR = 0,
+	CB_INVENTORY_ITEM_TRANSACTION = 1,
+	CB_INVENTORY_ITEM_BLOCK = 2,
+}CBInventoryItemType;
 
 typedef enum{
 	CB_SCRIPT_OP_0 = 0x00,
