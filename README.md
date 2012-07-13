@@ -3,7 +3,7 @@ cbitcoin - A Bitcoin Library In The C Programming Language
 
 cbitcoin is a bitcoin library in development that will use nothing but the standard C library. The aim for this project is to create a simple, portable and powerful library for bitcoin in C. The library should be easy to use but provide many configurable features. Using only standard C, the library should be small, efficient and portable. The library will be low-level such that it will provide a basic abstraction on the bitcoin protocol that enables programmers to make a diverse range of bitcoin applications. The library is not intended to become a simple client interface. cbitcoin may become useful for projects involving embedded devices.
 
-THE LIBRARY IS STILL IN DEVELOPMENT AND IS MOSTLY INCOMPLETE.
+THE LIBRARY IS STILL IN DEVELOPMENT.
 
 If you wish to contact Matthew Mitchell about this project please email cbitcoin@thelibertyportal.com
 
