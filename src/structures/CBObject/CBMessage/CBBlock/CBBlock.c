@@ -79,7 +79,7 @@ bool CBInitBlockGenesis(CBBlock * self,CBEvents * events){
 	if (!CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	CBReleaseObject(&data);
-	CBBlockDeserialise(self);
+	CBBlockDeserialise(self,true);
 	return true;
 }
 
@@ -89,10 +89,12 @@ void CBFreeBlock(void * vself){
 	CBBlock * self = vself;
 	if(self->prevBlockHash) CBReleaseObject(&self->prevBlockHash);
 	if(self->merkleRoot) CBReleaseObject(&self->merkleRoot);
-	for (u_int32_t x = 0; x < self->transactionNum; x++) {
-		if(self->transactions[x]) CBReleaseObject(&self->transactions[x]);
+	if (self->transactions) { // Check for the loop since the transaction number can be set without having any transactions.
+		for (u_int32_t x = 0; x < self->transactionNum; x++) {
+			if(self->transactions[x]) CBReleaseObject(&self->transactions[x]);
+		}
+		free(self->transactions);
 	}
-	if(self->transactions) free(self->transactions);
 	if(self->hash) CBReleaseObject(&self->hash);
 	CBFreeObject(CBGetObject(self));
 }
@@ -106,14 +108,14 @@ CBByteArray * CBBlockCalculateHash(CBBlock * self){
 	free(hash1);
 	return hash;
 }
-u_int32_t CBBlockDeserialise(CBBlock * self){
+u_int32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBBlock with no bytes.");
 		return 0;
 	}
-	if (bytes->length < 81) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with less than 81 bytes. Minimum for header.");
+	if (bytes->length < 82) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with less than 82 bytes. Minimum for header (With null byte).");
 		return 0;
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
@@ -123,38 +125,81 @@ u_int32_t CBBlockDeserialise(CBBlock * self){
 	self->difficulty = CBByteArrayReadInt32(bytes, 72);
 	self->nounce = CBByteArrayReadInt32(bytes, 76);
 	// If first VarInt byte is zero, then stop here for headers, otherwise look for 8 more bytes and continue
-	if (CBByteArrayGetByte(bytes, 80)) {
+	u_int8_t firstByte = CBByteArrayGetByte(bytes, 80);
+	if (transactions && firstByte) {
 		// More to come
 		if (bytes->length < 89) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with a non-zero varint with less than 89 bytes.");
+			// Release header objects
+			CBReleaseObject(&self->prevBlockHash);
+			CBReleaseObject(&self->merkleRoot);
 			return 0;
 		}
 		CBVarInt transactionNumVarInt = CBVarIntDecode(bytes, 80);
 		if (transactionNumVarInt.val*60 > bytes->length - 81) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with too many transactions for the byte data length.");
+			// Release header objects
+			CBReleaseObject(&self->prevBlockHash);
+			CBReleaseObject(&self->merkleRoot);
 			return 0;
 		}
 		self->transactionNum = (u_int32_t)transactionNumVarInt.val;
 		self->transactions = malloc(sizeof(*self->transactions) * self->transactionNum);
 		u_int32_t cursor = 80 + transactionNumVarInt.size;
 		for (u_int16_t x = 0; x < self->transactionNum; x++) {
-			CBTransaction * transaction = CBNewTransactionFromData(CBByteArraySubReference(bytes, cursor, bytes->length-cursor), CBGetMessage(self)->events);
+			CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+			CBTransaction * transaction = CBNewTransactionFromData(data, CBGetMessage(self)->events);
 			u_int32_t len = CBTransactionDeserialise(transaction);
 			if (!len) {
 				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBBlock cannot be deserialised because of an error with the transaction number %u.",x);
 				CBReleaseObject(&transaction);
+				CBReleaseObject(&data);
 				for (u_int16_t y = 0; y < x; y++) {
 					CBReleaseObject(&self->transactions[y]);
 				}
 				self->transactions = NULL;
+				self->transactionNum = 0;
+				// Release header objects
+				CBReleaseObject(&self->prevBlockHash);
+				CBReleaseObject(&self->merkleRoot);
 				return 0;
 			}
-			CBGetMessage(transaction)->bytes->length = len;
+			// Readjust CBByteArray length
+			data->length = len;
+			CBReleaseObject(&data);
 			self->transactions[x] = transaction;
 			cursor += len;
 		}
 		return cursor;
-	}else return 81; // Just header
+	}else{ // Just header
+		u_int8_t x;
+		if (firstByte < 253) {
+			x = 1;
+		}else if (firstByte == 253){
+			x = 2;
+		}else if (firstByte == 254){
+			x = 4;
+		}else{
+			x = 8;
+		}
+		if (bytes->length < 80 + x + 1) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock header with not enough space to cover the var int.");
+			// Release header objects
+			CBReleaseObject(&self->prevBlockHash);
+			CBReleaseObject(&self->merkleRoot);
+			return 0;
+		}
+		self->transactionNum = (u_int32_t)CBVarIntDecode(bytes, 80).val; // This value is undefined in the protocol. Should best be zero when getting the headers since there is not supposed to be any transactions. Would have probably been better if the var int was dropped completely for headers only.
+		// Ensure null byte is null. This null byte is a bit of a nuissance but it exists in the protocol when there are no transactions.
+		if (CBByteArrayGetByte(bytes, 80 + x) != 0) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock header with a final byte which is not null. This is not what it is supposed to be but you already knew that right?");
+			// Release header objects
+			CBReleaseObject(&self->prevBlockHash);
+			CBReleaseObject(&self->merkleRoot);
+			return 0;
+		}
+		return 80 + x + 1; // 80 header bytes, the var int and the null byte
+	}
 }
 CBByteArray * CBBlockGetHash(CBBlock * self){
 	if (!self->hash)
@@ -162,7 +207,7 @@ CBByteArray * CBBlockGetHash(CBBlock * self){
 	CBRetainObject(self->hash);
 	return self->hash;
 }
-u_int32_t CBBlockSerialise(CBBlock * self){
+u_int32_t CBBlockSerialise(CBBlock * self,bool transactions){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBBlock with no bytes.");
@@ -170,8 +215,8 @@ u_int32_t CBBlockSerialise(CBBlock * self){
 	}
 	CBVarInt transactionNum = CBVarIntFromUInt64(self->transactionNum);
 	u_int32_t cursor = 80 + transactionNum.size;
-	if (bytes->length < cursor) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBBlock with less bytes than required for the header and transaction number var int. %i < %i\n",bytes->length, cursor);
+	if (bytes->length < cursor + 1) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBBlock with less bytes than required for the header, transaction number var int and at least a null byte. %i < %i\n",bytes->length, cursor);
 		return 0;
 	}
 	// Do header
@@ -185,15 +230,25 @@ u_int32_t CBBlockSerialise(CBBlock * self){
 	CBByteArraySetInt32(bytes, 76, self->nounce);
 	// Do Transactions
 	CBVarIntEncode(bytes, 80, transactionNum);
-	for (u_int32_t x = 0; x < self->transactionNum; x++) {
-		CBGetMessage(self->transactions[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		u_int32_t len = CBTransactionSerialise(self->transactions[x]);
-		if (!len) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBBlock cannot be serialised because of an error with the transaction number %u.",x);
-			return 0;
+	if (transactions) {
+		for (u_int32_t x = 0; x < self->transactionNum; x++) {
+			CBGetMessage(self->transactions[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+			u_int32_t len = CBTransactionSerialise(self->transactions[x]);
+			if (!len) {
+				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBBlock cannot be serialised because of an error with the transaction number %u.",x);
+				// Release CBByteArray objects because of failure.
+				for (u_int32_t y = 0; y < x + 1; y++) {
+					CBReleaseObject(&CBGetMessage(self->transactions[y])->bytes);
+				}
+				return 0;
+			}
+			CBGetMessage(self->transactions[x])->bytes->length = len;
+			cursor += len;
 		}
-		CBGetMessage(self->transactions[x])->bytes->length = len;
-		cursor += len;
+	}else{
+		// Add null byte since there are to be no transactions (header only).
+		CBByteArraySetByte(bytes, cursor, 0);
+		cursor++;
 	}
 	return cursor;
 }

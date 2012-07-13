@@ -53,14 +53,12 @@ typedef struct{
  @returns A new CBBlock object.
  */
 CBBlock * CBNewBlock(CBEvents * events);
-
 /**
  @brief Creates a new CBBlock object.
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
 CBBlock * CBNewBlockFromData(CBByteArray * data,CBEvents * events);
-
 /**
  @brief Creates a new CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
  @param data Serialised block data.
@@ -114,9 +112,10 @@ CBByteArray * CBBlockCalculateHash(CBBlock * self);
 /**
  @brief Deserialises a CBBlock so that it can be used as an object.
  @param self The CBBlock object
+ @param transactions If true deserialise transactions. If false there do not deserialise for transactions.
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBBlockDeserialise(CBBlock * self);
+u_int32_t CBBlockDeserialise(CBBlock * self,bool transactions);
 /**
  @brief Retrieves or calculates the hash for a block. Hashes taken from this fuction are cached.
  @param self The CBBlock object. This should be serialised.
@@ -126,8 +125,9 @@ CBByteArray * CBBlockGetHash(CBBlock * self);
 /**
  @brief Serialises a CBBlock to the byte data.
  @param self The CBBlock object
+ @param transactions If true serialise transactions. If false there do not serialise for transactions.
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBBlockSerialise(CBBlock * self);
+u_int32_t CBBlockSerialise(CBBlock * self,bool transactions);
 
 #endif
