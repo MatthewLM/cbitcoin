@@ -243,6 +243,13 @@ void CBByteArraySetInt32(CBByteArray * self,u_int32_t offset,u_int32_t integer);
  */
 void CBByteArraySetInt64(CBByteArray * self,u_int32_t offset,u_int64_t integer);
 /**
+ @brief Writes a 16 bit integer to a CBByteArray as big-endian for port numbers.
+ @param self The CBByteArray object
+ @param offset Offset to where to start the write
+ @param integer The 16 bit integer to set.
+ */
+void CBByteArraySetPort(CBByteArray * self,u_int32_t offset,u_int16_t integer);
+/**
  @brief Reads a 16 bit integer from a CBByteArray as little-endian
  @param self The CBByteArray object
  @param offset Offset to where to start the read
@@ -263,6 +270,13 @@ u_int32_t CBByteArrayReadInt32(CBByteArray * self,u_int32_t offset);
  @returns A 64 bit integer. This can be cast to a signed integer if reading integer as a signed value
  */
 u_int64_t CBByteArrayReadInt64(CBByteArray * self,u_int32_t offset);
+/**
+ @brief Reads a 16 bit integer from the CBByteArray as big-endian for port numbers.
+ @param self The CBByteArray object
+ @param offset Offset to where to start the read
+ @returns A 16 bit integer.
+ */
+u_int16_t CBByteArrayReadPort(CBByteArray * self,u_int32_t offset);
 /**
  @brief Reverses the bytes.
  @param self The CBByteArray object to reverse
