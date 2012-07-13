@@ -1,11 +1,11 @@
 cbitcoin - A Bitcoin Library In The C Programming Language
 ==========================================================
 
-cbitcoin is a bitcoin library in development that will use nothing but the standard C library. The aim for this project is to create a simple, portable and powerful library for bitcoin in C. The library should be easy to use but provide many configurable features. Using only standard C, the library should be small, efficient and portable. It may become useful for projects involving embedded devices.
+cbitcoin is a bitcoin library in development that will use nothing but the standard C library. The aim for this project is to create a simple, portable and powerful library for bitcoin in C. The library should be easy to use but provide many configurable features. Using only standard C, the library should be small, efficient and portable. The library will be low-level such that it will provide a basic abstraction on the bitcoin protocol that enables programmers to make a diverse range of bitcoin applications. The library is not intended to become a simple client interface. cbitcoin may become useful for projects involving embedded devices.
 
 THE LIBRARY IS STILL IN DEVELOPMENT AND IS MOSTLY INCOMPLETE.
 
-**Send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9**
+**To help support cbitcoin financially, please kindly send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9**
 
 Contributors
 ------------
@@ -95,7 +95,7 @@ Functions should be documented like this:
 	 */
 	int someFunc(int someParam);
  
-It may be that other elements are documented and should be documented in a similar fashion.
+It may be that other elements are documented and should be documented in a similar fashion and please leave helpful comments in the source code.
 
 Thank You!
 ==========
