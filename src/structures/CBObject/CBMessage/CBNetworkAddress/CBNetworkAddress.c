@@ -74,7 +74,7 @@ void CBFreeNetworkAddress(void * vself){
 
 //  Functions
 
-u_int32_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool time){
+u_int8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool time){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBNetworkAddress with no bytes.");
@@ -90,11 +90,13 @@ u_int32_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool time){
 		cursor = 4;
 	}else cursor = 0;
 	self->services = CBByteArrayReadInt64(bytes, cursor);
-	self->ip = CBNewByteArraySubReference(bytes, cursor + 8, 16);
-	self->port = CBByteArrayReadInt16(bytes, cursor + 24);
+	cursor += 8;
+	self->ip = CBNewByteArraySubReference(bytes, cursor, 16);
+	cursor += 16;
+	self->port = CBByteArrayReadPort(bytes, cursor);
 	return cursor + 2;
 }
-u_int32_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool time){
+u_int8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool time){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBNetworkAddress with no bytes.");
@@ -110,9 +112,11 @@ u_int32_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool time){
 		cursor = 4;
 	}else cursor = 0;
 	CBByteArraySetInt64(bytes, cursor, self->services);
-	CBByteArrayCopyByteArray(bytes, cursor + 8, self->ip);
-	CBByteArrayChangeReference(self->ip, bytes, cursor + 8);
-	CBByteArraySetInt16(bytes, cursor + 24, self->port);
+	cursor += 8;
+	CBByteArrayCopyByteArray(bytes, cursor, self->ip);
+	CBByteArrayChangeReference(self->ip, bytes, cursor);
+	cursor += 16;
+	CBByteArraySetPort(bytes, cursor, self->port);
 	return cursor + 2;
 
 }
