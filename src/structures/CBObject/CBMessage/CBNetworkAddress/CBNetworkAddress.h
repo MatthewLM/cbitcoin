@@ -88,13 +88,13 @@ void CBFreeNetworkAddress(void * self);
  @param time If true a timestamp is expected, else it is not. If a timestamp is not expected then "time" will not be set and will be the previous value.
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool time);
+u_int8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool time);
 /**
  @brief Serialises a CBNetworkAddress to the byte data.
  @param self The CBNetworkAddress object
  @param time If true the time will be included, else it will not.
  @returns The length written on success, 0 on failure.
  */
-u_int32_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool time);
+u_int8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool time);
 
 #endif
