@@ -1,5 +1,5 @@
 //
-//  testCBTransaction.c
+//  testCBVersion.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 01/07/2012.
@@ -87,7 +87,7 @@ int main(){
 		}
 		return 1;
 	}
-	if (version->addRecv->port != 0x8D20) {
+	if (version->addRecv->port != 8333) {
 		printf("DESERIALISATION ADD RECV PORT FAIL\n");
 		return 1;
 	}
@@ -108,8 +108,8 @@ int main(){
 		}
 		return 1;
 	}
-	if (version->addSource->port != 0x107B) {
-		printf("DESERIALISATION ADD SOURCE PORT FAIL 0x%2.X != 0x107B \n",version->addRecv->port);
+	if (version->addSource->port != 31504) {
+		printf("DESERIALISATION ADD SOURCE PORT FAIL 0x%2.X != 31504 \n",version->addRecv->port);
 		return 1;
 	}
 	if (version->nounce != 1393780771635895773) {
