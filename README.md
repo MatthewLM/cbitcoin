@@ -5,6 +5,8 @@ cbitcoin is a bitcoin library in development that will use nothing but the stand
 
 THE LIBRARY IS STILL IN DEVELOPMENT AND IS MOSTLY INCOMPLETE.
 
+If you wish to contact Matthew Mitchell about this project please email cbitcoin@thelibertyportal.com
+
 **To help support cbitcoin financially, please kindly send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9**
 
 Contributors
