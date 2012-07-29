@@ -996,9 +996,7 @@ void CBNetworkCommunicatorTakeAddress(CBNetworkCommunicator * self,CBNetworkAddr
 	if (self->nodesNum < self->maxConnections) {
 		CBNode * node = CBNewNodeByTakingNetworkAddress(addr);
 		bool ok = CBNetworkCommunicatorConnect(self, node);
-		if (ok)
-			CBNetworkCommunicatorTakeNode(self, node);
-		else
+		if (!ok)
 			CBReleaseObject(&node);
 		return;
 	}
