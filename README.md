@@ -16,6 +16,16 @@ Anyone who contributes to this project can have their name and a bitcoin address
 
 Matthew Mitchell - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9
 
+Installation
+------------
+
+Installation instructions will come later. For now look at BUILD.py (OSX only). This library should not be used for live applications yet.
+
+Thread Safety
+-------------
+
+This library is not thread safe except in parts where the documentation states otherwise. No more than one thread should access a cbitcoin object at any one time.
+
 Making a Contribution
 ---------------------
 
