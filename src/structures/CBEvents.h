@@ -35,6 +35,10 @@
  */
 typedef struct{
 	void (*onErrorReceived)(CBError error,char *,...);
+	void (*onTimeOut)(void *,void *); /**< Timeout event callback with a CBNetworkCommunicator and CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The first argument is the CBNetworkCommunicator responsible for the timeout. The second argument is the node with the timeout. */
+	bool (*onMessageReceived)(void *,void *); /**< The callback for when a message has been received from a node. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress node the message was received from. Return true if the node should be disconnected and false if the node is OK. Access the message by the "receive" feild in the CBNetworkAddress node. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the node's "alternativeTypeBytes" field. Do not delay the thread for very long. */
+	void (*onBadTime)(void); /**< Called when cbitcoin detects a divergence between the network time and system time whcih suggests the system time may be wrong, in the same way bitcoin-qt detects it. */
+	void (*onNetworkError)(void); /**< Called when both IPv4 and IPv6 fails. */
 }CBEvents;
 
 #endif
