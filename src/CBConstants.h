@@ -27,21 +27,41 @@
 
 #define CB_MESSAGE_MAX_SIZE 0x02000000 // 32 MB
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours from network time
-#define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
+#define CB_NETWORK_TIME_ALLOWED_TIME_DRIFT 4200 // 70 minutes from system time
+#define CB_MIN_PROTO_VERSION 209
+#define CB_ADDR_TIME_VERSION 31402 // Version where times are included in addr messages.
+#define CB_PONG_VERSION 60000 // Version where pings are responded with pongs.
 #define CB_LIBRARY_VERSION 1 // Goes up in increments
 #define CB_LIBRARY_VERSION_STRING "1.0 pre-alpha" // Features.Non-features pre-alpha/alpha/beta
-#define CB_USER_AGENT_SEGMENT "cbitcoin:1.0(pre-alpha)/"
-#define CB_PRODUCTION_NETWORK 0 // The normal network for trading
-#define CB_TEST_NETWORK 111 // The network for testing
+#define CB_USER_AGENT_SEGMENT "/cbitcoin:1.0(pre-alpha)/"
+#define CB_PRODUCTION_NETWORK_BYTE 0 // The normal network for trading
+#define CB_TEST_NETWORK_BYTE 111 // The network for testing
+#define CB_PRODUCTION_NETWORK_BYTES 0xD9B4BEF9 // The normal network for trading
+#define CB_TEST_NETWORK_BYTES 0xDAB5BFFA // The network for testing ??? Why make it the production network bytes with all bytes incremented?
 #define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
 #define CB_TRANSACTION_INPUT_OUT_POINTER_MESSAGE_LENGTH 36
+#define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
+#define CB_TRANSACTION_MAX_SIZE CB_BLOCK_MAX_SIZE - 81 // Minus the header
+#define CB_VERSION_MAX_SIZE 492 // Includes 400 characters for the user-agent and the 9 byte var int.
+#define CB_ADDRESS_BROADCAST_MAX_SIZE 1000
+#define CB_INVENTORY_BROADCAST_MAX_SIZE 50000
+#define CB_GET_DATA_MAX_SIZE 50000
+#define CB_GET_BLOCKS_MAX_SIZE 16045
+#define CB_GET_HEADERS_MAX_SIZE 64045
+#define CB_BLOCK_HEADERS_MAX_SIZE 178009
+#define CB_ALERT_MAX_SIZE 2100 // Max size for payload is 2000. Extra 100 for signature though the signature will likely be less.
 #define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
 #define CB_MAX_MONEY 2100000000000000 // 21 million Bitcoins. Each bitcoin has 100 million satoshis (individual units).
+#define CB_SOCKET_CONNECTION_CLOSE -1
+#define CB_SOCKET_FAILURE -2
+#define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a node.
+#define CB_MAX_ADDRESS_STORE 10000 // Maximum number of network addresses for storage.
+#define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a node in 24 hours
+#define CB_PING_TIME 1800 // Send pings approx every 30 minutes.
 
 //  Enums
 
 typedef enum{
-	CB_ERROR_MESSAGE_LENGTH_NOT_SET,
 	CB_ERROR_MESSAGE_CHECKSUM_BAD_SIZE,
 	CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,
 	CB_ERROR_MESSAGE_NO_DESERIALISATION_IMPLEMENTATION,
@@ -55,10 +75,46 @@ typedef enum{
 	CB_ERROR_BASE58_DECODE_CHECK_INVALID,
 	CB_ERROR_TRANSACTION_FEW_INPUTS,
 	CB_ERROR_TRANSACTION_FEW_OUTPUTS,
+	CB_ERROR_NETWORK_COMMUNICATOR_NODE_LIST_MUTEX_CREATE_FAIL,
+	CB_ERROR_NETWORK_COMMUNICATOR_ADDR_LIST_MUTEX_CREATE_FAIL,
+	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL,
+	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_CREATE_FAIL,
+	CB_ERROR_NETWORK_COMMUNICATOR_CONNECT_FAILURE,
+	CB_ERROR_NODE_MUTEX_CREATE_FAIL,
 }CBError;
 
+/*
+ @brief Used for CBNetworkCommunicator objects. These flags alter the behaviour of a CBNetworkCommunicator.
+ */
 typedef enum{
-	CB_SERVICE_FULL_BLOCKS = 1, // Service for full blocks. Node maintains the entire blockchain.
+	CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE = 1, /**< */
+	CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY = 2, /**< Automatically discover nodes and connect upto the maximum allowed connections using the supplied CBVersion. This involves the exchange of version messages and addresses. */
+	CB_NETWORK_COMMUNICATOR_AUTO_PING = 4, /**< Send ping messages every "heartBeat" automatically. If the protocol version in the CBVersion message is 60000 or over, cbitcoin will use the new ping/pong specification. @see PingPong.h */ 
+}CBNetworkCommunicatorFlags;
+
+/*
+ @brief The type of a CBMessage.
+ */
+typedef enum{
+	CB_MESSAGE_TYPE_VERSION = 1, /**< @see CBVersion.h */
+	CB_MESSAGE_TYPE_VERACK = 2, /**< Acknowledgement and acceptance of a node's version and connection. */
+	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBAddressBroadcast.h */
+	CB_MESSAGE_TYPE_INV = 8, /**< @see CBInventoryBroadcast.h */
+	CB_MESSAGE_TYPE_GETDATA = 16, /**< @see CBInventoryBroadcast.h */
+	CB_MESSAGE_TYPE_GETBLOCKS = 32, /**< @see CBGetBlocks.h */
+	CB_MESSAGE_TYPE_GETHEADERS = 64, /**< @see CBGetBlocks.h */
+	CB_MESSAGE_TYPE_TX = 128, /**< @see CBTransaction.h */
+	CB_MESSAGE_TYPE_BLOCK = 256, /**< @see CBBlock.h */
+	CB_MESSAGE_TYPE_HEADERS = 512, /**< @see CBBlockHeaders.h */
+	CB_MESSAGE_TYPE_GETADDR = 1024, /**< Request for "active peers". bitcoin-qt consiers active peers to be those that have sent messages in the last 30 minutes. */
+	CB_MESSAGE_TYPE_PING = 2048, /**< @see PingPong.h */
+	CB_MESSAGE_TYPE_PONG = 4096, /**< @see PingPong.h */
+	CB_MESSAGE_TYPE_ALERT = 8192, /**< @see CBAlert.h */
+	CB_MESSAGE_TYPE_ALT = 16384, /**< The message was defined by "alternativeMessages" in a CBNetworkCommunicator */
+}CBMessageType;
+
+typedef enum{
+	CB_SERVICE_FULL_BLOCKS = 1, /**< Service for full blocks. Node maintains the entire blockchain. */
 }CBVersionServices;
 
 typedef enum{
