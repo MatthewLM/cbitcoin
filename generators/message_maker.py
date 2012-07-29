@@ -202,7 +202,7 @@ bool CBInit"+name+"FromData(CB"+name+" * self,CBByteArray * data,CBEvents * even
 //  Destructor\n\
 \n\
 void CBFree"+name+"(void * self){\n\
-\tCBFreeObject(self);\n\
+\tCBFreeMessage(self);\n\
 }\n\
 \n\
 //  Functions\n\
