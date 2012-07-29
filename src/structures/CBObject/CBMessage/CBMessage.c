@@ -60,14 +60,11 @@ bool CBInitMessageByData(CBMessage * self,CBByteArray * data,CBEvents * events){
 
 //  Destructor
 
-void CBFreeMessage(void * self){
-	CBFreeProcessMessage(self);
-}
-void CBFreeProcessMessage(CBMessage * self){
+void CBFreeMessage(void * vself){
+	CBMessage * self = vself;
 	if (self->bytes) CBReleaseObject(&self->bytes);
-	CBFreeObject(CBGetObject(self));
+	CBFreeObject(self);
 }
 
 //  Functions
-
 

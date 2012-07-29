@@ -71,7 +71,7 @@ void CBFreeGetBlocks(void * vself){
 	CBGetBlocks * self = vself;
 	if (self->chainDescriptor) CBReleaseObject(&self->chainDescriptor);
 	if (self->stopAtHash) CBReleaseObject(&self->stopAtHash);
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions

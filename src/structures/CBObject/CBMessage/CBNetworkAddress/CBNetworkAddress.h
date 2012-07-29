@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Contains IP, time, port and services information for a node. Used to advertise nodes. Inherits CBObject
+ @brief Contains IP, time, port and services information for a node as well as data and code for managing individual nodes. Used to advertise nodes. "bytesTransferred/timeUsed" can be used to rank nodes for the most efficient ones which can be useful when selecting prefered nodes for download. Inherits CBObject
 */
 
 #ifndef CBNETWORKADDRESSH
@@ -31,6 +31,7 @@
 //  Includes
 
 #include "CBMessage.h"
+#include "CBDependencies.h"
 
 /**
  @brief Structure for CBNetworkAddress objects. @see CBNetworkAddress.h
@@ -39,8 +40,9 @@ typedef struct{
 	CBMessage base; /**< CBObject base structure */
 	u_int32_t time; /**< Timestamp */
 	u_int64_t services; /**< Services bit field */
-	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. */
+	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. The CBNetworkAddress should have exclusive access to the CBByteArray to avoid potential threading issues as the CBNetworkAddresses are protected by mutexes maintained by CBNetworkCommunicators but the ip is not. */
 	u_int16_t port; /**< Port number */
+	int32_t version; /**< Protocol version of node. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
 } CBNetworkAddress;
 
 /**

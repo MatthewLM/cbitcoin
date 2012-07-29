@@ -91,7 +91,7 @@ void CBFreeTransactionInput(void * vself){
 	CBTransactionInput * self = vself;
 	if (self->scriptObject) CBReleaseObject(&self->scriptObject);
 	if (self->outPointerHash) CBReleaseObject(&self->outPointerHash);
-	CBFreeProcessMessage(CBGetMessage(self));
+	CBFreeMessage(self);
 }
 
 //  Functions

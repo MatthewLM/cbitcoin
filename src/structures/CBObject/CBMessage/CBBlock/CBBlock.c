@@ -96,7 +96,7 @@ void CBFreeBlock(void * vself){
 		free(self->transactions);
 	}
 	if(self->hash) CBReleaseObject(&self->hash);
-	CBFreeObject(CBGetObject(self));
+	CBFreeMessage(CBGetObject(self));
 }
 
 //  Functions

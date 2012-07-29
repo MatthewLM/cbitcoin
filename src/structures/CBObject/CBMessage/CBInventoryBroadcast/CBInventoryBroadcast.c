@@ -70,7 +70,7 @@ void CBFreeInventoryBroadcast(void * vself){
 		CBReleaseObject(&self->items[x]); // Free item
 	}
 	free(self->items); // Free item pointer memory block.
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions

@@ -77,7 +77,7 @@ void CBFreeVersion(void * vself){
 	CBVersion * self = vself;
 	if (self->addRecv) CBReleaseObject(&self->addRecv);
 	if (self->userAgent) CBReleaseObject(&self->userAgent);
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions

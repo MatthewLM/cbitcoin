@@ -42,7 +42,7 @@ typedef struct{
 	u_int32_t sequence; /**< The version of this transaction input. Not used in protocol v0.3.18.00. Set to 0 for transactions that may somday be open to change after broadcast, set to CB_TRANSACTION_INPUT_FINAL if this input never needs to be changed after broadcast. */
 	CBScript * scriptObject; /**< Contains script information as a CBScript. */
 	CBByteArray * outPointerHash; /**< Hash of the transaction that includes the output for this input */
-	u_int32_t outPointerIndex; /**< The index of the output for this input */ // ??? What size integer? 32 bits probably future proof.
+	u_int32_t outPointerIndex; /**< The index of the output for this input */ 
 } CBTransactionInput;
 
 /**

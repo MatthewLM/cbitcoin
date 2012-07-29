@@ -39,8 +39,10 @@
  */
 typedef struct CBMessage{
 	CBObject base; /**< CBObject base structure */
-	CBByteArray * bytes; /**< Raw message data. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */
-	CBByteArray * checksum;
+	CBMessageType type; /**< The type of the message */
+	u_int8_t * altText; /**< For an alternative message: This is the type text. */
+	CBByteArray * bytes; /**< Raw message data minus the message header. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */
+	u_int8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
 	CBEvents * events; /**< Pointer to bitcoin event centre for errors */
 } CBMessage;
 
@@ -76,12 +78,6 @@ bool CBInitMessageByData(CBMessage * self,CBByteArray * data,CBEvents * events);
  @param self The CBMessage object to free.
  */
 void CBFreeMessage(void * self);
-
-/**
- @brief Does the processing to free a CBMessage object. Should be called by the children when freeing objects.
- @param self The pointer to the CBMessage object to free.
- */
-void CBFreeProcessMessage(CBMessage * self);
 
 //  Functions
 

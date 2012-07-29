@@ -29,13 +29,19 @@
 CBNetworkAddress * CBNewNetworkAddress(u_int32_t time,CBByteArray * ip,u_int16_t port,u_int64_t services,CBEvents * events){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	CBInitNetworkAddress(self,time,ip,port,services,events);
+	bool ok = CBInitNetworkAddress(self,time,ip,port,services,events);
+	if (!ok) {
+		return NULL;
+	}
 	return self;
 }
 CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data,CBEvents * events){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	CBInitNetworkAddressFromData(self,data,events);
+	bool ok = CBInitNetworkAddressFromData(self,data,events);
+	if (!ok) {
+		return NULL;
+	}
 	return self;
 }
 
@@ -69,7 +75,7 @@ bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,CBE
 void CBFreeNetworkAddress(void * vself){
 	CBNetworkAddress * self = vself;
 	if (self->ip) CBReleaseObject(&self->ip); 
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions

@@ -67,7 +67,7 @@ bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,CBEve
 void CBFreeInventoryItem(void * vself){
 	CBInventoryItem * self = vself;
 	CBReleaseObject(&self->hash);
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions

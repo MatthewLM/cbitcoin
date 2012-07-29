@@ -70,7 +70,7 @@ void CBFreeChainDescriptor(void * vself){
 		CBReleaseObject(&self->hashes[x]);
 	}
 	free(self->hashes);
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions
@@ -130,6 +130,6 @@ u_int16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 }
 void CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash){
 	self->hashNum++;
-	self->hashes = realloc(self->hashes, self->hashNum);
+	self->hashes = realloc(self->hashes, sizeof(*self->hashes) * self->hashNum);
 	self->hashes[self->hashNum-1] = hash;
 }

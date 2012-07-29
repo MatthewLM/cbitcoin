@@ -80,7 +80,7 @@ void CBFreeTransaction(void * vself){
 	for (u_int32_t x = 0; x < self->outputNum; x++)
 		CBReleaseObject(&self->outputs[x]);
 	free(self->outputs);
-	CBFreeObject(CBGetObject(self));
+	CBFreeMessage(CBGetObject(self));
 }
 
 //  Functions

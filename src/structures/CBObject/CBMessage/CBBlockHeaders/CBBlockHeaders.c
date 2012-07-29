@@ -70,11 +70,15 @@ void CBFreeBlockHeaders(void * vself){
 		CBReleaseObject(&self->blockHeaders[x]);
 	}
 	free(self->blockHeaders);
-	CBFreeObject(self);
+	CBFreeMessage(self);
 }
 
 //  Functions
 
+void CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header){
+	CBBlockHeadersTakeBlockHeader(self,header);
+	CBRetainObject(header);
+}
 u_int32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (!bytes) {
@@ -149,4 +153,8 @@ u_int32_t CBBlockHeadersSerialise(CBBlockHeaders * self){
 	}
 	return cursor;
 }
-
+void CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header){
+	self->headerNum++;
+	self->blockHeaders = realloc(self->blockHeaders, sizeof(*self->blockHeaders) * self->headerNum);
+	self->blockHeaders[self->headerNum-1] = header;
+}

@@ -70,7 +70,7 @@ bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * d
 void CBFreeTransactionOutput(void * vself){
 	CBTransactionOutput * self = vself;
 	if (self->scriptObject) CBReleaseObject(&self->scriptObject);
-	CBFreeObject(CBGetObject(self));
+	CBFreeMessage(self);
 }
 
 //  Functions

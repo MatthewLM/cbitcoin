@@ -155,6 +155,6 @@ u_int32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self){
 }
 void CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address){
 	self->addrNum++;
-	self->addresses = realloc(self->addresses, self->addrNum);
+	self->addresses = realloc(self->addresses, sizeof(*self->addresses) * self->addrNum);
 	self->addresses[self->addrNum-1] = address;
 }
