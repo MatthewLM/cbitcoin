@@ -37,7 +37,7 @@
 #define CB_PRODUCTION_NETWORK_BYTE 0 // The normal network for trading
 #define CB_TEST_NETWORK_BYTE 111 // The network for testing
 #define CB_PRODUCTION_NETWORK_BYTES 0xD9B4BEF9 // The normal network for trading
-#define CB_TEST_NETWORK_BYTES 0xDAB5BFFA // The network for testing ??? Why make it the production network bytes with all bytes incremented?
+#define CB_TEST_NETWORK_BYTES 0xDAB5BFFA // The network for testing
 #define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
 #define CB_TRANSACTION_INPUT_OUT_POINTER_MESSAGE_LENGTH 36
 #define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
@@ -55,9 +55,12 @@
 #define CB_SOCKET_CONNECTION_CLOSE -1
 #define CB_SOCKET_FAILURE -2
 #define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a node.
-#define CB_MAX_ADDRESS_STORE 10000 // Maximum number of network addresses for storage.
+#define CB_BUCKET_NUM 255 // Maximum number of buckets
 #define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a node in 24 hours
 #define CB_PING_TIME 1800 // Send pings approx every 30 minutes.
+#define CB_24_HOURS 86400
+#define NOT ! // Better readability than !
+#define CB_MAX_RESPONSES_EXPECTED 3 // A pong, an inventory broadcast and an address broadcast.
 
 //  Enums
 
@@ -75,13 +78,45 @@ typedef enum{
 	CB_ERROR_BASE58_DECODE_CHECK_INVALID,
 	CB_ERROR_TRANSACTION_FEW_INPUTS,
 	CB_ERROR_TRANSACTION_FEW_OUTPUTS,
-	CB_ERROR_NETWORK_COMMUNICATOR_NODE_LIST_MUTEX_CREATE_FAIL,
-	CB_ERROR_NETWORK_COMMUNICATOR_ADDR_LIST_MUTEX_CREATE_FAIL,
 	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL,
 	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_CREATE_FAIL,
 	CB_ERROR_NETWORK_COMMUNICATOR_CONNECT_FAILURE,
-	CB_ERROR_NODE_MUTEX_CREATE_FAIL,
 }CBError;
+
+typedef enum{
+	CB_SOCKET_OK,
+	CB_SOCKET_NO_SUPPORT,
+	CB_SOCKET_BAD
+} CBSocketReturn;
+
+typedef enum{
+	CB_CONNECT_OK,
+	CB_CONNECT_NO_SUPPORT,
+	CB_CONNECT_BAD,
+	CB_CONNECT_FAIL
+} CBConnectReturn;
+
+typedef enum{
+	CB_IP_INVALID = 0,
+	CB_IP_IPv4 = 1,
+	CB_IP_IPv6 = 2,
+	CB_IP_LOCAL = 4,
+	CB_IP_TOR = 8,
+	CB_IP_I2P = 16,
+	CB_IP_SITT = 32,
+	CB_IP_RFC6052 = 64,
+	CB_IP_6TO4 = 128,
+	CB_IP_TEREDO = 256,
+	CB_IP_HENET = 512
+} CBIPType;
+
+typedef enum{
+	CB_TIMEOUT_CONNECT,
+	CB_TIMEOUT_RESPONSE,
+	CB_TIMEOUT_NO_DATA,
+	CB_TIMEOUT_SEND,
+	CB_TIMEOUT_RECEIVE
+} CBTimeOutType;
 
 /*
  @brief Used for CBNetworkCommunicator objects. These flags alter the behaviour of a CBNetworkCommunicator.
@@ -107,10 +142,12 @@ typedef enum{
 	CB_MESSAGE_TYPE_BLOCK = 256, /**< @see CBBlock.h */
 	CB_MESSAGE_TYPE_HEADERS = 512, /**< @see CBBlockHeaders.h */
 	CB_MESSAGE_TYPE_GETADDR = 1024, /**< Request for "active peers". bitcoin-qt consiers active peers to be those that have sent messages in the last 30 minutes. */
-	CB_MESSAGE_TYPE_PING = 2048, /**< @see PingPong.h */
-	CB_MESSAGE_TYPE_PONG = 4096, /**< @see PingPong.h */
+	CB_MESSAGE_TYPE_PING = 2048, /**< @see CBPingPong.h */
+	CB_MESSAGE_TYPE_PONG = 4096, /**< @see CBPingPong.h */
 	CB_MESSAGE_TYPE_ALERT = 8192, /**< @see CBAlert.h */
 	CB_MESSAGE_TYPE_ALT = 16384, /**< The message was defined by "alternativeMessages" in a CBNetworkCommunicator */
+	CB_MESSAGE_TYPE_ADDRMAN = 32768, /**< @see CBAddressManager.h */
+	CB_MESSAGE_TYPE_CHAINDESC = 65536, /**< @see CBChainDescriptor.h */
 }CBMessageType;
 
 typedef enum{

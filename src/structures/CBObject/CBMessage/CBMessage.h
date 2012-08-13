@@ -40,14 +40,16 @@
 typedef struct CBMessage{
 	CBObject base; /**< CBObject base structure */
 	CBMessageType type; /**< The type of the message */
-	u_int8_t * altText; /**< For an alternative message: This is the type text. */
+	uint8_t * altText; /**< For an alternative message: This is the type text. */
 	CBByteArray * bytes; /**< Raw message data minus the message header. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */
-	u_int8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
+	uint8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
 	CBEvents * events; /**< Pointer to bitcoin event centre for errors */
+	CBMessageType expectResponse; /**< Set to zero if no message expected or the type of message expected as a response. */
 } CBMessage;
 
 /**
  @brief Creates a new CBMessage object. This message will be created with object data and not with byte data. The message can be serialised for the byte data used over the network.
+ @param 
  @returns A new CBMessage object.
  */
 CBMessage * CBNewMessageByObject(CBEvents * events);

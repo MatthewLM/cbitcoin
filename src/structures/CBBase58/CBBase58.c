@@ -30,8 +30,8 @@ CBBigInt CBDecodeBase58(char * str){
 	bi.data = malloc(1);
 	bi.data[0] = 0;
 	bi.length = 1;
-	u_int8_t temp[189];
-	for (u_int8_t x = strlen(str) - 1;; x--){ // Working backwards
+	uint8_t temp[189];
+	for (uint8_t x = strlen(str) - 1;; x--){ // Working backwards
 		// Get index in alphabet array
 		int alphaIndex = str[x];
 		if (alphaIndex != 49){ // If not 1
@@ -54,12 +54,12 @@ CBBigInt CBDecodeBase58(char * str){
 			CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
 			free(bi2.data);
 		}
-		if (!x) 
+		if (NOT x)
 			break;
 	}
 	// Got CBBigInt from base-58 string. Add zeros on end.
-	u_int8_t zeros = 0;
-	for (u_int8_t x = 0; x < strlen(str); x++)
+	uint8_t zeros = 0;
+	for (uint8_t x = 0; x < strlen(str); x++)
 		if (str[x] == '1')
 			zeros++;
 		else
@@ -80,22 +80,22 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 		return bi;
 	}
 	// Reverse bytes for checksum generation
-	u_int8_t * reversed = malloc(bi.length-4);
-	for (u_int8_t x = 4; x < bi.length; x++) {
+	uint8_t * reversed = malloc(bi.length-4);
+	for (uint8_t x = 4; x < bi.length; x++) {
 		reversed[bi.length-1-x] = bi.data[x];
 	}
 	// The checksum uses SHA-256, twice, for some reason unknown to man.
-	u_int8_t * checksum = CBSha256(reversed,bi.length-4);
-	u_int8_t * checksum2 = CBSha256(checksum,32);
+	uint8_t * checksum = CBSha256(reversed,bi.length-4);
+	uint8_t * checksum2 = CBSha256(checksum,32);
 	free(checksum);
 	bool ok = true;
-	for (u_int8_t x = 0; x < 4; x++) {
+	for (uint8_t x = 0; x < 4; x++) {
 		if (checksum2[x] != bi.data[3-x]) {
 			ok = false;
 		}
 	}
 	free(checksum2);
-	if(!ok){
+	if(NOT ok){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;
 		bi.data[0] -= 0;
@@ -103,21 +103,21 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 	}
 	return bi;
 }
-char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len){
+char * CBEncodeBase58(uint8_t * bytes, uint8_t len){
 	// ??? Improvement?
-	u_int8_t x = 0;
+	uint8_t x = 0;
 	char * str = malloc(len);
-	u_int8_t size = len;
+	uint8_t size = len;
 	// Zeros
-	for (u_int8_t y = len - 1;; y--)
-		if (!bytes[y]){
+	for (uint8_t y = len - 1;; y--)
+		if (NOT bytes[y]){
 			str[x] = '1';
 			x++;
-			if (!y)
+			if (NOT y)
 				break;
 		}else
 			break;
-	u_int8_t zeros = x;
+	uint8_t zeros = x;
 	// Make CBBigInt
 	CBBigInt bi;
 	bi.data = malloc(len);
@@ -125,9 +125,9 @@ char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len){
 	bi.length = len;
 	CBBigIntNormalise(&bi);
 	// Make temporary data store
-	u_int8_t * temp = malloc(len);
+	uint8_t * temp = malloc(len);
 	// Encode
-	u_int8_t mod;
+	uint8_t mod;
 	for (;CBBigIntCompareTo58(bi) >= 0;x++) {
 		mod = CBBigIntModuloWith58(bi);
 		if (size < x + 3) {
@@ -143,7 +143,7 @@ char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len){
 	free(bi.data);
 	x++;
 	// Reversal
-	for (u_int8_t y = 0; y < (x-zeros) / 2; y++) {
+	for (uint8_t y = 0; y < (x-zeros) / 2; y++) {
 		char temp = str[y+zeros];
 		str[y+zeros] = str[x-y-1];
 		str[x-y-1] = temp;

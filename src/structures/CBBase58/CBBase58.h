@@ -53,6 +53,6 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events);
  @param len Length of bytes to encode.
  @returns Newly allocated string with encoded data. 
  */
-char * CBEncodeBase58(u_int8_t * bytes, u_int8_t len);
+char * CBEncodeBase58(uint8_t * bytes, uint8_t len);
 
 #endif

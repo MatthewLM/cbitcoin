@@ -43,7 +43,7 @@ int main(){
 	events.onErrorReceived = err;
 	// Test string
 	char * string = "Hello World!";
-	CBByteArray * ba = CBNewByteArrayWithDataCopy((u_int8_t *)string, (u_int32_t)strlen(string), &events);
+	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string), &events);
 	if (strcmp(string, (char *)CBByteArrayGetData(ba))) {
 		printf("STRING COPY FAIL\n");
 		return 1;

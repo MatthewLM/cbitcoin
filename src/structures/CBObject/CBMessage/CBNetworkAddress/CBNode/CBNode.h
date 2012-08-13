@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Contains data for managing node connections. "bytesTransferred/timeUsed" can be used to rank nodes for the most efficient ones which can be useful when selecting prefered nodes for download. Inherits CBNetworkAddress
+ @brief Contains data for managing node connections. Inherits CBNetworkAddress
 */
 
 #ifndef CBNODEH
@@ -38,30 +38,32 @@
 */
 typedef struct{
 	CBNetworkAddress base; /**< CBNetworkAddress base structure */
-	u_int64_t socketID; /**< Not used in the bitcoin protocol. This is used by cbitcoin to store a socket ID for a connection to a CBNetworkAddress. The socket here is not closed when the CBNetworkAddress is freed so needs to be closed elsewhere. */
-	u_int64_t bytesTransferred; /**< Total bytes downloaded from the node. */
-	u_int32_t timeUsed; /**< Total time taken to transfer the bytes to AND from the node. */
-	u_int64_t receiveStart; /**< Time receiving has started */
+	uint64_t socketID; /**< Not used in the bitcoin protocol. This is used by cbitcoin to store a socket ID for a connection to a CBNetworkAddress. The socket here is not closed when the CBNetworkAddress is freed so needs to be closed elsewhere. */
 	CBMessage * receive; /**< Receiving message. NULL if not receiving. This message is exclusive to the node. */
 	CBMessage * sendQueue[CB_SEND_QUEUE_MAX_SIZE]; /**< Messages to send to this node. NULL if not sending anything. */
-	u_int8_t sendQueueSize; /**< Upto 10 messages in queue */
-	u_int8_t sendQueueFront; /**< Index of the front of the queue */
-	u_int32_t messageSent; /**< Used by a CBNetworkCommunicator to store the message length send. When the header is sent, 24 bytes are taken off. */
+	uint8_t sendQueueSize; /**< Upto 10 messages in queue */
+	uint8_t sendQueueFront; /**< Index of the front of the queue */
+	uint32_t messageSent; /**< Used by a CBNetworkCommunicator to store the message length send. When the header is sent, 24 bytes are taken off. */
 	bool sentHeader; /**< True if the sending message's header has been sent. */
-	u_int8_t * sendingHeader; /**< Stores header to send */
+	uint8_t * sendingHeader; /**< Stores header to send */
 	bool getAddresses; /* True is asked for addresses, false otherwise. */
-	u_int64_t receiveEvent; /**< Event for receving data from this node */
-	u_int64_t sendEvent; /**< Event for sending data from this node */
-	u_int64_t connectEvent; /**< Event for connecting to the node. */
-	u_int16_t pingsSent; /**< Number of pings sent and thus how many responses expected */
+	uint64_t receiveEvent; /**< Event for receving data from this node */
+	uint64_t sendEvent; /**< Event for sending data from this node */
+	uint64_t connectEvent; /**< Event for connecting to the node. */
+	uint16_t pingsSent; /**< Number of pings sent and thus how many responses expected */
 	bool versionSent; /**< True if the version was sent to this node */
 	CBVersion * versionMessage; /**< The version message from this node. */
 	bool versionAck; /**< This node acknowledged the version message. */
-	u_int8_t * headerBuffer; /**< Used by a CBNetworkCommunicator to read the message header before processing. */
-	u_int32_t messageReceived; /**< Used by a CBNetworkCommunicator to store the message length received. When the header is received 24 bytes are taken off. */
-	u_int16_t acceptedTypes; /**< Set messages that will be accepted on receiving. When a node tries to send another message, drop the node. Starts empty */
+	uint8_t * headerBuffer; /**< Used by a CBNetworkCommunicator to read the message header before processing. */
+	uint32_t messageReceived; /**< Used by a CBNetworkCommunicator to store the message length received. When the header is received 24 bytes are taken off. */
+	uint16_t acceptedTypes; /**< Set messages that will be accepted on receiving. When a node tries to send another message, drop the node. Starts empty */
 	bool receivedHeader; /**< True if the receiving message's header has been received. */
-	int16_t timeOffset; /** The offset from the system time this node has */
+	int16_t timeOffset; /**< The offset from the system time this node has */
+	uint64_t timeBroadcast; /**< Time of the last own address brodcast. */
+	bool returnToAddresses; /**< Upon a lost or failed connection, return to addresses list. This doesn't include failure from "CBNetworkCommunicatorConnect" */
+	bool connectionWorking; /**< True when the connection has been successful and the node has ben added to the CBAddressManager. */
+	CBMessageType typesExpected[CB_MAX_RESPONSES_EXPECTED]; /**< List of expected responses */
+	uint8_t typesExpectedNum; /**< Number of expected responses */
 	void * additionalData; /**< Extra pointer so the CBNetworkAddresses can be used to keep track of additional data. Not part of the bitcoin protocol. This is also not used in cbitcoin. */
 } CBNode;
 

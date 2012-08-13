@@ -157,7 +157,7 @@ CB"+name+" * CBGet"+name+"(void * self){\n\
 //  Initialiser\n\
 \n\
 bool CBInit"+name+"(CB"+name+" * self){\n\
-\tif (!CBInitObject(CBGetObject(self)))\n\
+\tif (NOT CBInitObject(CBGetObject(self)))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\

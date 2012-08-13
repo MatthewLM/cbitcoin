@@ -87,12 +87,12 @@ void CBFreeInventoryItem(void * self);
  @param self The CBInventoryItem object
  @returns The length read on success, 0 on failure.
 */
-u_int32_t CBInventoryItemDeserialise(CBInventoryItem * self);
+uint32_t CBInventoryItemDeserialise(CBInventoryItem * self);
 /**
  @brief Serialises a CBInventoryItem to the byte data.
  @param self The CBInventoryItem object
  @returns The length written on success, 0 on failure.
 */
-u_int32_t CBInventoryItemSerialise(CBInventoryItem * self);
+uint32_t CBInventoryItemSerialise(CBInventoryItem * self);
 
 #endif

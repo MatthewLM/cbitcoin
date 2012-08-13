@@ -43,11 +43,11 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
 		a->data = realloc(a->data, b->length);
 		// Make certain data is empty
-		u_int8_t diff = b->length - a->length;
+		uint8_t diff = b->length - a->length;
 		memset(a->data + (b->length - diff), 0, diff);
 	}
-	u_int8_t overflow = 0;
-	for (u_int8_t x = 0; x < b->length; x++) {
+	uint8_t overflow = 0;
+	for (uint8_t x = 0; x < b->length; x++) {
 		a->data[x] += b->data[x] + overflow;
 		overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
 	}
@@ -60,41 +60,41 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	assert(a->data[a->length-1]);
 }
-void CBBigIntEqualsDivisionBy58(CBBigInt * a,u_int8_t * ans){
-	if (a->length == 1 && !a->data[0]) { // "a" is zero
+void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
+	if (a->length == 1 && NOT a->data[0]) { // "a" is zero
 		return;
 	}
 	// base-256 long division.
-	u_int16_t temp = 0;
-	for (u_int8_t x = a->length-1;; x--) {
+	uint16_t temp = 0;
+	for (uint8_t x = a->length-1;; x--) {
 		temp <<= 8;
 		temp |= a->data[x];
 		ans[x] = temp / 58;
 		temp -= ans[x] * 58;
-		if (!x)
+		if (NOT x)
 			break;
 	}
-	if (!ans[a->length-1]) { // If last byte is zero, adjust length.
+	if (NOT ans[a->length-1]) { // If last byte is zero, adjust length.
 		a->length--;
 		a->data = realloc(a->data, a->length);
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 	assert(a->data[a->length-1]);
 }
-void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans){
-	if (!b) {
+void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
+	if (NOT b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
 		a->data = realloc(a->data, 1);
 		a->data[0] = 0;
 		return;
 	}
-	if (a->length == 1 && !a->data[0]) { // "a" is zero
+	if (a->length == 1 && NOT a->data[0]) { // "a" is zero
 		return;
 	}
 	// Multiply b by each byte and then add to answer
-	for (u_int8_t x = 0; x < a->length; x++) {
-		u_int16_t mult = ans[x] + a->data[x] * b; // Allow for overflow onto next byte.
+	for (uint8_t x = 0; x < a->length; x++) {
+		uint16_t mult = ans[x] + a->data[x] * b; // Allow for overflow onto next byte.
 		ans[x] = mult;
 		ans[x+1] = (mult >> 8);
 	}
@@ -105,9 +105,9 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,u_int8_t b,u_int8_t * ans)
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 	assert(a->data[a->length-1]);
 }
-void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
-	u_int8_t sub = b;
-	for (u_int8_t x = 0;x < a->length; x++) {
+void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
+	uint8_t sub = b;
+	for (uint8_t x = 0;x < a->length; x++) {
 		if (a->data[x] >= sub) {
 			a->data[x] -= sub;
 			break;
@@ -119,26 +119,26 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,u_int8_t b){
 	CBBigIntNormalise(a);
 	assert(a->data[a->length-1]);
 }
-u_int8_t CBBigIntModuloWith58(CBBigInt a){
+uint8_t CBBigIntModuloWith58(CBBigInt a){
 	// Use method presented here: http://stackoverflow.com/a/10441333/238411
-	u_int16_t result = 0; // Prevents overflow in calculations
-	for(u_int8_t x = a.length - 1;; x--){
+	uint16_t result = 0; // Prevents overflow in calculations
+	for(uint8_t x = a.length - 1;; x--){
 		result *= (256 % 58);
 		result %= 58;
 		result += a.data[x] % 58;
 		result %= 58;
-		if (!x)
+		if (NOT x)
 			break;
 	}
 	return result;
 }
-CBBigInt CBBigIntFromPowUInt8(u_int8_t a,u_int8_t b){
+CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b){
 	CBBigInt bi;
 	bi.data = malloc(1);
 	bi.length = 1;
 	bi.data[0] = 1;
-	u_int8_t * temp = malloc(b);
-	for (u_int8_t x = 0; x < b; x++) {
+	uint8_t * temp = malloc(b);
+	for (uint8_t x = 0; x < b; x++) {
 		memset(temp, 0, bi.length);
 		CBBigIntEqualsMultiplicationByUInt8(&bi, a, temp);
 	}
@@ -146,13 +146,13 @@ CBBigInt CBBigIntFromPowUInt8(u_int8_t a,u_int8_t b){
 	return bi;
 }
 void CBBigIntNormalise(CBBigInt * a){
-	for (u_int8_t x = a->length - 1;; x--){
+	for (uint8_t x = a->length - 1;; x--){
 		if (a->data[x]){
 			if (x == a->length - 1)
 				break;
 			a->length = x + 1;
 			break;
-		}else if (!x){
+		}else if (NOT x){
 			// Start with zero
 			a->length = 1;
 			break;

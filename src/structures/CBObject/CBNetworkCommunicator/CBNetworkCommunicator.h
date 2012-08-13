@@ -32,7 +32,7 @@
 
 #include "CBNode.h"
 #include "CBDependencies.h"
-#include "CBAddressBroadcast.h"
+#include "CBAddressManager.h"
 #include "CBInventoryBroadcast.h"
 #include "CBGetBlocks.h"
 #include "CBTransaction.h"
@@ -46,47 +46,46 @@
 */
 typedef struct {
 	CBObject base; /**< CBObject base structure */
-	u_int32_t networkID; /**< The 4 byte id for sending and receiving messages for a given network. */
+	uint32_t networkID; /**< The 4 byte id for sending and receiving messages for a given network. */
 	CBNetworkCommunicatorFlags flags; /**< Flags for the operation of the CBNetworkCommunicator. */
-	CBVersion * version; /**< Used for automatic handshaking. This CBVersion will be advertised to nodes. */
-	u_int16_t maxConnections; /**< Used for automatic discovery. The CBNetworkCommunicator will not connect to any more than this number of nodes */
-	u_int16_t maxIncommingConnections; /**< Maximum number of incomming connections. */
-	CBNetworkAddress ** addresses; /**< All known addresses which are not yet connected to. */
-	u_int16_t addrNum; /**< The number of addresses for unconnected nodes. Max storage = 65536 nodes or 1.85MB. */
-	CBNode ** nodes; /**< A list of pointers to CBNode for connected nodes. */
-	u_int16_t nodesNum; /**< The number of connected nodes */
-	u_int16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all nodes after this interval. bitcoin-qt uses 1800 (30 minutes) */
-	u_int16_t timeOut; /**< Time of zero contact from a node before timeout. bitcoin-qt uses 5400 (90 minutes) */
-	u_int16_t sendTimeOut; /**< Time to wait for a socket to be ready to write before a timeout. */
-	u_int16_t recvTimeOut; /**< When receiving data after the initial response, the time to wait for the following data before timeout. */
-	u_int16_t responseTimeOut; /**< Time to wait for a node to respond to a request before timeout.  */
-	u_int16_t connectionTimeOut; /**< Time to wait for a socket to connect before timeout. */
+	int32_t version; /**< Used for automatic handshaking. This version will be advertised to nodes. */
+	uint64_t services; /**< Used for automatic handshaking. These services will be advertised */
+	CBByteArray * userAgent; /**< Used for automatic handshaking. This user agent will be advertised. */
+	int32_t blockHeight; /** Set to the current block height for advertising to nodes during the automated handshake. */
+	CBNetworkAddress * ourIPv4; /**< IPv4 network address for us. */
+	CBNetworkAddress * ourIPv6; /**< IPv6 network address for us. */
+	uint32_t attemptingOrWorkingConnections; /**< All connections being attempted or sucessful */
+	uint32_t maxConnections; /**< Maximum number of nodes allowed to connect to. */
+	uint32_t numIncommingConnections; /**< Number of incomming connections made */
+	uint32_t maxIncommingConnections; /**< Maximum number of incomming connections. */
+	CBAddressManager * addresses; /**< All addresses both connected and unconnected */
+	uint16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all nodes after this interval. bitcoin-qt uses 1800 (30 minutes) */
+	uint16_t timeOut; /**< Time of zero contact from a node before timeout. bitcoin-qt uses 5400 (90 minutes) */
+	uint16_t sendTimeOut; /**< Time to wait for a socket to be ready to write before a timeout. */
+	uint16_t recvTimeOut; /**< When receiving data after the initial response, the time to wait for the following data before timeout. */
+	uint16_t responseTimeOut; /**< Time to wait for a node to respond to a request before timeout.  */
+	uint16_t connectionTimeOut; /**< Time to wait for a socket to connect before timeout. */
 	CBByteArray * alternativeMessages; /**< Alternative messages to accept. This should be the 12 byte command names each after another with nothing between. */
-	u_int32_t * altMaxSizes; /**< Sizes for the alternative messages. Will be freed by this object, so malloc this and give it to this object. Send in NULL for a default CB_BLOCK_MAX_SIZE. */
-	u_int16_t port; /**< Port used for connections. Usually 8333 for the bitcoin production network. */
-	u_int64_t listeningSocketIPv4; /**< The id of a listening socket on the IPv4 network. */
-	u_int64_t listeningSocketIPv6; /**< The id of a listening socket on the IPv6 network. */
+	uint32_t * altMaxSizes; /**< Sizes for the alternative messages. Will be freed by this object, so malloc this and give it to this object. Send in NULL for a default CB_BLOCK_MAX_SIZE. */
+	uint64_t listeningSocketIPv4; /**< The id of a listening socket on the IPv4 network. */
+	uint64_t listeningSocketIPv6; /**< The id of a listening socket on the IPv6 network. */
 	bool isListeningIPv4; /**< True when listening for incomming connections on the IPv4 network. False when not. */
 	bool isListeningIPv6; /**< True when listening for incomming connections on the IPv6 network. False when not. */
-	u_int64_t accessNodeListMutex; /**< A mutex for modifying the nodes list */
-	u_int64_t accessAddressListMutex; /**< A mutex for modifying the adresses list */
-	u_int64_t eventLoop; /**< Socket event loop */
-	u_int64_t acceptEventIPv4; /**< Event for accepting connections on IPv4 */
-	u_int64_t acceptEventIPv6; /**< Event for accepting connections on IPv6 */
-	bool IPv4; /**< True if it is beleived IPv4 connections can be successful. */
-	bool IPv6; /**< True if it is beleived IPv6 connections can be successful. */
-	u_int64_t nounce; /**< Value sent in version messages to check for connections to self */
-	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
-	u_int64_t lastPing; /**< Time last ping was sent */
+	uint64_t eventLoop; /**< Socket event loop */
+	uint64_t acceptEventIPv4; /**< Event for accepting connections on IPv4 */
+	uint64_t acceptEventIPv6; /**< Event for accepting connections on IPv6 */
+	uint64_t nounce; /**< Value sent in version messages to check for connections to self */
+	uint64_t lastPing; /**< Time last ping was sent */
 	CBEvents * events; /**< Events. */
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
+	void * callbackHandler; /**< Sent to event callbacks */
 } CBNetworkCommunicator;
 
 /**
  @brief Creates a new CBNetworkCommunicator object.
  @returns A new CBNetworkCommunicator object.
  */
-CBNetworkCommunicator * CBNewNetworkCommunicator(u_int32_t networkID,CBNetworkCommunicatorFlags flags,CBVersion * version,u_int16_t maxConnections,u_int16_t heartBeat,u_int16_t timeOut,CBByteArray * alternativeMessages,u_int32_t * altMaxSizes,u_int16_t port,CBEvents * events);
+CBNetworkCommunicator * CBNewNetworkCommunicator(CBEvents * events);
 
 /**
  @brief Gets a CBNetworkCommunicator from another object. Use this to avoid casts.
@@ -100,7 +99,7 @@ CBNetworkCommunicator * CBGetNetworkCommunicator(void * self);
  @param self The CBNetworkCommunicator object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,u_int32_t networkID,CBNetworkCommunicatorFlags flags,CBVersion * version,u_int16_t maxConnections,u_int16_t heartBeat,u_int16_t timeOut,CBByteArray * alternativeMessages,u_int32_t * altMaxSizes,u_int16_t port,CBEvents * events);
+bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,CBEvents * events);
 
 /**
  @brief Frees a CBNetworkCommunicator object.
@@ -114,28 +113,35 @@ void CBFreeNetworkCommunicator(void * self);
  @brief Accepts an incomming connection.
  @param vself The CBNetworkCommunicator object.
  @param socket The listening socket for accepting a connection.
+ @param IPv6 True if an IPv6 connection, false if an IPv4 connection.
  */
-void CBNetworkCommunicatorAcceptConnection(void * vself,u_int64_t socket);
+void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket,bool IPv6);
 /**
- @brief Adjust the network time offset with a node's time.
- @param self The CBNetworkCommunicator object.
- @param time Time to adjust network time with.
+ @brief Accepts an incomming IPv4 connection.
+ @param vself The CBNetworkCommunicator object.
+ @param socket The listening socket for accepting a connection.
  */
-void CBNetworkCommunicatorAdjustTime(CBNetworkCommunicator * self,u_int64_t time);
+void CBNetworkCommunicatorAcceptConnectionIPv4(void * vself,uint64_t socket);
 /**
- @brief Returns true if it is beleived the node can be connected to, otherwise false.
+ @brief Accepts an incomming IPv6 connection.
+ @param vself The CBNetworkCommunicator object.
+ @param socket The listening socket for accepting a connection.
+ */
+void CBNetworkCommunicatorAcceptConnectionIPv6(void * vself,uint64_t socket);
+/**
+ @brief Returns true if it is beleived the network address can be connected to, otherwise false.
  @param self The CBNetworkCommunicator object.
- @param node The node.
+ @param addr The CBNetworkAddress.
  @returns true if it is beleived the node can be connected to, otherwise false.
  */
-bool CBNetworkCommunicatorCanConnect(CBNetworkCommunicator * self,CBNode * node);
+bool CBNetworkCommunicatorCanConnect(CBNetworkCommunicator * self,CBNetworkAddress * addr);
 /**
  @brief Connects to a node. This node will be added to the node list if it connects correctly.
  @param self The CBNetworkCommunicator object.
  @param node The node to connect to.
- @returns true if successful, false otherwise.
+ @returns CB_CONNECT_OK if successful. CB_CONNECT_NO_SUPPORT if the IP version is not supported. CB_CONNECT_BAD if the connection failed and the address will be penalised. CB_CONNECT_FAIL if the connection failed but the address will not be penalised.
  */
-bool CBNetworkCommunicatorConnect(CBNetworkCommunicator * self,CBNode * node);
+CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Callback for the connection to a node.
  @param vself The CBNetworkCommunicator object.
@@ -146,22 +152,15 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vnode);
  @brief Disconnects a node.
  @param self The CBNetworkCommunicator object.
  @param node The node.
+ @param penalty Penalty to the score of the address.
  */
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBNode * node);
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBNode * node,u_int16_t penalty);
 /**
- @brief Determines if a CBNetworkAddress is in the "addresses" list. Compares the IP address.
+ @brief Gets a new version message for this.
  @param self The CBNetworkCommunicator object.
- @param addr The address.
- @returns If the address already exists, returns the existing object. Else returns NULL.
+ @param addRecv The CBNetworkAddress of the receipient.
  */
-CBNetworkAddress * CBNetworkCommunicatorGotNetworkAddress(CBNetworkCommunicator * self,CBNetworkAddress * addr);
-/**
- @brief Determines if a CBNetworkAddress is in the "nodes" list. Compares the IP address.
- @param self The CBNetworkCommunicator object.
- @param addr The address.
- @returns If the address already exists as a connected node, returns the existing object. Else returns NULL.
- */
-CBNode * CBNetworkCommunicatorGotNode(CBNetworkCommunicator * self,CBNetworkAddress * addr);
+CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBNetworkAddress * addRecv);
 /**
  @brief Processes a new received message for auto discovery.
  @param self The CBNetworkCommunicator object.
@@ -176,12 +175,6 @@ bool CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * se
  @returns true if node should be disconnected, false otherwise.
  */
 bool CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBNode * node);
-/**
- @brief Remove a CBNetworkAddress node from the nodes list.
- @param self The CBNetworkCommunicator object.
- @param node The CBNode to remove
- */
-void CBNetworkCommunicatorRemoveNode(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Called when a node socket is ready for reading.
  @param vself The CBNetworkCommunicator object.
@@ -198,8 +191,9 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode);
  @brief Called when a header is received.
  @param self The CBNetworkCommunicator object.
  @param node The CBNode.
+ @returns true if OK or false if the node has been disconnected.
  */
-void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node);
+bool CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Called on an error with the socket event loop. The error event is given with CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL.  
  @param vself The CBNetworkCommunicator object.
@@ -210,15 +204,16 @@ void CBNetworkCommunicatorOnLoopError(void * vself);
  @param self The CBNetworkCommunicator object.
  @param node The CBNode.
  */
-void CBNetworkCommunicatorOnMessageRecieved(CBNetworkCommunicator * self,CBNode * node);
+void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Called on a timeout error. The node is removed.
  @param vself The CBNetworkCommunicator object.
  @param vnode The CBNode index which timedout.
+ @param type The type of the timeout
  */
-void CBNetworkCommunicatorOnTimeOut(void * vself,void * vnode);
+void CBNetworkCommunicatorOnTimeOut(void * vself,void * vnode,CBTimeOutType type);
 /**
- @brief Sends, what should be, a correctly serialised message by placing it on the send queue.
+ @brief Sends a message by placing it on the send queue. Will serialise standard messages (unless serialised already) but not alternative messages or alert messages.
  @param self The CBNetworkCommunicator object.
  @param node The CBNode.
  @param message The CBMessage to send.
@@ -226,33 +221,61 @@ void CBNetworkCommunicatorOnTimeOut(void * vself,void * vnode);
  */
 bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBNode * node,CBMessage * message);
 /**
+ @brief Sets the CBAddressManager.
+ @param self The CBNetworkCommunicator object.
+ @param addr The CBAddressManager
+ */
+void CBNetworkCommunicatorSetAddressManager(CBNetworkCommunicator * self,CBAddressManager * addrMan);
+/**
+ @brief Sets the alternative messages
+ @param self The alternative messages as a CBByteArray with 12 characters per message command, one after the other.
+ @param altMaxSizes An allocated memory block of 32 bit integers with the max sizes for the alternative messages.
+ @param addr The CBAddressManager
+ */
+void CBNetworkCommunicatorSetAlternativeMessages(CBNetworkCommunicator * self,CBByteArray * altMessages,uint32_t * altMaxSizes);
+/**
+ @brief Sets the IPv4 address for the CBNetworkCommunicator.
+ @param self The CBNetworkCommunicator object.
+ @param addr The IPv4 address as a CBNetworkAddress.
+ */
+void CBNetworkCommunicatorSetOurIPv4(CBNetworkCommunicator * self,CBNetworkAddress * ourIPv4);
+/**
+ @brief Sets the IPv6 address for the CBNetworkCommunicator.
+ @param self The CBNetworkCommunicator object.
+ @param addr The IPv6 address as a CBNetworkAddress.
+ */
+void CBNetworkCommunicatorSetOurIPv6(CBNetworkCommunicator * self,CBNetworkAddress * ourIPv6);
+/**
+ @brief Sets the user agent.
+ @param self The CBNetworkCommunicator object.
+ @param addr The user agent as a CBByteArray.
+ */
+void CBNetworkCommunicatorSetUserAgent(CBNetworkCommunicator * self,CBByteArray * userAgent);
+/**
  @brief Starts a CBNetworkCommunicator by connecting to the nodes in the nodes list. This starts the socket event loop.
- @param vself The CBNetworkCommunicator object.
+ @param self The CBNetworkCommunicator object.
  @returns true if the CBNetworkCommunicator started successfully, false otherwise.
  */
 bool CBNetworkCommunicatorStart(CBNetworkCommunicator * self);
 /**
  @brief Causes the CBNetworkCommunicator to begin listening for incomming connections. "isListeningIPv4" and/or "isListeningIPv6" should be set to true if either IPv4 or IPv6 sockets are active.
  @param vself The CBNetworkCommunicator object.
- @param maxIncommingConnections The maximum number of incomming connections to accept.
  */
-void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self,u_int16_t maxIncommingConnections);
+void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self);
 /**
  @brief Closes all connections. This may be neccessary in case of failure in which case CBNetworkCommunicatorStart can be tried again to reconnect to the listed nodes.
  @param vself The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorStop(CBNetworkCommunicator * self);
 /**
- @brief Takes a CBNode an places it into the addresses list.
- @param self The CBNetworkCommunicator object.
- @param node The CBNetworkAddress to take.
+ @brief Stops listening for both IPv6 connections and IPv4 connections.
+ @param vself The CBNetworkCommunicator object.
  */
-void CBNetworkCommunicatorTakeAddress(CBNetworkCommunicator * self,CBNetworkAddress * addr);
+void CBNetworkCommunicatorStopListening(CBNetworkCommunicator * self);
 /**
- @brief Takes a CBNode an places it into the nodes list.
+ @brief Looks at the stored addresses and tries to connect to addresses up to the maximum number of allowed connections or as many as there are in the case the maximum number of connections is greater than the number of addresses, plus connected nodes.
  @param self The CBNetworkCommunicator object.
- @param node The CBNode to take.
  */
-void CBNetworkCommunicatorTakeNode(CBNetworkCommunicator * self,CBNode * node);
+void CBNetworkCommunicatorTryConnections(CBNetworkCommunicator * self);
 
 #endif

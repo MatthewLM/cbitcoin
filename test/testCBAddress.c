@@ -29,8 +29,8 @@ void err(CBError a,char * b,...){
 	printf("%s\n",b);
 }
 
-u_int8_t * sha256(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA256_DIGEST_LENGTH);
+uint8_t * sha256(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, data, len);
@@ -52,7 +52,7 @@ int main(){
 	CBString * addstr = CBNewStringByCopyingCString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9");
 	CBAddress * add = CBNewAddressFromString(addstr, false, &events, &dep);
 	CBGetObjectVT(addstr)->release(&addstr);
-	u_int8_t v = CBGetVersionChecksumBytesVT(add)->getVersion(add);
+	uint8_t v = CBGetVersionChecksumBytesVT(add)->getVersion(add);
 	if (v != 0) {
 		printf("PRODUCTION NET VERSION DOES NOT MATCH %i != 0\n",v);
 		return 1;
@@ -84,7 +84,7 @@ int main(){
 	CBGetObjectVT(str)->release(&str);
 	CBGetObjectVT(add)->release(&add);
 	// Test building from fake RIPEMD160 hash
-	u_int8_t * hash = malloc(20);
+	uint8_t * hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
 	add = CBNewAddressFromRIPEMD160Hash(net, hash, false, &events, &dep);

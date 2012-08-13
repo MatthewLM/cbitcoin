@@ -36,22 +36,22 @@ void err(CBError a,char * format,...){
 	printf("\n");
 }
 
-u_int8_t * CBSha160(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA_DIGEST_LENGTH);
+uint8_t * CBSha160(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA_DIGEST_LENGTH);
     SHA1(data, len, hash);
 	return hash;
 }
-u_int8_t * CBSha256(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA256_DIGEST_LENGTH);
+uint8_t * CBSha256(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
 	SHA256(data, len, hash);
 	return hash;
 }
-u_int8_t * CBRipemd160(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
+uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
     RIPEMD160(data, len, hash);
 	return hash;
 }
-bool CBEcdsaVerify(u_int8_t * signature,u_int8_t sigLen,u_int8_t * hash,const u_int8_t * pubKey,u_int8_t keyLen){
+bool CBEcdsaVerify(uint8_t * signature,uint8_t sigLen,uint8_t * hash,const uint8_t * pubKey,uint8_t keyLen){
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
 	o2i_ECPublicKey(&key, &pubKey, keyLen);
 	int res = ECDSA_verify(0, hash, 32, signature, sigLen, key);
@@ -70,13 +70,13 @@ int main(){
 	events.onErrorReceived = err;
 	// Test CBTransactionInput
 	// Test deserialisation
-	u_int8_t * hash2 = CBSha256((u_int8_t *)"hello", 5);
+	uint8_t * hash2 = CBSha256((uint8_t *)"hello", 5);
 	CBByteArray * bytes = CBNewByteArrayOfSize(42, &events);
 	CBByteArraySetBytes(bytes, 0, hash2, 32);
-	CBByteArraySetBytes(bytes, 32, (u_int8_t []){0x05,0xFA,0x4B,0x51}, 4);
+	CBByteArraySetBytes(bytes, 32, (uint8_t []){0x05,0xFA,0x4B,0x51}, 4);
 	CBVarIntEncode(bytes, 36, CBVarIntFromUInt64(1));
 	CBByteArraySetByte(bytes, 37, CB_SCRIPT_OP_TRUE);
-	u_int32_t sequence = rand();
+	uint32_t sequence = rand();
 	CBByteArraySetUInt32(bytes, 38, sequence);
 	CBTransactionInput * input = CBNewTransactionInputFromData(net, bytes, NULL, &events);
 	CBTransactionInputDeserialise(input);
@@ -86,7 +86,7 @@ int main(){
 			printf("%.2x",hash2[x]);
 		}
 		printf(" != 0x");
-		u_int8_t * d = CBByteArrayGetData(input->outPointerHash);
+		uint8_t * d = CBByteArrayGetData(input->outPointerHash);
 		for (int x = 0; x < 32; x++) {
 			printf("%.2x",d[x]);
 		}
@@ -97,7 +97,7 @@ int main(){
 		return 1;
 	}
 	CBScriptStack stack = CBNewEmptyScriptStack();
-	if(!CBScriptExecute(input->scriptObject, &stack, NULL, NULL, 0)){
+	if(NOT CBScriptExecute(input->scriptObject, &stack, NULL, NULL, 0)){
 		printf("CBTransactionInput DESERIALISED SCRIPT FAILURE\n");
 		return 1;
 	}
@@ -105,17 +105,17 @@ int main(){
 		printf("CBTransactionInput DESERIALISED sequence INCORRECT: %i != %i\n",input->sequence,sequence);
 		return 1;
 	}
-	CBReleaseObject(&input);
+	CBReleaseObject(input);
 	// Test serialisation
-	CBScript * scriptObj = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_TRUE},1 , &events);
+	CBScript * scriptObj = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_TRUE},1 , &events);
 	CBByteArray * outPointerHash = CBNewByteArrayWithDataCopy(hash2, 32, &events);
 	input = CBNewTransactionInput(net, NULL, scriptObj, outPointerHash, 0x514BFA05, &events);
 	input->sequence = sequence;
 	CBGetMessage(input)->bytes = CBNewByteArrayOfSize(42, &events);
 	CBTransactionInputSerialise(input);
-	if (!CBByteArrayEquals(bytes, CBGetMessage(input)->bytes)) {
+	if (NOT CBByteArrayEquals(bytes, CBGetMessage(input)->bytes)) {
 		printf("CBTransactionInput SERIALISATION FAILURE\n0x");
-		u_int8_t * d = CBByteArrayGetData(CBGetMessage(input)->bytes);
+		uint8_t * d = CBByteArrayGetData(CBGetMessage(input)->bytes);
 		for (int x = 0; x < 42; x++) {
 			printf("%.2x",d[x]);
 		}
@@ -126,12 +126,12 @@ int main(){
 		}
 		return 1;
 	}
-	CBReleaseObject(&input);
-	CBReleaseObject(&bytes);
+	CBReleaseObject(input);
+	CBReleaseObject(bytes);
 	// Test CBTransactionOutput
 	// Test deserialisation
 	bytes = CBNewByteArrayOfSize(10, &events);
-	u_int64_t value = rand();
+	uint64_t value = rand();
 	CBByteArraySetUInt64(bytes, 0, value);
 	CBVarIntEncode(bytes, 8, CBVarIntFromUInt64(1));
 	CBByteArraySetByte(bytes, 9, CB_SCRIPT_OP_TRUE);
@@ -142,18 +142,18 @@ int main(){
 		return 1;
 	}
 	stack = CBNewEmptyScriptStack();
-	if(!CBScriptExecute(output->scriptObject, &stack, NULL, NULL, 0)){
+	if(NOT CBScriptExecute(output->scriptObject, &stack, NULL, NULL, 0)){
 		printf("CBTransactionOutput DESERIALISED SCRIPT FAILURE\n");
 		return 1;
 	}
-	CBReleaseObject(&output);
+	CBReleaseObject(output);
 	// Test serialisation
 	output = CBNewTransactionOutput(net, NULL, value, scriptObj, &events);
 	CBGetMessage(output)->bytes = CBNewByteArrayOfSize(10, &events);
 	CBTransactionOutputSerialise(output);
-	if (!CBByteArrayEquals(bytes, CBGetMessage(output)->bytes)) {
+	if (NOT CBByteArrayEquals(bytes, CBGetMessage(output)->bytes)) {
 		printf("CBTransactionOutput SERIALISATION FAILURE\n0x");
-		u_int8_t * d = CBByteArrayGetData(CBGetMessage(output)->bytes);
+		uint8_t * d = CBByteArrayGetData(CBGetMessage(output)->bytes);
 		for (int x = 0; x < 14; x++) {
 			printf("%.2x",d[x]);
 		}
@@ -164,22 +164,22 @@ int main(){
 		}
 		return 1;
 	}
-	CBReleaseObject(&output);
-	CBReleaseObject(&bytes);
+	CBReleaseObject(output);
+	CBReleaseObject(bytes);
 	// Test CBTransaction
 	// Test deserialisation
 	// Set script data
-	u_int8_t * scripts[6];
-	scripts[0] = (u_int8_t []){CB_SCRIPT_OP_4,CB_SCRIPT_OP_2,CB_SCRIPT_OP_SUB,CB_SCRIPT_OP_3,CB_SCRIPT_OP_MAX,CB_SCRIPT_OP_3,CB_SCRIPT_OP_EQUAL};
-	scripts[1] = (u_int8_t []){CB_SCRIPT_OP_1,CB_SCRIPT_OP_3,CB_SCRIPT_OP_7,CB_SCRIPT_OP_ROT,CB_SCRIPT_OP_SUB,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_9,CB_SCRIPT_OP_EQUAL};
-	scripts[2] = (u_int8_t []){CB_SCRIPT_OP_TRUE,CB_SCRIPT_OP_IF,CB_SCRIPT_OP_3,CB_SCRIPT_OP_ELSE,CB_SCRIPT_OP_2,CB_SCRIPT_OP_ENDIF,CB_SCRIPT_OP_3,CB_SCRIPT_OP_EQUAL};
-	scripts[3] = (u_int8_t []){CB_SCRIPT_OP_3,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_9,CB_SCRIPT_OP_EQUAL};
-	scripts[4] = (u_int8_t []){CB_SCRIPT_OP_3,CB_SCRIPT_OP_3,CB_SCRIPT_OP_SUB,CB_SCRIPT_OP_NOT,CB_SCRIPT_OP_TRUE,CB_SCRIPT_OP_BOOLAND};
-	for (u_int8_t y = 0; y < 32; y++) {
+	uint8_t * scripts[6];
+	scripts[0] = (uint8_t []){CB_SCRIPT_OP_4,CB_SCRIPT_OP_2,CB_SCRIPT_OP_SUB,CB_SCRIPT_OP_3,CB_SCRIPT_OP_MAX,CB_SCRIPT_OP_3,CB_SCRIPT_OP_EQUAL};
+	scripts[1] = (uint8_t []){CB_SCRIPT_OP_1,CB_SCRIPT_OP_3,CB_SCRIPT_OP_7,CB_SCRIPT_OP_ROT,CB_SCRIPT_OP_SUB,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_9,CB_SCRIPT_OP_EQUAL};
+	scripts[2] = (uint8_t []){CB_SCRIPT_OP_TRUE,CB_SCRIPT_OP_IF,CB_SCRIPT_OP_3,CB_SCRIPT_OP_ELSE,CB_SCRIPT_OP_2,CB_SCRIPT_OP_ENDIF,CB_SCRIPT_OP_3,CB_SCRIPT_OP_EQUAL};
+	scripts[3] = (uint8_t []){CB_SCRIPT_OP_3,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_9,CB_SCRIPT_OP_EQUAL};
+	scripts[4] = (uint8_t []){CB_SCRIPT_OP_3,CB_SCRIPT_OP_3,CB_SCRIPT_OP_SUB,CB_SCRIPT_OP_NOT,CB_SCRIPT_OP_TRUE,CB_SCRIPT_OP_BOOLAND};
+	for (uint8_t y = 0; y < 32; y++) {
 		hash2[y] = rand();
 	}
-	u_int32_t randInt = rand();
-	u_int64_t randInt64 = rand();
+	uint32_t randInt = rand();
+	uint64_t randInt64 = rand();
 	bytes = CBNewByteArrayOfSize(187, &events);
 	// Protocol version
 	CBByteArraySetUInt32(bytes, 0, CB_PROTOCOL_VERSION);
@@ -233,14 +233,14 @@ int main(){
 		printf("TRANSACTION DESERIALISATION LOCK TIME FAIL. %u != %u\n",tx->lockTime,randInt);
 		return 1;
 	}
-	for (u_int8_t x = 0; x < 3; x++) {
+	for (uint8_t x = 0; x < 3; x++) {
 		if(memcmp(hash2,CBByteArrayGetData(tx->inputs[x]->outPointerHash),32)){
 			printf("TRANSACTION CBTransactionInput %i DESERIALISED outPointerHash INCORRECT: 0x\n",x);
 			for (int x = 0; x < 32; x++) {
 				printf("%.2x",hash2[x]);
 			}
 			printf(" != 0x");
-			u_int8_t * d = CBByteArrayGetData(tx->inputs[x]->outPointerHash);
+			uint8_t * d = CBByteArrayGetData(tx->inputs[x]->outPointerHash);
 			for (int x = 0; x < 32; x++) {
 				printf("%.2x",d[x]);
 			}
@@ -251,7 +251,7 @@ int main(){
 			return 1;
 		}
 		CBScriptStack stack = CBNewEmptyScriptStack();
-		if(!CBScriptExecute(tx->inputs[x]->scriptObject, &stack, NULL, NULL, 0)){
+		if(NOT CBScriptExecute(tx->inputs[x]->scriptObject, &stack, NULL, NULL, 0)){
 			printf("TRANSACTION CBTransactionInput %i DESERIALISED SCRIPT FAILURE\n",x);
 			return 1;
 		}
@@ -260,40 +260,40 @@ int main(){
 			return 1;
 		}
 	}
-	for (u_int8_t x = 0; x < 2; x++) {
+	for (uint8_t x = 0; x < 2; x++) {
 		if (tx->outputs[x]->value != randInt64) {
 			printf("TRANSACTION CBTransactionOutput %i DESERIALISED value INCORRECT: %llu != %llu\n",x,tx->outputs[x]->value,randInt64);
 			return 1;
 		}
 		stack = CBNewEmptyScriptStack();
-		if(!CBScriptExecute(tx->outputs[x]->scriptObject, &stack, NULL, NULL, 0)){
+		if(NOT CBScriptExecute(tx->outputs[x]->scriptObject, &stack, NULL, NULL, 0)){
 			printf("TRANSACTION CBTransactionOutput %i DESERIALISED SCRIPT FAILURE\n",x);
 			return 1;
 		}
 	}
-	CBReleaseObject(&tx);
+	CBReleaseObject(tx);
 	// Test serialisation
 	tx = CBNewTransaction(net, randInt, CB_PROTOCOL_VERSION, &events);
 	outPointerHash = CBNewByteArrayWithDataCopy(hash2, 32, &events);
-	for (u_int8_t x = 0; x < 3; x++) {
+	for (uint8_t x = 0; x < 3; x++) {
 		scriptObj = CBNewScriptWithDataCopy(net, scripts[x], (!x)? 7 : 8, &events);
 		input = CBNewTransactionInput(net, NULL, scriptObj, outPointerHash, randInt, &events);
 		input->sequence = randInt;
 		CBTransactionAddInput(tx, input);
-		CBReleaseObject(&scriptObj);
+		CBReleaseObject(scriptObj);
 	}
-	CBReleaseObject(&outPointerHash);
-	for (u_int8_t x = 3; x < 5; x++) {
+	CBReleaseObject(outPointerHash);
+	for (uint8_t x = 3; x < 5; x++) {
 		scriptObj = CBNewScriptWithDataCopy(net, scripts[x], (x == 3)? 7 : 6, &events);
 		output = CBNewTransactionOutput(net, NULL, randInt64, scriptObj, &events);
 		CBTransactionTakeOutput(tx, output);
-		CBReleaseObject(&scriptObj);
+		CBReleaseObject(scriptObj);
 	}
 	CBGetMessage(tx)->bytes = CBNewByteArrayOfSize(187, &events);
 	CBTransactionSerialise(tx);
-	if (!CBByteArrayEquals(bytes, CBGetMessage(tx)->bytes)) {
+	if (NOT CBByteArrayEquals(bytes, CBGetMessage(tx)->bytes)) {
 		printf("CBTransaction SERIALISATION FAILURE\n0x");
-		u_int8_t * d = CBByteArrayGetData(CBGetMessage(tx)->bytes);
+		uint8_t * d = CBByteArrayGetData(CBGetMessage(tx)->bytes);
 		for (int x = 0; x < 187; x++) {
 			printf("%.2x",d[x]);
 		}
@@ -304,34 +304,34 @@ int main(){
 		}
 		return 1;
 	}
-	CBReleaseObject(&tx);
-	CBReleaseObject(&bytes);
+	CBReleaseObject(tx);
+	CBReleaseObject(bytes);
 	free(hash2);
 	// Make keys for testing
 	EC_KEY * keys[21];
-	u_int8_t * pubKeys[21];
-	u_int8_t pubSizes[21];
+	uint8_t * pubKeys[21];
+	uint8_t pubSizes[21];
 	unsigned int sigSizes[21];
 	unsigned char testKey[279] = {0x30, 0x82, 0x01, 0x13, 0x02, 0x01, 0x01, 0x04, 0x20, 0x87, 0x5f, 0xc0, 0x45, 0x40, 0xf0, 0x2b, 0x8a, 0x6c, 0x21, 0x18, 0xb7, 0x87, 0xe3, 0xe6, 0x6b, 0x3d, 0xd4, 0x77, 0x32, 0xf5, 0x62, 0x7d, 0x12, 0x30, 0xac, 0x08, 0x61, 0x1e, 0x78, 0xd6, 0xbe, 0xa0, 0x81, 0xa5, 0x30, 0x81, 0xa2, 0x02, 0x01, 0x01, 0x30, 0x2c, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x01, 0x01, 0x02, 0x21, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2f, 0x30, 0x06, 0x04, 0x01, 0x00, 0x04, 0x01, 0x07, 0x04, 0x41, 0x04, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98, 0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65, 0x5d, 0xa4, 0xfb, 0xfc, 0x0e, 0x11, 0x08, 0xa8, 0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19, 0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8, 0x02, 0x21, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41, 0x02, 0x01, 0x01, 0xa1, 0x44, 0x03, 0x42, 0x00, 0x04, 0x86, 0x6e, 0xb3, 0xaf, 0x67, 0x49, 0x74, 0x0c, 0xc1, 0x42, 0xde, 0xe7, 0x52, 0x28, 0x20, 0x81, 0x34, 0xd8, 0xe4, 0x07, 0x94, 0x0d, 0xfe, 0x86, 0xdc, 0xb5, 0x50, 0x5a, 0xab, 0xb0, 0x4f, 0xdc, 0xe5, 0x37, 0x34, 0x63, 0x6a, 0xda, 0x8f, 0x28, 0x7b, 0x70, 0xf0, 0x7f, 0xda, 0x11, 0xc6, 0xa1, 0x29, 0x1f, 0xe6, 0x01, 0xd3, 0x13, 0xad, 0x52, 0x3a, 0x72, 0x28, 0xf3, 0x65, 0x2c, 0x71, 0x83};
-	for (u_int8_t x = 0; x < 21; x++){
+	for (uint8_t x = 0; x < 21; x++){
 		keys[x] = EC_KEY_new_by_curve_name(NID_secp256k1);
 		if (x == 3) {
 			// Test this key because it hashes into values that may be mistaken for code separators if the script interpreter is incorrect.
 			const unsigned char * ptestKey = testKey;
 			d2i_ECPrivateKey(&keys[x], &ptestKey, 279);
 		}else{
-			if(!EC_KEY_generate_key(keys[x])){
+			if(NOT EC_KEY_generate_key(keys[x])){
 				printf("GENERATE KEY FAIL\n"); 
 				return 1;
 			}
 		}
 		pubSizes[x] = i2o_ECPublicKey(keys[x], NULL);
-		if(!pubSizes[x]){
+		if(NOT pubSizes[x]){
 			printf("PUB KEY TO DATA ZERO\n"); 
 			return 1;
 		}
 		pubKeys[x] = malloc(pubSizes[x]);
-		u_int8_t * pubKey2 = pubKeys[x];
+		uint8_t * pubKey2 = pubKeys[x];
 		if(i2o_ECPublicKey(keys[x], &pubKey2) != pubSizes[x]){
 			printf("PUB KEY TO DATA FAIL\n"); 
 			return 1;
@@ -342,24 +342,24 @@ int main(){
 	tx = CBNewTransaction(net, 0, CB_PROTOCOL_VERSION, &events);
 	// Make outputs
 	for (int x = 0; x < 4; x++){
-		CBScript * outputsScript = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
+		CBScript * outputsScript = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
 		CBTransactionTakeOutput(tx, CBNewTransactionOutput(net, tx, 1000, outputsScript, &events));
-		CBReleaseObject(&outputsScript);
+		CBReleaseObject(outputsScript);
 	}
 	// Make inputs
-	u_int8_t * hash = CBSha256((u_int8_t []){0x56,0x21,0xF2}, 3);
+	uint8_t * hash = CBSha256((uint8_t []){0x56,0x21,0xF2}, 3);
 	for (int x = 0; x < 4; x++){
 		bytes = CBNewByteArrayWithDataCopy(hash, 32, &events);
 		CBTransactionTakeInput(tx, CBNewTransactionInput(net, tx, NULL, bytes, 0, &events));
 	}
 	free(hash);
-	CBReleaseObject(&bytes);
+	CBReleaseObject(bytes);
 	// Make standard output script.
-	u_int8_t * subScript = malloc(25);
+	uint8_t * subScript = malloc(25);
 	subScript[0] = CB_SCRIPT_OP_DUP;
 	subScript[1] = CB_SCRIPT_OP_HASH160;
 	subScript[2] = 20;
-	u_int8_t * keyHash = CBSha256(pubKeys[0], pubSizes[0]);
+	uint8_t * keyHash = CBSha256(pubKeys[0], pubSizes[0]);
 	hash = CBRipemd160(keyHash, 32);
 	free(keyHash);
 	memmove(subScript + 3, hash, 20);
@@ -371,7 +371,7 @@ int main(){
 	CBSignType hashTypes[4] = {CB_SIGHASH_ALL,CB_SIGHASH_SINGLE,CB_SIGHASH_NONE,CB_SIGHASH_ALL | CB_SIGHASH_ANYONECANPAY};
 	for (int x = 0; x < 4; x++) {
 		hash = CBTransactionGetInputHashForSignature(tx, subScriptByteArray, x, hashTypes[x]);
-		u_int8_t * signature = malloc(sigSizes[x] + 1);
+		uint8_t * signature = malloc(sigSizes[x] + 1);
 		ECDSA_sign(0, hash, 32, signature, &sigSizes[0], keys[0]);
 		sigSizes[0]++;
 		signature[sigSizes[0] - 1] = hashTypes[x];
@@ -388,7 +388,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("SIGHASH_ALL FAIL\n");
 		return 1;
 	}
@@ -474,7 +474,7 @@ int main(){
 		return 1;
 	}
 	CBByteArrayReverseBytes(tempBytes);
-	CBReleaseObject(&tempBytes);
+	CBReleaseObject(tempBytes);
 	// Test false public key
 	tempBytes = CBNewByteArraySubReference(CBGetByteArray(tx->inputs[0]->scriptObject), 2 + sigSizes[0], pubSizes[0]);
 	CBByteArrayReverseBytes(tempBytes);
@@ -485,7 +485,7 @@ int main(){
 		return 1;
 	}
 	CBByteArrayReverseBytes(tempBytes);
-	CBReleaseObject(&tempBytes);
+	CBReleaseObject(tempBytes);
 	// Test too few items on stack
 	CBGetByteArray(tx->inputs[0]->scriptObject)->length = sigSizes[0] + 1;
 	stack = CBNewEmptyScriptStack();
@@ -498,7 +498,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
 		printf("SIGHASH_SINGLE FAIL\n");
 		return 1;
 	}
@@ -506,7 +506,7 @@ int main(){
 	tx->outputs[0]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -515,7 +515,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -542,7 +542,7 @@ int main(){
 	tx->outputs[2]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -551,7 +551,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
 		printf("SIGHASH_SINGLE AND MODIFIED SECOND OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -587,7 +587,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1)) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -623,7 +623,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
 		printf("SIGHASH_NONE FAIL\n");
 		return 1;
 	}
@@ -631,7 +631,7 @@ int main(){
 	tx->outputs[0]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -640,7 +640,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -649,7 +649,7 @@ int main(){
 	tx->outputs[2]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -658,7 +658,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -694,7 +694,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2)) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -730,7 +730,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
 		printf("SIGHASH_ANYONECANPAY FAIL\n");
 		return 1;
 	}
@@ -768,7 +768,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[0]->outPointerHash, 0, CBByteArrayGetByte(tx->inputs[0]->outPointerHash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -777,7 +777,7 @@ int main(){
 	tx->inputs[0]->outPointerIndex++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -786,7 +786,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3)) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -819,27 +819,27 @@ int main(){
 	}
 	// Free objects
 	free(hash);
-	CBReleaseObject(&subScriptByteArray);
-	CBReleaseObject(&outputScript);
-	CBReleaseObject(&tx);
+	CBReleaseObject(subScriptByteArray);
+	CBReleaseObject(outputScript);
+	CBReleaseObject(tx);
 	// Test OP_CHECKMULTISIG
 	// Lower signature sizes that were incremented above for SIGHASH
 	for (int x = 0; x < 4; x++)
 		sigSizes[x]--;
 	// Make transaction
 	tx = CBNewTransaction(net, 0, CB_PROTOCOL_VERSION, &events);
-	hash = CBSha256((u_int8_t []){0x56,0x21,0xF2}, 3);
+	hash = CBSha256((uint8_t []){0x56,0x21,0xF2}, 3);
 	bytes = CBNewByteArrayWithData(hash, 32, &events);
 	CBTransactionTakeInput(tx, CBNewTransactionInput(net, tx, NULL, bytes, 0, &events)); 
-	CBReleaseObject(&bytes);
+	CBReleaseObject(bytes);
 	// Make output for this transaction
-	scriptObj = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
+	scriptObj = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(net, tx, 80, scriptObj, &events));
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Make previous output script with OP_CHECKMULTISIG
-	outputScript = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_CHECKMULTISIG}, 1, &events);
+	outputScript = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_CHECKMULTISIG}, 1, &events);
 	// Make signatures
-	u_int8_t * signatures[21];
+	uint8_t * signatures[21];
 	hash = CBTransactionGetInputHashForSignature(tx, CBGetByteArray(outputScript), 0, CB_SIGHASH_ALL);
 	for (int x = 0; x < 21; x++) {
 		signatures[x] = malloc(sigSizes[x] + 1);
@@ -859,11 +859,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - ONE SIG - ONE OK KEY - ZERO BAD KEYS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test two signatures, two keys
 	scriptObj = CBNewScriptOfSize(net, sigSizes[0] + pubSizes[0] + sigSizes[1] + pubSizes[1] + 9, &events);
 	CBByteArraySetByte(CBGetByteArray(scriptObj), 0, CB_SCRIPT_OP_0);
@@ -886,11 +886,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - TWO SIGS - TWO OK KEYS - ZERO BAD KEYS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test three signatures, 4 keys with first key fail
 	int len = 13; // 3 + 3*2 + 4
 	for (int x = 1; x < 4; x++)
@@ -918,11 +918,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - THREE SIGS - THREE OK KEYS - ONE BAD KEY FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test four signatures, 6 keys with 2,6 key fail
 	len = 17; 
 	for (int x = 0; x < 4; x++)
@@ -971,11 +971,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - FOUR SIGS - FOUR OK KEYS - TWO BAD KEYS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test five signatures, 10 keys with first 5 fail
 	len = 23;
 	for (int x = 5; x < 10; x++)
@@ -1003,11 +1003,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - FIVE SIGS - FIVE OK KEYS - FIVE BAD KEYS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test five signature, 10 keys with evens fail
 	len = 23;
 	for (int x = 0; x < 10; x += 2)
@@ -1035,11 +1035,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - FIVE SIGS - FIVE OK KEYS ODDS - FIVE BAD KEYS EVENS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test 20 signatures
 	len = 65;
 	for (int x = 0; x < 20; x++)
@@ -1071,11 +1071,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - TWENTY SIGS - TWENTY OK KEYS - ZERO BAD KEYS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test 21 signatures failure.
 	len = 68;
 	for (int x = 0; x < 21; x++)
@@ -1111,7 +1111,7 @@ int main(){
 		printf("OP_CHECKMULTISIG - TWENTY ONE SIGS - TWENTY ONE OK KEYS - ZERO BAD KEYS FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test one signature, one fail key failure
 	scriptObj = CBNewScriptOfSize(net, sigSizes[0] + pubSizes[1] + 6, &events);
 	CBByteArraySetByte(CBGetByteArray(scriptObj), 0, CB_SCRIPT_OP_0);
@@ -1128,7 +1128,7 @@ int main(){
 		printf("OP_CHECKMULTISIG - ONE SIG - ZERO OK KEYS - ONE BAD KEY FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test five signatures, 8 keys with 4 failing failure
 	len = 21;
 	for (int x = 4; x < 9; x++)
@@ -1163,7 +1163,7 @@ int main(){
 		printf("OP_CHECKMULTISIG DOESN'T GIVE NULL ZERO\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test low key number
 	scriptObj = CBNewScriptOfSize(net, sigSizes[0] + pubSizes[0] + sigSizes[1] + pubSizes[1] + 9, &events);
 	CBByteArraySetByte(CBGetByteArray(scriptObj), 0, CB_SCRIPT_OP_0);
@@ -1190,7 +1190,7 @@ int main(){
 		printf("OP_CHECKMULTISIG - LOW KEY NUMBER FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test low sig number
 	scriptObj = CBNewScriptOfSize(net, sigSizes[0] + pubSizes[0] + sigSizes[1] + pubSizes[1] + 9, &events);
 	CBByteArraySetByte(CBGetByteArray(scriptObj), 0, CB_SCRIPT_OP_0);
@@ -1213,11 +1213,11 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0);
-	if (!CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
+	if (NOT CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0)) {
 		printf("OP_CHECKMULTISIG - LOW SIG NUMBER FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test high key number
 	scriptObj = CBNewScriptOfSize(net, sigSizes[0] + pubSizes[0] + sigSizes[1] + pubSizes[1] + 9, &events);
 	CBByteArraySetByte(CBGetByteArray(scriptObj), 0, CB_SCRIPT_OP_0);
@@ -1244,7 +1244,7 @@ int main(){
 		printf("OP_CHECKMULTISIG - HIGH KEY NUMBER FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	// Test high sig number
 	scriptObj = CBNewScriptOfSize(net, sigSizes[0] + pubSizes[0] + sigSizes[1] + pubSizes[1] + 9, &events);
 	CBByteArraySetByte(CBGetByteArray(scriptObj), 0, CB_SCRIPT_OP_0);
@@ -1271,6 +1271,6 @@ int main(){
 		printf("OP_CHECKMULTISIG - HIGH SIG NUMBER FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&scriptObj);
+	CBReleaseObject(scriptObj);
 	return 0;
 }

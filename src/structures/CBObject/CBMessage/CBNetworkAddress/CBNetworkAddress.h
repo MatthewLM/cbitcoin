@@ -32,24 +32,27 @@
 
 #include "CBMessage.h"
 #include "CBDependencies.h"
+#include "CBNetworkFunctions.h"
 
 /**
  @brief Structure for CBNetworkAddress objects. @see CBNetworkAddress.h
 */
 typedef struct{
 	CBMessage base; /**< CBObject base structure */
-	u_int32_t time; /**< Timestamp */
-	u_int64_t services; /**< Services bit field */
+	uint32_t score; /**< Address score. */
+	uint64_t services; /**< Services bit field */
 	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. The CBNetworkAddress should have exclusive access to the CBByteArray to avoid potential threading issues as the CBNetworkAddresses are protected by mutexes maintained by CBNetworkCommunicators but the ip is not. */
-	u_int16_t port; /**< Port number */
+	CBIPType type; /**< The type of the IP */
+	uint16_t port; /**< Port number */
 	int32_t version; /**< Protocol version of node. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
 } CBNetworkAddress;
 
 /**
  @brief Creates a new CBNetworkAddress object.
+ @param ip The IP address in a 16 byte IPv6 format. If NULL, the IP will be a 16 byte CBByteArray set will all zero.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddress(u_int32_t time,CBByteArray * ip,u_int16_t port,u_int64_t services,CBEvents * events);
+CBNetworkAddress * CBNewNetworkAddress(uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,CBEvents * events);
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
  @returns A new CBNetworkAddress object.
@@ -68,7 +71,7 @@ CBNetworkAddress * CBGetNetworkAddress(void * self);
  @param self The CBNetworkAddress object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddress(CBNetworkAddress * self,u_int32_t time,CBByteArray * ip,u_int16_t port,u_int64_t services,CBEvents * events);
+bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,CBEvents * events);
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
@@ -90,13 +93,13 @@ void CBFreeNetworkAddress(void * self);
  @param time If true a timestamp is expected, else it is not. If a timestamp is not expected then "time" will not be set and will be the previous value.
  @returns The length read on success, 0 on failure.
  */
-u_int8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool time);
+uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score);
 /**
  @brief Serialises a CBNetworkAddress to the byte data.
  @param self The CBNetworkAddress object
  @param time If true the time will be included, else it will not.
  @returns The length written on success, 0 on failure.
  */
-u_int8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool time);
+uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool score);
 
 #endif

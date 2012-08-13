@@ -58,7 +58,7 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * strin
  @param events A CBEngine for errors.
  @returns A new CBVersionChecksumBytes object.
  */
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events);
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events);
 
 /**
  @brief Gets a CBVersionChecksumBytes from another object. Use this to avoid casts.
@@ -85,7 +85,7 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteAr
  @param events A CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events);
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events);
 
 /**
  @brief Frees a CBVersionChecksumBytes object.
@@ -100,7 +100,7 @@ void CBFreeVersionChecksumBytes(void * self);
  @param self The CBVersionChecksumBytes object.
  @returns The version code. The Macros CB_PRODUCTION_NETWORK and CB_TEST_NETWORK should correspond to this. 
  */
-u_int8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self);
+uint8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self);
 /**
  @brief Gets the string representation for a CBVersionChecksumBytes object as a base-58 encoded CBString.
  @param self The CBVersionChecksumBytes object.

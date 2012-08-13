@@ -37,7 +37,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int32_t version; /**< Protocol version for this message */
+	uint32_t version; /**< Protocol version for this message */
 	CBChainDescriptor * chainDescriptor; /**< CBChainDescriptor for determining what blocks are needed. */
 	CBByteArray * stopAtHash; /**< The block hash to stop at when retreiving an inventory. Else up to 500 block hashes can be given. */
 } CBGetBlocks;
@@ -46,7 +46,7 @@ typedef struct{
  @brief Creates a new CBGetBlocks object.
  @returns A new CBGetBlocks object.
 */
-CBGetBlocks * CBNewGetBlocks(u_int32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events);
+CBGetBlocks * CBNewGetBlocks(uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events);
 /**
 @brief Creates a new CBGetBlocks object from serialised data.
  @param data Serialised CBGetBlocks data.
@@ -66,7 +66,7 @@ CBGetBlocks * CBGetGetBlocks(void * self);
  @param self The CBGetBlocks object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocks(CBGetBlocks * self,u_int32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events);
+bool CBInitGetBlocks(CBGetBlocks * self,uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events);
 /**
  @brief Initialises a CBGetBlocks object from serialised data
  @param self The CBGetBlocks object to initialise
@@ -84,16 +84,22 @@ void CBFreeGetBlocks(void * self);
 //  Functions
 
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBGetBlocks object.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBGetBlocksCalculateLength(CBGetBlocks * self);
+/**
  @brief Deserialises a CBGetBlocks so that it can be used as an object.
  @param self The CBGetBlocks object
  @returns The length read on success, 0 on failure.
 */
-u_int16_t CBGetBlocksDeserialise(CBGetBlocks * self);
+uint16_t CBGetBlocksDeserialise(CBGetBlocks * self);
 /**
  @brief Serialises a CBGetBlocks to the byte data.
  @param self The CBGetBlocks object
  @returns The length written on success, 0 on failure.
 */
-u_int16_t CBGetBlocksSerialise(CBGetBlocks * self);
+uint16_t CBGetBlocksSerialise(CBGetBlocks * self);
 
 #endif

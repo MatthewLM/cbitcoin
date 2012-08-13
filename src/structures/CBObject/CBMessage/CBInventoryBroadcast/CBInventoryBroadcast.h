@@ -37,7 +37,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int16_t itemNum; /**< Number of items in the inventory. */
+	uint16_t itemNum; /**< Number of items in the inventory. */
 	CBInventoryItem ** items; /**< The items. This should be a memory block of pointers to CBInventoryItems. It will be freed when the CBInventoryBroadcast is freed. When adding an item it should be retained. When removing an item it should be released. Leave or set as NULL if empty. */
 } CBInventoryBroadcast;
 
@@ -83,16 +83,22 @@ void CBFreeInventoryBroadcast(void * self);
 //  Functions
 
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBInventoryBroadcast object.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBInventoryBroadcastCalculateLength(CBInventoryBroadcast * self);
+/**
  @brief Deserialises a CBInventoryBroadcast so that it can be used as an object.
  @param self The CBInventoryBroadcast object
  @returns The length read on success, 0 on failure.
 */
-u_int32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self);
+uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self);
 /**
  @brief Serialises a CBInventoryBroadcast to the byte data.
  @param self The CBInventoryBroadcast object
  @returns The length written on success, 0 on failure.
 */
-u_int32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self);
+uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self);
 
 #endif

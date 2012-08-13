@@ -33,8 +33,8 @@
  @brief Contains decoded variable size integer information. @see CBVarInt.h
  */
 typedef struct{
-	u_int64_t val; /**< Integer value */
-	u_int8_t size; /**< Size of the integer when encoded in bytes */
+	uint64_t val; /**< Integer value */
+	uint8_t size; /**< Size of the integer when encoded in bytes */
 }CBVarInt;
 
 /**
@@ -43,25 +43,25 @@ typedef struct{
  @param offset Offset to start decoding from.
  @returns The CBVarInt information
  */
-CBVarInt CBVarIntDecode(CBByteArray * bytes,u_int32_t offset);
+CBVarInt CBVarIntDecode(CBByteArray * bytes,uint32_t offset);
 /**
  @brief Encodes variable size integer into bytes.
  @param bytes The byte array to encode a variable size integer into.
  @param offset Offset to start decoding from.
  @param varInt Variable integer structure.
  */
-void CBVarIntEncode(CBByteArray * bytes,u_int32_t offset,CBVarInt varInt);
+void CBVarIntEncode(CBByteArray * bytes,uint32_t offset,CBVarInt varInt);
 /**
  @brief Returns a variable integer from a 64 bit integer.
  @param integer The 64 bit integer
  @returns A CBVarInt.
  */
-CBVarInt CBVarIntFromUInt64(u_int64_t integer);
+CBVarInt CBVarIntFromUInt64(uint64_t integer);
 /**
  @brief Returns the variable integer byte size of a 64 bit integer
  @param value The 64 bit integer
  @returns The size of a variable integer for this integer.
  */
-u_int8_t CBVarIntSizeOf(u_int64_t value);
+uint8_t CBVarIntSizeOf(uint64_t value);
 
 #endif

@@ -26,7 +26,7 @@
 
 //  Constructor
 
-CBVersion * CBNewVersion(int32_t version,u_int64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,u_int64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events){
+CBVersion * CBNewVersion(int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events){
 	CBVersion * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeVersion;
 	CBInitVersion(self,version,services,time,addRecv,addSource,nounce,userAgent,blockHeight,events);
@@ -47,7 +47,7 @@ CBVersion * CBGetVersion(void * self){
 
 //  Initialiser
 
-bool CBInitVersion(CBVersion * self,int32_t version,u_int64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,u_int64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events){
+bool CBInitVersion(CBVersion * self,int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events){
 	self->version = version;
 	self->services = services;
 	self->time = time;
@@ -59,14 +59,15 @@ bool CBInitVersion(CBVersion * self,int32_t version,u_int64_t services,int64_t t
 	self->userAgent = userAgent;
 	CBRetainObject(userAgent);
 	self->blockHeight = blockHeight;
-	if (!CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
 	return true;
 }
 bool CBInitVersionFromData(CBVersion * self,CBByteArray * data,CBEvents * events){
 	self->addRecv = NULL;
 	self->userAgent = NULL;
-	if (!CBInitMessageByData(CBGetMessage(self), data, events))
+	self->addSource = NULL;
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
 }
@@ -75,16 +76,17 @@ bool CBInitVersionFromData(CBVersion * self,CBByteArray * data,CBEvents * events
 
 void CBFreeVersion(void * vself){
 	CBVersion * self = vself;
-	if (self->addRecv) CBReleaseObject(&self->addRecv);
-	if (self->userAgent) CBReleaseObject(&self->userAgent);
+	if (self->addRecv) CBReleaseObject(self->addRecv);
+	if (self->addSource) CBReleaseObject(self->addSource);
+	if (self->userAgent) CBReleaseObject(self->userAgent);
 	CBFreeMessage(self);
 }
 
 //  Functions
 
-u_int32_t CBVersionDeserialise(CBVersion * self){
+uint32_t CBVersionDeserialise(CBVersion * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBVersion with no bytes.");
 		return 0;
 	}
@@ -97,16 +99,16 @@ u_int32_t CBVersionDeserialise(CBVersion * self){
 	self->time = CBByteArrayReadInt64(bytes, 12);
 	CBByteArray * data = CBByteArraySubReference(bytes, 20, bytes->length-20); // Get data from 20 bytes to the end of the byte array to deserialise the recieving network address.
 	self->addRecv = CBNewNetworkAddressFromData(data, CBGetMessage(self)->events);
-	u_int32_t len = CBNetworkAddressDeserialise(self->addRecv, false); // No time from version message.
-	if (!len) {
+	uint32_t len = CBNetworkAddressDeserialise(self->addRecv, false); // No time from version message.
+	if (NOT len) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBVersion cannot be deserialised because of an error with the receiving address.");
-		CBReleaseObject(&self->addRecv);
-		CBReleaseObject(&data);
+		CBReleaseObject(self->addRecv);
+		CBReleaseObject(data);
 		return 0;
 	}
 	// Readjust CBByteArray length for recieving address
 	data->length = len;
-	CBReleaseObject(&data);
+	CBReleaseObject(data);
 	if (self->version >= 106) {
 		if (bytes->length < 85) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBVersion with less than 85 bytes required.");
@@ -115,19 +117,19 @@ u_int32_t CBVersionDeserialise(CBVersion * self){
 		// Source address deserialisation
 		data = CBByteArraySubReference(bytes, 46, bytes->length-46);
 		self->addSource = CBNewNetworkAddressFromData(data, CBGetMessage(self)->events);
-		u_int32_t len = CBNetworkAddressDeserialise(self->addSource, false); // No time from version message.
-		if (!len) {
+		uint32_t len = CBNetworkAddressDeserialise(self->addSource, false); // No time from version message.
+		if (NOT len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBVersion cannot be deserialised because of an error with the source address.");
-			CBReleaseObject(&self->addRecv);
-			CBReleaseObject(&self->addSource);
-			CBReleaseObject(&data);
+			CBReleaseObject(self->addRecv);
+			CBReleaseObject(self->addSource);
+			CBReleaseObject(data);
 			return 0;
 		}
 		// Readjust CBByteArray length for source address
 		data->length = len;
-		CBReleaseObject(&data);
+		CBReleaseObject(data);
 		self->nounce = CBByteArrayReadInt64(bytes, 72);
-		u_int8_t x = CBByteArrayGetByte(bytes, 80); // Check length for decoding CBVarInt
+		uint8_t x = CBByteArrayGetByte(bytes, 80); // Check length for decoding CBVarInt
 		if (x > 253){
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBVersion with a var string that is too big.");
 			return 0;
@@ -141,14 +143,23 @@ u_int32_t CBVersionDeserialise(CBVersion * self){
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBVersion with a userAgent over 400 bytes.");
 			return 0;
 		}
-		self->userAgent = CBNewByteArraySubReference(bytes, 80 + varInt.size, (u_int32_t)varInt.val);
-		self->blockHeight = CBByteArrayReadInt32(bytes, 80 + varInt.size + (u_int32_t)varInt.val);
-		return 84 + varInt.size + (u_int32_t)varInt.val;
+		self->userAgent = CBNewByteArraySubReference(bytes, 80 + varInt.size, (uint32_t)varInt.val);
+		self->blockHeight = CBByteArrayReadInt32(bytes, 80 + varInt.size + (uint32_t)varInt.val);
+		return 84 + varInt.size + (uint32_t)varInt.val;
 	}else return 46; // Not the further message.
 }
-u_int32_t CBVersionSerialise(CBVersion * self){
+uint32_t CBVersionCalculateLength(CBVersion * self){
+	uint32_t len = 46; // Version, services, time and receiving address.
+	if (self->version >= 106) {
+		if (self->userAgent->length > 400)
+			return 0;
+		len += 38 + CBVarIntSizeOf(self->userAgent->length) + self->userAgent->length; // Source address, nounce, user-agent and block height.
+	}
+	return len;
+}
+uint32_t CBVersionSerialise(CBVersion * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBVersion with no bytes.");
 		return 0;
 	}
@@ -160,11 +171,11 @@ u_int32_t CBVersionSerialise(CBVersion * self){
 	CBByteArraySetInt64(bytes, 4, self->services);
 	CBByteArraySetInt64(bytes, 12, self->time);
 	CBGetMessage(self->addRecv)->bytes = CBByteArraySubReference(bytes, 20, bytes->length-20);
-	u_int32_t len = CBNetworkAddressSerialise(self->addRecv,false);
-	if (!len) {
+	uint32_t len = CBNetworkAddressSerialise(self->addRecv,false);
+	if (NOT len) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBVersion cannot be serialised because of an error with the receiving CBNetworkAddress");
 		// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
-		CBReleaseObject(&CBGetMessage(self->addRecv)->bytes);
+		CBReleaseObject(CBGetMessage(self->addRecv)->bytes);
 		return 0;
 	}
 	CBGetMessage(self->addRecv)->bytes->length = len;
@@ -177,16 +188,12 @@ u_int32_t CBVersionSerialise(CBVersion * self){
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBVersion with a userAgent over 400 bytes.");
 			return 0;
 		}
-		if (bytes->length < 85) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to deserialise a CBVersion with less than 85 bytes required.");
-			return 0;
-		}
 		CBGetMessage(self->addSource)->bytes = CBByteArraySubReference(bytes, 46, bytes->length-46);
-		u_int32_t len = CBNetworkAddressSerialise(self->addSource,false);
-		if (!len) {
+		uint32_t len = CBNetworkAddressSerialise(self->addSource,false);
+		if (NOT len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBVersion cannot be serialised because of an error with the source CBNetworkAddress");
 			// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
-			CBReleaseObject(&CBGetMessage(self->addSource)->bytes);
+			CBReleaseObject(CBGetMessage(self->addSource)->bytes);
 			return 0;
 		}
 		CBGetMessage(self->addSource)->bytes->length = len;
@@ -199,7 +206,7 @@ u_int32_t CBVersionSerialise(CBVersion * self){
 		}
 		CBByteArrayCopyByteArray(bytes, 80 + varInt.size,self->userAgent);
 		CBByteArrayChangeReference(self->userAgent,bytes,80 + varInt.size);
-		CBByteArraySetInt32(bytes, 80 + varInt.size + (u_int32_t)varInt.val, self->blockHeight);
-		return 84 + varInt.size + (u_int32_t)varInt.val;
+		CBByteArraySetInt32(bytes, 80 + varInt.size + (uint32_t)varInt.val, self->blockHeight);
+		return 84 + varInt.size + (uint32_t)varInt.val;
 	}else return 46; // Not the further message.
 }

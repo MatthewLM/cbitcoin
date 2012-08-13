@@ -38,13 +38,13 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	CBByteArray * hash; /**< The hash for this block. NULL if it needs to be calculated or set. */
-	u_int32_t version;
+	uint32_t version;
 	CBByteArray * prevBlockHash; /**< The previous block hash. */
 	CBByteArray * merkleRoot; /**< The merkle tree root hash. */
-	u_int32_t time; /**< Timestamp for the block. The network uses 32 bits. The protocol can be future proofed by detecting overflows when going through the blocks. So if a block's time overflows such that the time is less than the median of the last 10 blocks, the block can be seen by adding the first 32 bits of the network time and finally the timestamp can be tested against the network time. The overflow problem can therefore be fixed by a workaround but it is a shame Satoshi did not use 64 bits. */
-	u_int32_t difficulty; /**< The calculated difficulty for this block. */
-	u_int32_t nounce; /**< Nounce used in generating the block. */
-	u_int32_t transactionNum; /**< Number of transactions in the block. */
+	uint32_t time; /**< Timestamp for the block. The network uses 32 bits. The protocol can be future proofed by detecting overflows when going through the blocks. So if a block's time overflows such that the time is less than the median of the last 10 blocks, the block can be seen by adding the first 32 bits of the network time and finally the timestamp can be tested against the network time. The overflow problem can therefore be fixed by a workaround but it is a shame Satoshi did not use 64 bits. */
+	uint32_t difficulty; /**< The calculated difficulty for this block. */
+	uint32_t nounce; /**< Nounce used in generating the block. */
+	uint32_t transactionNum; /**< Number of transactions in the block. */
 	CBTransaction ** transactions; /**< The transactions included in this block. NULL if only the header has been received. */
 } CBBlock;
 
@@ -110,12 +110,19 @@ void CBFreeBlock(void * vself);
  */
 CBByteArray * CBBlockCalculateHash(CBBlock * self);
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBBlock object.
+ @param transactions If true, the full block, if not true just the header.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions);
+/**
  @brief Deserialises a CBBlock so that it can be used as an object.
  @param self The CBBlock object
  @param transactions If true deserialise transactions. If false there do not deserialise for transactions.
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBBlockDeserialise(CBBlock * self,bool transactions);
+uint32_t CBBlockDeserialise(CBBlock * self,bool transactions);
 /**
  @brief Retrieves or calculates the hash for a block. Hashes taken from this fuction are cached.
  @param self The CBBlock object. This should be serialised.
@@ -128,6 +135,6 @@ CBByteArray * CBBlockGetHash(CBBlock * self);
  @param transactions If true serialise transactions. If false there do not serialise for transactions.
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBBlockSerialise(CBBlock * self,bool transactions);
+uint32_t CBBlockSerialise(CBBlock * self,bool transactions);
 
 #endif

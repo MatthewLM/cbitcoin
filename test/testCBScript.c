@@ -30,18 +30,18 @@
 #include <openssl/ripemd.h>
 #include <openssl/bn.h>
 
-u_int8_t * CBSha160(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA_DIGEST_LENGTH);
+uint8_t * CBSha160(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA_DIGEST_LENGTH);
     SHA1(data, len, hash);
 	return hash;
 }
-u_int8_t * CBSha256(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA256_DIGEST_LENGTH);
+uint8_t * CBSha256(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
 	SHA256(data, len, hash);
 	return hash;
 }
-u_int8_t * CBRipemd160(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
+uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
     RIPEMD160(data, len, hash);
 	return hash;
 }
@@ -56,9 +56,9 @@ int main(){
 	CBEvents events;
 	FILE * f = fopen("scriptCases.txt", "r");
 	if (!f) printf("FILE WONT OPEN\n");
-	for (u_int16_t x = 0;;) {
+	for (uint16_t x = 0;;) {
 		char * line = NULL;
-		u_int16_t lineLen = 0;
+		uint16_t lineLen = 0;
 		bool eof = false;
 		while (true) {
 			line = realloc(line, lineLen + 101);
@@ -85,7 +85,7 @@ int main(){
 				}else{
 					printf("%i: {%s} OK\n",x,line);
 				}
-				CBReleaseObject(&script);
+				CBReleaseObject(script);
 				fseek(f, 1, SEEK_CUR);
 			}
 		}
@@ -94,23 +94,23 @@ int main(){
 	}
 	fclose(f);
 	// Test PUSHDATA
-	CBScript * script = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x47,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x47,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x47,CB_SCRIPT_OP_EQUAL}, 16, &events);
+	CBScript * script = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x47,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x47,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x47,CB_SCRIPT_OP_EQUAL}, 16, &events);
 	CBScriptStack stack = CBNewEmptyScriptStack();
-	if(!CBScriptExecute(script, &stack, NULL, NULL, 0)){
+	if(NOT CBScriptExecute(script, &stack, NULL, NULL, 0)){
 		printf("PUSHDATA TEST 1 FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&script);
+	CBReleaseObject(script);
 	script = CBNewScriptOfSize(net, 16, &events);
-	script = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x00,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x00,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x00,CB_SCRIPT_OP_EQUAL}, 16, &events);
+	script = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x00,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x00,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x00,CB_SCRIPT_OP_EQUAL}, 16, &events);
 	stack = CBNewEmptyScriptStack();
-	if(!CBScriptExecute(script, &stack, NULL, NULL, 0)){
+	if(NOT CBScriptExecute(script, &stack, NULL, NULL, 0)){
 		printf("PUSHDATA TEST 2 FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&script);
+	CBReleaseObject(script);
 	// Test stack length limit
-	script = CBNewScriptWithDataCopy(net, (u_int8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
+	script = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
 	stack = CBNewEmptyScriptStack();
 	for (int x = 0; x < 1001; x++)
 		CBScriptStackPushItem(&stack, (CBScriptStackItem){NULL,0});
@@ -118,6 +118,6 @@ int main(){
 		printf("STACK LIMIT TEST FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(&script);
+	CBReleaseObject(script);
 	return 0;
 }

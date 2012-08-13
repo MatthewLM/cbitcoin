@@ -30,12 +30,12 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * strin
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
 	bool ok = CBInitVersionChecksumBytesFromString(self,string,cacheString,events);
-	if (!ok) {
+	if (NOT ok) {
 		return NULL;
 	}
 	return self;
 }
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
 	CBInitVersionChecksumBytesFromBytes(self,bytes,size,cacheString,events);
@@ -64,15 +64,15 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteAr
 		return false;
 	}
 	// Take over the bytes with the CBByteArray
-	if (!CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length, events))
+	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length, events))
 		return false;
 	CBByteArrayReverseBytes(CBGetByteArray(self)); // CBBigInt is in little-endian. Conversion needed to make bitcoin address the right way.
 	return true;
 }
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t * bytes,u_int32_t size,bool cacheString,CBEvents * events){
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events){
 	self->cacheString = cacheString;
 	self->cachedString = NULL;
-	if (!CBInitByteArrayWithData(CBGetByteArray(self), bytes, size, events))
+	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes, size, events))
 		return false;
 	return true;
 }
@@ -81,13 +81,13 @@ bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,u_int8_t 
 
 void CBFreeVersionChecksumBytes(void * vself){
 	CBVersionChecksumBytes * self = vself;
-	if (self->cachedString) CBReleaseObject(&self->cachedString);
+	if (self->cachedString) CBReleaseObject(self->cachedString);
 	CBFreeByteArray(CBGetByteArray(self));
 }
 
 //  Functions
 
-u_int8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self){
+uint8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self){
 	return CBByteArrayGetByte(CBGetByteArray(self), 0);
 }
 CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
@@ -99,7 +99,7 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 		// Make string
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Make this into little-endian
 		char * string = CBEncodeBase58(CBByteArrayGetData(CBGetByteArray(self)),CBGetByteArray(self)->length);
-		CBByteArray * str = CBNewByteArrayWithData((u_int8_t *)string, strlen(string), CBGetByteArray(self)->events);
+		CBByteArray * str = CBNewByteArrayWithData((uint8_t *)string, strlen(string), CBGetByteArray(self)->events);
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Now the string is got, back to big-endian.
 		if (self->cacheString) {
 			self->cachedString = str;

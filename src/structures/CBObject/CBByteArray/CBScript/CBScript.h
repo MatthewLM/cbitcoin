@@ -39,8 +39,8 @@
  */
 
 typedef struct{
-	u_int8_t * data; /**< Data for this stack item */
-	u_int16_t length; /**< Length of this item */
+	uint8_t * data; /**< Data for this stack item */
+	uint16_t length; /**< Length of this item */
 } CBScriptStackItem;
 
 /**
@@ -49,7 +49,7 @@ typedef struct{
 
 typedef struct{
 	CBScriptStackItem * elements; /**< Elements in the stack */
-	u_int16_t length; /**< Length of the stack */
+	uint16_t length; /**< Length of the stack */
 } CBScriptStack;
 
 typedef CBByteArray CBScript;
@@ -58,12 +58,12 @@ typedef CBByteArray CBScript;
  @brief Creates a new CBScript object.
  @returns A new CBScript object.
  */
-CBScript * CBNewScriptFromReference(CBByteArray * program,u_int32_t offset,u_int32_t len);
+CBScript * CBNewScriptFromReference(CBByteArray * program,uint32_t offset,uint32_t len);
 /**
  @brief Creates a new CBScript object with a given size.
  @returns A new CBScript object.
  */
-CBScript * CBNewScriptOfSize(u_int32_t size,CBEvents * events);
+CBScript * CBNewScriptOfSize(uint32_t size,CBEvents * events);
 /**
  @brief Creates a new CBScript object from a string. The script text should follow the following Backus–Naur Form:
  /code
@@ -95,7 +95,7 @@ CBScript * CBNewScriptFromString(char * string,CBEvents * events);
  @param events CBEngine for errors.
  @returns The new CBScript object.
  */
-CBScript * CBNewScriptWithData(u_int8_t * data,u_int32_t size,CBEvents * events);
+CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,CBEvents * events);
 /**
  @brief Creates a new CBScript using data which is copied.
  @param data The data. This data is copied.
@@ -103,7 +103,7 @@ CBScript * CBNewScriptWithData(u_int8_t * data,u_int32_t size,CBEvents * events)
  @param events CBEngine for errors.
  @returns The new CBScript object.
  */
-CBScript * CBNewScriptWithDataCopy(u_int8_t * data,u_int32_t size,CBEvents * events);
+CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,CBEvents * events);
 
 /**
  @brief Gets a CBScript from another object. Use this to avoid casts.
@@ -149,21 +149,21 @@ CBScriptStack CBNewEmptyScriptStack(void);
  @param inputIndex The index of the input for the signature.
  @returns True is the program ended with true, false otherwise or on script failure.
  */
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,u_int8_t * (*getHashForSig)(void *, CBByteArray *, u_int32_t, CBSignType),void * transaction,u_int32_t inputIndex);
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex);
 /**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.
  @param subScriptLen A pointer to the length of the sub script. The length will be modified to the new length.
  @param signature The signature to be found and removed.
  */
-void CBSubScriptRemoveSignature(u_int8_t * subScript,u_int32_t * subScriptLen,CBScriptStackItem signature);
+void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBScriptStackItem signature);
 /**
  @brief Returns a copy of a stack item, "fromTop" from the top.
  @param stack A pointer to the stack.
  @param fromTop Number of items from the top to copy.
  @returns A copy of the stack item which should be freed.
  */
-CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack,u_int8_t fromTop);
+CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack,uint8_t fromTop);
 /**
  @brief Evaluates the top stack item as a bool. False if 0 or -0.
  @param stack The stack.

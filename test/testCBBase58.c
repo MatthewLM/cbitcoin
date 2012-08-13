@@ -29,8 +29,8 @@ void err(CBError a,char * b,...){
 	printf("%s\n",b);
 }
 
-u_int8_t * CBSha256(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA256_DIGEST_LENGTH);
+uint8_t * CBSha256(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, data, len);

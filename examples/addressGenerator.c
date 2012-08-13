@@ -27,13 +27,13 @@
 #include <openssl/ripemd.h>
 #include "CBAddress.h"
 
-u_int8_t * CBSha256(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(SHA256_DIGEST_LENGTH);
+uint8_t * CBSha256(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
 	SHA256(data, len, hash);
 	return hash;
 }
-u_int8_t * CBRipemd160(u_int8_t * data,u_int16_t len){
-	u_int8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
+uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
+	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
     RIPEMD160(data, len, hash);
 	return hash;
 }
@@ -81,19 +81,19 @@ int main(){
 	getline(stringMatch);
 	printf("Making %u addresses for \"%s\"\n\n",i,stringMatch);
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
-	u_int8_t * pubKey = NULL;
+	uint8_t * pubKey = NULL;
 	int pubSize = 0;
-	u_int8_t * privKey = NULL;
+	uint8_t * privKey = NULL;
 	int privSize = 0;
-	u_int8_t * shaHash = malloc(32);
-	u_int8_t * ripemdHash = malloc(20);
+	uint8_t * shaHash = malloc(32);
+	uint8_t * ripemdHash = malloc(20);
 	for (unsigned int x = 0; x < i;) {
-		if(!EC_KEY_generate_key(key)){
+		if(NOT EC_KEY_generate_key(key)){
 			printf("GENERATE KEY FAIL\n"); 
 			return 1;
 		}
 		int pubSizeNew = i2o_ECPublicKey(key, NULL);
-		if(!pubSizeNew){
+		if(NOT pubSizeNew){
 			printf("PUB KEY TO DATA ZERO\n"); 
 			return 1;
 		}
@@ -101,7 +101,7 @@ int main(){
 			pubSize = pubSizeNew;
 			pubKey = realloc(pubKey, pubSize);
 		}
-		u_int8_t * pubKey2 = pubKey;
+		uint8_t * pubKey2 = pubKey;
 		if(i2o_ECPublicKey(key, &pubKey2) != pubSize){
 			printf("PUB KEY TO DATA FAIL\n");
 			return 1;
@@ -110,12 +110,12 @@ int main(){
 		RIPEMD160(shaHash, 32, ripemdHash);
 		CBAddress * address = CBNewAddressFromRIPEMD160Hash(net, ripemdHash, false, &events);
 		CBString * string = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(address));
-		CBReleaseObject(&address);
+		CBReleaseObject(address);
 		bool match = true;
-		u_int8_t offset = 1;
+		uint8_t offset = 1;
 		int addSize = strlen(string->string);
 		int matchSize = strlen(stringMatch);
-		for (u_int8_t y = 0; y < matchSize;) {
+		for (uint8_t y = 0; y < matchSize;) {
 			char other = islower(stringMatch[y]) ? toupper(stringMatch[y]) : (isupper(stringMatch[y])? tolower(stringMatch[y]) : '\0');
 			if (string->string[y+offset] != stringMatch[y] && string->string[y+offset] != other) {
 				offset++;
@@ -129,7 +129,7 @@ int main(){
 		if (match) {
 			// Get private key
 			const BIGNUM * privKeyNum = EC_KEY_get0_private_key(key);
-			if (!privKeyNum) {
+			if (NOT privKeyNum) {
 				printf("PRIV KEY TO BN FAIL\n");
 			}
 			int privSizeNew = BN_num_bytes(privKeyNum);
@@ -153,11 +153,11 @@ int main(){
 			printf("\nAddress (base-58): %s\n\n",string->string);
 			x++; // Move to next
 		}
-		CBReleaseObject(&string);
+		CBReleaseObject(string);
 	}
 	free(shaHash);
 	free(ripemdHash);
 	EC_KEY_free(key);
-	CBReleaseObject(&net);
+	CBReleaseObject(net);
 	return 0;
 }

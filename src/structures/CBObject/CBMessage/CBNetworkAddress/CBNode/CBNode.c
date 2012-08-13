@@ -43,8 +43,6 @@ CBNode * CBGetNode(void * self){
 //  Initialiser
 
 bool CBInitNodeByTakingNetworkAddress(CBNode * self){
-	self->bytesTransferred = 0;
-	self->timeUsed = 0;
 	self->receive = NULL;
 	self->pingsSent = 0;
 	self->versionSent = false;
@@ -54,6 +52,10 @@ bool CBInitNodeByTakingNetworkAddress(CBNode * self){
 	self->timeOffset = 0;
 	self->sentHeader = false;
 	self->messageSent = 0;
+	self->timeBroadcast = 0;
+	self->returnToAddresses = false;
+	self->connectionWorking = false;
+	self->typesExpectedNum = 0;
 	return true;
 }
 

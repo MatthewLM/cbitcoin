@@ -39,19 +39,19 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int32_t version; /**< Version of the transaction data format. */
-	u_int32_t inputNum; /**< Number of CBTransactionInputs */
+	uint32_t version; /**< Version of the transaction data format. */
+	uint32_t inputNum; /**< Number of CBTransactionInputs */
 	CBTransactionInput ** inputs;
-	u_int32_t outputNum; /**< Number of CBTransactionOutputs */
+	uint32_t outputNum; /**< Number of CBTransactionOutputs */
 	CBTransactionOutput ** outputs;
-	u_int32_t lockTime; /**< Time for the transaction to be valid */
+	uint32_t lockTime; /**< Time for the transaction to be valid */
 } CBTransaction;
 
 /**
  @brief Creates a new CBTransaction object with no inputs or outputs.
  @returns A new CBTransaction object.
  */
-CBTransaction * CBNewTransaction(u_int32_t lockTime, u_int32_t version, CBEvents * events);
+CBTransaction * CBNewTransaction(uint32_t lockTime, uint32_t version, CBEvents * events);
 /**
  @brief Creates a new CBTransaction object from byte data. Should be serialised for object data.
  @returns A new CBTransaction object.
@@ -70,7 +70,7 @@ CBTransaction * CBGetTransaction(void * self);
  @param self The CBTransaction object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransaction(CBTransaction * self, u_int32_t lockTime, u_int32_t version, CBEvents * events);
+bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version, CBEvents * events);
 /**
  @brief Initialises a new CBTransaction object from the byte data.
  @param self The CBTransaction object to initialise
@@ -100,11 +100,17 @@ void CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
  */
 void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBTransaction object.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBTransactionCalculateLength(CBTransaction * self);
+/**
  @brief Deserialises a CBTransaction so that it can be used as an object.
  @param self The CBTransaction object
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBTransactionDeserialise(CBTransaction * self);
+uint32_t CBTransactionDeserialise(CBTransaction * self);
 /**
  @brief Gets the hash for signing or signature checking for a transaction input. The transaction input needs to contain the outPointerHash, outPointerIndex and sequence. If these are modifed afterwards then the signiture is invalid.
  @param self The CBTransaction object.
@@ -113,13 +119,13 @@ u_int32_t CBTransactionDeserialise(CBTransaction * self);
  @param signType The type of signature to get the data for.
  @returns NULL on failure or the 32 byte data hash for signing or checking signatures.
  */
-u_int8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArray * prevOutSubScript, u_int32_t input, CBSignType signType);
+uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
 /**
  @brief Serialises a CBTransaction to the byte data.
  @param self The CBTransaction object.
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBTransactionSerialise(CBTransaction * self);
+uint32_t CBTransactionSerialise(CBTransaction * self);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.

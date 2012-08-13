@@ -37,7 +37,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int64_t ID; /**< Used to identify a ping/pong. Set ping to zero if no identiication is needed. Set pongs to the same as the request ping. */
+	uint64_t ID; /**< Used to identify a ping/pong. Set ping to zero if no identiication is needed. Set pongs to the same as the request ping. */
 } CBPingPong;
 
 /**
@@ -45,7 +45,7 @@ typedef struct{
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
  @returns A new CBPingPong object.
 */
-CBPingPong * CBNewPingPong(u_int64_t ID,CBEvents * events);
+CBPingPong * CBNewPingPong(uint64_t ID,CBEvents * events);
 /**
 @brief Creates a new CBPingPong object from serialised data.
  @param data Serialised CBPingPong data.
@@ -66,7 +66,7 @@ CBPingPong * CBGetPingPong(void * self);
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
  @returns true on success, false on failure.
 */
-bool CBInitPingPong(CBPingPong * self,u_int64_t ID,CBEvents * events);
+bool CBInitPingPong(CBPingPong * self,uint64_t ID,CBEvents * events);
 /**
  @brief Initialises a CBPingPong object from serialised data
  @param self The CBPingPong object to initialise
@@ -86,14 +86,14 @@ void CBFreePingPong(void * self);
 /**
  @brief Deserialises a CBPingPong so that it can be used as an object.
  @param self The CBPingPong object
- @returns true if the ID was deserialised correctly. false otherwise.
+ @returns Length read if successful, zero otherwise.
 */
-bool CBPingPongDeserialise(CBPingPong * self);
+uint8_t CBPingPongDeserialise(CBPingPong * self);
 /**
  @brief Serialises a CBPingPong to the byte data.
  @param self The CBPingPong object
- @returns true if the ID was serialised correctly. false otherwise.
+ @returns Length written if successful, zero otherwise.
 */
-bool CBPingPongSerialise(CBPingPong * self);
+uint8_t CBPingPongSerialise(CBPingPong * self);
 
 #endif

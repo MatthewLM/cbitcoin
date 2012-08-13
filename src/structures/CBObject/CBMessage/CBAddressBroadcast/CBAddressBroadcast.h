@@ -38,7 +38,7 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	bool timeStamps; /**< If true, timestamps are included with the CBNetworkAddresses */
-	u_int8_t addrNum; /**< Number of addresses. Maximum is 30. */
+	uint8_t addrNum; /**< Number of addresses. Maximum is 30. */
 	CBNetworkAddress ** addresses; /**< List of CBNetworkAddresses shared so that nodes can find new nodes. */
 } CBAddressBroadcast;
 
@@ -90,17 +90,23 @@ void CBFreeAddressBroadcast(void * self);
  */
 void CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBAddressBroadcast object.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBAddressBroadcastCalculateLength(CBAddressBroadcast * self);
+/**
  @brief Deserialises a CBAddressBroadcast so that it can be used as an object.
  @param self The CBAddressBroadcast object
  @returns The length read on success, 0 on failure.
 */
-u_int32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self);
+uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self);
 /**
  @brief Serialises a CBAddressBroadcast to the byte data.
  @param self The CBAddressBroadcast object
  @returns The length written on success, 0 on failure.
 */
-u_int32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self);
+uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self);
 /**
  @brief Takes a CBNetworkAddress to the list for broadcasting. This does not retain the CBNetworkAddress so you can pass an CBNetworkAddress into this while releasing control in the calling function.
  @param self The CBAddressBroadcast object

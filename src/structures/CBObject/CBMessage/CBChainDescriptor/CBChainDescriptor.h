@@ -37,7 +37,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int16_t hashNum; /**< Number of block hashes to describe the block chain. Up to 500. */
+	uint16_t hashNum; /**< Number of block hashes to describe the block chain. Up to 500. */
 	CBByteArray ** hashes; /**< Hashes used to describe the block chain. This should contain hashes in the blockchain but not all of them. The maximum allowed is 500. The usual behaviour is to have the 10 last block hashes and then each hash below those going down to the genesis block has a gap that doubles (See https://en.bitcoin.it/wiki/Protocol_specification#getblocks ). The newest block hashes should come first. This should be NULL if empty. The CBGetBlocks object will release each CBByteArray and free the array when the object is freed. */
 } CBChainDescriptor;
 
@@ -93,13 +93,13 @@ void CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash);
  @param self The CBChainDescriptor object
  @returns The length read on success, 0 on failure.
 */
-u_int16_t CBChainDescriptorDeserialise(CBChainDescriptor * self);
+uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self);
 /**
  @brief Serialises a CBChainDescriptor to the byte data.
  @param self The CBChainDescriptor object
  @returns The length written on success, 0 on failure.
 */
-u_int16_t CBChainDescriptorSerialise(CBChainDescriptor * self);
+uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self);
 /**
  @brief Takes a hash for the CBChainDescriptor and puts it on the end. The hash is not retained so the calling function is releasing control.
  @param self The CBChainDescriptor object

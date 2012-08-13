@@ -26,7 +26,7 @@
 
 //  Constructors
 
-CBTransactionOutput * CBNewTransactionOutput(u_int64_t value, CBScript * script,CBEvents * events){
+CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script,CBEvents * events){
 	CBTransactionOutput * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeTransactionOutput;
 	CBInitTransactionOutput(self,value,script,events);
@@ -47,20 +47,20 @@ CBTransactionOutput * CBGetTransactionOutput(void * self){
 
 //  Initialisers
 
-bool CBInitTransactionOutput(CBTransactionOutput * self, u_int64_t value, CBScript * script,CBEvents * events){
+bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script,CBEvents * events){
 	if (script){
 		self->scriptObject = script;
 		CBRetainObject(script);
 	}else
 		self->scriptObject = NULL;
 	self->value = value;
-	if (!CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
 	return true;
 }
 bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data, CBEvents * events){
 	self->scriptObject = NULL;
-	if (!CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
 }
@@ -69,15 +69,15 @@ bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * d
 
 void CBFreeTransactionOutput(void * vself){
 	CBTransactionOutput * self = vself;
-	if (self->scriptObject) CBReleaseObject(&self->scriptObject);
+	if (self->scriptObject) CBReleaseObject(self->scriptObject);
 	CBFreeMessage(self);
 }
 
 //  Functions
 
-u_int32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
+uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBTransactionOutput with no bytes.");
 		return 0;
 	}
@@ -85,7 +85,7 @@ u_int32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBTransactionOutput with less than 9 bytes.");
 		return 0;
 	}
-	u_int8_t x = CBByteArrayGetByte(bytes, 8); // Check length for decoding CBVarInt
+	uint8_t x = CBByteArrayGetByte(bytes, 8); // Check length for decoding CBVarInt
 	if (x < 253)
 		x = 9;
 	else if (x == 253)
@@ -103,30 +103,30 @@ u_int32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBTransactionInput with too big a script.");
 		return 0;
 	}
-	u_int32_t reqLen = (u_int32_t)(8 + scriptLen.size + scriptLen.val);
+	uint32_t reqLen = (uint32_t)(8 + scriptLen.size + scriptLen.val);
 	if (bytes->length < reqLen) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBTransactionOutput with less bytes than needed according to the length for the script. %i < %i",bytes->length, reqLen);
 		return 0;
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->value = CBByteArrayReadInt64(bytes, 0);
-	self->scriptObject = CBNewScriptFromReference(bytes, 8 + scriptLen.size, (u_int32_t) scriptLen.val);
+	self->scriptObject = CBNewScriptFromReference(bytes, 8 + scriptLen.size, (uint32_t) scriptLen.val);
 	return reqLen;
 }
-u_int32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
+uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBTransactionInput with no bytes.");
 		return 0;
 	}
-	CBVarInt scriptLen = CBVarIntFromUInt64(CBGetByteArray(self->scriptObject)->length);
-	u_int32_t reqLen = 8 + scriptLen.size + CBGetByteArray(self->scriptObject)->length;
-	if (bytes->length < reqLen) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransactionOutput with less bytes than required. %i < %i\n",bytes->length, reqLen);
+	if (NOT self->scriptObject){
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionOutput without scriptObject.");
 		return 0;
 	}
-	if (!self->scriptObject){
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionOutput without scriptObject.");
+	CBVarInt scriptLen = CBVarIntFromUInt64(CBGetByteArray(self->scriptObject)->length);
+	uint32_t reqLen = 8 + scriptLen.size + CBGetByteArray(self->scriptObject)->length;
+	if (bytes->length < reqLen) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransactionOutput with less bytes than required. %i < %i\n",bytes->length, reqLen);
 		return 0;
 	}
 	// Serialise data into the CBByteArray and rereference objects to this CBByteArray to save memory.

@@ -50,14 +50,14 @@ CBInventoryBroadcast * CBGetInventoryBroadcast(void * self){
 bool CBInitInventoryBroadcast(CBInventoryBroadcast * self,CBEvents * events){
 	self->itemNum = 0;
 	self->items = NULL;
-	if (!CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
 	return true;
 }
 bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self,CBByteArray * data,CBEvents * events){
 	self->itemNum = 0;
 	self->items = NULL;
-	if (!CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
 }
@@ -66,8 +66,8 @@ bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self,CBByteArray * 
 
 void CBFreeInventoryBroadcast(void * vself){
 	CBInventoryBroadcast * self = vself;
-	for (u_int16_t x = 0; x < self->itemNum; x++) {
-		CBReleaseObject(&self->items[x]); // Free item
+	for (uint16_t x = 0; x < self->itemNum; x++) {
+		CBReleaseObject(self->items[x]); // Free item
 	}
 	free(self->items); // Free item pointer memory block.
 	CBFreeMessage(self);
@@ -75,9 +75,9 @@ void CBFreeInventoryBroadcast(void * vself){
 
 //  Functions
 
-u_int32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
+uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBInventoryBroadcast with no bytes.");
 		return 0;
 	}
@@ -93,20 +93,20 @@ u_int32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 	// Run through the items and deserialise each one.
 	self->items = malloc(sizeof(*self->items) * (size_t)itemNum.val);
 	self->itemNum = itemNum.val;
-	u_int16_t cursor = itemNum.size;
-	for (u_int16_t x = 0; x < itemNum.val; x++) {
+	uint16_t cursor = itemNum.size;
+	for (uint16_t x = 0; x < itemNum.val; x++) {
 		// Make new CBInventoryItem from the rest of the data.
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		self->items[x] = CBNewInventoryItemFromData(data, CBGetMessage(self)->events);
 		// Deserialise
-		u_int8_t len = CBInventoryItemDeserialise(self->items[x]);
-		if (!len) {
+		uint8_t len = CBInventoryItemDeserialise(self->items[x]);
+		if (NOT len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBInventoryBroadcast cannot be deserialised because of an error with the CBInventoryItem number %u.",x);
 			// Release bytes
-			CBReleaseObject(&data);
+			CBReleaseObject(data);
 			// Because of failure release the CBInventoryItems
-			for (u_int16_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(&self->items[y]);
+			for (uint16_t y = 0; y < x + 1; y++) {
+				CBReleaseObject(self->items[y]);
 			}
 			free(self->items);
 			self->items = NULL;
@@ -115,32 +115,35 @@ u_int32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 		}
 		// Adjust length
 		data->length = len;
-		CBReleaseObject(&data);
+		CBReleaseObject(data);
 		cursor += len;
 	}
 	return cursor;
 }
-u_int32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self){
+uint32_t CBInventoryBroadcastCalculateLength(CBInventoryBroadcast * self){
+	return CBVarIntSizeOf(self->itemNum) + self->itemNum * 36;
+}
+uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBInventoryBroadcast with no bytes.");
 		return 0;
 	}
-	if (bytes->length < 36 * self->itemNum) {
+	CBVarInt num = CBVarIntFromUInt64(self->itemNum);
+	if (bytes->length < num.size + 36 * self->itemNum) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBInventoryBroadcast with less bytes than required.");
 		return 0;
 	}
-	CBVarInt num = CBVarIntFromUInt64(self->itemNum);
 	CBVarIntEncode(bytes, 0, num);
-	u_int16_t cursor = num.size;
-	for (u_int16_t x = 0; x < num.val; x++) {
+	uint16_t cursor = num.size;
+	for (uint16_t x = 0; x < num.val; x++) {
 		CBGetMessage(self->items[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		u_int32_t len = CBInventoryItemSerialise(self->items[x]);
-		if (!len) {
+		uint32_t len = CBInventoryItemSerialise(self->items[x]);
+		if (NOT len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBInventoryBroadcast cannot be serialised because of an error with the CBInventoryItem number %u.",x);
 			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
-			for (u_int8_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(&CBGetMessage(self->items[y])->bytes);
+			for (uint8_t y = 0; y < x + 1; y++) {
+				CBReleaseObject(CBGetMessage(self->items[y])->bytes);
 			}
 			return 0;
 		}

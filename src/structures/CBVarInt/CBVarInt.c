@@ -24,8 +24,8 @@
 
 #include "CBVarInt.h"
 
-CBVarInt CBVarIntDecode(CBByteArray * bytes,u_int32_t offset){
-	u_int8_t first = CBByteArrayGetByte(bytes, offset);
+CBVarInt CBVarIntDecode(CBByteArray * bytes,uint32_t offset){
+	uint8_t first = CBByteArrayGetByte(bytes, offset);
 	CBVarInt result;
 	if (first < 253) {
 		// 8 bits.
@@ -46,18 +46,18 @@ CBVarInt CBVarIntDecode(CBByteArray * bytes,u_int32_t offset){
 	}
 	return result;
 }
-void CBVarIntEncode(CBByteArray * bytes,u_int32_t offset,CBVarInt varInt){
+void CBVarIntEncode(CBByteArray * bytes,uint32_t offset,CBVarInt varInt){
 	switch (varInt.size) {
 		case 1:
-			CBByteArraySetByte(bytes, offset, (u_int8_t)varInt.val);
+			CBByteArraySetByte(bytes, offset, (uint8_t)varInt.val);
 			break;
 		case 3:
 			CBByteArraySetByte(bytes, offset, 253);
-			CBByteArraySetInt16(bytes, offset + 1, (u_int16_t)varInt.val);
+			CBByteArraySetInt16(bytes, offset + 1, (uint16_t)varInt.val);
 			break;
 		case 5:
 			CBByteArraySetByte(bytes, offset, 254);
-			CBByteArraySetInt32(bytes, offset + 1, (u_int32_t)varInt.val);
+			CBByteArraySetInt32(bytes, offset + 1, (uint32_t)varInt.val);
 			break;
 		case 9:
 			CBByteArraySetByte(bytes, offset, 255);
@@ -65,13 +65,13 @@ void CBVarIntEncode(CBByteArray * bytes,u_int32_t offset,CBVarInt varInt){
 			break;
 	}
 }
-CBVarInt CBVarIntFromUInt64(u_int64_t integer){
+CBVarInt CBVarIntFromUInt64(uint64_t integer){
 	CBVarInt varInt;
 	varInt.val = integer;
 	varInt.size = CBVarIntSizeOf(integer);
 	return varInt;
 }
-u_int8_t CBVarIntSizeOf(u_int64_t value){
+uint8_t CBVarIntSizeOf(uint64_t value){
 	if (value < 253)
 		return 1;
 	else if (value < 65536)

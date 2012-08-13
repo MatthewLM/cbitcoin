@@ -50,14 +50,14 @@ CBChainDescriptor * CBGetChainDescriptor(void * self){
 bool CBInitChainDescriptor(CBChainDescriptor * self,CBEvents * events){
 	self->hashNum = 0;
 	self->hashes = NULL;
-	if (!CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
 	return true;
 }
 bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,CBEvents * events){
 	self->hashNum = 0;
 	self->hashes = NULL;
-	if (!CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
 }
@@ -66,8 +66,8 @@ bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,C
 
 void CBFreeChainDescriptor(void * vself){
 	CBChainDescriptor * self = vself;
-	for (u_int16_t x = 0; x < self->hashNum; x++) {
-		CBReleaseObject(&self->hashes[x]);
+	for (uint16_t x = 0; x < self->hashNum; x++) {
+		CBReleaseObject(self->hashes[x]);
 	}
 	free(self->hashes);
 	CBFreeMessage(self);
@@ -79,9 +79,9 @@ void CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash){
 	CBChainDescriptorTakeHash(self,hash);
 	CBRetainObject(hash);
 }
-u_int16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
+uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
@@ -101,16 +101,16 @@ u_int16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	// Deserialise each hash
 	self->hashes = malloc(sizeof(*self->hashes) * (size_t)hashNum.val);
 	self->hashNum = hashNum.val;
-	u_int16_t cursor = hashNum.size;
-	for (u_int16_t x = 0; x < self->hashNum; x++) {
+	uint16_t cursor = hashNum.size;
+	for (uint16_t x = 0; x < self->hashNum; x++) {
 		self->hashes[x] = CBNewByteArraySubReference(bytes, cursor, 32);
 		cursor += 32;
 	}
 	return cursor;
 }
-u_int16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
+uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
@@ -120,8 +120,8 @@ u_int16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 		return 0;
 	}
 	CBVarIntEncode(bytes, 0, hashNum);
-	u_int16_t cursor = hashNum.size;
-	for (u_int16_t x = 0; x < self->hashNum; x++) {
+	uint16_t cursor = hashNum.size;
+	for (uint16_t x = 0; x < self->hashNum; x++) {
 		CBByteArrayCopyByteArray(bytes, cursor, self->hashes[x]);
 		CBByteArrayChangeReference(self->hashes[x], bytes, cursor);
 		cursor += 32;

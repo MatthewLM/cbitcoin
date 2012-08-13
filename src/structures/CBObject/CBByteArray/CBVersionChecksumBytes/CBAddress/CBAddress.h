@@ -50,7 +50,7 @@ typedef struct{
  @param dependencies Takes the SHA-256 function for the checksum.
  @returns A new CBAddress object.
  */
-CBAddress * CBNewAddressFromRIPEMD160Hash(u_int8_t * hash,u_int8_t networkCode,bool cacheString,CBEvents * events);
+CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash,uint8_t networkCode,bool cacheString,CBEvents * events);
 /**
  @brief Creates a new CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
@@ -77,7 +77,7 @@ CBAddress * CBGetAddress(void * self);
  @param events Events for errors.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,u_int8_t networkCode,u_int8_t * hash,bool cacheString,CBEvents * events);
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,uint8_t networkCode,uint8_t * hash,bool cacheString,CBEvents * events);
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.

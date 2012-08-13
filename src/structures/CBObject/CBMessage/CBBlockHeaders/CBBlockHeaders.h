@@ -37,7 +37,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	u_int16_t headerNum; /**< The number of headers. */
+	uint16_t headerNum; /**< The number of headers. */
 	CBBlock ** blockHeaders; /**< The block headers as CBBlock objects with no transactions. The number of transactions is given however. */
 } CBBlockHeaders;
 
@@ -89,17 +89,23 @@ void CBFreeBlockHeaders(void * self);
  */
 void CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header);
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBBlockHeaders object.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBBlockHeadersCalculateLength(CBBlockHeaders * self);
+/**
  @brief Deserialises a CBBlockHeaders so that it can be used as an object.
  @param self The CBBlockHeaders object
  @returns The length read on success, 0 on failure.
 */
-u_int32_t CBBlockHeadersDeserialise(CBBlockHeaders * self);
+uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self);
 /**
  @brief Serialises a CBBlockHeaders to the byte data.
  @param self The CBBlockHeaders object
  @returns The length written on success, 0 on failure.
 */
-u_int32_t CBBlockHeadersSerialise(CBBlockHeaders * self);
+uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self);
 /**
  @brief Takes a CBBlock for the block header list. This does not retain the CBBlock so you can pass an CBBlock into this while releasing control from the calling function.
  @param self The CBBlockHeaders object

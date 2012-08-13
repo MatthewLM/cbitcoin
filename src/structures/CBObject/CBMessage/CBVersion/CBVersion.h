@@ -39,11 +39,11 @@
 typedef struct{
 	CBMessage base; /**< CBObject base structure */
 	int32_t version; /**< The protocol version. There appears to be no good reason why this is signed. */
-	u_int64_t services; /**< The services which a node is offering. */
+	uint64_t services; /**< The services which a node is offering. */
 	int64_t time; /**< The timestamp of this node. This assumes time(NULL) returns a correct 64 bit timestamp which it should to avoid massive problems in the future. */
-	CBNetworkAddress * addRecv; /**< Socket information for the recieving node. This is used to detect the nodes own IP address, though I do not see the point in needing to detect your own IP address since source IP addresses can be detected by TCP/IP connections. This is used so the node can share the socket information to spread it to other nodes on the network when listening to incomming connections. The socket information is recognised and shared by the bitcoin network through the CBAddressBroadcast message. */
-	CBNetworkAddress * addSource; /**< Not used but can be used outside the library. If NULL it is serialised as all zero. Supposed to be used as the source socket information. */
-	u_int64_t nounce; /**< Nounce used to detect self. */
+	CBNetworkAddress * addRecv; /**< Socket information for the recieving node. */
+	CBNetworkAddress * addSource; /**< The socket information for the source address. */
+	uint64_t nounce; /**< Nounce used to detect self. */
 	CBByteArray * userAgent; /**< Used to identify bitcoin software. Should be a string no more than 400 characters in length. */
 	int32_t blockHeight; /**< The latest block height for the node. Should probably be unsigned but the protocol specifies a signed integer. */
 } CBVersion;
@@ -52,7 +52,7 @@ typedef struct{
  @brief Creates a new CBVersion object.
  @returns A new CBVersion object.
  */
-CBVersion * CBNewVersion(int32_t version,u_int64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,u_int64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events);
+CBVersion * CBNewVersion(int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events);
 /**
  @brief Creates a new CBVersion object from serialised data.
  @param data A CBByteArray holding the serialised data.
@@ -72,7 +72,7 @@ CBVersion * CBGetVersion(void * self);
  @param self The CBVersion object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitVersion(CBVersion * self,int32_t version,u_int64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,u_int64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events);
+bool CBInitVersion(CBVersion * self,int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events);
 /**
  @brief Initialises a new CBVersion object from serialised data.
  @param self The CBVersion object to initialise
@@ -94,12 +94,18 @@ void CBFreeVersion(void * self);
  @param self The CBVersion object
  @returns The length read on success, 0 on failure.
  */
-u_int32_t CBVersionDeserialise(CBVersion * self);
+uint32_t CBVersionDeserialise(CBVersion * self);
+/**
+ @brief Calculates the length needed to serialise the object
+ @param self The CBVersion object
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBVersionCalculateLength(CBVersion * self);
 /**
  @brief Serialises a CBVersion to the byte data.
  @param self The CBVersion object
  @returns The length written on success, 0 on failure.
  */
-u_int32_t CBVersionSerialise(CBVersion * self);
+uint32_t CBVersionSerialise(CBVersion * self);
 
 #endif

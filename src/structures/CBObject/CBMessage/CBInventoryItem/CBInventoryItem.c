@@ -51,13 +51,13 @@ bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteA
 	self->type = type;
 	self->hash = hash;
 	CBRetainObject(hash);
-	if (!CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
 	return true;
 }
 bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,CBEvents * events){
 	self->hash = NULL;
-	if (!CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
 }
@@ -66,15 +66,15 @@ bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,CBEve
 
 void CBFreeInventoryItem(void * vself){
 	CBInventoryItem * self = vself;
-	CBReleaseObject(&self->hash);
+	CBReleaseObject(self->hash);
 	CBFreeMessage(self);
 }
 
 //  Functions
 
-u_int32_t CBInventoryItemDeserialise(CBInventoryItem * self){
+uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBInventoryItem with no bytes.");
 		return 0;
 	}
@@ -86,9 +86,9 @@ u_int32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	self->hash = CBByteArraySubReference(bytes, 4, 32);
 	return 36;
 }
-u_int32_t CBInventoryItemSerialise(CBInventoryItem * self){
+uint32_t CBInventoryItemSerialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (!bytes) {
+	if (NOT bytes) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBInventoryItem with no bytes.");
 		return 0;
 	}

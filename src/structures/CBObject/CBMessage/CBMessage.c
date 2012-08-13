@@ -43,18 +43,20 @@ CBMessage * CBGetMessage(void * self){
 //  Initialiser
 
 bool CBInitMessageByObject(CBMessage * self,CBEvents * events){
-	if (!CBInitObject(CBGetObject(self)))
+	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->bytes = NULL;
 	self->events = events;
+	self->expectResponse = false;
 	return true;
 }
 bool CBInitMessageByData(CBMessage * self,CBByteArray * data,CBEvents * events){
-	if (!CBInitObject(CBGetObject(self)))
+	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->bytes = data;
 	CBRetainObject(data); // Retain data for this object.
 	self->events = events;
+	self->expectResponse = false;
 	return true;
 }
 
@@ -62,7 +64,7 @@ bool CBInitMessageByData(CBMessage * self,CBByteArray * data,CBEvents * events){
 
 void CBFreeMessage(void * vself){
 	CBMessage * self = vself;
-	if (self->bytes) CBReleaseObject(&self->bytes);
+	if (self->bytes) CBReleaseObject(self->bytes);
 	CBFreeObject(self);
 }
 

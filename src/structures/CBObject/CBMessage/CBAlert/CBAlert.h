@@ -42,11 +42,11 @@ typedef struct{
 	int64_t expiration; /**< The date at which the alert is no longer in effect */
 	int32_t ID; /**< Unique id for this alert */
 	int32_t cancel; /**< Alerts under this ID should be deleted and not relayed in the future */
-	u_int16_t setCancelNum; /**< Number of IDs to cancel */
+	uint16_t setCancelNum; /**< Number of IDs to cancel */
 	int32_t * setCancel; /**< A selection of IDs to cancel */
 	int32_t minVer; /**< The alert is valid for versions greater than this. */
 	int32_t maxVer; /**< The alert is valid for versions less than this. */
-	u_int16_t userAgentNum; /**< Number of user agents. */
+	uint16_t userAgentNum; /**< Number of user agents. */
 	CBByteArray ** userAgents; /**< List of the userAgents of the effected versions. */
 	int32_t priority; /**< Priority compared to other alerts */
 	CBByteArray * hiddenComment; /**< Comment that should be hidden from end-users */
@@ -101,7 +101,7 @@ void CBFreeAlert(void * self);
  @param self The CBAlert object
  @param ID The id to add.
  */
-void CBAlertAddCancelID(CBAlert * self,u_int32_t ID);
+void CBAlertAddCancelID(CBAlert * self,uint32_t ID);
 /**
  @brief Adds a user agent to the user agent set
  @param self The CBAlert object
@@ -109,11 +109,17 @@ void CBAlertAddCancelID(CBAlert * self,u_int32_t ID);
  */
 void CBAlertAddUserAgent(CBAlert * self,CBByteArray * userAgent);
 /**
+ @brief Calculates the length needed to serialise the object.
+ @param self The CBAlert object.
+ @returns The length read on success, 0 on failure.
+ */
+uint32_t CBAlertCalculateLength(CBAlert * self);
+/**
  @brief Deserialises a CBAlert so that it can be used as an object.
  @param self The CBAlert object
  @returns The length read on success, 0 on failure.
 */
-u_int32_t CBAlertDeserialise(CBAlert * self);
+uint32_t CBAlertDeserialise(CBAlert * self);
 /**
  @brief Gets the payload from the data. Should be serialised beforehand.
  @param self The CBAlert object
@@ -132,7 +138,7 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self);
  @param offset The offset to the begining of the signature which should be exactly after the payload.
  @returns The total length of the serialised CBAlert on sucess, else false.
  */
-u_int16_t CBAlertSerialiseSignature(CBAlert * self,u_int16_t offset);
+uint16_t CBAlertSerialiseSignature(CBAlert * self,uint16_t offset);
 /**
  @brief Takes a user agent for the user agent set. This does not retain the CBByteArray so you can pass an CBByteArray into this while releasing control from the calling function.
  @param self The CBAlert object

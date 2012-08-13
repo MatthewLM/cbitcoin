@@ -129,13 +129,13 @@ void CBFree"+name+"(void * self);\n\
  @param self The CB"+name+" object\n\
  @returns The length read on success, 0 on failure.\n\
 */\n\
-u_int32_t CB"+name+"Deserialise(CB"+name+" * self);\n\
+uint32_t CB"+name+"Deserialise(CB"+name+" * self);\n\
 /**\n\
  @brief Serialises a CB"+name+" to the byte data.\n\
  @param self The CB"+name+" object\n\
  @returns The length written on success, 0 on failure.\n\
 */\n\
-u_int32_t CB"+name+"Serialise(CB"+name+" * self);\n\
+uint32_t CB"+name+"Serialise(CB"+name+" * self);\n\
 \n\
 #endif\n");
 # Source
@@ -189,12 +189,12 @@ CB"+name+" * CBGet"+name+"(void * self){\n\
 //  Initialisers\n\
 \n\
 bool CBInit"+name+"(CB"+name+" * self,CBEvents * events){\n\
-\tif (!CBInitMessageByObject(CBGetMessage(self), events))\n\
+\tif (NOT CBInitMessageByObject(CBGetMessage(self), events))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\
 bool CBInit"+name+"FromData(CB"+name+" * self,CBByteArray * data,CBEvents * events){\n\
-\tif (!CBInitMessageByData(CBGetMessage(self), data, events))\n\
+\tif (NOT CBInitMessageByData(CBGetMessage(self), data, events))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\
@@ -207,16 +207,16 @@ void CBFree"+name+"(void * self){\n\
 \n\
 //  Functions\n\
 \n\
-u_int32_t CB"+name+"Deserialise(CB"+name+" * self){\n\
+uint32_t CB"+name+"Deserialise(CB"+name+" * self){\n\
 \tCBByteArray * bytes = CBGetMessage(self)->bytes;\n\
-\tif (!bytes) {\n\
+\tif (NOT bytes) {\n\
 \t\tCBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,\"Attempting to deserialise a CB"+name+" with no bytes.\");\n\
 \t\treturn 0;\n\
 \t}\n\
 }\n\
-u_int32_t CB"+name+"Serialise(CB"+name+" * self){\n\
+uint32_t CB"+name+"Serialise(CB"+name+" * self){\n\
 \tCBByteArray * bytes = CBGetMessage(self)->bytes;\n\
-\tif (!bytes) {\n\
+\tif (NOT bytes) {\n\
 \t\tCBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,\"Attempting to serialise a CB"+name+" with no bytes.\");\n\
 \t\treturn 0;\n\
 \t}\n\
