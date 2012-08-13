@@ -28,15 +28,16 @@
  The rule for memory management is to retain an object before returning it, to retain an object when giving it to another object, and to release an object once the object is no longer needed. When a new object is created it should be retained. Unless required for thread safety, objects don't need to be retained when passed into functions. Whenever an object is created it must be released and objects must be released for each time they are retained. Failure to abide by this properly will cause memory leaks or segmentation faults.
  
  Remember to pass a reference to an object to the release function. Forgeting to do this will break your code.
- */
+ */ // ??? Need for all objects to check initiailisation returns and return NULL on failure.
 
 #ifndef CBOBJECTH
 #define CBOBJECTH
 
 //  Includes
 
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "CBConstants.h"
 
 /**
@@ -44,7 +45,7 @@
  */
 typedef struct CBObject{
 	void (*free)(void *); /**< Pointer to the function to free the object. */
-	u_int32_t references; /**< Keeps a count of the references to an object for memory management. */
+	uint32_t references; /**< Keeps a count of the references to an object for memory management. */
 } CBObject;
 /**
  @brief Creates a new CBObject.

@@ -55,13 +55,12 @@ void CBFreeObject(void * self){
 //  Functions
 
 void CBReleaseObject(void * self){
-	CBObject * obj = *((CBObject **) self);
+	CBObject * obj = self;
 	// Decrement reference counter. Free if no more references.
 	obj->references--;
 	if (obj->references < 1){
 		obj->free(obj); // Remembering to dereference self from CBObject ** to CBOject *
 	}
-	*(void **)self = NULL; //Assign NULL to the pointer now that the object is released from the pointer's control.
 }
 void CBRetainObject(void * self){
 	// Increment reference counter.

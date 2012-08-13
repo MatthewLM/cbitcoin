@@ -39,7 +39,6 @@ Making a Contribution
 Coding Guidelines
 -----------------
 
-* When calling release on objects, you absolutely must pass the object by reference.
 * cbitcoin uses an object-orientated approach by implememting virtual function tables, reference counting and inheritance on structures. New code should be consistent with this approach. Use the supplied structure_maker.py to make a new structure which inherits CBObject. All structures inheriting CBObject should go into the structures directory as shown.
 * The rule for memory management is to retain an object before returning it, to retain an object when giving it to another object, and to release an object once the object is no longer needed. When a new object is created it should be retained. Unless required for thread safety, objects don't need to be retained when passed into functions.
 * Filenames should begin with CB.
