@@ -19,12 +19,7 @@ Matthew Mitchell - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9
 Installation
 ------------
 
-Installation instructions will come later. For now look at BUILD.py (OSX only). This library should not be used for live applications yet.
-
-Thread Safety
--------------
-
-This library is not thread safe except in parts where the documentation states otherwise. No more than one thread should access a cbitcoin object at any one time.
+Installation instructions will come later. For now look at BUILD.py (OSX only). This library should not be used for live applications yet but feel free to experiment and provide feedback to cbitcoin@thelibertyportal.com
 
 Making a Contribution
 ---------------------
@@ -32,23 +27,21 @@ Making a Contribution
 1. Fork the project on github: https://github.com/MatthewLM/cbitcoin
 2. Implement the changes.
 3. Document the changes (See "Documenting" below)
-4. Send a pull request.
+4. Make a pull request.
 5. Send an email to cbitcoin@thelibertyportal.com notifying that a request has been made.
 6. The changes will be pulled once approved.
 
 Coding Guidelines
 -----------------
 
-* cbitcoin uses an object-orientated approach by implememting virtual function tables, reference counting and inheritance on structures. New code should be consistent with this approach. Use the supplied structure_maker.py to make a new structure which inherits CBObject. All structures inheriting CBObject should go into the structures directory as shown.
-* The rule for memory management is to retain an object before returning it, to retain an object when giving it to another object, and to release an object once the object is no longer needed. When a new object is created it should be retained. Unless required for thread safety, objects don't need to be retained when passed into functions.
+* cbitcoin uses an object-orientated approach by implememting reference counting and inheritance on structures. New code should be consistent with this approach. Use the supplied structure_maker.py to make a new structure which inherits CBObject. All structures inheriting CBObject should go into the structures directory as shown. message_maker.py is similar to structure_maker but is for CBMessage structures.
+* The rule for memory management is to retain an object before returning it, to retain an object when giving it to another object, and to release an object once the object is no longer needed by an object or function. When a new object is created it should be retained. There are some exceptions to the rules, such as functions which take a reference from the caller.
 * Filenames should begin with CB.
 * Functions, types and variables with linker visibility outside the library should begin with CB.
-* CamelCase should be used. lowerCamelCase should be used for structure fields and variables unless inappropriate.
+* CamelCase should be used. lowerCamelCase should be used for structure fields and variables except where inappropriate.
 * Constants should be ALL_UPPERCASE_WITH_UNDERSCORES.
 * Constants made visible throughout the library should go in CBConstants.h
-* Functions to be included in the virtual tables of structures, should be declared and implemented in the structure files. These must take the structure as the first argument.
-* Destructors may be removed for structures that can use the inherited destructor. structure_maker.py includes a destructor by default for easy coding.
-* CBGet functions should be prefered over type-casting. Type-casts should be used for virtual table casting when only the virtual table is available, else CBGet...VT can be used on the object.
+* CBGet functions should be prefered over type-casting.
 * Use comments where appropriate, especially in obscure sections.
 * In structure files, please order functions under "//  Functions" alphabetically.
 * Use "???" in comments for areas of confusion or uncertainty where the code may need improving or changed. Look for "???" to find parts in the code that may need work.
