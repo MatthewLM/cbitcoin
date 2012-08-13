@@ -47,7 +47,8 @@
 #pragma weak CBSocketBind
 #pragma weak CBSocketConnect
 #pragma weak CBSocketListen
-#pragma weak CBSocketAccept
+#pragma weak CBSocketAcceptIPv4
+#pragma weak CBSocketAcceptIPv6
 #pragma weak CBNewEventLoop
 #pragma weak CBSocketCanAcceptEvent
 #pragma weak CBSocketDidConnectEvent
