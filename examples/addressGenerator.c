@@ -1,5 +1,5 @@
 //
-//  testKeyHash.c
+//  addressGenerator.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 06/06/2012.
