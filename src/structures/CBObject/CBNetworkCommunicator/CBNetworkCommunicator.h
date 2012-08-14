@@ -75,8 +75,8 @@ typedef struct {
 	uint64_t acceptEventIPv4; /**< Event for accepting connections on IPv4 */
 	uint64_t acceptEventIPv6; /**< Event for accepting connections on IPv6 */
 	uint64_t nounce; /**< Value sent in version messages to check for connections to self */
-	uint64_t lastPing; /**< Time last ping was sent */
 	CBEvents * events; /**< Events. */
+	uint64_t pingTimer; /**< Timer for ping event */
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
 	void * callbackHandler; /**< Sent to event callbacks */
 } CBNetworkCommunicator;
@@ -176,6 +176,13 @@ bool CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * se
  */
 bool CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBNode * node);
 /**
+ @brief Processes a new received message for auto ping pongs.
+ @param self The CBNetworkCommunicator object.
+ @param node The node
+ @returns true if node should be disconnected, false otherwise.
+ */
+bool CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBNode * node);
+/**
  @brief Called when a node socket is ready for reading.
  @param vself The CBNetworkCommunicator object.
  @param vnode The CBNode index with data to read.
@@ -191,9 +198,8 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode);
  @brief Called when a header is received.
  @param self The CBNetworkCommunicator object.
  @param node The CBNode.
- @returns true if OK or false if the node has been disconnected.
  */
-bool CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node);
+void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Called on an error with the socket event loop. The error event is given with CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL.  
  @param vself The CBNetworkCommunicator object.
@@ -220,6 +226,11 @@ void CBNetworkCommunicatorOnTimeOut(void * vself,void * vnode,CBTimeOutType type
  @returns true if successful, false otherwise.
  */
 bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBNode * node,CBMessage * message);
+/**
+ @brief Sends pings to all connected nodes.
+ @param self The CBNetworkCommunicator object.
+ */
+void CBNetworkCommunicatorSendPings(void * vself);
 /**
  @brief Sets the CBAddressManager.
  @param self The CBNetworkCommunicator object.
@@ -263,6 +274,11 @@ bool CBNetworkCommunicatorStart(CBNetworkCommunicator * self);
  */
 void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self);
 /**
+ @brief Starts the timer event for sending pings (heartbeat).
+ @param vself The CBNetworkCommunicator object.
+ */
+void CBNetworkCommunicatorStartPings(CBNetworkCommunicator * self);
+/**
  @brief Closes all connections. This may be neccessary in case of failure in which case CBNetworkCommunicatorStart can be tried again to reconnect to the listed nodes.
  @param vself The CBNetworkCommunicator object.
  */
@@ -272,6 +288,11 @@ void CBNetworkCommunicatorStop(CBNetworkCommunicator * self);
  @param vself The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorStopListening(CBNetworkCommunicator * self);
+/**
+ @brief Stops the timer event for sending pings (heartbeat).
+ @param vself The CBNetworkCommunicator object.
+ */
+void CBNetworkCommunicatorStopPings(CBNetworkCommunicator * self);
 /**
  @brief Looks at the stored addresses and tries to connect to addresses up to the maximum number of allowed connections or as many as there are in the case the maximum number of connections is greater than the number of addresses, plus connected nodes.
  @param self The CBNetworkCommunicator object.

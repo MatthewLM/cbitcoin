@@ -121,10 +121,13 @@ void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket, bool IP
 			if (CBSocketCanSendEvent(&node->sendEvent,self->eventLoop, node->socketID, CBNetworkCommunicatorOnCanSend, node)) {
 				// Both events work. Take the node.
 				CBAddressManagerTakeNode(self->addresses, node);
+				if (self->addresses->nodesNum == 1 && self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING)
+					// Got first node, start pings
+					CBNetworkCommunicatorStartPings(self);
 				node->connectionWorking = true;
 				self->attemptingOrWorkingConnections++;
 				self->numIncommingConnections++;
-				printf("HAS ACCEPT\n");
+				printf("HAS ACCEPT WITH PORT %u\n",port);
 				if (self->numIncommingConnections == self->maxIncommingConnections || self->attemptingOrWorkingConnections == self->maxConnections) {
 					// Reached maximum connections, stop listening.
 					CBNetworkCommunicatorStopListening(self);
@@ -197,6 +200,9 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vnode){
 		if (CBSocketCanSendEvent(&node->sendEvent,self->eventLoop, node->socketID, CBNetworkCommunicatorOnCanSend, node)) {
 			if (CBSocketAddEvent(node->sendEvent, self->sendTimeOut)) {
 				CBAddressManagerTakeNode(self->addresses, node);
+				if (self->addresses->nodesNum == 1 && self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING)
+					// Got first node, start pings
+					CBNetworkCommunicatorStartPings(self);
 				node->connectionWorking = true;
 				// Connection OK, so begin handshake if auto handshaking is enabled
 				if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE){
@@ -236,6 +242,9 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBNode * node,
 		CBReleaseObject(node->sendQueue[(node->sendQueueFront + x) % CB_SEND_QUEUE_MAX_SIZE]);
 	self->attemptingOrWorkingConnections--;
 	if (node->connectionWorking) CBAddressManagerRemoveNode(self->addresses, node);
+	if (self->addresses->nodesNum == 0 && self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING)
+		// No more nodes so stop pings
+		CBNetworkCommunicatorStopPings(self);
 	if (NOT self->attemptingOrWorkingConnections)
 		self->events->onNetworkError(self->callbackHandler,self);
 }
@@ -269,7 +278,7 @@ bool CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * se
 				// Do not already have this address as a node
 				if (addrs->addresses[x]->type & CB_IP_INVALID || addrs->addresses[x]->type & CB_IP_LOCAL)
 					// Address broadcasts should not contain invalid or local addresses.
-					return false;
+					return true;
 				// Adjust time priority
 				if (addrs->addresses[x]->score > now + 600)
 					// Address is advertised more than ten minutes from now. Give low priority at 5 days ago
@@ -385,6 +394,7 @@ bool CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * se
 			if (NOT node->versionSent) {
 				CBVersion * version = CBNetworkCommunicatorGetVersion(self, CBGetNetworkAddress(node));
 				CBGetMessage(version)->expectResponse = CB_MESSAGE_TYPE_VERACK; // Expect a response for this message.
+				node->acceptedTypes = CB_MESSAGE_TYPE_VERACK; // Ony allow version acknowledgement from here.
 				CBGetMessage(version)->type = CB_MESSAGE_TYPE_VERSION;
 				bool ok = CBNetworkCommunicatorSendMessage(self, node, CBGetMessage(version));
 				CBReleaseObject(version);
@@ -412,13 +422,29 @@ bool CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * se
 		node->acceptedTypes |= CB_MESSAGE_TYPE_GETADDR;
 		node->acceptedTypes |= CB_MESSAGE_TYPE_ADDR;
 		node->acceptedTypes |= CB_MESSAGE_TYPE_ALERT;
-		// Request addresses
-		CBMessage * getaddr = CBNewMessageByObject(self->events);
-		getaddr->type = CB_MESSAGE_TYPE_GETADDR;
-		getaddr->expectResponse = CB_MESSAGE_TYPE_ADDR; // Expect a response of addresses for this message.
-		CBNetworkCommunicatorSendMessage(self,node,getaddr);
-		CBReleaseObject(getaddr);
-		node->getAddresses = true;
+		if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY) {
+			// Request addresses
+			CBMessage * getaddr = CBNewMessageByObject(self->events);
+			getaddr->type = CB_MESSAGE_TYPE_GETADDR;
+			getaddr->expectResponse = CB_MESSAGE_TYPE_ADDR; // Expect a response of addresses for this message.
+			CBNetworkCommunicatorSendMessage(self,node,getaddr);
+			CBReleaseObject(getaddr);
+			node->getAddresses = true;
+		}
+	}
+	return false;
+}
+bool CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBNode * node){
+	if (node->receive->type == CB_MESSAGE_TYPE_PING
+		&& node->versionMessage->version >= CB_PONG_VERSION
+		&& self->version >= CB_PONG_VERSION){
+		node->receive->type = CB_MESSAGE_TYPE_PONG;
+		CBNetworkCommunicatorSendMessage(self, node, node->receive);
+	}else if (node->receive->type == CB_MESSAGE_TYPE_PONG){
+		if(self->version < CB_PONG_VERSION || node->versionMessage->version < CB_PONG_VERSION)
+			return true; // This node should not be sending pong messages.
+		// No longer want a pong
+		node->acceptedTypes &= ~CB_MESSAGE_TYPE_PONG;
 	}
 	return false;
 }
@@ -448,11 +474,9 @@ void CBNetworkCommunicatorOnCanReceive(void * vself,void * vnode){
 			default:
 				// Did read some bytes
 				node->messageReceived += num;
-				if (node->messageReceived == 24){
+				if (node->messageReceived == 24)
 					// Hurrah! The header has been received.
-					if(CBNetworkCommunicatorOnHeaderRecieved(self,node)) // If failure skip and just return
-						node->messageReceived = 0; // Reset for payload.
-				}
+					CBNetworkCommunicatorOnHeaderRecieved(self,node);
 				return;
 		}
 	}else{
@@ -538,7 +562,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode){
 			node->sendingHeader[22] = toSend->checksum[2];
 			node->sendingHeader[23] = toSend->checksum[3];
 		}
-		uint8_t len = CBSocketSend(node->socketID, node->sendingHeader + node->messageSent, 24 - node->messageSent);
+		int8_t len = CBSocketSend(node->socketID, node->sendingHeader + node->messageSent, 24 - node->messageSent);
 		if (len == CB_SOCKET_FAILURE) {
 			free(node->sendingHeader);
 			CBNetworkCommunicatorDisconnect(self, node, 0);
@@ -559,7 +583,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode){
 		}
 	}else{
 		// Sent header
-		uint8_t len = CBSocketSend(node->socketID, CBByteArrayGetData(node->sendQueue[node->sendQueueFront]->bytes) + node->messageSent, node->sendQueue[node->sendQueueFront]->bytes->length - node->messageSent);
+		int32_t len = CBSocketSend(node->socketID, CBByteArrayGetData(node->sendQueue[node->sendQueueFront]->bytes) + node->messageSent, node->sendQueue[node->sendQueueFront]->bytes->length - node->messageSent);
 		if (len == CB_SOCKET_FAILURE)
 			CBNetworkCommunicatorDisconnect(self, node, 0);
 		else{
@@ -581,7 +605,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode){
 				CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
 				return;
 			}
-			node->typesExpected[node->typesExpectedNum] = node->sendQueue[node->sendQueueFront]->type;
+			node->typesExpected[node->typesExpectedNum] = node->sendQueue[node->sendQueueFront]->expectResponse;
 			node->typesExpectedNum++;
 		}
 		// Remove message from queue.
@@ -598,14 +622,12 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode){
 		}
 	}
 }
-bool CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node){
+void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node){
 	// Make a CBByteArray. ??? Could be modified not to use a CBByteArray, but it is cleaner this way and easier to maintain.
 	CBByteArray * header = CBNewByteArrayWithData(node->headerBuffer, 24, self->events);
-	if (CBByteArrayReadInt32(header, 0) != self->networkID) {
+	if (CBByteArrayReadInt32(header, 0) != self->networkID)
 		// The network ID bytes is not what we are looking for. We will have to remove the node.
 		CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
-		return false;
-	}
 	CBMessageType type;
 	uint32_t size;
 	bool error = false;
@@ -764,22 +786,29 @@ bool CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode *
 		// Error with the message header type or length
 		CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
 		CBReleaseObject(header);
-		return false;
 	}
 	// If this is a response we have been waiting for, no longer wait for it
 	for (uint8_t x = 0; x < node->typesExpectedNum; x++) {
 		if (type == node->typesExpected[x]) {
-			node->typesExpectedNum--;
-			memmove(node->typesExpected + x, node->typesExpected + x + 1, node->typesExpectedNum - x);
-			if (NOT node->typesExpectedNum)
-				// No more responses expected, back to usual timeOut.
-				CBSocketAddEvent(node->receiveEvent, self->timeOut);
+			bool remove = true;
+			if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE)
+				if (type == CB_MESSAGE_TYPE_VERACK && NOT node->versionMessage){
+					// We expect the version
+					node->typesExpected[x] = CB_MESSAGE_TYPE_VERSION;
+					remove = false;
+				}
+			if (remove) {
+				node->typesExpectedNum--;
+				memmove(node->typesExpected + x, node->typesExpected + x + 1, node->typesExpectedNum - x);
+				if (NOT node->typesExpectedNum)
+					// No more responses expected, back to usual timeOut.
+					CBSocketAddEvent(node->receiveEvent, self->timeOut);
+			}
 			break;
 		}
 	}
 	// The type and size is OK, make the message
 	node->receive->type = type;
-	node->receive->bytes = CBNewByteArrayOfSize(size, self->events);
 	// Get checksum
 	node->receive->checksum[0] = CBByteArrayGetByte(header, 20);
 	node->receive->checksum[1] = CBByteArrayGetByte(header, 21);
@@ -787,8 +816,14 @@ bool CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode *
 	node->receive->checksum[3] = CBByteArrayGetByte(header, 23);
 	// Message is now ready. Free the header.
 	CBReleaseObject(header); // Took the header buffer which should be freed here.
-	node->receivedHeader = true;
-	return true;
+	if (size) {
+		node->receive->bytes = CBNewByteArrayOfSize(size, self->events);
+		// Change variables for receiving the payload.
+		node->receivedHeader = true;
+		node->messageReceived = 0;
+	}else
+		// Got the message
+		CBNetworkCommunicatorOnMessageReceived(self,node);
 }
 void CBNetworkCommunicatorOnLoopError(void * vself){
 	CBNetworkCommunicator * self = vself;
@@ -798,9 +833,18 @@ void CBNetworkCommunicatorOnLoopError(void * vself){
 }
 void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode * node){
 	// Check checksum
-	uint8_t * hash1 = CBSha256(CBByteArrayGetData(node->receive->bytes), node->receive->bytes->length);
-	uint8_t * hash2 = CBSha256(hash1, 32);
-	free(hash1);
+	uint8_t * hash2;
+	if (node->receive->bytes) {
+		uint8_t * hash1 = CBSha256(CBByteArrayGetData(node->receive->bytes), node->receive->bytes->length);
+		hash2 = CBSha256(hash1, 32);
+		free(hash1);
+	}else{
+		hash2 = malloc(4);
+		hash2[0] = 0x5D;
+		hash2[1] = 0xF6;
+		hash2[2] = 0xE0;
+		hash2[3] = 0xE2;
+	}
 	if (memcmp(hash2, node->receive->checksum, 4)) {
 		// Checksum failure. There is no excuse for this. Drop the node. Why have checksums anyway???
 		CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
@@ -870,9 +914,17 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode 
 			break;
 	}
 	// Check that the deserialised message's size read matches the message length.
-	if (len != node->receive->bytes->length)
+	if (NOT node->receive->bytes) {
+		if (len) {
+			// Error
+			CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
+			return;
+		}
+	}else if (len != node->receive->bytes->length){
 		// Error
 		CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
+		return;
+	}
 	// Deserialisation was sucessful.
 	// Call event callback
 	bool disconnect = self->events->onMessageReceived(self->callbackHandler,self,node);
@@ -880,52 +932,25 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode 
 		// Automatic responses
 		if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY)
 			// Auto discovery responses
-			CBNetworkCommunicatorProcessMessageAutoDiscovery(self,node);
-		else if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE)
+			disconnect = CBNetworkCommunicatorProcessMessageAutoDiscovery(self,node);
+		if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE)
 			// Auto handshake responses
-			CBNetworkCommunicatorProcessMessageAutoHandshake(self,node);
-		else if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING) {
+			disconnect = CBNetworkCommunicatorProcessMessageAutoHandshake(self,node);
+		if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING) {
 			// Auto ping response
-			if (node->receive->type == CB_MESSAGE_TYPE_PING
-				&& node->versionMessage->version >= CB_PONG_VERSION
-				&& self->version >= CB_PONG_VERSION){
-				node->receive->type = CB_MESSAGE_TYPE_PONG;
-				CBNetworkCommunicatorSendMessage(self, node, node->receive);
-			}else if (node->receive->type == CB_MESSAGE_TYPE_PONG
-					 && self->version >= CB_PONG_VERSION
-					 && node->versionMessage->version < CB_PONG_VERSION)
-				disconnect = true; // This node should not be sending pong messages.
-			// Use opportunity to check if we should send ping messages to nodes to check the connections or keep connections alive.
-			if (self->lastPing < time(NULL) - CB_PING_TIME) {
-				CBMessage * ping = CBNewMessageByObject(self->events);
-				ping->type = CB_MESSAGE_TYPE_PING;
-				if (self->version >= CB_PONG_VERSION) {
-					CBPingPong * pingPong = CBNewPingPong(rand(),self->events);
-					CBGetMessage(pingPong)->type = CB_MESSAGE_TYPE_PING;
-					for (uint16_t x = 0; x < self->addresses->nodesNum; x++) {
-						if (self->addresses->nodes[x]->acceptedTypes & CB_MESSAGE_TYPE_PING){ // Only send ping if they can send ping.
-							if(self->addresses->nodes[x]->versionMessage->version >= CB_PONG_VERSION){
-								CBNetworkCommunicatorSendMessage(self, self->addresses->nodes[x], CBGetMessage(pingPong));
-								CBGetMessage(pingPong)->expectResponse = CB_MESSAGE_TYPE_PONG; // Expect a pong.
-							}else
-								CBNetworkCommunicatorSendMessage(self, self->addresses->nodes[x], CBGetMessage(ping));
-						}
-					}
-					CBReleaseObject(pingPong);
-				}else for (uint16_t x = 0; x < self->addresses->nodesNum; x++)
-					if (self->addresses->nodes[x]->acceptedTypes & CB_MESSAGE_TYPE_PING) // Only send ping if they can send ping.
-						CBNetworkCommunicatorSendMessage(self, self->addresses->nodes[x], CBGetMessage(ping));
-				CBReleaseObject(ping);
-				self->lastPing = time(NULL);
-			}
+			disconnect = CBNetworkCommunicatorProcessMessageAutoPingPong(self, node);
 		}
 	}
 	// Release objects and get ready for next message
 	if (disconnect)
 		// Node misbehaving. Disconnect.
 		CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS);
-	else
+	else{
 		CBReleaseObject(node->receive);
+		// Reset variables for receiving the next message
+		node->receivedHeader = false;
+		node->receive = NULL;
+	}
 }
 void CBNetworkCommunicatorOnTimeOut(void * vself,void * vnode,CBTimeOutType type){
 	CBNetworkCommunicator * self = vself;
@@ -1047,6 +1072,29 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBNode * node
 	CBRetainObject(message);
 	return true;
 }
+void CBNetworkCommunicatorSendPings(void * vself){
+	CBNetworkCommunicator * self = vself;
+	CBMessage * ping = CBNewMessageByObject(self->events);
+	ping->type = CB_MESSAGE_TYPE_PING;
+	if (self->version >= CB_PONG_VERSION) {
+		CBPingPong * pingPong = CBNewPingPong(rand(),self->events);
+		CBGetMessage(pingPong)->type = CB_MESSAGE_TYPE_PING;
+		for (uint16_t x = 0; x < self->addresses->nodesNum; x++) {
+			if (self->addresses->nodes[x]->acceptedTypes & CB_MESSAGE_TYPE_PING){ // Only send ping if they can send ping.
+				if(self->addresses->nodes[x]->versionMessage->version >= CB_PONG_VERSION){
+					CBNetworkCommunicatorSendMessage(self, self->addresses->nodes[x], CBGetMessage(pingPong));
+					CBGetMessage(pingPong)->expectResponse = CB_MESSAGE_TYPE_PONG; // Expect a pong.
+					self->addresses->nodes[x]->acceptedTypes |= CB_MESSAGE_TYPE_PONG;
+				}else
+					CBNetworkCommunicatorSendMessage(self, self->addresses->nodes[x], CBGetMessage(ping));
+			}
+		}
+		CBReleaseObject(pingPong);
+	}else for (uint16_t x = 0; x < self->addresses->nodesNum; x++)
+		if (self->addresses->nodes[x]->acceptedTypes & CB_MESSAGE_TYPE_PING) // Only send ping if they can send ping.
+			CBNetworkCommunicatorSendMessage(self, self->addresses->nodes[x], CBGetMessage(ping));
+	CBReleaseObject(ping);
+}
 void CBNetworkCommunicatorSetAddressManager(CBNetworkCommunicator * self,CBAddressManager * addrMan){
 	CBRetainObject(addrMan);
 	self->addresses = addrMan;
@@ -1121,6 +1169,9 @@ void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self){
 			CBCloseSocket(self->listeningSocketIPv6);
 	}
 }
+void CBNetworkCommunicatorStartPings(CBNetworkCommunicator * self){
+	CBStartTimer(self->eventLoop, &self->pingTimer, self->heartBeat, CBNetworkCommunicatorSendPings, self);
+}
 void CBNetworkCommunicatorStop(CBNetworkCommunicator * self){
 	self->isStarted = false;
 	// Stop event loop
@@ -1142,6 +1193,9 @@ void CBNetworkCommunicatorStopListening(CBNetworkCommunicator * self){
 		CBCloseSocket(self->listeningSocketIPv6);
 		self->isListeningIPv6 = false;
 	}
+}
+void CBNetworkCommunicatorStopPings(CBNetworkCommunicator * self){
+	CBEndTimer(self->pingTimer);
 }
 void CBNetworkCommunicatorTryConnections(CBNetworkCommunicator * self){
 	if (self->attemptingOrWorkingConnections >= self->maxConnections) {

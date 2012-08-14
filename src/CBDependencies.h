@@ -59,6 +59,8 @@
 #pragma weak CBSocketFreeEvent
 #pragma weak CBSocketSend
 #pragma weak CBSocketReceive
+#pragma weak CBStartTimer
+#pragma weak CBEndTimer
 #pragma weak CBCloseSocket
 #pragma weak CBExitEventLoop
 
@@ -233,6 +235,20 @@ int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len);
  @returns The number of bytes actually written into "data", CB_SOCKET_CONNECTION_CLOSE on connection closure, 0 on no bytes received, and CB_SOCKET_FAILURE on failure.
  */
 int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len);
+/**
+ @brief Calls a callback every "time" seconds, until the timer is ended.
+ @param loopID The loop id for events.
+ @param timer The timer sent by reference to be set.
+ @param time The number of seconds between each call of the callback.
+ @param callback The callback function.
+ @param arg The callback argument.
+ */
+bool CBStartTimer(uint64_t loopID,uint64_t * timer,uint16_t time,void (*callback)(void *),void * arg);
+/**
+ @brief Ends a timer.
+ @param timer The timer sent by reference to be set.
+ */
+void CBEndTimer(uint64_t timer);
 /**
  @brief Closes a socket. The id should be freed, as well as any other data relating to this socket.
  @param socketID The socket id to be closed.

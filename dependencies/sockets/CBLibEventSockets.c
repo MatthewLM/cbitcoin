@@ -103,6 +103,21 @@ bool CBSocketListen(uint64_t socketID,uint16_t maxConnections){
 	}
 	return true;
 }
+bool CBSocketAcceptIPv4(uint64_t socketID,uint64_t * connectionSocketID,uint8_t * IP,uint16_t * port){
+	struct sockaddr_in address;
+	socklen_t size = sizeof(address);
+	*connectionSocketID = accept((evutil_socket_t)socketID, (struct sockaddr *)&address, &size);
+	if (*connectionSocketID == -1) {
+		return false;
+	}
+	// Fill out IPv4 address
+	memcpy(IP, &address.sin_addr, 4);
+	// Set port which will be some random connection port.
+	*port = address.sin_port;
+	// Make socket non-blocking
+	evutil_make_socket_nonblocking((evutil_socket_t)*connectionSocketID);
+	return true;
+}
 bool CBSocketAcceptIPv6(uint64_t socketID,uint64_t * connectionSocketID,uint8_t * IP,uint16_t * port){
 	struct sockaddr_in6 address;
 	socklen_t size = sizeof(address);
@@ -114,21 +129,6 @@ bool CBSocketAcceptIPv6(uint64_t socketID,uint64_t * connectionSocketID,uint8_t 
 	memcpy(IP, &address.sin6_addr, 16);
 	// Set port
 	*port = address.sin6_port;
-	// Make socket non-blocking
-	evutil_make_socket_nonblocking((evutil_socket_t)*connectionSocketID);
-	return true;
-}
-bool CBSocketAcceptIPv4(uint64_t socketID,uint64_t * connectionSocketID,uint8_t * IP,uint16_t * port){
-	struct sockaddr_in address;
-	socklen_t size = sizeof(address);
-	*connectionSocketID = accept((evutil_socket_t)socketID, (struct sockaddr *)&address, &size);
-	if (*connectionSocketID == -1) {
-		return false;
-	}
-	// Fill out IPv4 address
-	memcpy(IP, &address.sin_addr, 4);
-	// Set port
-	*port = address.sin_port;
 	// Make socket non-blocking
 	evutil_make_socket_nonblocking((evutil_socket_t)*connectionSocketID);
 	return true;
@@ -280,6 +280,11 @@ void CBSocketFreeEvent(uint64_t eventID){
 }
 int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len){
 	ssize_t res = send((evutil_socket_t)socketID, data, len, CB_SEND_FLAGS);
+	printf("SENT (%li): ",res);
+	for (uint32_t x = 0; x < res; x++) {
+		printf("%c",data[x]);
+	}
+	printf("\n");
 	if (res >= 0)
 		return (int32_t)res;
 	if (errno == EAGAIN)
@@ -288,6 +293,11 @@ int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len){
 }
 int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len){
 	ssize_t res = read((evutil_socket_t)socketID, data, len);
+	printf("RECEIVED: ");
+	for (uint32_t x = 0; x < res; x++) {
+		printf("%c",data[x]);
+	}
+	printf("\n");
 	if (res > 0)
 		return (int32_t)res; // OK, read data.
 	if (NOT res)
@@ -295,6 +305,33 @@ int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len){
 	if (errno == EAGAIN)
 		return 0; // False event. Wait again. No bytes read.
 	return CB_SOCKET_FAILURE; // Failure
+}
+bool CBStartTimer(uint64_t loopID,uint64_t * timer,uint16_t time,void (*callback)(void *),void * arg){
+	CBTimer * theTimer = malloc(sizeof(*theTimer));
+	theTimer->callback = callback;
+	theTimer->arg = arg;
+	theTimer->timer = event_new(((CBEventLoop *)loopID)->base, -1, EV_PERSIST, CBFireTimer, theTimer);
+	if (NOT theTimer->timer) {
+		free(theTimer);
+		theTimer = 0;
+	}
+	*timer = (uint64_t)theTimer;
+	int res;
+	if (time) {
+		struct timeval timev = {time,0};
+		res = event_add(theTimer->timer, &timev);
+	}else
+		res = event_add(theTimer->timer, NULL);
+	return NOT res;
+}
+void CBFireTimer(evutil_socket_t foo,short bar,void * timer){
+	CBTimer * theTimer = timer;
+	theTimer->callback(theTimer->arg);
+}
+void CBEndTimer(uint64_t timer){
+	CBTimer * theTimer = (CBTimer *)timer;
+	event_free(theTimer->timer);
+	free(theTimer);
 }
 void CBDoRun(evutil_socket_t socketID,short eventNum,void * arg){
 	CBEventLoop * loop = arg;

@@ -57,7 +57,6 @@
 #define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a node.
 #define CB_BUCKET_NUM 255 // Maximum number of buckets
 #define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a node in 24 hours
-#define CB_PING_TIME 1800 // Send pings approx every 30 minutes.
 #define CB_24_HOURS 86400
 #define NOT ! // Better readability than !
 #define CB_MAX_RESPONSES_EXPECTED 3 // A pong, an inventory broadcast and an address broadcast.

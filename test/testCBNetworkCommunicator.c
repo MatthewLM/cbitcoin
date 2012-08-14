@@ -96,18 +96,14 @@ bool onMessageReceived(void * vtester,void * vcomm,void * vnode){
 				printf("VERSION RECEIVE IP FAIL\n");
 				CBNetworkCommunicatorStop(comm);
 			}
-			if (CBGetVersion(theMessage)->addSource->port != 45563 && comm->ourIPv4->port == 45562) {
+			if (CBGetVersion(theMessage)->addSource->port != 45562 + (comm->ourIPv4->port == 45562)) {
 				printf("VERSION SOURCE PORT FAIL\n");
-				CBNetworkCommunicatorStop(comm);
-			}
-			if (CBGetVersion(theMessage)->addRecv->port != 45562  && comm->ourIPv4->port == 45563) {
-				printf("VERSION RECEIVE PORT FAIL\n");
 				CBNetworkCommunicatorStop(comm);
 			}
 			*tester |= GOTVERSION;
 			break;
 		case CB_MESSAGE_TYPE_VERACK:
-			if ((*tester && *tester != GOTVERSION) || node->versionSent) {
+			if ((NOT node->versionSent || node->versionAck)) {
 				printf("VERACK FAIL\n");
 				CBNetworkCommunicatorStop(comm);
 			}
@@ -183,7 +179,7 @@ int main(){
 	commListen->heartBeat = 10;
 	commListen->timeOut = 20;
 	commListen->sendTimeOut = 1;
-	commListen->recvTimeOut = 1;
+	commListen->recvTimeOut = 10;
 	commListen->responseTimeOut = 10;
 	commListen->connectionTimeOut = 10;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen, altMessages, NULL);

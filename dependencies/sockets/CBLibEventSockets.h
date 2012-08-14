@@ -59,6 +59,7 @@ void CBCanAccept(evutil_socket_t socketID,short eventNum,void * arg);
 void CBDidConnect(evutil_socket_t socketID,short eventNum,void * arg);
 void CBCanSend(evutil_socket_t socketID,short eventNum,void * arg);
 void CBCanReceive(evutil_socket_t socketID,short eventNum,void * arg);
+void CBFireTimer(evutil_socket_t foo,short bar,void * timer);
 void CBDoRun(evutil_socket_t socketID,short eventNum,void * arg);
 /**
  @brief Runs a callback on the network thread.
@@ -89,5 +90,11 @@ typedef struct{
 	union CBOnEvent onEvent;
 	void * node;
 }CBEvent;
+
+typedef struct{
+	void (*callback)(void *);
+	void * arg;
+	struct event * timer;
+}CBTimer;
 
 #endif
