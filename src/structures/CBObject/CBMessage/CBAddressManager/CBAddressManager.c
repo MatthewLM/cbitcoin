@@ -242,14 +242,14 @@ CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self,CBN
 	CBBucket * bucket = self->buckets + CBAddressManagerGetBucketIndex(self, addr);
 	// Look in that bucket for the address...
 	for (uint16_t x = 0; x < bucket->addrNum; x++)
-		if (CBByteArrayEquals(addr->ip, bucket->addresses[x]->ip))
-			// Compares IPs
+		if (CBByteArrayEquals(addr->ip, bucket->addresses[x]->ip) && addr->port == bucket->addresses[x]->port)
+			// Compares IPs and port
 			return bucket->addresses[x];
 	return NULL;
 }
 CBNode * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr){
 	for (uint16_t x = 0; x < self->nodesNum; x++)
-		if (CBByteArrayEquals(CBGetNetworkAddress(self->nodes[x])->ip, addr->ip))
+		if (CBByteArrayEquals(CBGetNetworkAddress(self->nodes[x])->ip, addr->ip) && addr->port == CBGetNetworkAddress(self->nodes[x])->port)
 			return self->nodes[x];
 	return NULL;
 }
@@ -310,8 +310,7 @@ void CBAddressManagerSetReachability(CBAddressManager * self, CBIPType type, boo
 		self->reachablity &= ~type;
 }
 bool CBAddressManagerSetup(CBAddressManager * self){
-	// Allocate buckets
-	self->buckets = malloc(sizeof(*self->buckets) * CB_BUCKET_NUM);
+	// Clear buckets
 	memset(self->buckets, 0, sizeof(*self->buckets) * CB_BUCKET_NUM);
 	// Create random number generators.
 	if (CBNewSecureRandomGenerator(&self->rndGen)) {

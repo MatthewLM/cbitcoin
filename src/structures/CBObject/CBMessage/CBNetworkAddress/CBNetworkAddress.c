@@ -56,12 +56,13 @@ CBNetworkAddress * CBGetNetworkAddress(void * self){
 bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,CBEvents * events){
 	self->score = score;
 	self->ip = ip;
-	// Determine IP type
-	self->type = CBGetIPType(CBByteArrayGetData(ip));
 	if (NOT ip) {
 		ip = CBNewByteArrayOfSize(16, events);
 		memset(CBByteArrayGetData(ip), 0, 16);
+		self->type = CB_IP_INVALID;
 	}else{
+		// Determine IP type
+		self->type = CBGetIPType(CBByteArrayGetData(ip));
 		CBRetainObject(ip);
 	}
 	self->port = port;

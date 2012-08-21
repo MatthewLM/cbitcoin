@@ -109,7 +109,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 	// Readjust CBByteArray length for recieving address
 	data->length = len;
 	CBReleaseObject(data);
-	if (self->version >= 106) {
+	if (self->version >= 106) { // ??? Very old. No need for backwards compatibility? Might as well.
 		if (bytes->length < 85) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBVersion with less than 85 bytes required.");
 			return 0;

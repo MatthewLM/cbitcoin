@@ -47,8 +47,7 @@
 #pragma weak CBSocketBind
 #pragma weak CBSocketConnect
 #pragma weak CBSocketListen
-#pragma weak CBSocketAcceptIPv4
-#pragma weak CBSocketAcceptIPv6
+#pragma weak CBSocketAccept
 #pragma weak CBNewEventLoop
 #pragma weak CBSocketCanAcceptEvent
 #pragma weak CBSocketDidConnectEvent
@@ -143,20 +142,9 @@ bool CBSocketListen(uint64_t socketID,uint16_t maxConnections);
  @brief Accepts an incomming IPv4 connection on a bound socket. This should be non-blocking.
  @param socketID The socket id
  @param connectionSocketID A socket id for a new socket for the connection.
- @param IP 4 bytes to be set by the function for the IP of the incomming connection.
- @param port Set to the port of the connection.
  @returns true if function was sucessful and false otherwise.
  */
-bool CBSocketAcceptIPv4(uint64_t socketID,uint64_t * connectionSocketID,uint8_t * IP,uint16_t * port);
-/**
- @brief Accepts an incomming IPv6 connection on a bound socket. This should be non-blocking.
- @param socketID The socket id
- @param connectionSocketID A socket id for a new socket for the connection.
- @param IP 16 bytes to be set by the function for the IP of the incomming connection.
- @param port Set to the port of the connection.
- @returns true if function was sucessful and false otherwise.
- */
-bool CBSocketAcceptIPv6(uint64_t socketID,uint64_t * connectionSocketID,uint8_t * IP,uint16_t * port);
+bool CBSocketAccept(uint64_t socketID,uint64_t * connectionSocketID);
 /**
  @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
  @param loopID A uint64_t storing an integer or pointer representation of the new event loop.

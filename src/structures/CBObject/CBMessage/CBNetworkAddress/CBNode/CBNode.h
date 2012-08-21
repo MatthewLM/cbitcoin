@@ -50,7 +50,6 @@ typedef struct{
 	uint64_t receiveEvent; /**< Event for receving data from this node */
 	uint64_t sendEvent; /**< Event for sending data from this node */
 	uint64_t connectEvent; /**< Event for connecting to the node. */
-	uint16_t pingsSent; /**< Number of pings sent and thus how many responses expected */
 	bool versionSent; /**< True if the version was sent to this node */
 	CBVersion * versionMessage; /**< The version message from this node. */
 	bool versionAck; /**< This node acknowledged the version message. */

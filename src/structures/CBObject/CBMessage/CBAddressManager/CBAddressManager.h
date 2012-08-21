@@ -58,7 +58,7 @@ typedef struct{
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	CBBucket * buckets; /**< Unconnected nodes stored in the buckets */
+	CBBucket buckets[CB_BUCKET_NUM]; /**< Unconnected nodes stored in the buckets */
 	CBNode ** nodes; /**< Connected nodes sorted by the time offset. */
 	uint32_t nodesNum; /**< Number of connected nodes */
 	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
@@ -157,14 +157,14 @@ uint64_t CBAddressManagerGetGroup(CBAddressManager * self,CBNetworkAddress * add
  */
 uint64_t CBAddressManagerGetNumberOfAddresses(CBAddressManager * self);
 /**
- @brief Determines if a CBNetworkAddress already exists in the CBAddressManager. Compares the IP address.
+ @brief Determines if a CBNetworkAddress already exists in the CBAddressManager. Compares the IP address and port.
  @param self The CBAddressManager object.
  @param addr The address.
  @returns If the address already exists, returns the existing object. Else returns NULL.
  */
 CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
- @brief Determines if a CBNetworkAddress is in the "nodes" list. Compares the IP address.
+ @brief Determines if a CBNetworkAddress is in the "nodes" list. Compares the IP address and port.
  @param self The CBAddressManager object.
  @param addr The address.
  @returns If the address already exists as a connected node, returns the existing object. Else returns NULL.

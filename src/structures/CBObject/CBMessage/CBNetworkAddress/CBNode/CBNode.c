@@ -44,7 +44,6 @@ CBNode * CBGetNode(void * self){
 
 bool CBInitNodeByTakingNetworkAddress(CBNode * self){
 	self->receive = NULL;
-	self->pingsSent = 0;
 	self->versionSent = false;
 	self->versionAck = false;
 	self->versionMessage = NULL;

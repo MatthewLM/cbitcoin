@@ -20,7 +20,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "CBLibEventSockets.h"
+#include "CBLibevSockets.h"
 
 // Implementation
 
@@ -35,10 +35,10 @@ CBSocketReturn CBNewSocket(uint64_t * socketID,bool IPv6){
 	// Stop SIGPIPE annoying us.
 	if (CB_NOSIGPIPE) {
 		int i = 1;
-		setsockopt((evutil_socket_t)*socketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
+		setsockopt((int)*socketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
 	}
 	// Make socket non-blocking
-	evutil_make_socket_nonblocking((evutil_socket_t)*socketID);
+	fcntl((int)*socketID, F_SETFL, fcntl((int)*socketID, F_GETFL, 0) | O_NONBLOCK);
 	return CB_SOCKET_OK;
 }
 bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port){
@@ -57,8 +57,8 @@ bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port){
 	for(ptr = res; ptr != NULL; ptr = ptr->ai_next) {
 		if ((*socketID = socket(ptr->ai_family, ptr->ai_socktype,ptr->ai_protocol)) == -1)
 			continue;
-		if (bind((evutil_socket_t)*socketID, ptr->ai_addr, ptr->ai_addrlen) == -1) {
-			evutil_closesocket((evutil_socket_t)*socketID);
+		if (bind((int)*socketID, ptr->ai_addr, ptr->ai_addrlen) == -1) {
+			close((int)*socketID);
 			continue;
 		}
 		break; // Success.
@@ -69,10 +69,10 @@ bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port){
 	// Prevent SIGPIPE
 	if (CB_NOSIGPIPE) {
 		int i = 1;
-		setsockopt(*socketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
+		setsockopt((int)*socketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
 	}
 	// Make socket non-blocking
-	evutil_make_socket_nonblocking((evutil_socket_t)*socketID);
+	fcntl((int)*socketID, F_SETFL, fcntl((int)*socketID, F_GETFL, 0) | O_NONBLOCK);
 	return true;
 }
 bool CBSocketConnect(uint64_t socketID,uint8_t * IP,bool IPv6,uint16_t port){
@@ -84,50 +84,50 @@ bool CBSocketConnect(uint64_t socketID,uint8_t * IP,bool IPv6,uint16_t port){
 		address.sin6_family = AF_INET6;
 		memcpy(&address.sin6_addr, IP, 16); // Move IP address into place.
 		address.sin6_port = htons(port); // Port number to network order
-		res = connect((evutil_socket_t)socketID, (struct sockaddr *)&address, sizeof(address));
+		res = connect((int)socketID, (struct sockaddr *)&address, sizeof(address));
 	}else{
 		struct sockaddr_in address;
 		memset(&address, 0, sizeof(address)); // Clear structure.
 		address.sin_family = AF_INET;
 		memcpy(&address.sin_addr, IP + 12, 4); // Move IP address into place. Last 4 bytes for IPv4.
 		address.sin_port = htons(port); // Port number to network order
-		res = connect((evutil_socket_t)socketID, (struct sockaddr *)&address, sizeof(address));
+		res = connect((int)socketID, (struct sockaddr *)&address, sizeof(address));
 	}
 	if (NOT res || errno == EINPROGRESS)
 		return true;
 	return false;
 }
 bool CBSocketListen(uint64_t socketID,uint16_t maxConnections){
-	if(listen((evutil_socket_t)socketID, maxConnections) == -1){
+	if(listen((int)socketID, maxConnections) == -1){
 		return false;
 	}
 	return true;
 }
 bool CBSocketAccept(uint64_t socketID,uint64_t * connectionSocketID){
-	*connectionSocketID = accept((evutil_socket_t)socketID, NULL, NULL);
+	*connectionSocketID = accept((int)socketID, NULL, NULL);
 	if (*connectionSocketID == -1) {
 		return false;
 	}
-	// Make socket non-blocking
-	evutil_make_socket_nonblocking((evutil_socket_t)*connectionSocketID);
 	// Stop SIGPIPE
 	if (CB_NOSIGPIPE) {
 		int i = 1;
-		setsockopt((evutil_socket_t)*connectionSocketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
+		setsockopt((int)*connectionSocketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
 	}
+	// Make socket non-blocking
+	fcntl((int)*connectionSocketID, F_SETFL, fcntl((int)*connectionSocketID, F_GETFL, 0) | O_NONBLOCK);
 	return true;
 }
 bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeout)(void *,void *,CBTimeOutType),void * communicator){
-	struct event_base * base = event_base_new();
-	// Create dummy event to maintain loop. When libevent 2.1 is released as stable EVLOOP_NO_EXIT_ON_EMPTY can be used. For now there is a hack solution.
-	event_base_add_virtual(base);
+	struct ev_loop * base = ev_loop_new(0);
 	// Create arguments for the loop
 	CBEventLoop * loop = malloc(sizeof(*loop));
 	loop->base = base;
 	loop->onError = onError;
 	loop->onTimeOut = onDidTimeout;
 	loop->communicator = communicator;
-	loop->userEvent = event_new(loop->base, 0, 0, CBDoRun, loop);
+	loop->userEvent = malloc(sizeof(*loop->userEvent));
+	ev_async_init((struct ev_async *)loop->userEvent, CBDoRun);
+	ev_async_start(base, (struct ev_async *)loop->userEvent);
 	// Create thread attributes explicitly for portability reasons.
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
@@ -136,7 +136,8 @@ bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeou
 	if(pthread_create(&loop->loopThread, &attr, CBStartEventLoop, loop)){
 		// Thread creation failed.
 		pthread_attr_destroy(&attr);
-		event_base_free(base);
+		ev_loop_destroy(base);
+		free(loop->userEvent);
 		return 0;
 	}
 	pthread_attr_destroy(&attr);
@@ -146,124 +147,123 @@ bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeou
 void * CBStartEventLoop(void * vloop){
 	CBEventLoop * loop = vloop;
 	// Start event loop
-	if(event_base_dispatch(loop->base) == -1){
-		// Error
-		loop->onError(loop->communicator);
-	}
+	ev_run(loop->base, 0);
 	// Break from loop. Free everything.
-	event_base_free(loop->base);
+	ev_loop_destroy(loop->base);
+	free(loop->userEvent);
 	free(loop);
 	return NULL;
 }
 bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanAccept)(void *,uint64_t)){
-	CBEvent * event = malloc(sizeof(*event));
+	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *) loopID;
 	event->onEvent.i = onCanAccept;
-	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_READ|EV_PERSIST, CBCanAccept, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
+	event->socket = (int)socketID;
+	ev_io_init((struct ev_io *)event, CBCanAccept, (int)socketID, EV_READ);
 	*eventID = (uint64_t)event;
-	return event;
+	return true;
 }
-void CBCanAccept(evutil_socket_t socketID,short eventNum,void * arg){
-	CBEvent * event = arg;
-	event->onEvent.i(event->loop->communicator,socketID);
+void CBCanAccept(struct ev_loop * loop,struct ev_io * watcher,int eventID){
+	CBIOEvent * event = (CBIOEvent *)watcher;
+	event->onEvent.i(event->loop->communicator,event->socket);
 }
 bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * node){
-	CBEvent * event = malloc(sizeof(*event));
+	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onDidConnect;
 	event->node = node;
-	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_TIMEOUT|EV_WRITE, CBDidConnect, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
+	event->timerCallback = CBDidConnectTimeout;
+	ev_io_init((struct ev_io *)event, CBDidConnect, (int)socketID, EV_WRITE);
 	*eventID = (uint64_t)event;
-	return event;
+	return true;
 }
-void CBDidConnect(evutil_socket_t socketID,short eventNum,void * arg){
-	CBEvent * event = arg;
-	if (eventNum & EV_TIMEOUT) {
-		// Timeout for the connection
-		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
-	}else{
-		// Connection successful
-		event->onEvent.ptr(event->loop->communicator,event->node);
-	}
+void CBDidConnect(struct ev_loop * loop,struct ev_io * watcher,int eventID){
+	CBIOEvent * event = (CBIOEvent *)watcher;
+	// Reset timeout
+	if (event->timeout)
+		ev_timer_again(loop, (struct ev_timer *)event->timeout);
+	// This is a one-shot event.
+	ev_io_stop(loop, watcher);
+	// Connection successful
+	event->onEvent.ptr(event->loop->communicator,event->node);
+}
+void CBDidConnectTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
+	CBTimer * event = (CBTimer *) watcher;
+	event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
 }
 bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * node){
-	CBEvent * event = malloc(sizeof(*event));
+	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onCanSend;
 	event->node = node;
-	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_TIMEOUT|EV_WRITE|EV_PERSIST, CBCanSend, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
+	event->timerCallback = CBCanSendTimeout;
+	ev_io_init((struct ev_io *)event, CBCanSend, (int)socketID, EV_WRITE);
 	*eventID = (uint64_t)event;
-	return event;
+	return true;
 }
-void CBCanSend(evutil_socket_t socketID,short eventNum,void * arg){
-	CBEvent * event = arg;
-	if (eventNum & EV_TIMEOUT) {
-		// Timeout when waiting to write.
-		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_SEND);
-	}else{
-		// Can send
-		event->onEvent.ptr(event->loop->communicator,event->node);
-	}
+void CBCanSend(struct ev_loop * loop,struct ev_io * watcher,int eventID){
+	CBIOEvent * event = (CBIOEvent *)watcher;
+	// Reset timeout
+	if (event->timeout)
+		ev_timer_again(loop, (struct ev_timer *)event->timeout);
+	// Can send
+	event->onEvent.ptr(event->loop->communicator,event->node);
+}
+void CBCanSendTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
+	CBTimer * event = (CBTimer *) watcher;
+	event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_SEND);
 }
 bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * node){
-	CBEvent * event = malloc(sizeof(*event));
+	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onCanReceive;
 	event->node = node;
-	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_TIMEOUT|EV_READ|EV_PERSIST, CBCanReceive, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
+	event->timerCallback = CBCanReceiveTimeout;
+	ev_io_init((struct ev_io *)event, CBCanReceive, (int)socketID, EV_READ);
 	*eventID = (uint64_t)event;
-	return event;
+	return true;
 }
-void CBCanReceive(evutil_socket_t socketID,short eventNum,void * arg){
-	CBEvent * event = arg;
-	if (eventNum & EV_TIMEOUT) {
-		// Timeout when waiting to receive
-		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_RECEIVE);
-	}else{
-		// Can receive
-		event->onEvent.ptr(event->loop->communicator,event->node);
-	}
+void CBCanReceive(struct ev_loop * loop,struct ev_io * watcher,int eventID){
+	CBIOEvent * event = (CBIOEvent *)watcher;
+	// Reset timeout
+	if (event->timeout)
+		ev_timer_again(loop, (struct ev_timer *)event->timeout);
+	// Can receive
+	event->onEvent.ptr(event->loop->communicator,event->node);
+}
+void CBCanReceiveTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
+	CBTimer * event = (CBTimer *) watcher;
+	event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_RECEIVE);
 }
 bool CBSocketAddEvent(uint64_t eventID,uint16_t timeout){
-	CBEvent * event = (CBEvent *)eventID;
-	int res;
+	CBIOEvent * event = (CBIOEvent *)eventID;
+	ev_io_start(event->loop->base, (struct ev_io *)event);
 	if (timeout) {
-		struct timeval time = {timeout,0};
-		res = event_add(event->event, &time);
+		// Add timer
+		event->timeout = malloc(sizeof(*event->timeout));
+		event->timeout->loop = event->loop;
+		event->timeout->node = event->node;
+		ev_timer_init((struct ev_timer *)event->timeout, event->timerCallback, 0, timeout);
+		ev_timer_start(event->loop->base, (struct ev_timer *)event->timeout);
 	}else
-		res = event_add(event->event, NULL);
-	return NOT res;
+		event->timeout = NULL;
+	return true;
 }
 bool CBSocketRemoveEvent(uint64_t eventID){
-	CBEvent * event = (CBEvent *)eventID;
-	if(event_del(event->event))
-		return false;
-	else
-		return true;
+	CBIOEvent * event = (CBIOEvent *)eventID;
+	if (event->timeout){
+		ev_timer_stop(event->loop->base, (struct ev_timer *)event->timeout);
+		free(event->timeout);
+		event->timeout = NULL;
+	}
+	ev_io_stop(event->loop->base, (struct ev_io *)event);
 }
 void CBSocketFreeEvent(uint64_t eventID){
-	CBEvent * event = (CBEvent *)eventID;
-	event_free(event->event);
-	free(event);
+	CBSocketRemoveEvent(eventID);
+	free((CBIOEvent *)eventID);
 }
 int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len){
-	ssize_t res = send((evutil_socket_t)socketID, data, len, CB_SEND_FLAGS);
+	ssize_t res = send((int)socketID, data, len, CB_SEND_FLAGS);
 	if (res >= 0)
 		return (int32_t)res;
 	if (errno == EAGAIN)
@@ -271,7 +271,7 @@ int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len){
 	return CB_SOCKET_FAILURE; // Failure
 }
 int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len){
-	ssize_t res = read((evutil_socket_t)socketID, data, len);
+	ssize_t res = read((int)socketID, data, len);
 	if (res > 0)
 		return (int32_t)res; // OK, read data.
 	if (NOT res)
@@ -284,51 +284,37 @@ bool CBStartTimer(uint64_t loopID,uint64_t * timer,uint16_t time,void (*callback
 	CBTimer * theTimer = malloc(sizeof(*theTimer));
 	theTimer->callback = callback;
 	theTimer->arg = arg;
-	theTimer->timer = event_new(((CBEventLoop *)loopID)->base, -1, EV_PERSIST, CBFireTimer, theTimer);
-	if (NOT theTimer->timer) {
-		free(theTimer);
-		theTimer = 0;
-	}
+	theTimer->loop = (CBEventLoop *)loopID;
+	ev_timer_init((struct ev_timer *)theTimer, CBFireTimer, 0, time);
+	ev_timer_start(((CBEventLoop *)loopID)->base, (struct ev_timer *)theTimer);
 	*timer = (uint64_t)theTimer;
-	int res;
-	if (time) {
-		struct timeval timev = {time,0};
-		res = event_add(theTimer->timer, &timev);
-	}else
-		res = event_add(theTimer->timer, NULL);
-	return NOT res;
+	return true;
 }
-void CBFireTimer(evutil_socket_t foo,short bar,void * timer){
-	CBTimer * theTimer = timer;
+void CBFireTimer(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
+	CBTimer * theTimer = (CBTimer *)watcher;
 	theTimer->callback(theTimer->arg);
 }
 void CBEndTimer(uint64_t timer){
 	CBTimer * theTimer = (CBTimer *)timer;
-	event_free(theTimer->timer);
+	ev_timer_stop(theTimer->loop->base, (struct ev_timer *)theTimer);
 	free(theTimer);
 }
-void CBDoRun(evutil_socket_t socketID,short eventNum,void * arg){
-	CBEventLoop * loop = arg;
-	loop->userCallback(loop->userArg);
+void CBDoRun(struct ev_loop * loop,struct ev_async * watcher,int event){
+	CBEventLoop * evloop = (CBEventLoop *)((CBAsyncEvent *)watcher)->loop;
+	evloop->userCallback(evloop->userArg);
 }
 bool CBRunOnNetworkThread(uint64_t loopID,void (*callback)(void *),void * arg){
 	CBEventLoop * loop = (CBEventLoop *) loopID;
 	loop->userCallback = callback;
 	loop->userArg = arg;
-	event_active(loop->userEvent, 0, 0);
+	ev_async_send(loop->base, (struct ev_async *)loop->userEvent);
 }
 void CBCloseSocket(uint64_t socketID){
-	evutil_closesocket((evutil_socket_t)socketID);
+	close((int)socketID);
 }
 void CBExitEventLoop(uint64_t loopID){
-	if (NOT loopID) {
+	if (NOT loopID)
 		return;
-	}
 	CBEventLoop * loop = (CBEventLoop *) loopID;
-	if(event_base_loopbreak(loop->base)){
-		// Error occured. No choice but to do a dirty closure.
-		pthread_cancel(loop->loopThread);
-		event_base_free(loop->base);
-		free(loop);
-	}
+	ev_unloop(loop->base, EVUNLOOP_ONE);
 }

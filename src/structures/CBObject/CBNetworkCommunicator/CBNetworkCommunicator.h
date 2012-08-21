@@ -113,21 +113,8 @@ void CBFreeNetworkCommunicator(void * self);
  @brief Accepts an incomming connection.
  @param vself The CBNetworkCommunicator object.
  @param socket The listening socket for accepting a connection.
- @param IPv6 True if an IPv6 connection, false if an IPv4 connection.
  */
-void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket,bool IPv6);
-/**
- @brief Accepts an incomming IPv4 connection.
- @param vself The CBNetworkCommunicator object.
- @param socket The listening socket for accepting a connection.
- */
-void CBNetworkCommunicatorAcceptConnectionIPv4(void * vself,uint64_t socket);
-/**
- @brief Accepts an incomming IPv6 connection.
- @param vself The CBNetworkCommunicator object.
- @param socket The listening socket for accepting a connection.
- */
-void CBNetworkCommunicatorAcceptConnectionIPv6(void * vself,uint64_t socket);
+void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket);
 /**
  @brief Returns true if it is beleived the network address can be connected to, otherwise false.
  @param self The CBNetworkCommunicator object.
