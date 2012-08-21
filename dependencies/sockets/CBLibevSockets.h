@@ -1,8 +1,8 @@
 //
-//  CBLibEventSockets.h
+//  CBLibevSockets.h
 //  cbitcoin
 //
-//  Created by Matthew Mitchell on 10/08/2012.
+//  Created by Matthew Mitchell on 19/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
 //  This file is part of cbitcoin.
