@@ -1223,6 +1223,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 	if (CBScriptStackEvalBool(stack)) {
 		if (isP2SH){
 			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length, self->events);
+			CBScriptStackRemoveItem(stack); // Remove OP_TRUE
 			bool res = CBScriptExecute(p2shScriptObj, stack, getHashForSig, transaction, inputIndex, false);
 			CBReleaseObject(p2shScriptObj);
 			return res;

@@ -101,7 +101,32 @@ int main(){
 	}
 	CBReleaseObject(script);
 	// Test P2SH
-	CBScript * p2shScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_HASH160,0x14,,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_CHECKSIG}, 16, &events);
-	CBSCript * inputScript = CBNew
+	CBScript * inputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_14,0x04,CB_SCRIPT_OP_5,CB_SCRIPT_OP_9,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_EQUAL}, 6, &events);
+	CBScript * outputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_HASH160,0x14,0x87,0xF3,0xB6,0x21,0xF1,0x8C,0x50,0x06,0x8B,0x7D,0xAB,0xA1,0x60,0xBB,0x2C,0x51,0xFD,0xD6,0xA5,0xE2,CB_SCRIPT_OP_EQUAL}, 23, &events);
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(inputScript, &stack, NULL, NULL, 0, false);
+	if (NOT CBScriptExecute(outputScript, &stack, NULL, NULL, 0, false)) {
+		printf("OK NO PS2H FAIL\n");
+		return 1;
+	}
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(inputScript, &stack, NULL, NULL, 0, false);
+	if (NOT CBScriptExecute(outputScript, &stack, NULL, NULL, 0, true)) {
+		printf("OK YES PS2H FAIL\n");
+		return 1;
+	}
+	CBByteArraySetByte(inputScript, 0, CB_SCRIPT_OP_13);
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(inputScript, &stack, NULL, NULL, 0, false);
+	if (NOT CBScriptExecute(outputScript, &stack, NULL, NULL, 0, false)) {
+		printf("BAD NO PS2H FAIL\n");
+		return 1;
+	}
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(inputScript, &stack, NULL, NULL, 0, false);
+	if (CBScriptExecute(outputScript, &stack, NULL, NULL, 0, true)) {
+		printf("BAD YES PS2H FAIL\n");
+		return 1;
+	}
 	return 0;
 }
