@@ -68,9 +68,8 @@ bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self,bool timeStamps,CB
 
 void CBFreeAddressBroadcast(void * vself){
 	CBAddressBroadcast * self = vself;
-	for (uint8_t x = 0; x < self->addrNum; x++) {
+	for (uint8_t x = 0; x < self->addrNum; x++)
 		CBReleaseObject(self->addresses[x]);
-	}
 	if (self->addresses) free(self->addresses);
 	CBFreeObject(self);
 }

@@ -59,11 +59,10 @@ typedef struct{
 	bool receivedHeader; /**< True if the receiving message's header has been received. */
 	int16_t timeOffset; /**< The offset from the system time this node has */
 	uint64_t timeBroadcast; /**< Time of the last own address brodcast. */
-	bool returnToAddresses; /**< Upon a lost or failed connection, return to addresses list. This doesn't include failure from "CBNetworkCommunicatorConnect" */
 	bool connectionWorking; /**< True when the connection has been successful and the node has ben added to the CBAddressManager. */
 	CBMessageType typesExpected[CB_MAX_RESPONSES_EXPECTED]; /**< List of expected responses */
 	uint8_t typesExpectedNum; /**< Number of expected responses */
-	void * additionalData; /**< Extra pointer so the CBNetworkAddresses can be used to keep track of additional data. Not part of the bitcoin protocol. This is also not used in cbitcoin. */
+	bool incomming; /**< Node from an incomming connection if true */
 } CBNode;
 
 /**

@@ -45,6 +45,7 @@ typedef struct{
 	CBIPType type; /**< The type of the IP */
 	uint16_t port; /**< Port number */
 	int32_t version; /**< Protocol version of node. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
+	bool public; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. This doesn't include failure from "CBNetworkCommunicatorConnect". If false the address is private and should be forgotten when connections are closed. */
 } CBNetworkAddress;
 
 /**
@@ -94,6 +95,13 @@ void CBFreeNetworkAddress(void * self);
  @returns The length read on success, 0 on failure.
  */
 uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score);
+/**
+ @brief Compares two network addresses
+ @param self The CBNetworkAddress object
+ @param addr The CBNetworkAddress for comparison
+ @returns true if the IP and port match and the IP is not NULL. False otherwise.
+ */
+bool CBNetworkAddressEquals(CBNetworkAddress * self,CBNetworkAddress * addr);
 /**
  @brief Serialises a CBNetworkAddress to the byte data.
  @param self The CBNetworkAddress object

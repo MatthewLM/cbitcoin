@@ -178,6 +178,12 @@ CBNode * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr
  */
 bool CBAddressManagerIsReachable(CBAddressManager * self,CBIPType type);
 /**
+ @brief Removes a CBNetworkAddress if the CBAddressManager has it.
+ @param self The CBAddressManager object.
+ @param addr The CBNetworkAddress to remove
+ */
+void CBAddressManagerRemoveAddress(CBAddressManager * self,CBNetworkAddress * addr);
+/**
  @brief Remove a CBNode from the nodes list.
  @param self The CBAddressManager object.
  @param node The CBNode to remove

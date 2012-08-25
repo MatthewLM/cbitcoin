@@ -52,7 +52,6 @@ bool CBInitNodeByTakingNetworkAddress(CBNode * self){
 	self->sentHeader = false;
 	self->messageSent = 0;
 	self->timeBroadcast = 0;
-	self->returnToAddresses = false;
 	self->connectionWorking = false;
 	self->typesExpectedNum = 0;
 	return true;

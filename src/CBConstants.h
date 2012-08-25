@@ -127,6 +127,16 @@ typedef enum{
 }CBNetworkCommunicatorFlags;
 
 /*
+ @brief The action for a CBNetworkCommunicator to complete after the onMessageReceived handler returns.
+ */
+typedef enum{
+	CB_MESSAGE_ACTION_CONTINUE, /**< Continue as normal */
+	CB_MESSAGE_ACTION_DISCONNECT, /**< Disconnect the node */
+	CB_MESSAGE_ACTION_STOP, /**< Stop the CBNetworkCommunicator */
+	CB_MESSAGE_ACTION_RETURN /**< Return from the message handler with no action. */
+}CBOnMessageReceivedAction;
+
+/*
  @brief The type of a CBMessage.
  */
 typedef enum{
@@ -291,6 +301,6 @@ typedef enum{
 	CB_COMPARE_MORE_THAN = 1,
 	CB_COMPARE_EQUAL = 0,
 	CB_COMPARE_LESS_THAN = -1,
-}CBCompare; 
+}CBCompare;
 
 #endif

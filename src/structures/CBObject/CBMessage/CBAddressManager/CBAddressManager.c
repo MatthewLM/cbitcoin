@@ -165,6 +165,7 @@ CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self,u
 			(addrs + x)->bucketIndex = bucketIndex;
 			(addrs + x)->addrIndex = bucket->addrNum - index - 1;
 			CBRetainObject((addrs + x)->addr);
+			printf("GOT ADDR: %i (%p)\n",(addrs + x)->addr->port,(addrs + x)->addr);
 			x++;
 			firstEmpty = -1; // Not got all around to first empty. Wait again until we see an empty bucket
 		}else if (firstEmpty == -1)
@@ -242,14 +243,14 @@ CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self,CBN
 	CBBucket * bucket = self->buckets + CBAddressManagerGetBucketIndex(self, addr);
 	// Look in that bucket for the address...
 	for (uint16_t x = 0; x < bucket->addrNum; x++)
-		if (CBByteArrayEquals(addr->ip, bucket->addresses[x]->ip) && addr->port == bucket->addresses[x]->port)
-			// Compares IPs and port
+		if (CBNetworkAddressEquals(bucket->addresses[x], addr))
+			// IP and port match
 			return bucket->addresses[x];
 	return NULL;
 }
 CBNode * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr){
 	for (uint16_t x = 0; x < self->nodesNum; x++)
-		if (CBByteArrayEquals(CBGetNetworkAddress(self->nodes[x])->ip, addr->ip) && addr->port == CBGetNetworkAddress(self->nodes[x])->port)
+		if (CBNetworkAddressEquals(CBGetNetworkAddress(self->nodes[x]), addr))
 			return self->nodes[x];
 	return NULL;
 }
@@ -258,6 +259,24 @@ bool CBAddressManagerIsReachable(CBAddressManager * self,CBIPType type){
 		return false;
 	return self->reachablity & type;
 }
+void CBAddressManagerRemoveAddress(CBAddressManager * self,CBNetworkAddress * addr){
+	CBBucket * bucket = (self->buckets + CBAddressManagerGetBucketIndex(self, addr));
+	for (uint16_t x = 0; x < bucket->addrNum; x++) {
+		if (CBNetworkAddressEquals(addr,bucket->addresses[x])) {
+			bucket->addrNum--;
+			if (bucket->addrNum) {
+				// Move memory down.
+				if (bucket->addrNum - x)
+					memmove(bucket->addresses + x, bucket->addresses + x + 1, (bucket->addrNum - x) * sizeof(*bucket->addresses));
+				// Reallocate memory.
+				bucket->addresses = realloc(bucket->addresses, sizeof(*bucket->addresses) * bucket->addrNum);
+			}
+			// Release from addresses.
+			CBReleaseObject(bucket->addresses[x]->ip);
+			break;
+		}
+	}
+}
 void CBAddressManagerRemoveNode(CBAddressManager * self,CBNode * node){
 	// Find position of node. Basic linear search (Better alternative in this case ???). Assumes node is in the list properly or a fatal overflow is caused.
 	uint16_t nodePos = 0;
@@ -265,7 +284,7 @@ void CBAddressManagerRemoveNode(CBAddressManager * self,CBNode * node){
 	// Moves rest of nodes down
 	memmove(self->nodes + nodePos, self->nodes + nodePos + 1, (self->nodesNum - nodePos - 1) * sizeof(*self->nodes));
 	self->nodesNum--; // Removed node. Don't bother reallocating memory which will be done upon a new node.
-	if (node->returnToAddresses)
+	if (CBGetNetworkAddress(node)->public)
 		// Public node, return to addresses list.
 		CBAddressManagerTakeAddress(self, realloc(node, sizeof(CBNetworkAddress)));
 	else

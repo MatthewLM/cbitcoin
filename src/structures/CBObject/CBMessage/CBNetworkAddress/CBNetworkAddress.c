@@ -67,12 +67,14 @@ bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * i
 	}
 	self->port = port;
 	self->services = services;
+	self->public = false; // Private by default.
 	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
 	return true;
 }
 bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,CBEvents * events){
 	self->ip = NULL;
+	self->public = false; // Private by default.
 	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
@@ -114,6 +116,12 @@ uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score){
 	cursor += 16;
 	self->port = CBByteArrayReadPort(bytes, cursor);
 	return cursor + 2;
+}
+bool CBNetworkAddressEquals(CBNetworkAddress * self,CBNetworkAddress * addr){
+	return (self->ip
+			&& addr->ip
+			&& CBByteArrayEquals(self->ip, addr->ip)
+			&& self->port == addr->port);
 }
 uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool score){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;

@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 #include "CBNetworkCommunicator.h"
-#include "CBLibevSockets.h"
+#include "CBLibEventSockets.h"
 #include <event2/thread.h>
 #include <time.h>
 #include "stdarg.h"
@@ -45,11 +45,13 @@ typedef enum{
 }TesterProgress;
 
 typedef struct{
-	TesterProgress prog[6];
-	CBNode * nodeToProg[6];
+	TesterProgress prog[7];
+	CBNode * nodeToProg[7];
 	uint8_t progNum;
 	int complete;
+	int addrComplete;
 	CBNetworkCommunicator * comms[3];
+	pthread_mutex_t testingMutex;
 }Tester;
 
 void onTimeOut(void * tester,void * comm,void * node,CBTimeOutType type);
@@ -73,10 +75,16 @@ void onTimeOut(void * tester,void * comm,void * node,CBTimeOutType type){
 	}
 	CBNetworkCommunicatorStop((CBNetworkCommunicator *)comm);
 }
-bool onMessageReceived(void * vtester,void * vcomm,void * vnode);
-bool onMessageReceived(void * vtester,void * vcomm,void * vnode){
+void stop(void * comm);
+void stop(void * comm){
+	CBNetworkCommunicatorStop(comm);
+}
+CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * vnode);
+CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * vnode){
 	Tester * tester = vtester;
+	pthread_mutex_lock(&tester->testingMutex); // Only one processing of test at a time.
 	CBNode * node = vnode;
+	CBNetworkCommunicator * comm = vcomm;
 	CBMessage * theMessage = node->receive;
 	// Assign node to tester progress.
 	uint8_t x = 0;
@@ -86,6 +94,7 @@ bool onMessageReceived(void * vtester,void * vcomm,void * vnode){
 		}
 	}
 	if (x == tester->progNum) {
+		printf("NEW NODE OBJ: (%s,%p),(%p)\n",(comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"),comm,node);
 		tester->nodeToProg[x] = node;
 		tester->progNum++;
 	}
@@ -150,22 +159,35 @@ bool onMessageReceived(void * vtester,void * vcomm,void * vnode){
 			*prog |= GOTGETADDR;
 			break;
 		case CB_MESSAGE_TYPE_ADDR:
-			if (NOT (*prog & GOTVERSION && *prog & GOTACK && node->getAddresses)) {
-				printf("GET ADDR FAIL\n");
+			if (NOT (*prog & GOTVERSION && *prog & GOTACK)) {
+				printf("ADDR FAIL\n");
 				exit(EXIT_FAILURE);
 			}
-			tester->complete++;
+			tester->addrComplete++;
 			break;
 		default:
 			printf("MESSAGE FAIL\n");
 			exit(EXIT_FAILURE);
 			break;
 	}
-	if ((*tester).complete == 10 && *prog == (GOTVERSION | GOTACK | GOTPING | GOTPONG |GOTGETADDR)) { // Connector sends self and other node twice (4). Listeners send self to connector (2). Listeners send self and connector to each other (4). 4 + 2 + 4 = 10
-		// Completed testing
-		CBNetworkCommunicatorStop((CBNetworkCommunicator *)vcomm);
+	if (*prog == (GOTVERSION | GOTACK | GOTPING | GOTPONG | GOTGETADDR)) {
+		*prog = 0;
+		tester->complete++;
 	}
-	return false;
+	printf("COMPLETION: %i - %i\n",tester->addrComplete,tester->complete);
+	if (tester->addrComplete == 6 && tester->complete == 6) { // Connector sends other node twice (2). Listeners send self to connector (2). Listeners send selves to each other (2). 2 + 2 + 2 = 6
+		// Completed testing
+		printf("DONE\n");
+		printf("STOPPING COMM L1\n");
+		CBRunOnNetworkThread(tester->comms[0]->eventLoop, stop, tester->comms[0]);
+		printf("STOPPING COMM L2\n");
+		CBRunOnNetworkThread(tester->comms[1]->eventLoop, stop, tester->comms[1]);
+		printf("STOPPING COMM CN\n");
+		CBRunOnNetworkThread(tester->comms[2]->eventLoop, stop, tester->comms[2]);
+		return CB_MESSAGE_ACTION_RETURN;
+	}
+	pthread_mutex_unlock(&tester->testingMutex);
+	return CB_MESSAGE_ACTION_CONTINUE;
 }
 void onNetworkError(void * foo,void * comm);
 void onNetworkError(void * foo,void * comm){
@@ -182,11 +204,13 @@ int main(){
 	CBEvents events;
 	Tester tester;
 	memset(&tester, 0, sizeof(tester));
+	pthread_mutex_init(&tester.testingMutex, NULL);
 	events.onErrorReceived = err;
 	events.onBadTime = onBadTime;
 	events.onMessageReceived = onMessageReceived;
 	events.onNetworkError = onNetworkError;
 	events.onTimeOut = onTimeOut;
+	evthread_use_pthreads();
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
 	CBByteArray * altMessages = CBNewByteArrayOfSize(0, &events);
 	CBByteArray * altMessages2 = CBNewByteArrayOfSize(0, &events);
@@ -194,9 +218,11 @@ int main(){
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,127,0,0,1}, 16, &events);
 	CBByteArray * loopBack2 = CBByteArrayCopy(loopBack); // Do not use in more than one thread.
 	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0, &events);
-	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0, &events); // Use in second thread.
+	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0, &events); // Use in connector thread.
+	addrListenB->public = true; // Ensure addresses are relayed.
 	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, loopBack, 45563, 0, &events);
-	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0, &events); // Use in second thread.
+	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0, &events); // Use in connector thread.
+	addrListen2B->public = true; // Ensure addresses are relayed.
 	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0, &events); // Different port over loopback to seperate the CBNetworkCommunicators.
 	CBReleaseObject(loopBack);
 	CBReleaseObject(loopBack2);
@@ -212,9 +238,9 @@ int main(){
 	commListen->networkID = CB_PRODUCTION_NETWORK_BYTES;
 	commListen->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
 	commListen->version = CB_PONG_VERSION;
-	commListen->maxConnections = 2;
-	commListen->maxIncommingConnections = 2;
-	commListen->heartBeat = 10;
+	commListen->maxConnections = 3;
+	commListen->maxIncommingConnections = 3; // One for connector, one for the other listener and an extra so that we continue to share our address.
+	commListen->heartBeat = 1;
 	commListen->timeOut = 0; //20;
 	commListen->sendTimeOut = 0; //1;
 	commListen->recvTimeOut = 0; //10;
@@ -225,7 +251,7 @@ int main(){
 	CBNetworkCommunicatorSetUserAgent(commListen, userAgent);
 	CBNetworkCommunicatorSetOurIPv4(commListen, addrListen);
 	commListen->callbackHandler = &tester;
-	// Second listenin CBNetworkCommunicator setup.
+	// Second listening CBNetworkCommunicator setup.
 	CBAddressManager * addrManListen2 = CBNewAddressManager(&events);
 	addrManListen2->maxAddressesInBucket = 2;
 	CBAddressManagerSetReachability(addrManListen2, CB_IP_IPv4 | CB_IP_LOCAL, true);
@@ -234,9 +260,9 @@ int main(){
 	commListen2->networkID = CB_PRODUCTION_NETWORK_BYTES;
 	commListen2->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
 	commListen2->version = CB_PONG_VERSION;
-	commListen2->maxConnections = 2;
-	commListen2->maxIncommingConnections = 2;
-	commListen2->heartBeat = 10;
+	commListen2->maxConnections = 3;
+	commListen2->maxIncommingConnections = 3;
+	commListen2->heartBeat = 1;
 	commListen2->timeOut = 0; //20;
 	commListen2->sendTimeOut = 0; //1;
 	commListen2->recvTimeOut = 0; //10;
@@ -261,7 +287,7 @@ int main(){
 	commConnect->version = CB_PONG_VERSION;
 	commConnect->maxConnections = 2;
 	commConnect->maxIncommingConnections = 0;
-	commConnect->heartBeat = 10;
+	commConnect->heartBeat = 1;
 	commConnect->timeOut = 0; //20;
 	commConnect->sendTimeOut = 0; //1;
 	commConnect->recvTimeOut = 0; //1;
@@ -283,10 +309,18 @@ int main(){
 	CBNetworkCommunicatorStart(commListen);
 	pthread_t listenThread = ((CBEventLoop *) commListen->eventLoop)->loopThread;
 	CBNetworkCommunicatorStartListening(commListen);
+	if (NOT commListen->isListeningIPv4) {
+		printf("FIRST LISTEN FAIL\n");
+		exit(EXIT_FAILURE);
+	}
 	// Start listening on second listener.
 	CBNetworkCommunicatorStart(commListen2);
 	pthread_t listen2Thread = ((CBEventLoop *) commListen2->eventLoop)->loopThread;
 	CBNetworkCommunicatorStartListening(commListen2);
+	if (NOT commListen2->isListeningIPv4) {
+		printf("SECOND LISTEN FAIL\n");
+		exit(EXIT_FAILURE);
+	}
 	// Start connection
 	CBNetworkCommunicatorStart(commConnect);
 	pthread_t connectThread = ((CBEventLoop *) commConnect->eventLoop)->loopThread;
@@ -295,15 +329,11 @@ int main(){
 	pthread_join(listenThread, NULL);
 	pthread_join(listen2Thread, NULL);
 	pthread_join(connectThread, NULL);
-	if (NOT (tester.prog[0] == 127 && tester.prog[1] == 127 && tester.prog[2] == 127)){
-		printf("NO SUCCESS\n");
-		exit(EXIT_FAILURE);
-	}
 	// Check addresses in the first listening CBNetworkCommunicator
 	uint8_t i = CBAddressManagerGetBucketIndex(commListen->addresses, addrListen2);
 	CBBucket * bucket = commListen->addresses->buckets + i;
-	if (bucket->addrNum != 2) {
-		printf("ADDRESS DISCOVERY LISTEN ONE ADDR NUM FAIL\n");
+	if (bucket->addrNum != 1) { // Only L2 should go back to addresses. CN is private
+		printf("ADDRESS DISCOVERY LISTEN ONE ADDR NUM FAIL %i != 1\n",bucket->addrNum);
 		exit(EXIT_FAILURE);
 	}
 	if (i != CBAddressManagerGetBucketIndex(commListen->addresses, addrConnect)) {
@@ -314,14 +344,10 @@ int main(){
 		printf("ADDRESS DISCOVERY LISTEN ONE LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if(!CBAddressManagerGotNetworkAddress(commListen->addresses, addrConnect)){
-		printf("ADDRESS DISCOVERY LISTEN ONE CONNECT FAIL\n");
-		exit(EXIT_FAILURE);
-	}
 	// Check the addresses in the second.
 	i = CBAddressManagerGetBucketIndex(commListen2->addresses, addrListen);
 	bucket = commListen2->addresses->buckets + i;
-	if (bucket->addrNum != 2) {
+	if (bucket->addrNum != 1) {
 		printf("ADDRESS DISCOVERY LISTEN TWO ADDR NUM FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -331,10 +357,6 @@ int main(){
 	}
 	if(!CBAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY LISTEN TWO LISTEN ONE FAIL\n");
-		exit(EXIT_FAILURE);
-	}
-	if(!CBAddressManagerGotNetworkAddress(commListen2->addresses, addrConnect)){
-		printf("ADDRESS DISCOVERY LISTEN TWO CONNECT FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	// And lastly the connecting CBNetworkCommunicator
@@ -363,5 +385,6 @@ int main(){
 	CBReleaseObject(commListen);
 	CBReleaseObject(commListen2);
 	CBReleaseObject(commConnect);
+	pthread_mutex_destroy(&tester.testingMutex);
 	return EXIT_SUCCESS;
 }

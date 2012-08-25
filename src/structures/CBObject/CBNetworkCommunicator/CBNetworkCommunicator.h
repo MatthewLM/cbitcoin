@@ -140,8 +140,9 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vnode);
  @param self The CBNetworkCommunicator object.
  @param node The node.
  @param penalty Penalty to the score of the address.
+ @param stopping If true, do not call "onNetworkError" because the CBNetworkCommunicator is stopping.
  */
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBNode * node,u_int16_t penalty);
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBNode * node,u_int16_t penalty,bool stopping);
 /**
  @brief Gets a new version message for this.
  @param self The CBNetworkCommunicator object.
@@ -154,21 +155,21 @@ CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBNetwo
  @param node The node
  @returns true if node should be disconnected, false otherwise.
  */
-bool CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self,CBNode * node);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Processes a new received message for auto handshaking.
  @param self The CBNetworkCommunicator object.
  @param node The node
  @returns true if node should be disconnected, false otherwise.
  */
-bool CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBNode * node);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Processes a new received message for auto ping pongs.
  @param self The CBNetworkCommunicator object.
  @param node The node
  @returns true if node should be disconnected, false otherwise.
  */
-bool CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBNode * node);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBNode * node);
 /**
  @brief Called when a node socket is ready for reading.
  @param vself The CBNetworkCommunicator object.
