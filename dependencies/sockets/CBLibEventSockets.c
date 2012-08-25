@@ -57,6 +57,9 @@ bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port){
 	for(ptr = res; ptr != NULL; ptr = ptr->ai_next) {
 		if ((*socketID = socket(ptr->ai_family, ptr->ai_socktype,ptr->ai_protocol)) == -1)
 			continue;
+		int opt = 1;
+		// Prevent EADDRINUSE
+		setsockopt((evutil_socket_t)*socketID, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 		if (bind((evutil_socket_t)*socketID, ptr->ai_addr, ptr->ai_addrlen) == -1) {
 			evutil_closesocket((evutil_socket_t)*socketID);
 			continue;
@@ -69,7 +72,7 @@ bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port){
 	// Prevent SIGPIPE
 	if (CB_NOSIGPIPE) {
 		int i = 1;
-		setsockopt(*socketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
+		setsockopt((evutil_socket_t)*socketID, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
 	}
 	// Make socket non-blocking
 	evutil_make_socket_nonblocking((evutil_socket_t)*socketID);
@@ -93,7 +96,7 @@ bool CBSocketConnect(uint64_t socketID,uint8_t * IP,bool IPv6,uint16_t port){
 		address.sin_port = htons(port); // Port number to network order
 		res = connect((evutil_socket_t)socketID, (struct sockaddr *)&address, sizeof(address));
 	}
-	if (NOT res || errno == EINPROGRESS)
+	if (res < 0 && errno == EINPROGRESS)
 		return true;
 	return false;
 }
@@ -190,8 +193,15 @@ void CBDidConnect(evutil_socket_t socketID,short eventNum,void * arg){
 		// Timeout for the connection
 		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
 	}else{
-		// Connection successful
-		event->onEvent.ptr(event->loop->communicator,event->node);
+		int optval = -1;
+		socklen_t optlen = sizeof(optval);
+		getsockopt(socketID, SOL_SOCKET, SO_ERROR, &optval, &optlen);
+		if (optval)
+			// Act as timeout
+			event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
+		else
+			// Connection successful
+			event->onEvent.ptr(event->loop->communicator,event->node);
 	}
 }
 bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * node){
