@@ -46,7 +46,7 @@ CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,CBEvents * events){
 	return CBNewByteArrayWithData(data, size, events);
 }
 CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,CBEvents * events){
-	return CBNewByteArrayWithData(data, size, events);
+	return CBNewByteArrayWithDataCopy(data, size, events);
 }
 
 //  Object Getter
@@ -435,16 +435,16 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 					uint32_t diff;
 					if (spaceFind == NULL)
 						if (lineFind == NULL)
-							diff = strlen(cursor);
+							diff = (uint32_t)strlen(cursor);
 						else
-							diff = lineFind - cursor;
+							diff = (uint32_t)(lineFind - cursor);
 					else
 						if (lineFind == NULL)
-							diff = spaceFind - cursor;
+							diff = (uint32_t)(spaceFind - cursor);
 						else if (lineFind < spaceFind)
-							diff = lineFind - cursor;
+							diff = (uint32_t)(lineFind - cursor);
 						else
-							diff = spaceFind - cursor;
+							diff = (uint32_t)(spaceFind - cursor);
 					diff -= 2; // For the "0x"
 					if (diff & 1) {
 						// Is odd
@@ -543,7 +543,7 @@ CBScriptStack CBNewEmptyScriptStack(){
 	stack.length = 0;
 	return stack;
 }
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex){
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex,bool p2sh){
 	// ??? Adding syntax parsing to the begining of the interpreter is maybe a good idea.
 	// This looks confusing but isn't too bad, trust me.
 	CBScriptStack altStack = CBNewEmptyScriptStack();
@@ -553,8 +553,19 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 	uint32_t cursor = 0;
 	if (CBGetByteArray(self)->length > 10000)
 		return false; // Script is an illegal size.
+	// Determine if P2SH https://en.bitcoin.it/wiki/BIP_0016
+	CBScriptStackItem p2shScript;
+	bool isP2SH;
+	if (p2sh
+		&& self->length == 23
+		&& CBByteArrayGetByte(CBGetByteArray(self),0) == CB_SCRIPT_OP_HASH160
+		&& CBByteArrayGetByte(CBGetByteArray(self),1) == 0x14
+		&& CBByteArrayGetByte(CBGetByteArray(self),22) == CB_SCRIPT_OP_EQUAL) {
+		p2shScript = CBScriptStackCopyItem(stack, 0);
+		isP2SH = true;
+	}else isP2SH = false;
 	for (uint8_t opCount = 0; CBGetByteArray(self)->length - cursor > 0;) {
-		uint8_t byte = CBByteArrayGetByte(CBGetByteArray(self), cursor);
+		CBScriptOp byte = CBByteArrayGetByte(CBGetByteArray(self), cursor);
 		if (byte > CB_SCRIPT_OP_16 && ++opCount > 201)
 			return false; // Too many op codes
 		if (byte == CB_SCRIPT_OP_VERIF
@@ -1205,17 +1216,19 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				return false; // Stack size over the limit
 		}
 	}
-	if (ifElseSize) {
+	if (ifElseSize)
 		return false; // If/Else Block(s) not terminated.
-	}
-	if (NOT stack->length) {
+	if (NOT stack->length)
 		return false; // Stack empty.
-	}
 	if (CBScriptStackEvalBool(stack)) {
+		if (isP2SH){
+			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length, self->events);
+			bool res = CBScriptExecute(p2shScriptObj, stack, getHashForSig, transaction, inputIndex, false);
+			CBReleaseObject(p2shScriptObj);
+			return res;
+		}
 		return true;
-	}else{
-		return false;
-	}
+	}else return false;
 }
 void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBScriptStackItem signature){
 	if (signature.data == NULL) return; // Signature zero

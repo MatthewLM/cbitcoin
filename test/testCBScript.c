@@ -26,33 +26,12 @@
 #include "CBScript.h"
 #include <time.h>
 #include "CBDependencies.h"
-#include <openssl/sha.h>
-#include <openssl/ripemd.h>
-#include <openssl/bn.h>
-
-uint8_t * CBSha160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA_DIGEST_LENGTH);
-    SHA1(data, len, hash);
-	return hash;
-}
-uint8_t * CBSha256(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
-	SHA256(data, len, hash);
-	return hash;
-}
-uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
-    RIPEMD160(data, len, hash);
-	return hash;
-}
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
-	CBNetworkParameters * net = CBNewNetworkParameters();
-	net->networkCode = 0;
 	CBEvents events;
 	FILE * f = fopen("scriptCases.txt", "r");
 	if (!f) printf("FILE WONT OPEN\n");
@@ -72,13 +51,16 @@ int main(){
 		line[strlen(line)-1] = '\0';
 		if (!(line[0] == '/' && line[1] == '/') && strlen(line)){
 			x++;
-			CBScript * script = CBNewScriptFromString(net, line, &events);
+			CBScript * script = CBNewScriptFromString(line, &events);
 			if (!script) {
 				printf("%i: {%s} INVALID\n",x,line);
 				return 1;
 			}else{
 				CBScriptStack stack = CBNewEmptyScriptStack();
-				bool res = CBScriptExecute(script, &stack, NULL, NULL, 0);
+				if (x == 31) {
+					printf("");
+				}
+				bool res = CBScriptExecute(script, &stack, NULL, NULL, 0, true);
 				if (res != ((fgetc(f) == '1') ? true : false)) {
 					printf("%i: {%s} FAIL\n",x,line);
 					return 1;
@@ -94,30 +76,32 @@ int main(){
 	}
 	fclose(f);
 	// Test PUSHDATA
-	CBScript * script = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x47,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x47,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x47,CB_SCRIPT_OP_EQUAL}, 16, &events);
+	CBScript * script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x47,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x47,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x47,CB_SCRIPT_OP_EQUAL}, 16, &events);
 	CBScriptStack stack = CBNewEmptyScriptStack();
-	if(NOT CBScriptExecute(script, &stack, NULL, NULL, 0)){
+	if(NOT CBScriptExecute(script, &stack, NULL, NULL, 0, true)){
 		printf("PUSHDATA TEST 1 FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
-	script = CBNewScriptOfSize(net, 16, &events);
-	script = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x00,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x00,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x00,CB_SCRIPT_OP_EQUAL}, 16, &events);
+	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x00,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x00,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x00,CB_SCRIPT_OP_EQUAL}, 16, &events);
 	stack = CBNewEmptyScriptStack();
-	if(NOT CBScriptExecute(script, &stack, NULL, NULL, 0)){
+	if(NOT CBScriptExecute(script, &stack, NULL, NULL, 0, true)){
 		printf("PUSHDATA TEST 2 FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
 	// Test stack length limit
-	script = CBNewScriptWithDataCopy(net, (uint8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
+	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1, &events);
 	stack = CBNewEmptyScriptStack();
 	for (int x = 0; x < 1001; x++)
 		CBScriptStackPushItem(&stack, (CBScriptStackItem){NULL,0});
-	if(CBScriptExecute(script, &stack, NULL, NULL, 0)){
+	if(CBScriptExecute(script, &stack, NULL, NULL, 0, true)){
 		printf("STACK LIMIT TEST FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
+	// Test P2SH
+	CBScript * p2shScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_HASH160,0x14,,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_CHECKSIG}, 16, &events);
+	CBSCript * inputScript = CBNew
 	return 0;
 }

@@ -147,9 +147,10 @@ CBScriptStack CBNewEmptyScriptStack(void);
  @param getHashForSig A pointer to the funtion to get the hash for checking the signature. Should take a CBTransaction object, input index, CBSignType and the CBDependencies object.
  @param transaction Transaction for checking the signatures.
  @param inputIndex The index of the input for the signature.
+ @param p2sh If false, do not allow any P2SH matches.
  @returns True is the program ended with true, false otherwise or on script failure.
  */
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex);
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex,bool p2sh);
 /**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.
