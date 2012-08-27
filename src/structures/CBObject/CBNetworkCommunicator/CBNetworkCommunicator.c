@@ -750,7 +750,7 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode *
 		// Block message
 		if (node->acceptedTypes & CB_MESSAGE_TYPE_BLOCK){
 			size = CBByteArrayReadInt32(header, 16);
-			if (size > CB_BLOCK_MAX_SIZE)
+			if (size > CB_BLOCK_MAX_SIZE + 89) // Plus 89 for header.
 				error = true;
 			else
 				type = CB_MESSAGE_TYPE_BLOCK;
