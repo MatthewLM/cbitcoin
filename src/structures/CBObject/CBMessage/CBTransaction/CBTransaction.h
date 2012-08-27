@@ -144,11 +144,5 @@ void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input);
  @param input The CBTransactionOutput object.
  */
 void CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output);
-/**
- @brief Validates a transaction has outputs and inputs, is below the maximum block size and has outputs that do not overflow. Further validation can be done by checking the transaction against input transactions. With simplified payment verification instead the validation is done through trusting miners but the basic validation can still be done for these basic checks.
- @param self The transaction to validate. This should be deserialised.
- @return true if valid for the basic criteria, false if invalid.
- */
-bool CBTransactionValidateBasic(CBTransaction * self);
 
 #endif

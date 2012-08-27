@@ -525,7 +525,7 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 		}
 	}
 	// Got data. Now create script byte array for data
-	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), data, dataLast, events))
+	if (NOT CBInitByteArrayWithData(self, data, dataLast, events))
 		return false;
 	return true;
 }
@@ -551,21 +551,17 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 	uint16_t ifElseSize = 0; // Amount of if/else block levels
 	uint32_t beginSubScript = 0;
 	uint32_t cursor = 0;
-	if (CBGetByteArray(self)->length > 10000)
+	if (self->length > 10000)
 		return false; // Script is an illegal size.
 	// Determine if P2SH https://en.bitcoin.it/wiki/BIP_0016
 	CBScriptStackItem p2shScript;
 	bool isP2SH;
-	if (p2sh
-		&& self->length == 23
-		&& CBByteArrayGetByte(CBGetByteArray(self),0) == CB_SCRIPT_OP_HASH160
-		&& CBByteArrayGetByte(CBGetByteArray(self),1) == 0x14
-		&& CBByteArrayGetByte(CBGetByteArray(self),22) == CB_SCRIPT_OP_EQUAL) {
+	if (p2sh && CBScriptIsP2SH(self)) {
 		p2shScript = CBScriptStackCopyItem(stack, 0);
 		isP2SH = true;
 	}else isP2SH = false;
-	for (uint8_t opCount = 0; CBGetByteArray(self)->length - cursor > 0;) {
-		CBScriptOp byte = CBByteArrayGetByte(CBGetByteArray(self), cursor);
+	for (uint8_t opCount = 0; self->length - cursor > 0;) {
+		CBScriptOp byte = CBByteArrayGetByte(self, cursor);
 		if (byte > CB_SCRIPT_OP_16 && ++opCount > 201)
 			return false; // Too many op codes
 		if (byte == CB_SCRIPT_OP_VERIF
@@ -608,46 +604,44 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				CBScriptStackPushItem(stack, item);
 			}else if (byte < 76){
 				// Check size
-				if ((CBGetByteArray(self)->length - cursor) < byte)
+				if ((self->length - cursor) < byte)
 					return false; // Not enough space.
 				// Push data the size of the value of the byte
 				CBScriptStackItem item;
 				item.data = malloc(byte);
 				item.length = byte;
-				memmove(item.data, CBByteArrayGetData(CBGetByteArray(self)) + cursor, byte);
+				memmove(item.data, CBByteArrayGetData(self) + cursor, byte);
 				CBScriptStackPushItem(stack, item);
 				cursor += byte;
 			}else if (byte < 79){
 				// Push data with the length of bytes represented by the next bytes. The number of bytes to push is in little endian unlike arithmetic operations which is weird.
 				uint32_t amount;
-				if(CBGetByteArray(self)->length - cursor < 1)
+				if(self->length - cursor < 1)
 					return false; // Needs at least one more byte
 				if (byte == CB_SCRIPT_OP_PUSHDATA1){
-					if ((CBGetByteArray(self)->length - cursor) < 1)
-						return false; // Not enough space.
-					amount = CBByteArrayGetByte(CBGetByteArray(self), cursor);
+					amount = CBByteArrayGetByte(self, cursor);
 					cursor++;
 				}else if (byte == CB_SCRIPT_OP_PUSHDATA2){
-					if ((CBGetByteArray(self)->length - cursor) < 2)
+					if (self->length - cursor < 2)
 						return false; // Not enough space.
-					amount = CBByteArrayReadInt16(CBGetByteArray(self), cursor);
+					amount = CBByteArrayReadInt16(self, cursor);
 					cursor += 2;
 				}else{
-					if ((CBGetByteArray(self)->length - cursor) < 4)
+					if (self->length - cursor < 4)
 						return false; // Not enough space.
-					amount = CBByteArrayReadInt32(CBGetByteArray(self), cursor);
+					amount = CBByteArrayReadInt32(self, cursor);
 					cursor += 4;
 				}
 				// Check limitation
 				if (amount > 520)
 					return false; // Size of data to push is illegal.
 				// Check size
-				if ((CBGetByteArray(self)->length - cursor) < amount)
+				if (self->length - cursor < amount)
 					return false; // Not enough space.
 				CBScriptStackItem item;
 				if (amount){
 					item.data = malloc(amount);
-					memmove(item.data, CBByteArrayGetData(CBGetByteArray(self)) + cursor, amount);
+					memmove(item.data, CBByteArrayGetData(self) + cursor, amount);
 				}else{
 					item.data = NULL;
 				}
@@ -871,10 +865,10 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					return false; // Protocol does not except integers more than 32 bits.
 				// Convert to 64 bit integer.
 				int64_t res = CBScriptStackItemToInt64(item);
-				switch (byte) {
-					case CB_SCRIPT_OP_1ADD: res++; break;
-					case CB_SCRIPT_OP_1SUB: res--; break;
-				}
+				if (byte == CB_SCRIPT_OP_1ADD)
+					res++;
+				else
+					res--;
 				// Convert back to bitcoin format. Re-assign item as length may have changed.
 				stack->elements[stack->length-1] = CBInt64ToScriptStackItem(item, res);
 			}else if (byte == CB_SCRIPT_OP_NEGATE){
@@ -956,7 +950,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					case CB_SCRIPT_OP_GREATERTHAN: res = (res > second); break;
 					case CB_SCRIPT_OP_GREATERTHANOREQUAL: res = (res >= second); break;
 					case CB_SCRIPT_OP_MIN: res = (res > second)? second : res; break;
-					case CB_SCRIPT_OP_MAX: res = (res < second)? second : res; break;
+					default: res = (res < second)? second : res; break;
 				}
 				if (byte == CB_SCRIPT_OP_NUMEQUALVERIFY){
 					if (NOT res)
@@ -1017,7 +1011,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 						free(data2);
 						break;
 					case CB_SCRIPT_OP_SHA256: data = CBSha256(item.data,item.length); break;
-					case CB_SCRIPT_OP_HASH256:
+					default:
 						data2 = CBSha256(item.data,item.length);
 						data = CBSha256(data2,32);
 						free(data2);
@@ -1034,12 +1028,12 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					  || byte == CB_SCRIPT_OP_CHECKMULTISIG
 					  || byte == CB_SCRIPT_OP_CHECKMULTISIGVERIFY){
 				// Get sub script and remove OP_CODESEPARATORs
-				uint32_t subScriptLen = CBGetByteArray(self)->length - beginSubScript;
+				uint32_t subScriptLen = self->length - beginSubScript;
 				uint8_t * subScript = malloc(subScriptLen);
-				uint8_t * sourceScript = CBByteArrayGetData(CBGetByteArray(self));
+				uint8_t * sourceScript = CBByteArrayGetData(self);
 				uint8_t * subScriptCopyPointer = subScript;
 				uint8_t * lastSeparator = sourceScript + beginSubScript;
-				uint8_t * end = sourceScript + CBGetByteArray(self)->length;
+				uint8_t * end = sourceScript + self->length;
 				uint8_t * ptr = lastSeparator;
 				// Remove code separators for subScript.
 				bool fail = false; // Checks for push failures.
@@ -1049,7 +1043,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 						memmove(subScriptCopyPointer, lastSeparator, end - lastSeparator);
 						break;
 					}else if (*ptr == CB_SCRIPT_OP_CODESEPARATOR) {
-						uint32_t len = ptr - lastSeparator; // Do not include code separator.
+						uint32_t len = (uint32_t)(ptr - lastSeparator); // Do not include code separator.
 						memmove(subScriptCopyPointer, lastSeparator, len);
 						lastSeparator = ptr + 1; // Point past code seperator for copying next time.
 						subScriptCopyPointer += len;
@@ -1230,6 +1224,48 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 		}
 		return true;
 	}else return false;
+}
+uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH){
+	uint32_t sigOps = 0;
+	CBScriptOp lastOp = CB_SCRIPT_OP_INVALIDOPCODE;
+	uint32_t cursor = 0;
+	for (;cursor < self->length;) {
+		CBScriptOp op = CBByteArrayGetByte(self, cursor);
+		if (op < 76) {
+			cursor += op + 1;
+		}else if (op < 79){
+			cursor++;
+			if(self->length - cursor < 1)
+				break; // Needs at least one more byte
+			if (op == CB_SCRIPT_OP_PUSHDATA1)
+				cursor += 1 + CBByteArrayGetByte(self, cursor);
+			else if (op == CB_SCRIPT_OP_PUSHDATA2){
+				if (self->length - cursor < 2)
+					break; // Not enough space.
+				cursor += 2 + CBByteArrayReadInt16(self, cursor);
+			}else{
+				if (self->length - cursor < 4)
+					break; // Not enough space.
+				cursor += 4 + CBByteArrayReadInt32(self, cursor);
+			}
+		}else if (op == CB_SCRIPT_OP_CHECKSIG || op == CB_SCRIPT_OP_CHECKSIGVERIFY){
+			sigOps++;
+			cursor++;
+		}else if (op == CB_SCRIPT_OP_CHECKMULTISIG || op == CB_SCRIPT_OP_CHECKMULTISIGVERIFY){
+			if (inP2SH && lastOp >= CB_SCRIPT_OP_1 && lastOp <= CB_SCRIPT_OP_16)
+				sigOps += lastOp - CB_SCRIPT_OP_1 + 1;
+			else sigOps += 20;
+			cursor++;
+		}else cursor++;
+		lastOp = op;
+	}
+	return sigOps;
+}
+bool CBScriptIsP2SH(CBScript * self){
+	return (self->length == 23
+			&& CBByteArrayGetByte(self,0) == CB_SCRIPT_OP_HASH160
+			&& CBByteArrayGetByte(self,1) == 0x14
+			&& CBByteArrayGetByte(self,22) == CB_SCRIPT_OP_EQUAL);
 }
 void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBScriptStackItem signature){
 	if (signature.data == NULL) return; // Signature zero

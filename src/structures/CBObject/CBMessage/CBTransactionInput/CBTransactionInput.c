@@ -26,10 +26,10 @@
 
 //  Constructors
 
-CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence, CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events){
+CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence, CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	CBInitTransactionInput(self,script,sequence,outPointerHash,outPointerIndex,events);
+	CBInitTransactionInput(self,script,sequence,prevOutHash,prevOutIndex,events);
 	return self;
 }
 CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,CBEvents * events){
@@ -38,10 +38,10 @@ CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,CBEvents *
 	CBInitTransactionInputFromData(self, data, events);
 	return self;
 }
-CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events){
+CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	CBInitUnsignedTransactionInput(self,sequence,outPointerHash,outPointerIndex, events);
+	CBInitUnsignedTransactionInput(self,sequence,prevOutHash,prevOutIndex, events);
 	return self;
 }
 
@@ -53,15 +53,15 @@ CBTransactionInput * CBGetTransactionInput(void * self){
 
 //  Initialisers
 
-bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events){
+bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events){
 	if (script){
 		self->scriptObject = script;
 		CBRetainObject(script);
 	}else
 		self->scriptObject = NULL;
-	self->outPointerHash = outPointerHash;
-	CBRetainObject(outPointerHash);
-	self->outPointerIndex = outPointerIndex;
+	self->prevOut.hash = prevOutHash;
+	CBRetainObject(prevOutHash);
+	self->prevOut.index = prevOutIndex;
 	self->sequence = sequence;
 	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
@@ -69,16 +69,16 @@ bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t
 }
 bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data,CBEvents * events){
 	self->scriptObject = NULL;
-	self->outPointerHash = NULL;
+	self->prevOut.hash = NULL;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
 		return false;
 	return true;
 }
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events){
+bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events){
 	self->scriptObject = NULL;
-	self->outPointerHash = outPointerHash;
-	CBRetainObject(outPointerHash);
-	self->outPointerIndex = outPointerIndex;
+	self->prevOut.hash = prevOutHash;
+	CBRetainObject(prevOutHash);
+	self->prevOut.index = prevOutIndex;
 	self->sequence = sequence;
 	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
 		return false;
@@ -90,7 +90,7 @@ bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,
 void CBFreeTransactionInput(void * vself){
 	CBTransactionInput * self = vself;
 	if (self->scriptObject) CBReleaseObject(self->scriptObject);
-	if (self->outPointerHash) CBReleaseObject(self->outPointerHash);
+	if (self->prevOut.hash) CBReleaseObject(self->prevOut.hash);
 	CBFreeMessage(self);
 }
 
@@ -117,8 +117,8 @@ uint32_t CBTransactionInputDeserialise(CBTransactionInput * self){
 		return 0;
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
-	self->outPointerHash = CBByteArraySubReference(bytes, 0, 32);
-	self->outPointerIndex = CBByteArrayReadInt32(bytes, 32);
+	self->prevOut.hash = CBByteArraySubReference(bytes, 0, 32);
+	self->prevOut.index = CBByteArrayReadInt32(bytes, 32);
 	self->scriptObject = CBNewScriptFromReference(bytes,36 + scriptLen.size, (uint32_t) scriptLen.val);
 	self->sequence = CBByteArrayReadInt32(bytes, (uint32_t) (36 + scriptLen.size + scriptLen.val));
 	return reqLen;
@@ -129,8 +129,8 @@ uint32_t CBTransactionInputSerialise(CBTransactionInput * self){
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBTransactionInput with no bytes.");
 		return 0;
 	}
-	if (NOT self->outPointerHash){
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionInput without outPointerHash.");
+	if (NOT self->prevOut.hash){
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionInput without prevOut.hash.");
 		return 0;
 	}
 	if (NOT self->scriptObject){
@@ -144,9 +144,9 @@ uint32_t CBTransactionInputSerialise(CBTransactionInput * self){
 		return 0;
 	}
 	// Serialise data into the CBByteArray and rereference objects to this CBByteArray to save memory.
-	CBByteArrayCopyByteArray(bytes, 0, self->outPointerHash);
-	CBByteArrayChangeReference(self->outPointerHash, bytes, 0);
-	CBByteArraySetInt32(bytes, 32, self->outPointerIndex);
+	CBByteArrayCopyByteArray(bytes, 0, self->prevOut.hash);
+	CBByteArrayChangeReference(self->prevOut.hash, bytes, 0);
+	CBByteArraySetInt32(bytes, 32, self->prevOut.index);
 	CBVarIntEncode(bytes, 36, scriptLen);
 	CBByteArrayCopyByteArray(bytes, 36 + scriptLen.size,CBGetByteArray(self->scriptObject));
 	CBByteArrayChangeReference(CBGetByteArray(self->scriptObject),bytes,36 + scriptLen.size);

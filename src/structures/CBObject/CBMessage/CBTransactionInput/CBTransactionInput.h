@@ -35,21 +35,28 @@
 #include "CBTransactionOutput.h"
 
 /**
+ @brief Structure for previous outputs that are being spent by an input.
+ */
+typedef struct{
+	CBByteArray * hash; /**< Hash of the transaction that includes the output for this input */
+	uint32_t index; /**< The index of the output for this input */
+} CBPrevOut;
+
+/**
  @brief Structure for CBTransactionInput objects. @see CBTransactionInput.h
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint32_t sequence; /**< The version of this transaction input. Not used in protocol v0.3.18.00. Set to 0 for transactions that may somday be open to change after broadcast, set to CB_TRANSACTION_INPUT_FINAL if this input never needs to be changed after broadcast. */
 	CBScript * scriptObject; /**< Contains script information as a CBScript. */
-	CBByteArray * outPointerHash; /**< Hash of the transaction that includes the output for this input */
-	uint32_t outPointerIndex; /**< The index of the output for this input */ 
+	CBPrevOut prevOut; /**< A locator for a previous output being spent */
 } CBTransactionInput;
 
 /**
  @brief Creates a new CBTransactionInput object.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events);
+CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
 /**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
@@ -60,7 +67,7 @@ CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,CBEvents *
  @brief Creates a new unsigned CBTransactionInput object and links it to a given output.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events);
+CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
 
 /**
  @brief Gets a CBTransactionInput from another object. Use this to avoid casts.
@@ -74,7 +81,7 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events);
+bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise
@@ -87,7 +94,7 @@ bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * dat
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * outPointerHash,uint32_t outPointerIndex,CBEvents * events);
+bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
 
 /**
  @brief Frees a CBTransactionInput object.

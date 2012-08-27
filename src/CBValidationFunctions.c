@@ -62,6 +62,59 @@ uint32_t CBCalculateTarget(uint32_t oldTarget, uint32_t time){
 	// Return the new target
 	return (uint32_t) num;
 }
+uint32_t CBTransactionGetSigOps(CBTransaction * tx){
+	uint32_t sigOps = 0;
+	for (uint32_t x = 0; x < tx->inputNum; x++)
+		sigOps += CBScriptGetSigOpCount(tx->inputs[x]->scriptObject, false);
+	for (uint32_t x = 0; x < tx->outputNum; x++)
+		sigOps += CBScriptGetSigOpCount(tx->outputs[x]->scriptObject, false);
+	return sigOps;
+}
+CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase){
+	if (NOT tx->inputNum || NOT tx->outputNum)
+		return NULL;
+	uint32_t length;
+	if (CBGetMessage(tx)->bytes) // Already have length
+		length = CBGetMessage(tx)->bytes->length;
+	else{
+		// Calculate length. Worthwhile having a cache? ???
+		length = CBTransactionCalculateLength(tx);
+	}
+	if(length > CB_BLOCK_MAX_SIZE){
+		return NULL;
+	}
+	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the C++ client on this where an attacker could overflow very large outputs to equal small inputs.
+	uint64_t total = 0;
+	for (uint32_t x = 0; x < tx->outputNum; x++) {
+		if (tx->outputs[x]->value > CB_MAX_MONEY)
+			return NULL;
+		total += tx->outputs[x]->value;
+		if (total > CB_MAX_MONEY)
+			return NULL;
+	}
+	if (coinbase){
+		// Validate input script for coinbase
+		if (tx->inputs[0]->scriptObject->length < 2
+			|| tx->inputs[0]->scriptObject->length > 100)
+			return NULL;
+	}else for (uint32_t x = 0; x < tx->inputNum; x++)
+		// Check each input for null previous output hashes.
+		if (CBByteArrayIsNull(tx->inputs[x]->prevOut.hash))
+			return NULL;
+	// Check for duplicate transaction output spends and add them to a list of CBPrevOut structures.
+	CBPrevOut * prevOutputs = malloc(sizeof(*prevOutputs) * tx->inputNum);
+	for (uint32_t x = 0; x < tx->inputNum; x++) {
+		for (uint32_t y = 0; y < x; y++)
+			if (CBByteArrayEquals(prevOutputs[y].hash, tx->inputs[x]->prevOut.hash)
+				&& prevOutputs[y].index == tx->inputs[x]->prevOut.index) {
+				// Duplicate previous output
+				free(prevOutputs);
+				return NULL;
+			}
+		prevOutputs[x] = tx->inputs[x]->prevOut;
+	}
+	return prevOutputs;
+}
 bool CBValidateProofOfWork(CBByteArray * hash, uint32_t target){
 	// Get trailing zero bytes
 	uint8_t zeroBytes = target >> 24;

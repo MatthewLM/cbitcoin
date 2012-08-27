@@ -105,6 +105,7 @@ uint32_t CBTransactionCalculateLength(CBTransaction * self){
 			return 0;
 		len += CBVarIntSizeOf(self->outputs[x]->scriptObject->length) + self->outputs[x]->scriptObject->length;
 	}
+	return len;
 }
 uint32_t CBTransactionDeserialise(CBTransaction * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -252,8 +253,8 @@ uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArra
 	uint32_t cursor;
 	if (signType & CB_SIGHASH_ANYONECANPAY) {
 		CBVarIntEncode(data, 4, CBVarIntFromUInt64(1)); // Only the input the signature is for.
-		CBByteArrayCopyByteArray(data, 5, self->inputs[input]->outPointerHash);
-		CBByteArraySetInt32(data, 37, self->inputs[input]->outPointerIndex);
+		CBByteArrayCopyByteArray(data, 5, self->inputs[input]->prevOut.hash);
+		CBByteArraySetInt32(data, 37, self->inputs[input]->prevOut.index);
 		// Add prevOutSubScript
 		CBByteArrayCopyByteArray(data, 41, prevOutSubScript);
 		cursor = 41 + prevOutSubScript->length;
@@ -264,9 +265,9 @@ uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArra
 		CBVarIntEncode(data, 4, inputNum);
 		cursor = 4 + inputNum.size;
 		for (uint32_t x = 0; x < self->inputNum; x++) {
-			CBByteArrayCopyByteArray(data, cursor, self->inputs[x]->outPointerHash);
+			CBByteArrayCopyByteArray(data, cursor, self->inputs[x]->prevOut.hash);
 			cursor += 32;
-			CBByteArraySetInt32(data, cursor, self->inputs[x]->outPointerIndex);
+			CBByteArraySetInt32(data, cursor, self->inputs[x]->prevOut.index);
 			cursor += 4;
 			// Add prevOutSubScript if the input is for the signature.
 			if (x == input) {
@@ -327,8 +328,8 @@ uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArra
 }
 bool CBTransactionIsCoinBase(CBTransaction * self){
 	return (self->inputNum == 1
-			&& self->inputs[0]->outPointerIndex == 0xFFFFFFFF
-			&& CBByteArrayIsNull(self->inputs[0]->outPointerHash));
+			&& self->inputs[0]->prevOut.index == 0xFFFFFFFF
+			&& CBByteArrayIsNull(self->inputs[0]->prevOut.hash));
 }
 uint32_t CBTransactionSerialise(CBTransaction * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -406,39 +407,4 @@ void CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output)
 	self->outputNum++;
 	self->outputs = realloc(self->outputs, sizeof(*self->outputs) * self->outputNum);
 	self->outputs[self->outputNum-1] = output;
-}
-bool CBTransactionValidateBasic(CBTransaction * self){
-	if (NOT self->inputNum || NOT self->outputNum) {
-		return false;
-	}
-	uint32_t length;
-	if (CBGetMessage(self)->bytes) { // Already have length
-		length = CBGetMessage(self)->bytes->length;
-	}else{
-		// Calculate length. Worthwhile having a cache? ???
-		length = 8 + CBVarIntSizeOf(self->inputNum) + CBVarIntSizeOf(self->outputNum) + self->inputNum*40 + self->outputNum*8;
-		for (uint32_t x = 0; x < self->inputNum; x++) {
-			uint32_t scriptLen = CBGetByteArray(self->inputs[x]->scriptObject)->length;
-			length += CBVarIntSizeOf(scriptLen) + scriptLen;
-		}
-		for (uint32_t x = 0; x < self->outputNum; x++) {
-			uint32_t scriptLen = CBGetByteArray(self->outputs[x]->scriptObject)->length;
-			length += CBVarIntSizeOf(scriptLen) + scriptLen;
-		}
-	}
-	if(length > CB_BLOCK_MAX_SIZE){
-		return false;
-	}
-	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the C++ client on this where an attacker could overflow very large outputs to equal small inputs.
-	uint64_t total = 0;
-	for (uint32_t x = 0; x < self->outputNum; x++) {
-		if (self->outputs[x]->value > CB_MAX_MONEY) {
-			return false;
-		}
-		total += self->outputs[x]->value;
-		if (total > CB_MAX_MONEY) {
-			return false;
-		}
-	}
-	return true;
 }

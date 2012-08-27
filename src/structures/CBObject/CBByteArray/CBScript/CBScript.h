@@ -152,6 +152,19 @@ CBScriptStack CBNewEmptyScriptStack(void);
  */
 bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex,bool p2sh);
 /**
+ @brief Returns the number of sigops.
+ @param self The CBScript object.
+ @param inP2SH true when getting sigops for a P2SH script.
+ @retuns the number of sigops as used for validation.
+ */
+uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH);
+/**
+ @brief Determines if a script object matches the P2SH template.
+ @param self The CBScript object.
+ @retuns true if the script matches the P2SH template, false otherwise.
+ */
+bool CBScriptIsP2SH(CBScript * self);
+/**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.
  @param subScriptLen A pointer to the length of the sub script. The length will be modified to the new length.
