@@ -321,9 +321,10 @@ uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArra
 	CBByteArraySetInt32(data, cursor, self->lockTime);
 	CBByteArraySetInt32(data, cursor + 4, signType);
 	assert(sizeOfData == cursor + 8); // Must always be like this
-	uint8_t * firstHash = CBSha256(CBByteArrayGetData(data),sizeOfData);
-	uint8_t * secondHash = CBSha256(firstHash,32);
-	free(firstHash);
+	uint8_t firstHash[32];
+	uint8_t * secondHash = malloc(32);
+	CBSha256(CBByteArrayGetData(data),sizeOfData,firstHash);
+	CBSha256(firstHash,32,secondHash);
 	return secondHash;
 }
 bool CBTransactionIsCoinBase(CBTransaction * self){

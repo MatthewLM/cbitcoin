@@ -58,11 +58,11 @@ bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,uint8_t networkCode,uint8_t
 	// Move hash
 	memmove(data+1, hash, 20);
 	// Make checksum and move it into address
-	uint8_t * checksum = CBSha256(data,21);
-	uint8_t * checksum2 = CBSha256(checksum,32);
-	free(checksum);
+	uint8_t checksum[32];
+	uint8_t checksum2[32];
+	CBSha256(data,21,checksum);
+	CBSha256(checksum,32,checksum2);
 	memmove(data+21, checksum2, 4);
-	free(checksum2);
 	// Initialise CBVersionChecksumBytes
 	if (NOT CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25,cacheString, events))
 		return false;

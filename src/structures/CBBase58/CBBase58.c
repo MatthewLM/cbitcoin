@@ -85,16 +85,16 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 		reversed[bi.length-1-x] = bi.data[x];
 	}
 	// The checksum uses SHA-256, twice, for some reason unknown to man.
-	uint8_t * checksum = CBSha256(reversed,bi.length-4);
-	uint8_t * checksum2 = CBSha256(checksum,32);
-	free(checksum);
+	uint8_t checksum[32];
+	uint8_t checksum2[32];
+	CBSha256(reversed,bi.length-4,checksum);
+	CBSha256(checksum,32,checksum2);
 	bool ok = true;
 	for (uint8_t x = 0; x < 4; x++) {
 		if (checksum2[x] != bi.data[3-x]) {
 			ok = false;
 		}
 	}
-	free(checksum2);
 	if(NOT ok){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;

@@ -874,13 +874,12 @@ void CBNetworkCommunicatorOnLoopError(void * vself){
 }
 void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode * node){
 	// Check checksum
-	uint8_t * hash2;
+	uint8_t hash[32];
+	uint8_t hash2[32];
 	if (node->receive->bytes) {
-		uint8_t * hash1 = CBSha256(CBByteArrayGetData(node->receive->bytes), node->receive->bytes->length);
-		hash2 = CBSha256(hash1, 32);
-		free(hash1);
+		CBSha256(CBByteArrayGetData(node->receive->bytes), node->receive->bytes->length, hash);
+		CBSha256(hash, 32, hash2);
 	}else{
-		hash2 = malloc(4);
 		hash2[0] = 0x5D;
 		hash2[1] = 0xF6;
 		hash2[2] = 0xE0;
@@ -889,10 +888,8 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode 
 	if (memcmp(hash2, node->receive->checksum, 4)) {
 		// Checksum failure. There is no excuse for this. Drop the node. Why have checksums anyway???
 		CBNetworkCommunicatorDisconnect(self, node, CB_24_HOURS, false);
-		free(hash2);
 		return;
 	}
-	free(hash2);
 	// Deserialise and give the onMessageReceived or onAlternativeMessageReceived event
 	uint32_t len;
 	switch (node->receive->type) {
@@ -1095,14 +1092,14 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBNode * node
 	}
 	if (message->bytes) {
 		// Make checksum
-		uint8_t * hash1 = CBSha256(CBByteArrayGetData(message->bytes), message->bytes->length);
-		uint8_t * hash2 = CBSha256(hash1, 32);
-		free(hash1);
+		uint8_t hash[32];
+		uint8_t hash2[32];
+		CBSha256(CBByteArrayGetData(message->bytes), message->bytes->length, hash);
+		CBSha256(hash, 32, hash2);
 		message->checksum[0] = hash2[0];
 		message->checksum[1] = hash2[1];
 		message->checksum[2] = hash2[2];
 		message->checksum[3] = hash2[3];
-		free(hash2);
 	}else{
 		// Empty bytes checksum
 		message->checksum[0] = 0x5D;

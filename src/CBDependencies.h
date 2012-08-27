@@ -77,23 +77,23 @@
  @brief SHA-256 cryptographic hash function.
  @param data A pointer to the byte data to hash.
  @param length The length of the data to hash.
- @returns A pointer to a 32-byte hash, allocated in the function
+ @param output A pointer to hold a 32-byte hash.
  */
-uint8_t * CBSha256(uint8_t * data,uint16_t length);
+void CBSha256(uint8_t * data,uint16_t length,uint8_t * output);
 /**
  @brief RIPEMD-160 cryptographic hash function.
  @param data A pointer to the byte data to hash.
  @param length The length of the data to hash.
- @returns A pointer to a 20-byte hash, allocated in the function
+ @param output A pointer to hold a 20-byte hash.
  */
-uint8_t * CBRipemd160(uint8_t * data,uint16_t length);
+void CBRipemd160(uint8_t * data,uint16_t length,uint8_t * output);
 /**
  @brief SHA-1 cryptographic hash function.
  @param data A pointer to the byte data to hash.
  @param length The length of the data to hash.
- @returns A pointer to a 10-byte hash, allocated in the function
+ @param output A pointer to hold a 10-byte hash.
  */
-uint8_t * CBSha160(uint8_t * data,uint16_t length);
+void CBSha160(uint8_t * data,uint16_t length,uint8_t * output);
 /**
  @brief Verifies an ECDSA signature. This function must stick to the cryptography requirements in OpenSSL version 1.0.0 or any other compatible version. There may be compatibility problems when using libraries or code other than OpenSSL since OpenSSL does not adhere fully to the SEC1 ECDSA standards. This could cause security problems in your code. If in doubt, stick to OpenSSL.
  @param signature BER encoded signature bytes.

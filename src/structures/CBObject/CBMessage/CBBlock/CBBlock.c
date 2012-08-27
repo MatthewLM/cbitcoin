@@ -103,8 +103,11 @@ void CBFreeBlock(void * vself){
 
 CBByteArray * CBBlockCalculateHash(CBBlock * self){
 	uint8_t * headerData = CBByteArrayGetData(CBGetMessage(self)->bytes);
-	uint8_t * hash1 = CBSha256(headerData, 80);
-	CBByteArray * hash = CBNewByteArrayWithData(CBSha256(hash1, 32), 32, CBGetMessage(self)->events);
+	uint8_t hash1[32];
+	uint8_t * hash2 = malloc(32);
+	CBSha256(headerData, 80, hash1);
+	CBSha256(hash1, 32, hash2);
+	CBByteArray * hash = CBNewByteArrayWithData(hash2, 32, CBGetMessage(self)->events);
 	free(hash1);
 	return hash;
 }

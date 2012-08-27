@@ -1001,20 +1001,29 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					return false; // Stack cannot be empty
 				CBScriptStackItem item = stack->elements[stack->length-1];
 				uint8_t * data;
-				uint8_t * data2;
+				uint8_t dataTemp[32];
 				switch (byte) {
-					case CB_SCRIPT_OP_RIPEMD160: data = CBRipemd160(item.data,item.length);	break;
-					case CB_SCRIPT_OP_SHA1: data = CBSha160(item.data,item.length); break;
-					case CB_SCRIPT_OP_HASH160:
-						data2 = CBSha256(item.data,item.length);
-						data = CBRipemd160(data2,32);
-						free(data2);
+					case CB_SCRIPT_OP_RIPEMD160:
+						data = malloc(20);
+						CBRipemd160(item.data,item.length,data);
 						break;
-					case CB_SCRIPT_OP_SHA256: data = CBSha256(item.data,item.length); break;
+					case CB_SCRIPT_OP_SHA1:
+						data = malloc(20);
+						CBSha160(item.data,item.length,data);
+						break;
+					case CB_SCRIPT_OP_HASH160:
+						CBSha256(item.data,item.length,dataTemp);
+						data = malloc(20);
+						CBRipemd160(dataTemp,32,data);
+						break;
+					case CB_SCRIPT_OP_SHA256:
+						data = malloc(32);
+						CBSha256(item.data,item.length,data);
+						break;
 					default:
-						data2 = CBSha256(item.data,item.length);
-						data = CBSha256(data2,32);
-						free(data2);
+						CBSha256(item.data,item.length,dataTemp);
+						data = malloc(32);
+						CBSha256(dataTemp,32,data);
 						break;
 				}
 				free(item.data);

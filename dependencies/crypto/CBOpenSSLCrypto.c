@@ -33,20 +33,14 @@
 
 // Implementation
 
-uint8_t * CBSha160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA_DIGEST_LENGTH);
-    SHA1(data, len, hash);
-	return hash;
+void CBSha160(uint8_t * data,uint16_t len,uint8_t * output){
+    SHA1(data, len, output);
 }
-uint8_t * CBSha256(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
-	SHA256(data, len, hash);
-	return hash;
+void CBSha256(uint8_t * data,uint16_t len,uint8_t * output){
+	SHA256(data, len, output);
 }
-uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
-    RIPEMD160(data, len, hash);
-	return hash;
+void CBRipemd160(uint8_t * data,uint16_t len,uint8_t * output){
+	RIPEMD160(data, len, output);
 }
 bool CBEcdsaVerify(uint8_t * signature,uint8_t sigLen,uint8_t * hash,const uint8_t * pubKey,uint8_t keyLen){
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
