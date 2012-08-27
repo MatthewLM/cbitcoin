@@ -134,7 +134,7 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 	self->prevBlockHash = CBByteArraySubReference(bytes, 4, 32);
 	self->merkleRoot = CBByteArraySubReference(bytes, 36, 32);
 	self->time = CBByteArrayReadInt32(bytes, 68);
-	self->difficulty = CBByteArrayReadInt32(bytes, 72);
+	self->target = CBByteArrayReadInt32(bytes, 72);
 	self->nounce = CBByteArrayReadInt32(bytes, 76);
 	// If first VarInt byte is zero, then stop here for headers, otherwise look for 8 more bytes and continue
 	uint8_t firstByte = CBByteArrayGetByte(bytes, 80);
@@ -213,6 +213,7 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 		return 80 + x + 1; // 80 header bytes, the var int and the null byte
 	}
 }
+
 CBByteArray * CBBlockGetHash(CBBlock * self){
 	if (NOT self->hash)
 		self->hash = CBBlockCalculateHash(self);
@@ -238,7 +239,7 @@ uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 	CBByteArrayCopyByteArray(bytes, 36, self->merkleRoot);
 	CBByteArrayChangeReference(self->merkleRoot, bytes, 36);
 	CBByteArraySetInt32(bytes, 68, self->time);
-	CBByteArraySetInt32(bytes, 72, self->difficulty);
+	CBByteArraySetInt32(bytes, 72, self->target);
 	CBByteArraySetInt32(bytes, 76, self->nounce);
 	// Do Transactions
 	CBVarIntEncode(bytes, 80, transactionNum);

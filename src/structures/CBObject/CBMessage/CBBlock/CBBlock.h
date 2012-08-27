@@ -31,6 +31,7 @@
 //  Includes
 
 #include "CBTransaction.h"
+#include "CBBigInt.h"
 
 /**
  @brief Structure for CBBlock objects. @see CBBlock.h
@@ -42,7 +43,7 @@ typedef struct{
 	CBByteArray * prevBlockHash; /**< The previous block hash. */
 	CBByteArray * merkleRoot; /**< The merkle tree root hash. */
 	uint32_t time; /**< Timestamp for the block. The network uses 32 bits. The protocol can be future proofed by detecting overflows when going through the blocks. So if a block's time overflows such that the time is less than the median of the last 10 blocks, the block can be seen by adding the first 32 bits of the network time and finally the timestamp can be tested against the network time. The overflow problem can therefore be fixed by a workaround but it is a shame Satoshi did not use 64 bits. */
-	uint32_t difficulty; /**< The calculated difficulty for this block. */
+	uint32_t target; /**< The compact target representation. */
 	uint32_t nounce; /**< Nounce used in generating the block. */
 	uint32_t transactionNum; /**< Number of transactions in the block. */
 	CBTransaction ** transactions; /**< The transactions included in this block. NULL if only the header has been received. */

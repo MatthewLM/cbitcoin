@@ -60,6 +60,8 @@
 #define CB_24_HOURS 86400
 #define NOT ! // Better readability than !
 #define CB_MAX_RESPONSES_EXPECTED 3 // A pong, an inventory broadcast and an address broadcast.
+#define CB_TARGET_INTERVAL 1209600 // Two week interval
+#define CB_MAX_TARGET 0x1D00FFFF
 
 //  Enums
 
