@@ -207,6 +207,12 @@ uint8_t * CBByteArrayGetData(CBByteArray * self);
  */
 uint8_t CBByteArrayGetLastByte(CBByteArray * self);
 /**
+ @brief Determines if a CBByteArray is null.
+ @param self The CBByteArray object.
+ @returns true if all bytes are zero, else false.
+ */
+bool CBByteArrayIsNull(CBByteArray * self);
+/**
  @brief Set a byte into the array. This will be set at self->offset+index in the underlying data.
  @param self The CBByteArray object.
  @param index The index in the array to set the byte

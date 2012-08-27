@@ -325,6 +325,11 @@ uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArra
 	free(firstHash);
 	return secondHash;
 }
+bool CBTransactionIsCoinBase(CBTransaction * self){
+	return (self->inputNum == 1
+			&& self->inputs[0]->outPointerIndex == 0xFFFFFFFF
+			&& CBByteArrayIsNull(self->inputs[0]->outPointerHash));
+}
 uint32_t CBTransactionSerialise(CBTransaction * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {

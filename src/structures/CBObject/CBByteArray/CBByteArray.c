@@ -164,6 +164,12 @@ uint8_t * CBByteArrayGetData(CBByteArray * self){
 uint8_t CBByteArrayGetLastByte(CBByteArray * self){
 	return self->sharedData->data[self->offset+self->length];
 }
+bool CBByteArrayIsNull(CBByteArray * self){
+	for (uint32_t x = 0; x < self->length; x++)
+		if (self->sharedData->data[self->offset+x])
+			return false;
+	return true;
+}
 void CBByteArraySetByte(CBByteArray * self,uint32_t index,uint8_t byte){
 	self->sharedData->data[self->offset+index] = byte;
 }

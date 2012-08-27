@@ -121,6 +121,12 @@ uint32_t CBTransactionDeserialise(CBTransaction * self);
  */
 uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
 /**
+ @brief Determines if a transaction is a coinbase transaction or not.
+ @param self The CBTransaction object.
+ @returns true if the transaction is a coin-base transaction or false if not.
+ */
+bool CBTransactionIsCoinBase(CBTransaction * self);
+/**
  @brief Serialises a CBTransaction to the byte data.
  @param self The CBTransaction object.
  @returns The length read on success, 0 on failure.
