@@ -22,6 +22,28 @@
 
 #include "CBValidationFunctions.h"
 
+void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum){
+	uint8_t hash[32];
+	for (uint32_t x = 0; hashNum != 1;) {
+		if (x == hashNum - 1) {
+			uint8_t dup[64];
+			memcpy(dup, hashes + x * 32, 32);
+			memcpy(dup + 32, hashes + x * 32, 32);
+			CBSha256(dup, 64, hash);
+		}else
+			CBSha256(hashes + x * 32, 64, hash);
+		// Double SHA256
+		CBSha256(hash, 32, hashes + x * 32/2);
+		x += 2;
+		if (x >= hashNum) {
+			if (x > hashNum)
+				// The number of hashes was odd. Increment to even
+				hashNum++;
+			hashNum /= 2;
+			x = 0;
+		}
+	}
+}
 uint32_t CBCalculateTarget(uint32_t oldTarget, uint32_t time){
 	// Limitations on the factor for retargeting.
 	if (time < CB_TARGET_INTERVAL / 4)

@@ -28,6 +28,12 @@
 #include "CBBlock.h"
 
 /**
+ @brief Calculates the merkle root from a list of hashes.
+ @param hashes The hashes stored as continuous byte data with each 32 byte hash after each other. The data pointed to by "hashes" will be modified and will result in the merkle root as the first 32 bytes.
+ @param hashNum The number of hashes in the memory block
+ */
+void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum);
+/**
  @brief Recalcultes the target for every 2016 blocks.
  @param oldTarget The old target in compact form.
  @param time The time between the newer block and older block for recalulating the target.
