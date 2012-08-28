@@ -54,12 +54,12 @@ CBMerkleNode * CBBuildMerkleTree(CBByteArray ** hashes, uint32_t numHashes){
 				// The number of hashes was odd. Increment to even
 				numHashes++;
 			numHashes /= 2;
+			// Move to next level
+			level = nextLevel;
 			if (numHashes == 1)
 				// Done, got the single root hash
 				break;
 			x = 0;
-			// Move to next level
-			level = nextLevel;
 			nextLevel = malloc((numHashes + 1)/2 * sizeof(*level));
 		}
 	}
