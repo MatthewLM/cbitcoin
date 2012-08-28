@@ -168,23 +168,23 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(bytes);
-	// Test adding 4 nodes. Check order.
+	// Test adding 4 peers. Check order.
 	int16_t timeOffsets[] = {-4,-10,19,-5};
 	CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16, &events);
 	for (int x = 0; x < 4; x++) {
 		CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
-		CBNode * node = CBNewNodeByTakingNetworkAddress(addr);
-		node->timeOffset = timeOffsets[x];
-		CBAddressManagerTakeNode(addrMan, node);
+		CBPeer * peer = CBNewNodeByTakingNetworkAddress(addr);
+		peer->timeOffset = timeOffsets[x];
+		CBAddressManagerTakeNode(addrMan, peer);
 	}
 	int16_t orderedOffsets[] = {-10,-5,-4,19};
 	for (int x = 0; x < 4; x++) {
-		if (addrMan->nodes[x]->timeOffset != orderedOffsets[x]) {
-			printf("NODE ORDER FAIL %i: %i != %i\n",x,addrMan->nodes[x]->timeOffset, orderedOffsets[x]);
+		if (addrMan->peers[x]->timeOffset != orderedOffsets[x]) {
+			printf("NODE ORDER FAIL %i: %i != %i\n",x,addrMan->peers[x]->timeOffset, orderedOffsets[x]);
 			return 1;
 		}
 	}
-	// Test if we got nodes
+	// Test if we got peers
 	CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
 	if(NOT CBAddressManagerGotNode(addrMan, addr)){
 		printf("GOT NODE FAIL\n");
@@ -206,8 +206,8 @@ int main(){
 		printf("MEDIAN FAIL %i != -5\n",addrMan->networkTimeOffset);
 		return 1;
 	}
-	// Remove the node with the timeoffset of -5 and check that the median now equals -4
-	CBAddressManagerRemoveNode(addrMan, addrMan->nodes[1]);
+	// Remove the peer with the timeoffset of -5 and check that the median now equals -4
+	CBAddressManagerRemoveNode(addrMan, addrMan->peers[1]);
 	if (addrMan->networkTimeOffset != -4) {
 		printf("MEDIAN FAIL %i != -4\n",addrMan->networkTimeOffset);
 		return 1;

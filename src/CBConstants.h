@@ -54,9 +54,9 @@
 #define CB_MAX_MONEY 2100000000000000 // 21 million Bitcoins. Each bitcoin has 100 million satoshis (individual units).
 #define CB_SOCKET_CONNECTION_CLOSE -1
 #define CB_SOCKET_FAILURE -2
-#define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a node.
+#define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a peer.
 #define CB_BUCKET_NUM 255 // Maximum number of buckets
-#define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a node in 24 hours
+#define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a peer in 24 hours
 #define CB_24_HOURS 86400
 #define NOT ! // Better readability than !
 #define CB_MAX_RESPONSES_EXPECTED 3 // A pong, an inventory broadcast and an address broadcast.
@@ -124,7 +124,7 @@ typedef enum{
  */
 typedef enum{
 	CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE = 1, /**< */
-	CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY = 2, /**< Automatically discover nodes and connect upto the maximum allowed connections using the supplied CBVersion. This involves the exchange of version messages and addresses. */
+	CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY = 2, /**< Automatically discover peers and connect upto the maximum allowed connections using the supplied CBVersion. This involves the exchange of version messages and addresses. */
 	CB_NETWORK_COMMUNICATOR_AUTO_PING = 4, /**< Send ping messages every "heartBeat" automatically. If the protocol version in the CBVersion message is 60000 or over, cbitcoin will use the new ping/pong specification. @see PingPong.h */ 
 }CBNetworkCommunicatorFlags;
 
@@ -133,7 +133,7 @@ typedef enum{
  */
 typedef enum{
 	CB_MESSAGE_ACTION_CONTINUE, /**< Continue as normal */
-	CB_MESSAGE_ACTION_DISCONNECT, /**< Disconnect the node */
+	CB_MESSAGE_ACTION_DISCONNECT, /**< Disconnect the peer */
 	CB_MESSAGE_ACTION_STOP, /**< Stop the CBNetworkCommunicator */
 	CB_MESSAGE_ACTION_RETURN /**< Return from the message handler with no action. */
 }CBOnMessageReceivedAction;
@@ -143,7 +143,7 @@ typedef enum{
  */
 typedef enum{
 	CB_MESSAGE_TYPE_VERSION = 1, /**< @see CBVersion.h */
-	CB_MESSAGE_TYPE_VERACK = 2, /**< Acknowledgement and acceptance of a node's version and connection. */
+	CB_MESSAGE_TYPE_VERACK = 2, /**< Acknowledgement and acceptance of a peer's version and connection. */
 	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBAddressBroadcast.h */
 	CB_MESSAGE_TYPE_INV = 8, /**< @see CBInventoryBroadcast.h */
 	CB_MESSAGE_TYPE_GETDATA = 16, /**< @see CBInventoryBroadcast.h */

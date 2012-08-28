@@ -46,7 +46,7 @@ typedef enum{
 
 typedef struct{
 	TesterProgress prog[7];
-	CBNode * nodeToProg[7];
+	CBPeer * peerToProg[7];
 	uint8_t progNum;
 	int complete;
 	int addrComplete;
@@ -54,8 +54,8 @@ typedef struct{
 	pthread_mutex_t testingMutex;
 }Tester;
 
-void onTimeOut(void * tester,void * comm,void * node,CBTimeOutType type);
-void onTimeOut(void * tester,void * comm,void * node,CBTimeOutType type){
+void onTimeOut(void * tester,void * comm,void * peer,CBTimeOutType type);
+void onTimeOut(void * tester,void * comm,void * peer,CBTimeOutType type){
 	switch (type) {
 		case CB_TIMEOUT_CONNECT:
 			printf("TIMEOUT FAIL: CONNECT\n");
@@ -79,29 +79,29 @@ void stop(void * comm);
 void stop(void * comm){
 	CBNetworkCommunicatorStop(comm);
 }
-CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * vnode);
-CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * vnode){
+CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * vpeer);
+CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * vpeer){
 	Tester * tester = vtester;
 	pthread_mutex_lock(&tester->testingMutex); // Only one processing of test at a time.
-	CBNode * node = vnode;
+	CBPeer * peer = vpeer;
 	CBNetworkCommunicator * comm = vcomm;
-	CBMessage * theMessage = node->receive;
-	// Assign node to tester progress.
+	CBMessage * theMessage = peer->receive;
+	// Assign peer to tester progress.
 	uint8_t x = 0;
 	for (; x < tester->progNum; x++) {
-		if (tester->nodeToProg[x] == node) {
+		if (tester->peerToProg[x] == peer) {
 			break;
 		}
 	}
 	if (x == tester->progNum) {
-		printf("NEW NODE OBJ: (%s,%p),(%p)\n",(comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"),comm,node);
-		tester->nodeToProg[x] = node;
+		printf("NEW NODE OBJ: (%s,%p),(%p)\n",(comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"),comm,peer);
+		tester->peerToProg[x] = peer;
 		tester->progNum++;
 	}
 	TesterProgress * prog = tester->prog + x;
 	switch (theMessage->type) {
 		case CB_MESSAGE_TYPE_VERSION:
-			if (NOT ((node->versionSent && *prog == GOTACK) || (*prog == 0))) {
+			if (NOT ((peer->versionSent && *prog == GOTACK) || (*prog == 0))) {
 				printf("VERSION FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -128,7 +128,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * v
 			*prog |= GOTVERSION;
 			break;
 		case CB_MESSAGE_TYPE_VERACK:
-			if ((NOT node->versionSent || node->versionAck)) {
+			if ((NOT peer->versionSent || peer->versionAck)) {
 				printf("VERACK FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -175,7 +175,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * v
 		tester->complete++;
 	}
 	printf("COMPLETION: %i - %i\n",tester->addrComplete,tester->complete);
-	if (tester->addrComplete == 6 && tester->complete == 6) { // Connector sends other node twice (2). Listeners send self to connector (2). Listeners send selves to each other (2). 2 + 2 + 2 = 6
+	if (tester->addrComplete == 6 && tester->complete == 6) { // Connector sends other peer twice (2). Listeners send self to connector (2). Listeners send selves to each other (2). 2 + 2 + 2 = 6
 		// Completed testing
 		printf("DONE\n");
 		printf("STOPPING COMM L1\n");

@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Stores up to 500 block hashes for a block chain to describe a block chain for a node so that a node can send relevent block data. Inherits CBMessage
+ @brief Stores up to 500 block hashes for a block chain to describe a block chain for a peer so that a peer can send relevent block data. Inherits CBMessage
 */
 
 #ifndef CBCHAINDESCRIPTORH

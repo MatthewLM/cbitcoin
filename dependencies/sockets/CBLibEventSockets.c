@@ -174,11 +174,11 @@ void CBCanAccept(evutil_socket_t socketID,short eventNum,void * arg){
 	CBEvent * event = arg;
 	event->onEvent.i(event->loop->communicator,socketID);
 }
-bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * node){
+bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * peer){
 	CBEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onDidConnect;
-	event->node = node;
+	event->peer = peer;
 	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_TIMEOUT|EV_WRITE, CBDidConnect, event);
 	if (NOT event->event) {
 		free(event);
@@ -191,24 +191,24 @@ void CBDidConnect(evutil_socket_t socketID,short eventNum,void * arg){
 	CBEvent * event = arg;
 	if (eventNum & EV_TIMEOUT) {
 		// Timeout for the connection
-		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
+		event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_CONNECT);
 	}else{
 		int optval = -1;
 		socklen_t optlen = sizeof(optval);
 		getsockopt(socketID, SOL_SOCKET, SO_ERROR, &optval, &optlen);
 		if (optval)
 			// Act as timeout
-			event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
+			event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_CONNECT);
 		else
 			// Connection successful
-			event->onEvent.ptr(event->loop->communicator,event->node);
+			event->onEvent.ptr(event->loop->communicator,event->peer);
 	}
 }
-bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * node){
+bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * peer){
 	CBEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onCanSend;
-	event->node = node;
+	event->peer = peer;
 	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_TIMEOUT|EV_WRITE|EV_PERSIST, CBCanSend, event);
 	if (NOT event->event) {
 		free(event);
@@ -221,17 +221,17 @@ void CBCanSend(evutil_socket_t socketID,short eventNum,void * arg){
 	CBEvent * event = arg;
 	if (eventNum & EV_TIMEOUT) {
 		// Timeout when waiting to write.
-		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_SEND);
+		event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_SEND);
 	}else{
 		// Can send
-		event->onEvent.ptr(event->loop->communicator,event->node);
+		event->onEvent.ptr(event->loop->communicator,event->peer);
 	}
 }
-bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * node){
+bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * peer){
 	CBEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onCanReceive;
-	event->node = node;
+	event->peer = peer;
 	event->event = event_new(((CBEventLoop *)loopID)->base, (evutil_socket_t)socketID, EV_TIMEOUT|EV_READ|EV_PERSIST, CBCanReceive, event);
 	if (NOT event->event) {
 		free(event);
@@ -244,10 +244,10 @@ void CBCanReceive(evutil_socket_t socketID,short eventNum,void * arg){
 	CBEvent * event = arg;
 	if (eventNum & EV_TIMEOUT) {
 		// Timeout when waiting to receive
-		event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_RECEIVE);
+		event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_RECEIVE);
 	}else{
 		// Can receive
-		event->onEvent.ptr(event->loop->communicator,event->node);
+		event->onEvent.ptr(event->loop->communicator,event->peer);
 	}
 }
 bool CBSocketAddEvent(uint64_t eventID,uint16_t timeout){

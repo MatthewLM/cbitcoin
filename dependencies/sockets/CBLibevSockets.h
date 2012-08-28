@@ -101,7 +101,7 @@ typedef struct{
 	CBEventLoop * loop;
 	void (*callback)(void *);
 	void * arg;
-	void * node;
+	void * peer;
 }CBTimer;
 
 typedef struct{
@@ -109,7 +109,7 @@ typedef struct{
 	CBEventLoop * loop; /**< For getting timeout events */
 	union CBOnEvent onEvent;
 	int socket;
-	void * node;
+	void * peer;
 	void (*timerCallback)(struct ev_loop *,struct ev_timer *,int);
 	CBTimer * timeout;
 }CBIOEvent;

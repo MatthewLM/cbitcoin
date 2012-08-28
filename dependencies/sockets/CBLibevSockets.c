@@ -167,11 +167,11 @@ void CBCanAccept(struct ev_loop * loop,struct ev_io * watcher,int eventID){
 	CBIOEvent * event = (CBIOEvent *)watcher;
 	event->onEvent.i(event->loop->communicator,event->socket);
 }
-bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * node){
+bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * peer){
 	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onDidConnect;
-	event->node = node;
+	event->peer = peer;
 	event->timerCallback = CBDidConnectTimeout;
 	ev_io_init((struct ev_io *)event, CBDidConnect, (int)socketID, EV_WRITE);
 	*eventID = (uint64_t)event;
@@ -185,17 +185,17 @@ void CBDidConnect(struct ev_loop * loop,struct ev_io * watcher,int eventID){
 	// This is a one-shot event.
 	ev_io_stop(loop, watcher);
 	// Connection successful
-	event->onEvent.ptr(event->loop->communicator,event->node);
+	event->onEvent.ptr(event->loop->communicator,event->peer);
 }
 void CBDidConnectTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
 	CBTimer * event = (CBTimer *) watcher;
-	event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_CONNECT);
+	event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_CONNECT);
 }
-bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * node){
+bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * peer){
 	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onCanSend;
-	event->node = node;
+	event->peer = peer;
 	event->timerCallback = CBCanSendTimeout;
 	ev_io_init((struct ev_io *)event, CBCanSend, (int)socketID, EV_WRITE);
 	*eventID = (uint64_t)event;
@@ -207,17 +207,17 @@ void CBCanSend(struct ev_loop * loop,struct ev_io * watcher,int eventID){
 	if (event->timeout)
 		ev_timer_again(loop, (struct ev_timer *)event->timeout);
 	// Can send
-	event->onEvent.ptr(event->loop->communicator,event->node);
+	event->onEvent.ptr(event->loop->communicator,event->peer);
 }
 void CBCanSendTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
 	CBTimer * event = (CBTimer *) watcher;
-	event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_SEND);
+	event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_SEND);
 }
-bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * node){
+bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * peer){
 	CBIOEvent * event = malloc(sizeof(*event));
 	event->loop = (CBEventLoop *)loopID;
 	event->onEvent.ptr = onCanReceive;
-	event->node = node;
+	event->peer = peer;
 	event->timerCallback = CBCanReceiveTimeout;
 	ev_io_init((struct ev_io *)event, CBCanReceive, (int)socketID, EV_READ);
 	*eventID = (uint64_t)event;
@@ -229,11 +229,11 @@ void CBCanReceive(struct ev_loop * loop,struct ev_io * watcher,int eventID){
 	if (event->timeout)
 		ev_timer_again(loop, (struct ev_timer *)event->timeout);
 	// Can receive
-	event->onEvent.ptr(event->loop->communicator,event->node);
+	event->onEvent.ptr(event->loop->communicator,event->peer);
 }
 void CBCanReceiveTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID){
 	CBTimer * event = (CBTimer *) watcher;
-	event->loop->onTimeOut(event->loop->communicator,event->node,CB_TIMEOUT_RECEIVE);
+	event->loop->onTimeOut(event->loop->communicator,event->peer,CB_TIMEOUT_RECEIVE);
 }
 bool CBSocketAddEvent(uint64_t eventID,uint16_t timeout){
 	CBIOEvent * event = (CBIOEvent *)eventID;
@@ -242,7 +242,7 @@ bool CBSocketAddEvent(uint64_t eventID,uint16_t timeout){
 		// Add timer
 		event->timeout = malloc(sizeof(*event->timeout));
 		event->timeout->loop = event->loop;
-		event->timeout->node = event->node;
+		event->timeout->peer = event->peer;
 		ev_timer_init((struct ev_timer *)event->timeout, event->timerCallback, 0, timeout);
 		ev_timer_start(event->loop->base, (struct ev_timer *)event->timeout);
 	}else

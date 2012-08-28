@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Message for broadcasting CBNetworkAddresses over the network. This is used to share socket information for nodes that are accepting incomming connections. When making an object, get the addresses you want to add and then set the "addrNum" and "addresses" fields. When managing the addresses you want to share, it's best to keep one object and change the addresses when necessary by reorganising the pointers with the "addresses" field. Inherits CBMessage
+ @brief Message for broadcasting CBNetworkAddresses over the network. This is used to share socket information for peers that are accepting incomming connections. When making an object, get the addresses you want to add and then set the "addrNum" and "addresses" fields. When managing the addresses you want to share, it's best to keep one object and change the addresses when necessary by reorganising the pointers with the "addresses" field. Inherits CBMessage
 */
 
 #ifndef CBADDRESSBROADCASTH
@@ -39,7 +39,7 @@ typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	bool timeStamps; /**< If true, timestamps are included with the CBNetworkAddresses */
 	uint8_t addrNum; /**< Number of addresses. Maximum is 30. */
-	CBNetworkAddress ** addresses; /**< List of CBNetworkAddresses shared so that nodes can find new nodes. */
+	CBNetworkAddress ** addresses; /**< List of CBNetworkAddresses shared so that peers can find new peers. */
 } CBAddressBroadcast;
 
 /**

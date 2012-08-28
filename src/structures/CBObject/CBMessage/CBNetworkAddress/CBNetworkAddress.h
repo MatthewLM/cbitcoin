@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Contains IP, time, port and services information for a node as well as data and code for managing individual nodes. Used to advertise nodes. "bytesTransferred/timeUsed" can be used to rank nodes for the most efficient ones which can be useful when selecting prefered nodes for download. Inherits CBObject
+ @brief Contains IP, time, port and services information for a peer as well as data and code for managing individual peers. Used to advertise peers. "bytesTransferred/timeUsed" can be used to rank peers for the most efficient ones which can be useful when selecting prefered peers for download. Inherits CBObject
 */
 
 #ifndef CBNETWORKADDRESSH
@@ -44,7 +44,7 @@ typedef struct{
 	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. The CBNetworkAddress should have exclusive access to the CBByteArray to avoid potential threading issues as the CBNetworkAddresses are protected by mutexes maintained by CBNetworkCommunicators but the ip is not. */
 	CBIPType type; /**< The type of the IP */
 	uint16_t port; /**< Port number */
-	int32_t version; /**< Protocol version of node. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
+	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
 	bool public; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. This doesn't include failure from "CBNetworkCommunicatorConnect". If false the address is private and should be forgotten when connections are closed. */
 } CBNetworkAddress;
 

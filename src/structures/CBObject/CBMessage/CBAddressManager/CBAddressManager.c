@@ -90,18 +90,18 @@ void CBAddressManagerAddAddress(CBAddressManager * self,CBNetworkAddress * addr)
 }
 void CBAddressManagerAdjustTime(CBAddressManager * self){
 	// Get median timeOffset. Nodes are pre-ordered to the timeOffset.
-	uint32_t index = (self->nodesNum-1)/2;
-	int16_t median = self->nodes[index]->timeOffset;
-	if (NOT self->nodesNum % 2)
+	uint32_t index = (self->peersNum-1)/2;
+	int16_t median = self->peers[index]->timeOffset;
+	if (NOT self->peersNum % 2)
 		// Average middle pair
-		median = (self->nodes[index + 1]->timeOffset + median)/2;
+		median = (self->peers[index + 1]->timeOffset + median)/2;
 	if (median > CB_NETWORK_TIME_ALLOWED_TIME_DRIFT) {
 		// Revert to system time
 		self->networkTimeOffset = 0;
-		// Check to see if any nodes are within 5 minutes of the system time and do not have the same time, else give bad time error.
+		// Check to see if any peers are within 5 minutes of the system time and do not have the same time, else give bad time error.
 		bool found = false;
-		for (uint16_t x = 0; x < self->nodesNum; x++)
-			if (self->nodes[x]->timeOffset < 300 && self->nodes[x]->timeOffset)
+		for (uint16_t x = 0; x < self->peersNum; x++)
+			if (self->peers[x]->timeOffset < 300 && self->peers[x]->timeOffset)
 				found = true;
 		if (NOT found)
 			CBGetMessage(self)->events->onBadTime(self->callbackHandler,self);
@@ -232,7 +232,7 @@ uint64_t CBAddressManagerGetGroup(CBAddressManager * self,CBNetworkAddress * add
 	return group;
 }
 uint64_t CBAddressManagerGetNumberOfAddresses(CBAddressManager * self){
-	uint64_t total = self->nodesNum;
+	uint64_t total = self->peersNum;
 	for (u_int8_t x = 0; x < CB_BUCKET_NUM; x++) {
 		total += (self->buckets + x)->addrNum;
 	}
@@ -248,10 +248,10 @@ CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self,CBN
 			return bucket->addresses[x];
 	return NULL;
 }
-CBNode * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr){
-	for (uint16_t x = 0; x < self->nodesNum; x++)
-		if (CBNetworkAddressEquals(CBGetNetworkAddress(self->nodes[x]), addr))
-			return self->nodes[x];
+CBPeer * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr){
+	for (uint16_t x = 0; x < self->peersNum; x++)
+		if (CBNetworkAddressEquals(CBGetNetworkAddress(self->peers[x]), addr))
+			return self->peers[x];
 	return NULL;
 }
 bool CBAddressManagerIsReachable(CBAddressManager * self,CBIPType type){
@@ -277,21 +277,21 @@ void CBAddressManagerRemoveAddress(CBAddressManager * self,CBNetworkAddress * ad
 		}
 	}
 }
-void CBAddressManagerRemoveNode(CBAddressManager * self,CBNode * node){
-	// Find position of node. Basic linear search (Better alternative in this case ???). Assumes node is in the list properly or a fatal overflow is caused.
-	uint16_t nodePos = 0;
-	for (;; nodePos++) if (self->nodes[nodePos] == node) break;
-	// Moves rest of nodes down
-	memmove(self->nodes + nodePos, self->nodes + nodePos + 1, (self->nodesNum - nodePos - 1) * sizeof(*self->nodes));
-	self->nodesNum--; // Removed node. Don't bother reallocating memory which will be done upon a new node.
-	if (CBGetNetworkAddress(node)->public)
-		// Public node, return to addresses list.
-		CBAddressManagerTakeAddress(self, realloc(node, sizeof(CBNetworkAddress)));
+void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer){
+	// Find position of peer. Basic linear search (Better alternative in this case ???). Assumes peer is in the list properly or a fatal overflow is caused.
+	uint16_t peerPos = 0;
+	for (;; peerPos++) if (self->peers[peerPos] == peer) break;
+	// Moves rest of peers down
+	memmove(self->peers + peerPos, self->peers + peerPos + 1, (self->peersNum - peerPos - 1) * sizeof(*self->peers));
+	self->peersNum--; // Removed peer. Don't bother reallocating memory which will be done upon a new peer.
+	if (CBGetNetworkAddress(peer)->public)
+		// Public peer, return to addresses list.
+		CBAddressManagerTakeAddress(self, realloc(peer, sizeof(CBNetworkAddress)));
 	else
-		// Private node (Never been advertised as address)
-		CBReleaseObject(node);
-	// Re-adjust time without this node. If no nodes are available do not adjust anything.
-	if (self->nodesNum) CBAddressManagerAdjustTime(self);
+		// Private peer (Never been advertised as address)
+		CBReleaseObject(peer);
+	// Re-adjust time without this peer. If no peers are available do not adjust anything.
+	if (self->peersNum) CBAddressManagerAdjustTime(self);
 }
 uint32_t CBAddressManagerSerialise(CBAddressManager * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -338,8 +338,8 @@ bool CBAddressManagerSetup(CBAddressManager * self){
 			return true;
 		CBFreeSecureRandomGenerator(self->rndGen);
 	}
-	self->nodes = NULL;
-	self->nodesNum = 0;
+	self->peers = NULL;
+	self->peersNum = 0;
 	return false;
 }
 void CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr){
@@ -374,20 +374,20 @@ void CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr
 	}
 	bucket->addresses[insert] = addr;
 }
-void CBAddressManagerTakeNode(CBAddressManager * self,CBNode * node){
+void CBAddressManagerTakeNode(CBAddressManager * self,CBPeer * peer){
 	// Find insertion point
 	uint16_t insert = 0;
-	for (; insert < self->nodesNum; insert++)
-		if (self->nodes[insert]->timeOffset > node->timeOffset)
+	for (; insert < self->peersNum; insert++)
+		if (self->peers[insert]->timeOffset > peer->timeOffset)
 			// Insert here
 			break;
-	// Reallocate nodes
-	self->nodesNum++;
-	self->nodes = realloc(self->nodes, sizeof(*self->nodes) * self->nodesNum);
-	// Move memory up to allow for node
-	memmove(self->nodes + insert + 1, self->nodes + insert, (self->nodesNum - insert - 1) * sizeof(*self->nodes));
+	// Reallocate peers
+	self->peersNum++;
+	self->peers = realloc(self->peers, sizeof(*self->peers) * self->peersNum);
+	// Move memory up to allow for peer
+	memmove(self->peers + insert + 1, self->peers + insert, (self->peersNum - insert - 1) * sizeof(*self->peers));
 	// Insert
-	self->nodes[insert] = node;
+	self->peers[insert] = peer;
 	// Adjust time
 	CBAddressManagerAdjustTime(self);
 }

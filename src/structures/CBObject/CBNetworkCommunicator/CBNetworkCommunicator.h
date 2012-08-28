@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Used for communicating to other nodes. The network communicator holds function pointers for receiving messages and functions to send messages. The timeouts are in seconds. It is important to understant that a CBNetworkCommunicator does not guarentee thread safety for everything. Thread safety is only given to the "nodes" list. This means it is completely okay to add and remove nodes from multiple threads. Two threads may try to access the list at once such as if the CBNetworkCommunicator receives a socket timeout event and tries to remove an node at the same time as a thread made by a program using cbitcoin tries to add a new node. When using a CBNetworkCommunicator, threading and networking dependencies need to be satisfied, @see CBDependencies.h Inherits CBObject
+ @brief Used for communicating to other peers. The network communicator holds function pointers for receiving messages and functions to send messages. The timeouts are in seconds. It is important to understant that a CBNetworkCommunicator does not guarentee thread safety for everything. Thread safety is only given to the "peers" list. This means it is completely okay to add and remove peers from multiple threads. Two threads may try to access the list at once such as if the CBNetworkCommunicator receives a socket timeout event and tries to remove an peer at the same time as a thread made by a program using cbitcoin tries to add a new peer. When using a CBNetworkCommunicator, threading and networking dependencies need to be satisfied, @see CBDependencies.h Inherits CBObject
 */
 
 #ifndef CBNETWORKCOMMUNICATORH
@@ -30,7 +30,7 @@
 
 //  Includes
 
-#include "CBNode.h"
+#include "CBPeer.h"
 #include "CBDependencies.h"
 #include "CBAddressManager.h"
 #include "CBInventoryBroadcast.h"
@@ -48,22 +48,22 @@ typedef struct {
 	CBObject base; /**< CBObject base structure */
 	uint32_t networkID; /**< The 4 byte id for sending and receiving messages for a given network. */
 	CBNetworkCommunicatorFlags flags; /**< Flags for the operation of the CBNetworkCommunicator. */
-	int32_t version; /**< Used for automatic handshaking. This version will be advertised to nodes. */
+	int32_t version; /**< Used for automatic handshaking. This version will be advertised to peers. */
 	uint64_t services; /**< Used for automatic handshaking. These services will be advertised */
 	CBByteArray * userAgent; /**< Used for automatic handshaking. This user agent will be advertised. */
-	int32_t blockHeight; /** Set to the current block height for advertising to nodes during the automated handshake. */
+	int32_t blockHeight; /** Set to the current block height for advertising to peers during the automated handshake. */
 	CBNetworkAddress * ourIPv4; /**< IPv4 network address for us. */
 	CBNetworkAddress * ourIPv6; /**< IPv6 network address for us. */
 	uint32_t attemptingOrWorkingConnections; /**< All connections being attempted or sucessful */
-	uint32_t maxConnections; /**< Maximum number of nodes allowed to connect to. */
+	uint32_t maxConnections; /**< Maximum number of peers allowed to connect to. */
 	uint32_t numIncommingConnections; /**< Number of incomming connections made */
 	uint32_t maxIncommingConnections; /**< Maximum number of incomming connections. */
 	CBAddressManager * addresses; /**< All addresses both connected and unconnected */
-	uint16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all nodes after this interval. bitcoin-qt uses 1800 (30 minutes) */
-	uint16_t timeOut; /**< Time of zero contact from a node before timeout. bitcoin-qt uses 5400 (90 minutes) */
+	uint16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all peers after this interval. bitcoin-qt uses 1800 (30 minutes) */
+	uint16_t timeOut; /**< Time of zero contact from a peer before timeout. bitcoin-qt uses 5400 (90 minutes) */
 	uint16_t sendTimeOut; /**< Time to wait for a socket to be ready to write before a timeout. */
 	uint16_t recvTimeOut; /**< When receiving data after the initial response, the time to wait for the following data before timeout. */
-	uint16_t responseTimeOut; /**< Time to wait for a node to respond to a request before timeout.  */
+	uint16_t responseTimeOut; /**< Time to wait for a peer to respond to a request before timeout.  */
 	uint16_t connectionTimeOut; /**< Time to wait for a socket to connect before timeout. */
 	CBByteArray * alternativeMessages; /**< Alternative messages to accept. This should be the 12 byte command names each after another with nothing between. */
 	uint32_t * altMaxSizes; /**< Sizes for the alternative messages. Will be freed by this object, so malloc this and give it to this object. Send in NULL for a default CB_BLOCK_MAX_SIZE. */
@@ -119,30 +119,30 @@ void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket);
  @brief Returns true if it is beleived the network address can be connected to, otherwise false.
  @param self The CBNetworkCommunicator object.
  @param addr The CBNetworkAddress.
- @returns true if it is beleived the node can be connected to, otherwise false.
+ @returns true if it is beleived the peer can be connected to, otherwise false.
  */
 bool CBNetworkCommunicatorCanConnect(CBNetworkCommunicator * self,CBNetworkAddress * addr);
 /**
- @brief Connects to a node. This node will be added to the node list if it connects correctly.
+ @brief Connects to a peer. This peer will be added to the peer list if it connects correctly.
  @param self The CBNetworkCommunicator object.
- @param node The node to connect to.
+ @param peer The peer to connect to.
  @returns CB_CONNECT_OK if successful. CB_CONNECT_NO_SUPPORT if the IP version is not supported. CB_CONNECT_BAD if the connection failed and the address will be penalised. CB_CONNECT_FAIL if the connection failed but the address will not be penalised.
  */
-CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self,CBNode * node);
+CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self,CBPeer * peer);
 /**
- @brief Callback for the connection to a node.
+ @brief Callback for the connection to a peer.
  @param vself The CBNetworkCommunicator object.
- @param vnode The CBNode that connected.
+ @param vpeer The CBPeer that connected.
  */
-void CBNetworkCommunicatorDidConnect(void * vself,void * vnode);
+void CBNetworkCommunicatorDidConnect(void * vself,void * vpeer);
 /**
- @brief Disconnects a node.
+ @brief Disconnects a peer.
  @param self The CBNetworkCommunicator object.
- @param node The node.
+ @param peer The peer.
  @param penalty Penalty to the score of the address.
  @param stopping If true, do not call "onNetworkError" because the CBNetworkCommunicator is stopping.
  */
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBNode * node,u_int16_t penalty,bool stopping);
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,u_int16_t penalty,bool stopping);
 /**
  @brief Gets a new version message for this.
  @param self The CBNetworkCommunicator object.
@@ -152,42 +152,42 @@ CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBNetwo
 /**
  @brief Processes a new received message for auto discovery.
  @param self The CBNetworkCommunicator object.
- @param node The node
- @returns true if node should be disconnected, false otherwise.
+ @param peer The peer
+ @returns true if peer should be disconnected, false otherwise.
  */
-CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self,CBNode * node);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self,CBPeer * peer);
 /**
  @brief Processes a new received message for auto handshaking.
  @param self The CBNetworkCommunicator object.
- @param node The node
- @returns true if node should be disconnected, false otherwise.
+ @param peer The peer
+ @returns true if peer should be disconnected, false otherwise.
  */
-CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBNode * node);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBPeer * peer);
 /**
  @brief Processes a new received message for auto ping pongs.
  @param self The CBNetworkCommunicator object.
- @param node The node
- @returns true if node should be disconnected, false otherwise.
+ @param peer The peer
+ @returns true if peer should be disconnected, false otherwise.
  */
-CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBNode * node);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBPeer * peer);
 /**
- @brief Called when a node socket is ready for reading.
+ @brief Called when a peer socket is ready for reading.
  @param vself The CBNetworkCommunicator object.
- @param vnode The CBNode index with data to read.
+ @param vpeer The CBPeer index with data to read.
  */
-void CBNetworkCommunicatorOnCanReceive(void * vself,void * vnode);
+void CBNetworkCommunicatorOnCanReceive(void * vself,void * vpeer);
 /**
- @brief Called when a node socket is ready for writing.
+ @brief Called when a peer socket is ready for writing.
  @param vself The CBNetworkCommunicator object.
- @param vnode The CBNode
+ @param vpeer The CBPeer
  */
-void CBNetworkCommunicatorOnCanSend(void * vself,void * vnode);
+void CBNetworkCommunicatorOnCanSend(void * vself,void * vpeer);
 /**
  @brief Called when a header is received.
  @param self The CBNetworkCommunicator object.
- @param node The CBNode.
+ @param peer The CBPeer.
  */
-void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBNode * node);
+void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer * peer);
 /**
  @brief Called on an error with the socket event loop. The error event is given with CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL.  
  @param vself The CBNetworkCommunicator object.
@@ -196,26 +196,26 @@ void CBNetworkCommunicatorOnLoopError(void * vself);
 /**
  @brief Called when an entire message is received.
  @param self The CBNetworkCommunicator object.
- @param node The CBNode.
+ @param peer The CBPeer.
  */
-void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBNode * node);
+void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBPeer * peer);
 /**
- @brief Called on a timeout error. The node is removed.
+ @brief Called on a timeout error. The peer is removed.
  @param vself The CBNetworkCommunicator object.
- @param vnode The CBNode index which timedout.
+ @param vpeer The CBPeer index which timedout.
  @param type The type of the timeout
  */
-void CBNetworkCommunicatorOnTimeOut(void * vself,void * vnode,CBTimeOutType type);
+void CBNetworkCommunicatorOnTimeOut(void * vself,void * vpeer,CBTimeOutType type);
 /**
  @brief Sends a message by placing it on the send queue. Will serialise standard messages (unless serialised already) but not alternative messages or alert messages.
  @param self The CBNetworkCommunicator object.
- @param node The CBNode.
+ @param peer The CBPeer.
  @param message The CBMessage to send.
  @returns true if successful, false otherwise.
  */
-bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBNode * node,CBMessage * message);
+bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBPeer * peer,CBMessage * message);
 /**
- @brief Sends pings to all connected nodes.
+ @brief Sends pings to all connected peers.
  @param self The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorSendPings(void * vself);
@@ -251,7 +251,7 @@ void CBNetworkCommunicatorSetOurIPv6(CBNetworkCommunicator * self,CBNetworkAddre
  */
 void CBNetworkCommunicatorSetUserAgent(CBNetworkCommunicator * self,CBByteArray * userAgent);
 /**
- @brief Starts a CBNetworkCommunicator by connecting to the nodes in the nodes list. This starts the socket event loop.
+ @brief Starts a CBNetworkCommunicator by connecting to the peers in the peers list. This starts the socket event loop.
  @param self The CBNetworkCommunicator object.
  @returns true if the CBNetworkCommunicator started successfully, false otherwise.
  */
@@ -267,7 +267,7 @@ void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self);
  */
 void CBNetworkCommunicatorStartPings(CBNetworkCommunicator * self);
 /**
- @brief Closes all connections. This may be neccessary in case of failure in which case CBNetworkCommunicatorStart can be tried again to reconnect to the listed nodes.
+ @brief Closes all connections. This may be neccessary in case of failure in which case CBNetworkCommunicatorStart can be tried again to reconnect to the listed peers.
  @param vself The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorStop(CBNetworkCommunicator * self);
@@ -282,7 +282,7 @@ void CBNetworkCommunicatorStopListening(CBNetworkCommunicator * self);
  */
 void CBNetworkCommunicatorStopPings(CBNetworkCommunicator * self);
 /**
- @brief Looks at the stored addresses and tries to connect to addresses up to the maximum number of allowed connections or as many as there are in the case the maximum number of connections is greater than the number of addresses, plus connected nodes.
+ @brief Looks at the stored addresses and tries to connect to addresses up to the maximum number of allowed connections or as many as there are in the case the maximum number of connections is greater than the number of addresses, plus connected peers.
  @param self The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorTryConnections(CBNetworkCommunicator * self);

@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Contains infromation relating to the version of a node, the timestamp, features, IPs, user agent and last block recieveed. Inherits CBMessage
+ @brief Contains infromation relating to the version of a peer, the timestamp, features, IPs, user agent and last block recieveed. Inherits CBMessage
 */
 
 #ifndef CBVERSIONH
@@ -39,13 +39,13 @@
 typedef struct{
 	CBMessage base; /**< CBObject base structure */
 	int32_t version; /**< The protocol version. There appears to be no good reason why this is signed. */
-	uint64_t services; /**< The services which a node is offering. */
-	int64_t time; /**< The timestamp of this node. This assumes time(NULL) returns a correct 64 bit timestamp which it should to avoid massive problems in the future. */
-	CBNetworkAddress * addRecv; /**< Socket information for the recieving node. */
+	uint64_t services; /**< The services which a peer is offering. */
+	int64_t time; /**< The timestamp of this peer. This assumes time(NULL) returns a correct 64 bit timestamp which it should to avoid massive problems in the future. */
+	CBNetworkAddress * addRecv; /**< Socket information for the recieving peer. */
 	CBNetworkAddress * addSource; /**< The socket information for the source address. */
 	uint64_t nounce; /**< Nounce used to detect self. */
 	CBByteArray * userAgent; /**< Used to identify bitcoin software. Should be a string no more than 400 characters in length. */
-	int32_t blockHeight; /**< The latest block height for the node. Should probably be unsigned but the protocol specifies a signed integer. */
+	int32_t blockHeight; /**< The latest block height for the peer. Should probably be unsigned but the protocol specifies a signed integer. */
 } CBVersion;
 
 /**

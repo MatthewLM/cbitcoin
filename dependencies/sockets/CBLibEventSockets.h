@@ -88,7 +88,7 @@ typedef struct{
 	CBEventLoop * loop; /**< For getting timeout events */
 	struct event * event; /**< libevent event. */
 	union CBOnEvent onEvent;
-	void * node;
+	void * peer;
 }CBEvent;
 
 typedef struct{

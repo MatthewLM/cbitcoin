@@ -1,5 +1,5 @@
 //
-//  CBNode.c
+//  CBPeer.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 22/07/2012.
@@ -22,12 +22,12 @@
 
 //  SEE HEADER FILE FOR DOCUMENTATION 
 
-#include "CBNode.h"
+#include "CBPeer.h"
 
 //  Constructor
 
-CBNode * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
-	CBNode * self = CBGetNode(addr);
+CBPeer * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
+	CBPeer * self = CBGetNode(addr);
 	self = realloc(self,sizeof(*self));
 	CBGetObject(self)->free = CBFreeNode;
 	CBInitNodeByTakingNetworkAddress(self);
@@ -36,13 +36,13 @@ CBNode * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
 
 //  Object Getter
 
-CBNode * CBGetNode(void * self){
+CBPeer * CBGetNode(void * self){
 	return self;
 }
 
 //  Initialiser
 
-bool CBInitNodeByTakingNetworkAddress(CBNode * self){
+bool CBInitNodeByTakingNetworkAddress(CBPeer * self){
 	self->receive = NULL;
 	self->versionSent = false;
 	self->versionAck = false;

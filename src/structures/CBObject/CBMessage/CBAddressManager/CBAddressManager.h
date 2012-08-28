@@ -30,7 +30,7 @@
 
 //  Includes
 
-#include "CBNode.h"
+#include "CBPeer.h"
 #include "CBAddressBroadcast.h"
 #include "CBNetworkFunctions.h"
 #include "CBDependencies.h"
@@ -58,9 +58,9 @@ typedef struct{
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	CBBucket buckets[CB_BUCKET_NUM]; /**< Unconnected nodes stored in the buckets */
-	CBNode ** nodes; /**< Connected nodes sorted by the time offset. */
-	uint32_t nodesNum; /**< Number of connected nodes */
+	CBBucket buckets[CB_BUCKET_NUM]; /**< Unconnected peers stored in the buckets */
+	CBPeer ** peers; /**< Connected peers sorted by the time offset. */
+	uint32_t peersNum; /**< Number of connected peers */
 	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
 	CBIPType reachablity; /**< Bitfield for reachable address types */
 	uint16_t maxAddressesInBucket; /**< Maximum number of addresses that can be stored in a single bucket. */
@@ -112,13 +112,13 @@ void CBFreeAddressManager(void * vself);
 //  Functions
 
 /**
- @brief Adds a CBNode an places it into the CBAddressManager with a retain.
+ @brief Adds a CBPeer an places it into the CBAddressManager with a retain.
  @param self The CBAddressManager object.
- @param node The CBNetworkAddress to take.
+ @param peer The CBNetworkAddress to take.
  */
 void CBAddressManagerAddAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
- @brief Adjust the network time offset with a node's time.
+ @brief Adjust the network time offset with a peer's time.
  @param self The CBAddressManager object.
  @param time Time to adjust network time with.
  */
@@ -164,12 +164,12 @@ uint64_t CBAddressManagerGetNumberOfAddresses(CBAddressManager * self);
  */
 CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
- @brief Determines if a CBNetworkAddress is in the "nodes" list. Compares the IP address and port.
+ @brief Determines if a CBNetworkAddress is in the "peers" list. Compares the IP address and port.
  @param self The CBAddressManager object.
  @param addr The address.
- @returns If the address already exists as a connected node, returns the existing object. Else returns NULL.
+ @returns If the address already exists as a connected peer, returns the existing object. Else returns NULL.
  */
-CBNode * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr);
+CBPeer * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr);
 /**
  @brief Determines if an IP type is reachable.
  @param self The CBAddressManager object.
@@ -184,11 +184,11 @@ bool CBAddressManagerIsReachable(CBAddressManager * self,CBIPType type);
  */
 void CBAddressManagerRemoveAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
- @brief Remove a CBNode from the nodes list.
+ @brief Remove a CBPeer from the peers list.
  @param self The CBAddressManager object.
- @param node The CBNode to remove
+ @param peer The CBPeer to remove
  */
-void CBAddressManagerRemoveNode(CBAddressManager * self,CBNode * node);
+void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer);
 /**
  @brief Serialises a CBAddressManager to the byte data.
  @param self The CBAddressManager object
@@ -209,16 +209,16 @@ void CBAddressManagerSetReachability(CBAddressManager * self, CBIPType type, boo
  */
 bool CBAddressManagerSetup(CBAddressManager * self);
 /**
- @brief Takes a CBNode an places it into the CBAddressManager
+ @brief Takes a CBPeer an places it into the CBAddressManager
  @param self The CBAddressManager object.
- @param node The CBNetworkAddress to take.
+ @param peer The CBNetworkAddress to take.
  */
 void CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
- @brief Takes a CBNode an places it into the nodes list.
+ @brief Takes a CBPeer an places it into the peers list.
  @param self The CBAddressManager object.
- @param node The CBNode to take.
+ @param peer The CBPeer to take.
  */
-void CBAddressManagerTakeNode(CBAddressManager * self,CBNode * node);
+void CBAddressManagerTakeNode(CBAddressManager * self,CBPeer * peer);
 
 #endif

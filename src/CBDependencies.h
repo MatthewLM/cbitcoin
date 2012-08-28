@@ -149,7 +149,7 @@ bool CBSocketAccept(uint64_t socketID,uint64_t * connectionSocketID);
  @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
  @param loopID A uint64_t storing an integer or pointer representation of the new event loop.
  @param onError If the event loop fails during execution of the thread, this function should be called.
- @param onDidTimeout The function to call for timeout events. The second argument is for the node given by events. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
+ @param onDidTimeout The function to call for timeout events. The second argument is for the peer given by events. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
  @param communicator A CBNetworkCommunicator to pass to all event functions (first parameter), including "onError" and "onDidTimeout"
  @returns true on success, false on failure.
  */
@@ -167,28 +167,28 @@ bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID
  @param loopID The loop id for socket events.
  @param socketID The socket id
  @param onDidConnect The function to call for the event.
- @param node The node to send to the "onDidConnect" or "onDidTimeout" function.
+ @param peer The peer to send to the "onDidConnect" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * node);
+bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for sending data. This should be persistent.
  @param loopID The loop id for socket events.
  @param socketID The socket id
  @param onCanSend The function to call for the event.
- @param node The node to send to the "onCanSend" or "onDidTimeout" function.
+ @param peer The peer to send to the "onCanSend" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * node);
+bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for receiving data. This should be persistent.
  @param loopID The loop id for socket events.
  @param socketID The socket id
  @param onCanReceive The function to call for the event.
- @param node The node to send to the "onCanReceive" or "onDidTimeout" function.
+ @param peer The peer to send to the "onCanReceive" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * node);
+bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * peer);
 /**
  @brief Adds an event to be pending.
  @param eventID The event ID to add.
