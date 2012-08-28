@@ -190,5 +190,6 @@ int main(){
 		printf("MERKLE ROOT CALC FAIL\n");
 		return 1;
 	}
+	// Test merkle tree generation
 	return 0;
 }
