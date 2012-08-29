@@ -192,10 +192,10 @@ bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketI
 /**
  @brief Adds an event to be pending.
  @param eventID The event ID to add.
- @param timeout The time in seconds to issue a timeout for the event. 0 for no timeout.
+ @param timeout The time in milliseconds to issue a timeout for the event. 0 for no timeout.
  @returns true if sucessful, false otherwise.
  */
-bool CBSocketAddEvent(uint64_t eventID,uint16_t timeout);
+bool CBSocketAddEvent(uint64_t eventID,uint32_t timeout);
 /**
  @brief Removes an event so no more events are made.
  @param eventID The event ID to remove
@@ -227,7 +227,7 @@ int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len);
  @brief Calls a callback every "time" seconds, until the timer is ended.
  @param loopID The loop id for events.
  @param timer The timer sent by reference to be set.
- @param time The number of seconds between each call of the callback.
+ @param time The number of milliseconds between each call of the callback.
  @param callback The callback function.
  @param arg The callback argument.
  */

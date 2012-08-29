@@ -250,11 +250,12 @@ void CBCanReceive(evutil_socket_t socketID,short eventNum,void * arg){
 		event->onEvent.ptr(event->loop->communicator,event->peer);
 	}
 }
-bool CBSocketAddEvent(uint64_t eventID,uint16_t timeout){
+bool CBSocketAddEvent(uint64_t eventID,uint32_t timeout){
 	CBEvent * event = (CBEvent *)eventID;
 	int res;
 	if (timeout) {
-		struct timeval time = {timeout,0};
+		uint32_t secs = timeout / 1000;
+		struct timeval time = {secs,(timeout - secs*1000) * 1000};
 		res = event_add(event->event, &time);
 	}else
 		res = event_add(event->event, NULL);
@@ -302,7 +303,8 @@ bool CBStartTimer(uint64_t loopID,uint64_t * timer,uint16_t time,void (*callback
 	*timer = (uint64_t)theTimer;
 	int res;
 	if (time) {
-		struct timeval timev = {time,0};
+		uint32_t secs = time / 1000;
+		struct timeval timev = {secs,(time - secs*1000) * 1000};
 		res = event_add(theTimer->timer, &timev);
 	}else
 		res = event_add(theTimer->timer, NULL);
