@@ -42,9 +42,7 @@ void CBRandomSeed(uint64_t gen,uint64_t seed){
 	memset(((uint8_t *)gen) + 8, 0, 24); // Blank out the rest of the data
 }
 uint64_t CBSecureRandomInteger(uint64_t gen){
-	uint8_t * hash = CBSha256((uint8_t *)gen, 32);
-	memcpy((void *)gen, hash, 32);
-	free(hash);
+	CBSha256((uint8_t *)gen, 32, (void *)gen);
 	uint64_t i;
 	memcpy(&i, (void *)gen, 8);
 	return i;
