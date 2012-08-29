@@ -51,7 +51,8 @@
 #define CB_BLOCK_HEADERS_MAX_SIZE 178009
 #define CB_ALERT_MAX_SIZE 2100 // Max size for payload is 2000. Extra 100 for signature though the signature will likely be less.
 #define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
-#define CB_MAX_MONEY 2100000000000000 // 21 million Bitcoins. Each bitcoin has 100 million satoshis (individual units).
+#define CB_ONE_BITCOIN 100000000 // Each bitcoin has 100 million satoshis (individual units).
+#define CB_MAX_MONEY 21000000 * CB_ONE_BITCOIN // 21 million Bitcoins. 
 #define CB_SOCKET_CONNECTION_CLOSE -1
 #define CB_SOCKET_FAILURE -2
 #define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a peer.
@@ -62,6 +63,8 @@
 #define CB_MAX_RESPONSES_EXPECTED 3 // A pong, an inventory broadcast and an address broadcast.
 #define CB_TARGET_INTERVAL 1209600 // Two week interval
 #define CB_MAX_TARGET 0x1D00FFFF
+#define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
+#define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
 
 //  Enums
 

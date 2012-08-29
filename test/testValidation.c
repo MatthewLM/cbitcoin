@@ -326,5 +326,18 @@ int main(){
 		return 1;
 	}
 	CBFreeMerkleTree(root);
+	// Test work calculation
+	CBBigInt work = CBCalculateBlockWork(0x1708ABCD);
+	if (memcmp(work.data, (uint8_t []){0xD5, 0x1D, 0x95, 0xFB, 0x85, 0x1D}, 6)) {
+		printf("BLOCK WORK CALCULATION FAIL\n");
+		return 1;
+	}
+	free(work.data);
+	work = CBCalculateBlockWork(0x10008F00);
+	if (memcmp(work.data, (uint8_t []){0xE1, 0x5E, 0x05, 0xB3, 0xA4, 0x1C, 0x10, 0x19, 0xEE, 0x55, 0x30, 0x4B, 0xCA, 0x01}, 14)) {
+		printf("BLOCK WORK CALCULATION TWO FAIL\n");
+		return 1;
+	}
+	free(work.data);
 	return 0;
 }

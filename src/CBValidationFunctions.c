@@ -22,6 +22,33 @@
 
 #include "CBValidationFunctions.h"
 
+uint64_t CBCalculateBlockReward(uint64_t blockHeight){
+	return (50 * CB_ONE_BITCOIN) >> (blockHeight / 210000);
+}
+CBBigInt CBCalculateBlockWork(uint32_t target){
+	// Get the base-256 exponent and the mantissa.
+	uint8_t zeroBytes = target >> 24;
+	target &= 0x00FFFFFF;
+	// Allocate CBBigInt data
+	CBBigInt work;
+	work.length = 29 - zeroBytes;
+	work.data = malloc(work.length);
+	// Do base-4294967296 long division and adjust for trailing zeros in target.
+	uint64_t temp = 0x01000000;
+	uint32_t workSeg;
+	for (uint8_t x = 0;; x++) {
+		workSeg = (uint32_t)(temp / target);
+		uint8_t i = 31 - x * 4 - zeroBytes;
+		for (uint8_t y = 0; y < 4; y++){
+			work.data[i] = workSeg >> ((3 - y) * 8);
+			if (NOT i)
+				return work;
+			i--;
+		}
+		temp -= workSeg * target;
+		temp <<= 32;
+	}
+}
 void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum){
 	uint8_t hash[32];
 	for (uint32_t x = 0; hashNum != 1;) {
@@ -91,6 +118,16 @@ uint32_t CBTransactionGetSigOps(CBTransaction * tx){
 	for (uint32_t x = 0; x < tx->outputNum; x++)
 		sigOps += CBScriptGetSigOpCount(tx->outputs[x]->scriptObject, false);
 	return sigOps;
+}
+bool CBTransactionIsFinal(CBTransaction * tx,uint64_t time,uint64_t height){
+	if (tx->lockTime) {
+		if (tx->lockTime < (tx->lockTime < CB_LOCKTIME_THRESHOLD ? (int64_t)height : (int64_t)time))
+			return true;
+		for (uint32_t x = 0; x < tx->inputNum; x++)
+			if (tx->inputs[x]->sequence != CB_TRANSACTION_INPUT_FINAL)
+				return false;
+	}
+	return true;
 }
 CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase){
 	if (NOT tx->inputNum || NOT tx->outputNum)
