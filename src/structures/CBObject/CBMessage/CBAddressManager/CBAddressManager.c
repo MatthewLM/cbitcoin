@@ -279,6 +279,7 @@ void CBAddressManagerRemoveAddress(CBAddressManager * self,CBNetworkAddress * ad
 }
 void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer){
 	// Find position of peer. Basic linear search (Better alternative in this case ???). Assumes peer is in the list properly or a fatal overflow is caused.
+	printf("STATS: (%li,%i,%li,%i)\n",peer->downloadTime,peer->downloadAmount,peer->latencyTime,peer->responses);
 	uint16_t peerPos = 0;
 	for (;; peerPos++) if (self->peers[peerPos] == peer) break;
 	// Moves rest of peers down
@@ -370,7 +371,8 @@ void CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr
 		bucket->addrNum++;
 		bucket->addresses = realloc(bucket->addresses, sizeof(*bucket->addresses) * bucket->addrNum);
 		// Move memory up to allow insertion of address.
-		memmove(bucket->addresses + insert + 1, bucket->addresses + insert, (bucket->addrNum - insert - 1) * sizeof(*bucket->addresses));
+		if (bucket->addrNum - insert - 1)
+			memmove(bucket->addresses + insert + 1, bucket->addresses + insert, (bucket->addrNum - insert - 1) * sizeof(*bucket->addresses));
 	}
 	bucket->addresses[insert] = addr;
 }
