@@ -54,6 +54,10 @@ bool CBInitNodeByTakingNetworkAddress(CBPeer * self){
 	self->timeBroadcast = 0;
 	self->connectionWorking = false;
 	self->typesExpectedNum = 0;
+	self->downloadTime = 0;
+	self->downloadAmount = 0;
+	self->latencyTime = 0;
+	self->responses = 0;
 	return true;
 }
 

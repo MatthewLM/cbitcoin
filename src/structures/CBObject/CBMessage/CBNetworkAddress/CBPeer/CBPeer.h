@@ -32,6 +32,7 @@
 
 #include "CBNetworkAddress.h"
 #include "CBVersion.h"
+#include <time.h>
 
 /**
  @brief Structure for CBPeer objects. @see CBPeer.h
@@ -63,6 +64,13 @@ typedef struct{
 	CBMessageType typesExpected[CB_MAX_RESPONSES_EXPECTED]; /**< List of expected responses */
 	uint8_t typesExpectedNum; /**< Number of expected responses */
 	bool incomming; /**< Node from an incomming connection if true */
+	clock_t downloadTime; /**< Download time for this peer, not taking the latency into account. Use for determining effeciency. */
+	uint32_t downloadAmount; /**< Downloaded bytes measured for this peer. */
+	clock_t latencyTime; /**< Total measured response time */
+	uint16_t responses; /**< Number of measured responses. */
+	clock_t latencyTimerStart; /**< Used to measure latency. */
+	clock_t downloadTimerStart; /**< Used to measure download time. */
+	CBMessageType latencyExpected; /**< Message expected for the latency measurement */
 } CBPeer;
 
 /**

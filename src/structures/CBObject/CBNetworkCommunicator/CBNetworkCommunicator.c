@@ -96,7 +96,7 @@ void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket){
 	// Set up receive event
 	if (CBSocketCanReceiveEvent(&peer->receiveEvent,self->eventLoop,peer->socketID, CBNetworkCommunicatorOnCanReceive, peer)) {
 		// The event works
-		if(CBSocketAddEvent(peer->receiveEvent, self->timeOut)){ // Begin receive event.
+		if(CBSocketAddEvent(peer->receiveEvent, self->responseTimeOut)){ // Begin receive event.
 			// Success
 			if (CBSocketCanSendEvent(&peer->sendEvent,self->eventLoop, peer->socketID, CBNetworkCommunicatorOnCanSend, peer)) {
 				// Both events work. Take the peer.
@@ -497,6 +497,8 @@ void CBNetworkCommunicatorOnCanReceive(void * vself,void * vpeer){
 		peer->headerBuffer = malloc(24); // Twenty-four bytes for the message header.
 		peer->messageReceived = 0; // So far received nothing.
 		CBSocketAddEvent(peer->receiveEvent, self->recvTimeOut); // From now on use timeout for receiving data.
+		// Start download timer
+		peer->downloadTimerStart = clock();
 	}
 	if (NOT peer->receivedHeader) { // Not received the complete message header yet.
 		 int32_t num = CBSocketReceive(peer->socketID, peer->headerBuffer + peer->messageReceived, 24 - peer->messageReceived);
@@ -532,9 +534,10 @@ void CBNetworkCommunicatorOnCanReceive(void * vself,void * vpeer){
 			default:
 				// Did read some bytes
 				peer->messageReceived += num;
-				if (peer->messageReceived == peer->receive->bytes->length)
+				if (peer->messageReceived == peer->receive->bytes->length){
 					// We now have the message.
 					CBNetworkCommunicatorOnMessageReceived(self,peer);
+				}
 				return;
 		}
 	}
@@ -647,6 +650,11 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vpeer){
 			}
 			peer->typesExpected[peer->typesExpectedNum] = peer->sendQueue[peer->sendQueueFront]->expectResponse;
 			peer->typesExpectedNum++;
+			// Start timer for latency measurement, if not already waiting.
+			if (NOT peer->latencyTimerStart){
+				peer->latencyTimerStart = clock();
+				peer->latencyExpected = peer->sendQueue[peer->sendQueueFront]->expectResponse;
+			}
 		}
 		// Remove message from queue.
 		peer->sendQueueSize--;
@@ -831,6 +839,13 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer *
 	// If this is a response we have been waiting for, no longer wait for it
 	for (uint8_t x = 0; x < peer->typesExpectedNum; x++) {
 		if (type == peer->typesExpected[x]) {
+			// Record latency
+			if (peer->latencyTimerStart && peer->latencyExpected == type) {
+				peer->latencyTime += clock() - peer->latencyTimerStart;
+				peer->responses++;
+				peer->latencyTimerStart = 0;
+			}
+			// Remove
 			bool remove = true;
 			if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE)
 				if (type == CB_MESSAGE_TYPE_VERACK && NOT peer->versionMessage){
@@ -841,9 +856,6 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer *
 			if (remove) {
 				peer->typesExpectedNum--;
 				memmove(peer->typesExpected + x, peer->typesExpected + x + 1, peer->typesExpectedNum - x);
-				if (NOT peer->typesExpectedNum)
-					// No more responses expected, back to usual timeOut.
-					CBSocketAddEvent(peer->receiveEvent, self->timeOut);
 			}
 			break;
 		}
@@ -873,6 +885,11 @@ void CBNetworkCommunicatorOnLoopError(void * vself){
 	CBNetworkCommunicatorStop(self);
 }
 void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBPeer * peer){
+	// Record download time
+	peer->downloadTime += clock() - peer->downloadTimerStart;
+	peer->downloadAmount += 24 + (peer->receive->bytes ? peer->receive->bytes->length : 0);
+	// Change timeout of receive event, depending on wether or not we want more responses.
+	CBSocketAddEvent(peer->receiveEvent,peer->typesExpectedNum ? self->responseTimeOut : self->timeOut);
 	// Check checksum
 	uint8_t hash[32];
 	uint8_t hash2[32];
@@ -1011,9 +1028,6 @@ void CBNetworkCommunicatorOnTimeOut(void * vself,void * vpeer,CBTimeOutType type
 	if (CBGetNetworkAddress(peer)->public && CBGetNetworkAddress(peer)->ip){ // Cannot take peer as address in the case where the IP is NULL
 		CBRetainObject(peer); // Retain peer for returning to addresses list
 		CBNetworkCommunicatorDisconnect(self,peer, CB_24_HOURS, false); // Remove CBNetworkAddress. 1 day penalty.
-		// Convert peer to address and add it back to the addresses list.
-		CBNetworkAddress * addr = realloc(peer, sizeof(*addr));
-		CBAddressManagerTakeAddress(self->addresses, addr);
 	}else
 		CBNetworkCommunicatorDisconnect(self,peer, CB_24_HOURS, false); // Remove CBNetworkAddress. 1 day penalty.
 	// Send event for network timeout. The peer will be NULL if it wasn't retained elsewhere.

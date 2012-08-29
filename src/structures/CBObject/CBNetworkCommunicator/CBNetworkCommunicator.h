@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Used for communicating to other peers. The network communicator holds function pointers for receiving messages and functions to send messages. The timeouts are in seconds. It is important to understant that a CBNetworkCommunicator does not guarentee thread safety for everything. Thread safety is only given to the "peers" list. This means it is completely okay to add and remove peers from multiple threads. Two threads may try to access the list at once such as if the CBNetworkCommunicator receives a socket timeout event and tries to remove an peer at the same time as a thread made by a program using cbitcoin tries to add a new peer. When using a CBNetworkCommunicator, threading and networking dependencies need to be satisfied, @see CBDependencies.h Inherits CBObject
+ @brief Used for communicating to other peers. The network communicator holds function pointers for receiving messages and functions to send messages. The timeouts are in milliseconds. It is important to understant that a CBNetworkCommunicator does not guarentee thread safety for everything. Thread safety is only given to the "peers" list. This means it is completely okay to add and remove peers from multiple threads. Two threads may try to access the list at once such as if the CBNetworkCommunicator receives a socket timeout event and tries to remove an peer at the same time as a thread made by a program using cbitcoin tries to add a new peer. When using a CBNetworkCommunicator, threading and networking dependencies need to be satisfied, @see CBDependencies.h Inherits CBObject
 */
 
 #ifndef CBNETWORKCOMMUNICATORH
@@ -39,7 +39,6 @@
 #include "CBBlockHeaders.h"
 #include "CBPingPong.h"
 #include "CBAlert.h"
-#include <time.h>
 
 /**
  @brief Structure for CBNetworkCommunicator objects. @see CBNetworkCommunicator.h
