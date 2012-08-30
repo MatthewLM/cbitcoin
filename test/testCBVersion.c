@@ -192,8 +192,8 @@ int main(){
 		}
 		return 1;
 	}
-	if (version->addRecv->port != 0x8D20) {
-		printf("DESERIALISATION OLD ADD RECV PORT FAIL\n");
+	if (version->addRecv->port != 0x208D) {
+		printf("DESERIALISATION OLD ADD RECV PORT FAIL 0x%x != 0x8D20\n",version->addRecv->port);
 		return 1;
 	}
 	// Test old serialisation
