@@ -108,7 +108,6 @@ CBByteArray * CBBlockCalculateHash(CBBlock * self){
 	CBSha256(headerData, 80, hash1);
 	CBSha256(hash1, 32, hash2);
 	CBByteArray * hash = CBNewByteArrayWithData(hash2, 32, CBGetMessage(self)->events);
-	free(hash1);
 	return hash;
 }
 uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions){

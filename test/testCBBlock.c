@@ -37,29 +37,6 @@ void err(CBError a,char * format,...){
 	printf("\n");
 }
 
-uint8_t * CBSha160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA_DIGEST_LENGTH);
-    SHA1(data, len, hash);
-	return hash;
-}
-uint8_t * CBSha256(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
-	SHA256(data, len, hash);
-	return hash;
-}
-uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
-    RIPEMD160(data, len, hash);
-	return hash;
-}
-bool CBEcdsaVerify(uint8_t * signature,uint8_t sigLen,uint8_t * hash,const uint8_t * pubKey,uint8_t keyLen){
-	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
-	o2i_ECPublicKey(&key, &pubKey, keyLen);
-	int res = ECDSA_verify(0, hash, 32, signature, sigLen, key);
-	EC_KEY_free(key);
-	return res == 1;
-}
-
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	s = 1337544566;
@@ -116,7 +93,7 @@ int main(){
 		printf("GENESIS BLOCK TIME FAIL\n0x");
 		return 1;
 	}
-	if (genesisBlock->difficulty != 0x1D00FFFF) {
+	if (genesisBlock->target != 0x1D00FFFF) {
 		printf("GENESIS BLOCK DIFFICULTY FAIL\n0x");
 		return 1;
 	}
@@ -154,12 +131,12 @@ int main(){
 		return 1;
 	}
 	for (int x = 0; x < 32; x++) {
-		if(CBByteArrayGetByte(genesisCoinBase->inputs[0]->outPointerHash, x) != 0){
+		if(CBByteArrayGetByte(genesisCoinBase->inputs[0]->prevOut.hash, x) != 0){
 			printf("GENESIS BLOCK TRANSACTION INPUT OUT POINTER HASH FAIL\n");
 			return 1;
 		}
 	}
-	if (genesisCoinBase->inputs[0]->outPointerIndex != 0xFFFFFFFF) {
+	if (genesisCoinBase->inputs[0]->prevOut.index != 0xFFFFFFFF) {
 		printf("GENESIS BLOCK TRANSACTION INPUT OUT POINTER INDEX FAIL\n0x");
 		return 1;
 	}
@@ -204,7 +181,7 @@ int main(){
 	memset(zeroHash, 0, 32);
 	block->prevBlockHash = CBNewByteArrayWithData(zeroHash, 32, &events);
 	block->merkleRoot = genesisMerkleRoot;
-	block->difficulty = 0x1D00FFFF;
+	block->target = 0x1D00FFFF;
 	block->time = 1231006505;
 	block->nounce = 2083236893;
 	block->transactionNum = 1;
@@ -214,7 +191,7 @@ int main(){
 	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TRANSACTION_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF, &events));
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(5000000000, genesisOutScript, &events));
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBGetMessage(genesisBlock)->bytes->length, &events);
-	CBBlockSerialise(block);
+	CBBlockSerialise(block, true);
 	if (NOT CBByteArrayEquals(CBGetMessage(block)->bytes, CBGetMessage(genesisBlock)->bytes)) {
 		printf("SERIALISATION TO GENESIS BLOCK FAIL\n0x");
 		uint8_t * d = CBByteArrayGetData(CBGetMessage(block)->bytes);
