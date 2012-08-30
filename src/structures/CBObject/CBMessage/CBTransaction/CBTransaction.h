@@ -113,13 +113,14 @@ uint32_t CBTransactionCalculateLength(CBTransaction * self);
 uint32_t CBTransactionDeserialise(CBTransaction * self);
 /**
  @brief Gets the hash for signing or signature checking for a transaction input. The transaction input needs to contain the outPointerHash, outPointerIndex and sequence. If these are modifed afterwards then the signiture is invalid.
- @param self The CBTransaction object.
+ @param vself The CBTransaction object.
  @param prevOutSubScript The sub script from the output. Must be the correct one or the signiture will be invalid.
  @param input The index of the input to sign.
  @param signType The type of signature to get the data for.
- @returns NULL on failure or the 32 byte data hash for signing or checking signatures.
+ @param hash The 32 byte data hash for signing or checking signatures.
+ @returns NULL on error or the pointer passed into the function by "hash".
  */
-uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
+uint8_t * CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash);
 /**
  @brief Determines if a transaction is a coinbase transaction or not.
  @param self The CBTransaction object.

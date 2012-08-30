@@ -57,10 +57,11 @@ typedef struct{
 /**
  @brief Creates a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.
  @param string The string to put into a CBByteArray.
+ @param terminator If true, include the termination character.
  @param events CBEngine for errors.
  @returns A new CBByteArray object.
  */
-CBByteArray * CBNewByteArrayFromString(char * string,CBEvents * events);
+CBByteArray * CBNewByteArrayFromString(char * string, bool terminator, CBEvents * events);
 /**
  @brief Creates an empty CBByteArray object.
  @param size Size in bytes for the new array.
@@ -104,10 +105,11 @@ CBByteArray * CBGetByteArray(void * self);
  @brief Initialises a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.
  @param self The CBByteArray object to initialise
  @param string The string to put into a CBByteArray.
+ @param terminator If tru, include the termination character.
  @param events CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayFromString(CBByteArray * self,char * string,CBEvents * events);
+bool CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator, CBEvents * events);
 /**
  @brief Initialises an empty CBByteArray object
  @param self The CBByteArray object to initialise

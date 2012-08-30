@@ -44,7 +44,7 @@ typedef struct{
 
 /**
  @brief Creates a new CBVersionChecksumBytes object from a base-58 encoded string. The base-58 string will be validated by it's checksum. This returns NULL if the string is invalid. The CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT error is given if the decoded data is less than 4 bytes. CB_ERROR_BASE58_DECODE_CHECK_INVALID is given if the checksum does not match.
- @param string A base-58 encoded CBString to make a CBVersionChecksumBytes object.
+ @param string A base-58 encoded CBString to make a CBVersionChecksumBytes object with a termination character.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events A CBEngine for errors.
  @returns A new CBVersionChecksumBytes object or NULL on failure.
@@ -70,7 +70,7 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self);
 /**
  @brief Initialises a CBVersionChecksumBytes object from a string.
  @param self The CBVersionChecksumBytes object to initialise.
- @param string A CBString to make a CBVersionChecksumBytes object.
+ @param string A CBString to make a CBVersionChecksumBytes object with a termination character.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @param events A CBEngine for errors.
  @returns true on success, false on failure.

@@ -23,19 +23,11 @@
 #include <stdio.h>
 #include "CBAddress.h"
 #include <time.h>
-#include <openssl/sha.h>
 
+void err(CBError a,char * b,...);
 void err(CBError a,char * b,...){
 	printf("%s\n",b);
-}
-
-uint8_t * sha256(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, data, len);
-    SHA256_Final(hash, &sha256);
-	return hash;
+	exit(EXIT_FAILURE);
 }
 
 int main(){
@@ -43,98 +35,77 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
-	CBNetworkParameters * net = CBNewNetworkParameters();
-	net->networkCode = 0;
 	CBEvents events;
 	events.onErrorReceived = err;
-	CBDependencies dep;
-	dep.sha256 = sha256;
-	CBString * addstr = CBNewStringByCopyingCString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9");
-	CBAddress * add = CBNewAddressFromString(addstr, false, &events, &dep);
-	CBGetObjectVT(addstr)->release(&addstr);
-	uint8_t v = CBGetVersionChecksumBytesVT(add)->getVersion(add);
-	if (v != 0) {
+	CBByteArray * addstr = CBNewByteArrayFromString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", true, &events);
+	CBAddress * add = CBNewAddressFromString(addstr, false, &events);
+	CBReleaseObject(addstr);
+	uint8_t v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	if (v != CB_PRODUCTION_NETWORK_BYTE) {
 		printf("PRODUCTION NET VERSION DOES NOT MATCH %i != 0\n",v);
 		return 1;
 	}
-	CBString * str = CBGetVersionChecksumBytesVT(add)->getString(add);
-	if (strcmp(str->string, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9")){
-		printf("NOT CACHED STRING WRONG %s != 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9\n",str->string);
+	CBByteArray * str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
+	if (strcmp((char *)CBByteArrayGetData(str), "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9")){
+		printf("NOT CACHED STRING WRONG %s != 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9\n",(char *)CBByteArrayGetData(str));
 		return 1;
 	}
-	CBGetObjectVT(str)->release(&str);
-	CBGetObjectVT(add)->release(&add);
-	addstr = CBNewStringByCopyingCString("mhFwRrjRNt8hYeWtm9LwqCpCgXjF38RJqn");
-	add = CBNewAddressFromString(addstr, false, &events, &dep);
-	CBGetObjectVT(addstr)->release(&addstr);
-	v = CBGetVersionChecksumBytesVT(add)->getVersion(add);
-	if (v != 0x6f) {
+	CBReleaseObject(str);
+	CBReleaseObject(add);
+	addstr = CBNewByteArrayFromString("mzCk9JXXF9we7MB2Gdt59tcfj6Lr2rSzpu", true,&events);
+	add = CBNewAddressFromString(addstr, false, &events);
+	CBReleaseObject(addstr);
+	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	if (v != CB_TEST_NETWORK_BYTE) {
 		printf("TEST NET VERSION DOES NOT MATCH %i != 111\n",v);
 		return 1;
 	}
-	CBGetObjectVT(add)->release(&add);
-	addstr = CBNewStringByCopyingCString("19tknf38VozS4GfoxHe6vUP3NRghbGGT6H");
-	add = CBNewAddressFromString(addstr, true, &events, &dep);
-	CBGetObjectVT(addstr)->release(&addstr);
-	str = CBGetVersionChecksumBytesVT(add)->getString(add);
-	if (strcmp(str->string, "19tknf38VozS4GfoxHe6vUP3NRghbGGT6H")){
-		printf("CACHED STRING WRONG %s != 19tknf38VozS4GfoxHe6vUP3NRghbGGT6H\n",str->string);
+	CBReleaseObject(add);
+	addstr = CBNewByteArrayFromString("19tknf38VozS4GfoxHe6vUP3NRghbGGT6H", true, &events);
+	add = CBNewAddressFromString(addstr, true, &events);
+	CBReleaseObject(addstr);
+	str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
+	if (strcmp((char *)CBByteArrayGetData(str), "19tknf38VozS4GfoxHe6vUP3NRghbGGT6H")){
+		printf("CACHED STRING WRONG %s != 19tknf38VozS4GfoxHe6vUP3NRghbGGT6H\n",(char *)CBByteArrayGetData(str));
 		return 1;
 	}
-	CBGetObjectVT(str)->release(&str);
-	CBGetObjectVT(add)->release(&add);
+	CBReleaseObject(str);
+	CBReleaseObject(add);
 	// Test building from fake RIPEMD160 hash
 	uint8_t * hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(net, hash, false, &events, &dep);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false, &events);
 	free(hash);
-	v = CBGetVersionChecksumBytesVT(add)->getVersion(add);
-	if (v != 0) {
+	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	if (v != CB_PRODUCTION_NETWORK_BYTE) {
 		printf("PRODUCTION NET VERSION FOR RIPEMD160 TEST DOES NOT MATCH %i != 0\n",v);
 		return 1;
 	}
-	CBGetObjectVT(add)->release(&add);
+	CBReleaseObject(add);
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	net->networkCode = 0x6f;
-	add = CBNewAddressFromRIPEMD160Hash(net, hash, false, &events, &dep);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_TEST_NETWORK_BYTE, false, &events);
 	free(hash);
-	v = CBGetVersionChecksumBytesVT(add)->getVersion(add);
-	if (v != 0x6f) {
+	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	if (v != CB_TEST_NETWORK_BYTE) {
 		printf("TEST NET VERSION FOR RIPEMD160 TEST DOES NOT MATCH %i != 111\n",v);
 		return 1;
 	}
-	CBGetObjectVT(add)->release(&add);
+	CBReleaseObject(add);
 	// Test CBNewAddressFromRIPEMD160Hash for pre-known address
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = x;
-	net->networkCode = 0;
-	add = CBNewAddressFromRIPEMD160Hash(net, hash, false, &events, &dep);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false, &events);
 	free(hash);
-	str = CBGetVersionChecksumBytesVT(add)->getString(add);
-	if (strcmp(str->string, "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB")){
-		printf("RIPEMD160 TEST STRING WRONG %s != 112D2adLM3UKy4Z4giRbReR6gjWuvHUqB\n",str->string);
+	str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
+	if (strcmp((char *)CBByteArrayGetData(str), "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB")){
+		printf("RIPEMD160 TEST STRING WRONG %s != 112D2adLM3UKy4Z4giRbReR6gjWuvHUqB\n",(char *)CBByteArrayGetData(str));
 		return 1;
 	}
-	CBGetObjectVT(str)->release(&str);
-	CBGetObjectVT(add)->release(&add);
-	// Find "1got", speed test
-	hash = malloc(20);
-	while (1) {
-		for (int x = 0; x < 20; x++)
-			hash[x] = rand();
-		add = CBNewAddressFromRIPEMD160Hash(net, hash, true, &events, &dep);
-		str = CBGetVersionChecksumBytesVT(add)->getString(add);
-		if (!strncmp(str->string, "1got", 4)) {
-			printf("GOT STRING = %s\n",str->string);
-			break;
-		}
-		CBGetObjectVT(str)->release(&str);
-		CBGetObjectVT(add)->release(&add);
-	}
-	free(hash);
+	CBReleaseObject(str);
+	CBReleaseObject(add);
 	return 0;
 }

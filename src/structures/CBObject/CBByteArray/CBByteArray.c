@@ -26,10 +26,10 @@
 
 //  Constructor
 
-CBByteArray * CBNewByteArrayFromString(char * string,CBEvents * events){
+CBByteArray * CBNewByteArrayFromString(char * string, bool terminator, CBEvents * events){
 	CBByteArray * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
-	CBInitByteArrayFromString(self,string,events);
+	CBInitByteArrayFromString(self,string,terminator,events);
 	return self;
 }
 CBByteArray * CBNewByteArrayOfSize(uint32_t size,CBEvents * events){
@@ -66,11 +66,11 @@ CBByteArray * CBGetByteArray(void * self){
 //  Initialisers
 
 
-bool CBInitByteArrayFromString(CBByteArray * self,char * string,CBEvents * events){
+bool CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator, CBEvents * events){
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->events = events;
-	self->length = strlen(string);
+	self->length = (uint32_t)(strlen(string) + terminator);
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	self->sharedData->data = malloc(self->length);
 	self->sharedData->references = 1;

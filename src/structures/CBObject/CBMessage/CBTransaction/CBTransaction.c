@@ -217,7 +217,8 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 	self->lockTime = CBByteArrayReadInt32(bytes, cursor);
 	return cursor + 4;
 }
-uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+uint8_t * CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){
+	CBTransaction * self= vself;
 	if (self->inputNum < input + 1) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_TRANSACTION_FEW_INPUTS,"Receiving transaction hash to sign cannot be done for because the input index goes past the number of inputs.");
 		return NULL;
@@ -322,10 +323,9 @@ uint8_t * CBTransactionGetInputHashForSignature(CBTransaction * self, CBByteArra
 	CBByteArraySetInt32(data, cursor + 4, signType);
 	assert(sizeOfData == cursor + 8); // Must always be like this
 	uint8_t firstHash[32];
-	uint8_t * secondHash = malloc(32);
 	CBSha256(CBByteArrayGetData(data),sizeOfData,firstHash);
-	CBSha256(firstHash,32,secondHash);
-	return secondHash;
+	CBSha256(firstHash,32,hash);
+	return hash;
 }
 bool CBTransactionIsCoinBase(CBTransaction * self){
 	return (self->inputNum == 1

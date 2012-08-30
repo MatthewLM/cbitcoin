@@ -69,7 +69,7 @@ bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,uint8_t networkCode,uint8_t
 	return true;
 }
 bool CBInitAddressFromString(CBAddress * self,CBByteArray * string,bool cacheString,CBEvents * events){
-	if (NOT CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string,cacheString, events))
+	if (NOT CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, cacheString, events))
 		return false;
 	return true;
 }

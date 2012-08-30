@@ -33,7 +33,7 @@ CBBigInt CBDecodeBase58(char * str){
 	uint8_t temp[189];
 	for (uint8_t x = strlen(str) - 1;; x--){ // Working backwards
 		// Get index in alphabet array
-		int alphaIndex = str[x];
+		uint8_t alphaIndex = str[x];
 		if (alphaIndex != 49){ // If not 1
 			if (str[x] < 58){ // Numbers
 				alphaIndex -= 49;
@@ -76,7 +76,7 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 	if (bi.length < 4){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short.");
 		bi.length = 1;
-		bi.data[0] -= 0;
+		bi.data[0] = 0;
 		return bi;
 	}
 	// Reverse bytes for checksum generation
@@ -90,15 +90,13 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 	CBSha256(reversed,bi.length-4,checksum);
 	CBSha256(checksum,32,checksum2);
 	bool ok = true;
-	for (uint8_t x = 0; x < 4; x++) {
-		if (checksum2[x] != bi.data[3-x]) {
+	for (uint8_t x = 0; x < 4; x++)
+		if (checksum2[x] != bi.data[3-x])
 			ok = false;
-		}
-	}
 	if(NOT ok){
 		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;
-		bi.data[0] -= 0;
+		bi.data[0] = 0;
 		return bi;
 	}
 	return bi;

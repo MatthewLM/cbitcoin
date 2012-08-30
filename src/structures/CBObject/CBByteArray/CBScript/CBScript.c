@@ -543,7 +543,7 @@ CBScriptStack CBNewEmptyScriptStack(){
 	stack.length = 0;
 	return stack;
 }
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex,bool p2sh){
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh){
 	// ??? Adding syntax parsing to the begining of the interpreter is maybe a good idea.
 	// This looks confusing but isn't too bad, trust me.
 	CBScriptStack altStack = CBNewEmptyScriptStack();
@@ -1102,6 +1102,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					return false;
 				}
 				bool res;
+				uint8_t hash[32];
 				if (byte == CB_SCRIPT_OP_CHECKSIG
 					|| byte == CB_SCRIPT_OP_CHECKSIGVERIFY){
 					if (stack->length < 2){
@@ -1119,11 +1120,10 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 						CBSubScriptRemoveSignature(subScript,&subScriptLen,signature);
 						// Complete verification
 						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->events);
-						uint8_t * hash = getHashForSig(transaction, subScriptByteArray, inputIndex, signType);
+						getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
 						// Use minus one on the signature length because the hash type
 						res = CBEcdsaVerify(signature.data,signature.length-1,hash,publicKey.data,publicKey.length);
 						CBReleaseObject(subScriptByteArray);
-						free(hash);
 					}
 					free(publicKey.data);
 					free(signature.data);
@@ -1177,13 +1177,12 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 							// Get sign type
 							CBSignType signType = signature->data[signature->length-1];
 							// Check signature
-							uint8_t * hash = getHashForSig(transaction, subScriptByteArray, inputIndex, signType);
+							getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
 							// Use minus one on the signature length because the hash type
 							if (CBEcdsaVerify(signature->data,signature->length-1,hash,publicKey.data,publicKey.length)){
 								sig++;
 								numSigs--;
 							}
-							free(hash);
 						}
                         key++;
 						numKeys--;

@@ -23,19 +23,10 @@
 #include <stdio.h>
 #include "CBBase58.h"
 #include <time.h>
-#include <openssl/sha.h>
 
+void err(CBError a,char * b,...);
 void err(CBError a,char * b,...){
 	printf("%s\n",b);
-}
-
-uint8_t * CBSha256(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, data, len);
-    SHA256_Final(hash, &sha256);
-	return hash;
 }
 
 int main(){
@@ -51,8 +42,6 @@ int main(){
 	unsigned char * test = malloc(29);
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
-	// 7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU = CORRECT
-	// 7EyVQVmCjB3siBN8DdtuG3ws64y9xsnT25vbt5eU = FAILURE
 	test[0] = 0xc5;
 	test[1] = 0xf8;
 	test[2] = 0x85;
@@ -84,6 +73,10 @@ int main(){
 	test[28] = 0x89;
 	char * str = CBEncodeBase58(test,29);
 	printf("%s\n",str);
+	if (strcmp(str, "7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU")) {
+		printf("7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU FAIL\n");
+		return 1;
+	}
 	free(str);
 	unsigned char * verify = malloc(29);
 	for (int x = 0; x < 10000; x++) {

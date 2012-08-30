@@ -150,7 +150,7 @@ CBScriptStack CBNewEmptyScriptStack(void);
  @param p2sh If false, do not allow any P2SH matches.
  @returns True is the program ended with true, false otherwise or on script failure.
  */
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType),void * transaction,uint32_t inputIndex,bool p2sh);
+bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh);
 /**
  @brief Returns the number of sigops.
  @param self The CBScript object.

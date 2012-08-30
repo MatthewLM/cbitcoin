@@ -127,7 +127,7 @@ int main(){
 	// Test serialisation
 	memset(CBByteArrayGetData(versionBytes), 0, 91);
 	CBReleaseObject(version->userAgent);
-	version->userAgent = CBNewByteArrayFromString("Hello!", &events);
+	version->userAgent = CBNewByteArrayFromString("Hello!", false, &events);
 	CBReleaseObject(version->addRecv->ip);
 	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, &events);
 	CBReleaseObject(version->addSource->ip);

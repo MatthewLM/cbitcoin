@@ -226,9 +226,9 @@ int main(){
 	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0, &events); // Different port over loopback to seperate the CBNetworkCommunicators.
 	CBReleaseObject(loopBack);
 	CBReleaseObject(loopBack2);
-	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, &events);
-	CBByteArray * userAgent2 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, &events);
-	CBByteArray * userAgent3 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, &events);
+	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, &events);
+	CBByteArray * userAgent2 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, &events);
+	CBByteArray * userAgent3 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, &events);
 	// First listening CBNetworkCommunicator setup.
 	CBAddressManager * addrManListen = CBNewAddressManager(&events);
 	addrManListen->maxAddressesInBucket = 2;
