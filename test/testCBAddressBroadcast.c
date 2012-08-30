@@ -63,7 +63,7 @@ int main(){
 		printf("DESERIALISATION NUM FAIL\n");
 		return 1;
 	}
-	if (addBroadcast->addresses[0]->time != 1341435462) {
+	if (addBroadcast->addresses[0]->score != 1341435462) {
 		printf("DESERIALISATION FIRST TIME FAIL\n");
 		return 1;
 	}
@@ -88,7 +88,7 @@ int main(){
 		printf("DESERIALISATION FIRST PORT FAIL\n");
 		return 1;
 	}
-	if (addBroadcast->addresses[1]->time != 1341437822) {
+	if (addBroadcast->addresses[1]->score != 1341437822) {
 		printf("DESERIALISATION SECOND TIME FAIL\n");
 		return 1;
 	}
