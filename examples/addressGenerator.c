@@ -27,17 +27,6 @@
 #include <openssl/ripemd.h>
 #include "CBAddress.h"
 
-uint8_t * CBSha256(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(SHA256_DIGEST_LENGTH);
-	SHA256(data, len, hash);
-	return hash;
-}
-uint8_t * CBRipemd160(uint8_t * data,uint16_t len){
-	uint8_t * hash = malloc(RIPEMD160_DIGEST_LENGTH);
-    RIPEMD160(data, len, hash);
-	return hash;
-}
-
 void err(CBError a,char * format,...);
 void err(CBError a,char * format,...){
 	va_list argptr;
@@ -47,8 +36,8 @@ void err(CBError a,char * format,...){
 	printf("\n");
 }
 
-void getline(char * ptr);
-void getline(char * ptr) {
+void getLine(char * ptr);
+void getLine(char * ptr) {
 	int c;
 	int len = 30;
     for(;;) {
@@ -68,18 +57,16 @@ void getline(char * ptr) {
 int main(){
 	CBEvents events;
 	events.onErrorReceived = err;
-	CBNetworkParameters * net = CBNewNetworkParameters();
-	net->networkCode = 0;
 	printf("OpenSSL version: %s\n",OPENSSL_VERSION_TEXT);
 	printf("Enter the number of keys: ");
 	fflush(stdout);
 	char stringMatch[30];
-	getline(stringMatch);
-	unsigned int i = strtol(stringMatch, NULL, 0);
+	getLine(stringMatch);
+	unsigned long int i = strtol(stringMatch, NULL, 0);
 	printf("Enter a string of text (30 max): ");
 	fflush(stdout);
-	getline(stringMatch);
-	printf("Making %u addresses for \"%s\"\n\n",i,stringMatch);
+	getLine(stringMatch);
+	printf("Making %lu addresses for \"%s\"\n\n",i,stringMatch);
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
 	uint8_t * pubKey = NULL;
 	int pubSize = 0;
@@ -108,19 +95,18 @@ int main(){
 		}
 		SHA256(pubKey, pubSize, shaHash);
 		RIPEMD160(shaHash, 32, ripemdHash);
-		CBAddress * address = CBNewAddressFromRIPEMD160Hash(net, ripemdHash, false, &events);
-		CBString * string = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(address));
+		CBAddress * address = CBNewAddressFromRIPEMD160Hash(ripemdHash, CB_PRODUCTION_NETWORK_BYTE, false, &events);
+		CBByteArray * string = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;
 		uint8_t offset = 1;
-		int addSize = strlen(string->string);
-		int matchSize = strlen(stringMatch);
+		size_t matchSize = strlen(stringMatch);
 		for (uint8_t y = 0; y < matchSize;) {
 			char other = islower(stringMatch[y]) ? toupper(stringMatch[y]) : (isupper(stringMatch[y])? tolower(stringMatch[y]) : '\0');
-			if (string->string[y+offset] != stringMatch[y] && string->string[y+offset] != other) {
+			if (CBByteArrayGetByte(string, y+offset) != stringMatch[y] && CBByteArrayGetByte(string, y+offset) != other) {
 				offset++;
 				y = 0;
-				if (addSize < matchSize + offset) {
+				if (string->length < matchSize + offset) {
 					match = false;
 					break;
 				}
@@ -150,7 +136,7 @@ int main(){
 			for (int x = 0; x < pubSize; x++) {
 				printf(" %.2X",pubKey[x]);
 			}
-			printf("\nAddress (base-58): %s\n\n",string->string);
+			printf("\nAddress (base-58): %s\n\n",CBByteArrayGetData(string));
 			x++; // Move to next
 		}
 		CBReleaseObject(string);
@@ -158,6 +144,5 @@ int main(){
 	free(shaHash);
 	free(ripemdHash);
 	EC_KEY_free(key);
-	CBReleaseObject(net);
 	return 0;
 }
