@@ -28,21 +28,39 @@
 
 CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence, CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewTransactionInput\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	CBInitTransactionInput(self,script,sequence,prevOutHash,prevOutIndex,events);
-	return self;
+	if(CBInitTransactionInput(self,script,sequence,prevOutHash,prevOutIndex,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewTransactionInputFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	CBInitTransactionInputFromData(self, data, events);
-	return self;
+	if(CBInitTransactionInputFromData(self, data, events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events){
 	CBTransactionInput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewUnsignedTransactionInput\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	CBInitUnsignedTransactionInput(self,sequence,prevOutHash,prevOutIndex, events);
-	return self;
+	if(CBInitUnsignedTransactionInput(self,sequence,prevOutHash,prevOutIndex, events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -118,8 +136,17 @@ uint32_t CBTransactionInputDeserialise(CBTransactionInput * self){
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->prevOut.hash = CBByteArraySubReference(bytes, 0, 32);
+	if (NOT self->prevOut.hash){
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray in CBTransactionInputDeserialise");
+		return 0;
+	}
 	self->prevOut.index = CBByteArrayReadInt32(bytes, 32);
 	self->scriptObject = CBNewScriptFromReference(bytes,36 + scriptLen.size, (uint32_t) scriptLen.val);
+	if (NOT self->scriptObject) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBScript in CBTransactionInputDeserialise");
+		CBReleaseObject(self->prevOut.hash);
+		return 0;
+	}
 	self->sequence = CBByteArrayReadInt32(bytes, (uint32_t) (36 + scriptLen.size + scriptLen.val));
 	return reqLen;
 }

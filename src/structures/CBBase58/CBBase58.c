@@ -28,6 +28,10 @@ CBBigInt CBDecodeBase58(char * str){
 	// ??? Quite likely these functions can be improved
 	CBBigInt bi;
 	bi.data = malloc(1);
+	if (NOT bi.data) {
+		bi.length = 0;
+		return bi;
+	}
 	bi.data[0] = 0;
 	bi.length = 1;
 	uint8_t temp[189];
@@ -66,7 +70,13 @@ CBBigInt CBDecodeBase58(char * str){
 			break;
 	if (zeros) {
 		bi.length += zeros;
-		realloc(bi.data, bi.length);
+		uint8_t * temp = realloc(bi.data, bi.length);
+		if (NOT temp) {
+			free(bi.data);
+			bi.length = 0;
+			return bi;
+		}
+		bi.data = temp;
 		memset(bi.data + bi.length - zeros, 0, zeros);
 	}
 	return bi;
@@ -74,13 +84,19 @@ CBBigInt CBDecodeBase58(char * str){
 CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 	CBBigInt bi = CBDecodeBase58(str);
 	if (bi.length < 4){
-		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short.");
-		bi.length = 1;
-		bi.data[0] = 0;
+		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short or there was a memory failure.");
+		bi.length = 0;
+		bi.data = NULL;
 		return bi;
 	}
 	// Reverse bytes for checksum generation
 	uint8_t * reversed = malloc(bi.length-4);
+	if (NOT reversed) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBDecodeBase58Checked",bi.length-4);
+		bi.length = 0;
+		bi.data = NULL;
+		return bi;
+	}
 	for (uint8_t x = 4; x < bi.length; x++) {
 		reversed[bi.length-1-x] = bi.data[x];
 	}
@@ -105,6 +121,8 @@ char * CBEncodeBase58(uint8_t * bytes, uint8_t len){
 	// ??? Improvement?
 	uint8_t x = 0;
 	char * str = malloc(len);
+	if (NOT str)
+		return NULL;
 	uint8_t size = len;
 	// Zeros
 	for (uint8_t y = len - 1;; y--)
@@ -119,18 +137,32 @@ char * CBEncodeBase58(uint8_t * bytes, uint8_t len){
 	// Make CBBigInt
 	CBBigInt bi;
 	bi.data = malloc(len);
+	if (NOT bi.data){
+		free(str);
+		return NULL;
+	}
 	memmove(bi.data, bytes, len);
 	bi.length = len;
 	CBBigIntNormalise(&bi);
 	// Make temporary data store
 	uint8_t * temp = malloc(len);
+	if (NOT temp) {
+		free(str);
+		free(bi.data);
+		return NULL;
+	}
 	// Encode
 	uint8_t mod;
 	for (;CBBigIntCompareTo58(bi) >= 0;x++) {
 		mod = CBBigIntModuloWith58(bi);
 		if (size < x + 3) {
 			size = x + 3;
-			str = realloc(str, size);
+			char * temp = realloc(str, size);
+			if (NOT temp){
+				free(str);
+				return NULL;
+			}
+			str = temp;
 		}
 		str[x] = base58Characters[mod];
 		CBBigIntEqualsSubtractionByUInt8(&bi, mod);

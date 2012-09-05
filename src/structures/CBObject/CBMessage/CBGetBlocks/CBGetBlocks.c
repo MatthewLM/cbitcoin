@@ -28,15 +28,27 @@
 
 CBGetBlocks * CBNewGetBlocks(uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events){
 	CBGetBlocks * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewGetBlocks\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeGetBlocks;
-	CBInitGetBlocks(self,version,chainDescriptor,stopAtHash,events);
-	return self;
+	if(CBInitGetBlocks(self,version,chainDescriptor,stopAtHash,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data,CBEvents * events){
 	CBGetBlocks * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewGetBlocksFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeGetBlocks;
-	CBInitGetBlocksFromData(self,data,events);
-	return self;
+	if(CBInitGetBlocksFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -89,11 +101,19 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	// Deserialise the CBChainDescriptor
 	CBByteArray * data = CBByteArraySubReference(bytes, 4, bytes->length-4);
+	if (NOT data) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBGetBlocksDeserialise for the chain descriptor.\n");
+		return 0;
+	}
 	self->chainDescriptor = CBNewChainDescriptorFromData(data, CBGetMessage(self)->events);
+	if (NOT self->chainDescriptor){
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBChainDescriptor in CBGetBlocksDeserialise\n");
+		CBReleaseObject(data);
+		return 0;
+	}
 	uint16_t len = CBChainDescriptorDeserialise(self->chainDescriptor);
-	if (NOT len) {
+	if (NOT len){
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBGetBlocks cannot be deserialised because of an error with the CBChainDescriptor.");
-		CBReleaseObject(self->chainDescriptor);
 		CBReleaseObject(data);
 		return 0;
 	}
@@ -105,6 +125,10 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 		return 0;
 	}
 	self->stopAtHash = CBNewByteArraySubReference(bytes, len + 4, 32);
+	if (NOT self->stopAtHash) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBGetBlocksDeserialise\n");
+		CBReleaseObject(self->chainDescriptor);
+	}
 	return len + 36;
 }
 uint32_t CBGetBlocksCalculateLength(CBGetBlocks * self){
@@ -123,6 +147,10 @@ uint16_t CBGetBlocksSerialise(CBGetBlocks * self){
 	CBByteArraySetInt32(bytes, 0, self->version);
 	// Serialise chain descriptor
 	CBGetMessage(self->chainDescriptor)->bytes = CBByteArraySubReference(bytes, 4, bytes->length-4);
+	if (NOT CBGetMessage(self->chainDescriptor)->bytes) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBGetBlocksSerialise");
+		return 0;
+	}
 	uint32_t len = CBChainDescriptorSerialise(self->chainDescriptor);
 	if (NOT len) {
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBGetBlocks cannot be serialised because of an error with the chain descriptor. This error should never occur... :o");

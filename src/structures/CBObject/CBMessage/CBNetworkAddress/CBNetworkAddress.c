@@ -28,21 +28,27 @@
 
 CBNetworkAddress * CBNewNetworkAddress(uint32_t time,CBByteArray * ip,uint16_t port,uint64_t services,CBEvents * events){
 	CBNetworkAddress * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeNetworkAddress;
-	bool ok = CBInitNetworkAddress(self,time,ip,port,services,events);
-	if (NOT ok) {
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewNetworkAddress\n",sizeof(*self));
 		return NULL;
 	}
-	return self;
+	CBGetObject(self)->free = CBFreeNetworkAddress;
+	if (CBInitNetworkAddress(self,time,ip,port,services,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data,CBEvents * events){
 	CBNetworkAddress * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeNetworkAddress;
-	bool ok = CBInitNetworkAddressFromData(self,data,events);
-	if (NOT ok) {
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewNetworkAddressFromData\n",sizeof(*self));
 		return NULL;
 	}
-	return self;
+	CBGetObject(self)->free = CBFreeNetworkAddress;
+	if(CBInitNetworkAddressFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -58,6 +64,8 @@ bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * i
 	self->ip = ip;
 	if (NOT ip) {
 		ip = CBNewByteArrayOfSize(16, events);
+		if (NOT ip)
+			return false;
 		memset(CBByteArrayGetData(ip), 0, 16);
 		self->type = CB_IP_INVALID;
 	}else{
@@ -68,8 +76,10 @@ bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * i
 	self->port = port;
 	self->services = services;
 	self->public = false; // Private by default.
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), events)){
+		CBReleaseObject(ip);
 		return false;
+	}
 	return true;
 }
 bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,CBEvents * events){
@@ -111,6 +121,8 @@ uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score){
 	self->services = CBByteArrayReadInt64(bytes, cursor);
 	cursor += 8;
 	self->ip = CBNewByteArraySubReference(bytes, cursor, 16);
+	if (NOT self->ip)
+		return 0;
 	// Determine IP type
 	self->type = CBGetIPType(CBByteArrayGetData(self->ip));
 	cursor += 16;

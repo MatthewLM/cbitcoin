@@ -4,19 +4,19 @@
 //
 //  Created by Matthew Mitchell on 07/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//  
+//
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -83,13 +83,13 @@ int main(){
 	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 12012, &events);
 	CBAddressManager * addrMan = CBNewAddressManagerFromData(bytes, &events);
 	addrMan->maxAddressesInBucket = 500;
-	u_int32_t len = CBAddressManagerDeserialise(addrMan);
+	uint32_t len = CBAddressManagerDeserialise(addrMan);
 	if(len != 12012){
 		printf("DESERIALISATION LEN FAIL %u != 12014\n",len);
 		return 1;
 	}
 	if (addrMan->secret != 0x56AFE32056AFE320) {
-		printf("DESERIALISATION SECRET FAIL %llx != 0x56AFE32056AFE320\n",addrMan->secret);
+		printf("DESERIALISATION SECRET FAIL %llx != 0x56AFE32056AFE320\n",(long long int)addrMan->secret);
 		return 1;
 	}
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
@@ -175,7 +175,7 @@ int main(){
 		CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
 		CBPeer * peer = CBNewNodeByTakingNetworkAddress(addr);
 		peer->timeOffset = timeOffsets[x];
-		CBAddressManagerTakeNode(addrMan, peer);
+		CBAddressManagerTakePeer(addrMan, peer);
 	}
 	int16_t orderedOffsets[] = {-10,-5,-4,19};
 	for (int x = 0; x < 4; x++) {

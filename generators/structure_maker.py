@@ -143,9 +143,13 @@ source.write("//\n\
 \n\
 CB"+name+" * CBNew"+name+"(){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
+\tif (NOT self)\n\
+\t\treturn NULL;\n\
 \tCBGetObject(self)->free = CBFree"+name+";\n\
-\tCBInit"+name+"(self);\n\
-\treturn self;\n\
+\tif(CBInit"+name+"(self))\n\
+\t\treturn self;\n\
+\tfree(self);\n\
+\treturn NULL;\n\
 }\n\
 \n\
 //  Object Getter\n\

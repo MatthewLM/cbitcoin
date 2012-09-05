@@ -85,7 +85,27 @@ typedef enum{
 	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL,
 	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_CREATE_FAIL,
 	CB_ERROR_NETWORK_COMMUNICATOR_CONNECT_FAILURE,
+	CB_ERROR_OUT_OF_MEMORY,
+	CB_ERROR_INIT_FAIL,
 }CBError;
+
+/*
+ @brief The return values for CBScriptExecute. @see CBScript.h
+ */
+typedef enum{
+	CB_SCRIPT_VALID, /**< Script validates. */
+	CB_SCRIPT_INVALID, /**< Script does not validate */
+	CB_SCRIPT_ERR /**< An error occured, do not assume validatity and handle the error. */
+} CBScriptExecuteReturn;
+
+/*
+ @brief The return values for CBTransactionGetInputHashForSignature. @see CBTransaction.h
+ */
+typedef enum{
+	CB_TX_HASH_OK, /**< Transaction hash was made OK */
+	CB_TX_HASH_BAD, /**< The transaction is invalid and a hash cannot be made. */
+	CB_TX_HASH_ERR /**< An error occured while making the hash. */
+} CBGetHashReturn;
 
 typedef enum{
 	CB_SOCKET_OK,
@@ -126,7 +146,7 @@ typedef enum{
  @brief Used for CBNetworkCommunicator objects. These flags alter the behaviour of a CBNetworkCommunicator.
  */
 typedef enum{
-	CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE = 1, /**< */
+	CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE = 1, /**< Automatically share version and verack messages with new connections. */
 	CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY = 2, /**< Automatically discover peers and connect upto the maximum allowed connections using the supplied CBVersion. This involves the exchange of version messages and addresses. */
 	CB_NETWORK_COMMUNICATOR_AUTO_PING = 4, /**< Send ping messages every "heartBeat" automatically. If the protocol version in the CBVersion message is 60000 or over, cbitcoin will use the new ping/pong specification. @see PingPong.h */ 
 }CBNetworkCommunicatorFlags;

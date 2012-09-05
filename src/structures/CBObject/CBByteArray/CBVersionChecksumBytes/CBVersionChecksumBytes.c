@@ -28,18 +28,27 @@
 
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string,bool cacheString,CBEvents * events){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	bool ok = CBInitVersionChecksumBytesFromString(self,string,cacheString,events);
-	if (NOT ok) {
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromString\n",sizeof(*self));
 		return NULL;
 	}
-	return self;
+	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
+	if(CBInitVersionChecksumBytesFromString(self,string,cacheString,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromBytes\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	CBInitVersionChecksumBytesFromBytes(self,bytes,size,cacheString,events);
-	return self;
+	if(CBInitVersionChecksumBytesFromBytes(self,bytes,size,cacheString,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -100,6 +109,8 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Make this into little-endian
 		char * string = CBEncodeBase58(CBByteArrayGetData(CBGetByteArray(self)),CBGetByteArray(self)->length);
 		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->events);
+		if (NOT str) 
+			return NULL;
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Now the string is got, back to big-endian.
 		if (self->cacheString) {
 			self->cachedString = str;

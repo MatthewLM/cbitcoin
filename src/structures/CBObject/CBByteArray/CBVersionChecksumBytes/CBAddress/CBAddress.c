@@ -28,18 +28,27 @@
 
 CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash,uint8_t networkCode,bool cacheString,CBEvents * events){
 	CBAddress * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressFromRIPEMD160Hash\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeAddress;
-	CBInitAddressFromRIPEMD160Hash(self,networkCode,hash,cacheString,events);
-	return self;
+	if (CBInitAddressFromRIPEMD160Hash(self,networkCode,hash,cacheString,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBAddress * CBNewAddressFromString(CBByteArray * string,bool cacheString,CBEvents * events){
 	CBAddress * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeAddress;
-	bool ok = CBInitAddressFromString(self,string,cacheString,events);
-	if (NOT ok) {
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressFromString\n",sizeof(*self));
 		return NULL;
 	}
-	return self;
+	CBGetObject(self)->free = CBFreeAddress;
+	if (CBInitAddressFromString(self,string,cacheString,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -53,6 +62,10 @@ CBAddress * CBGetAddress(void * self){
 bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,uint8_t networkCode,uint8_t * hash,bool cacheString,CBEvents * events){
 	// Build address and then complete intitialisation with CBVersionChecksumBytes
 	uint8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
+	if (NOT data) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate 25 bytes of memory in CBInitAddressFromRIPEMD160Hash\n");
+		return false;
+	}
 	// Set network byte
 	data[0] = networkCode;
 	// Move hash

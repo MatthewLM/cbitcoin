@@ -67,9 +67,10 @@ uint32_t CBTransactionGetSigOps(CBTransaction * tx);
  @brief Validates a transaction has outputs and inputs, is below the maximum block size, has outputs that do not overflow and that there are no duplicate spent transaction outputs. This function also checks coinbase transactions have input scripts between 2 and 100 bytes and non-coinbase transactions do not have a NULL previous output. Further validation can be done by checking the transaction against input transactions. With simplified payment verification instead the validation is done through trusting miners but the basic validation can still be done for these basic checks.
  @param tx The transaction to validate. This should be deserialised.
  @param coinbase true to validate for a coinbase transaction, false to validate for a non-coinbase transaction.
+ @param err Pointer to error which is set true when a memory failure occurs.
  @returns A memory block of previous transaction ouputs spent by this transaction if validation passed or NULL. The outputs can be used for further validation that the transaction is not a double-spend. The block of CBPrevOuts needs to be freed. The hashes are not retained, so the data is good until the transaction is freed. Do not try to release the hashes, thinking they have been retained in this function.
  */
-CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase);
+CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool * err);
 /**
  @brief Determines if a transaction is final and therefore can exist in a block. A transaction is final if the lockTime has been reached or if all inputs are final.
  @param tx The transaction.

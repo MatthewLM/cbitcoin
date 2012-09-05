@@ -28,15 +28,27 @@
 
 CBChainDescriptor * CBNewChainDescriptor(CBEvents * events){
 	CBChainDescriptor * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewChainDescriptor\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeChainDescriptor;
-	CBInitChainDescriptor(self,events);
-	return self;
+	if(CBInitChainDescriptor(self,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,CBEvents * events){
 	CBChainDescriptor * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewChainDescriptorFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeChainDescriptor;
-	CBInitChainDescriptorFromData(self,data,events);
-	return self;
+	if(CBInitChainDescriptorFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -75,9 +87,9 @@ void CBFreeChainDescriptor(void * vself){
 
 //  Functions
 
-void CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash){
-	CBChainDescriptorTakeHash(self,hash);
+bool CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash){
 	CBRetainObject(hash);
+	return CBChainDescriptorTakeHash(self,hash);
 }
 uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -100,10 +112,18 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	}
 	// Deserialise each hash
 	self->hashes = malloc(sizeof(*self->hashes) * (size_t)hashNum.val);
+	if (NOT self->hashes) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBChainDescriptorDeserialise\n",sizeof(*self->hashes) * (size_t)hashNum.val);
+		return 0;
+	}
 	self->hashNum = hashNum.val;
 	uint16_t cursor = hashNum.size;
 	for (uint16_t x = 0; x < self->hashNum; x++) {
 		self->hashes[x] = CBNewByteArraySubReference(bytes, cursor, 32);
+		if (NOT self->hashes[x]){
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBChainDescriptorDeserialise\n");
+			return 0;
+		}
 		cursor += 32;
 	}
 	return cursor;
@@ -128,8 +148,12 @@ uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 	}
 	return cursor;
 }
-void CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash){
+bool CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash){
 	self->hashNum++;
-	self->hashes = realloc(self->hashes, sizeof(*self->hashes) * self->hashNum);
+	CBByteArray ** temp = realloc(self->hashes, sizeof(*self->hashes) * self->hashNum);
+	if (NOT temp)
+		return false;
+	self->hashes = temp;
 	self->hashes[self->hashNum-1] = hash;
+	return true;
 }

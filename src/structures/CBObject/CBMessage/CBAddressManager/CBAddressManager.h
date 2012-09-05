@@ -4,25 +4,25 @@
 //
 //  Created by Matthew Mitchell on 31/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//  
+//
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  @file
- @brief Stores addresses both unconnected and connected. It also proves serialisation and deserialisation so that addresses can be stored in binary format. Credit largely goes to the addrman.cpp code in the original client, although the code here has differences. Inherits CBMessage. The binary format contains a 32 bit integer for the cbitcoin version, followed by CB_BUCKET_NUM buckets. Each of these buckets is written as a 16 bit integer for the number of addresses and then the serialised CBNetworkAddresses one after the other. After the buckets is the 64 bit integer secret. 
+ @brief Stores addresses both unconnected and connected. It also proves serialisation and deserialisation so that addresses can be stored in binary format. Credit largely goes to the addrman.cpp code in the original client, although the code here has differences. Inherits CBMessage. The binary format contains a 32 bit integer for the cbitcoin version, followed by CB_BUCKET_NUM buckets. Each of these buckets is written as a 16 bit integer for the number of addresses and then the serialised CBNetworkAddresses one after the other. After the buckets is the 64 bit integer secret.
 */
 
 #ifndef CBADDRESSMANAGERH
@@ -62,7 +62,7 @@ typedef struct{
 	CBPeer ** peers; /**< Connected peers sorted by the time offset. */
 	uint32_t peersNum; /**< Number of connected peers */
 	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
-	CBIPType reachablity; /**< Bitfield for reachable address types */
+	CBIPType reachability; /**< Bitfield for reachable address types */
 	uint16_t maxAddressesInBucket; /**< Maximum number of addresses that can be stored in a single bucket. */
 	uint64_t secret; /**< Securely generated pseudo-random number to generate a secret used to mix-up groups into different buckets. */
 	uint64_t rndGen; /**< Random number generator instance. */
@@ -108,15 +108,16 @@ bool CBInitAddressManagerFromData(CBAddressManager * self,CBByteArray * data,CBE
  @param self The CBAddressManager object to free.
  */
 void CBFreeAddressManager(void * vself);
- 
+
 //  Functions
 
 /**
  @brief Adds a CBPeer an places it into the CBAddressManager with a retain.
  @param self The CBAddressManager object.
  @param peer The CBNetworkAddress to take.
+ @returns true if the address was taken successfully, false if an error occured.
  */
-void CBAddressManagerAddAddress(CBAddressManager * self,CBNetworkAddress * addr);
+bool CBAddressManagerAddAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
  @brief Adjust the network time offset with a peer's time.
  @param self The CBAddressManager object.
@@ -133,16 +134,16 @@ uint32_t CBAddressManagerDeserialise(CBAddressManager * self);
  @brief Gets a number of addresses.
  @param self The CBAddressManager object.
  @param num The number of addresses to get.
- @returns The addresses in a newly allocated memory block. This block is NULL terminated. The number of addresses returned may be less than "num". CBNetworkAddressLocator is used to locate addresses if needed.
+ @returns The addresses in a newly allocated memory block. This block is NULL terminated. The number of addresses returned may be less than "num". CBNetworkAddressLocator is used to locate addresses if needed. This will return NULL if malloc() fails.
  */
-CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self,u_int32_t num);
+CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self,uint32_t num);
 /**
  @brief Gets the bucket index for an address.
  @param self The CBAddressManager object.
  @param addr The address.
  @returns The bucket index.
  */
-u_int8_t CBAddressManagerGetBucketIndex(CBAddressManager * self,CBNetworkAddress * addr);
+uint8_t CBAddressManagerGetBucketIndex(CBAddressManager * self,CBNetworkAddress * addr);
 /**
  @brief Gets the group number for an address. It is seperated such as to make it difficult to use an IP in many different groups. This is done such as the original bitcoin client.
  @param self The CBAddressManager object.
@@ -212,13 +213,14 @@ bool CBAddressManagerSetup(CBAddressManager * self);
  @brief Takes a CBPeer an places it into the CBAddressManager
  @param self The CBAddressManager object.
  @param peer The CBNetworkAddress to take.
+ @returns true if the address was taken successfully, false if an error occured.
  */
-void CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr);
+bool CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr);
 /**
  @brief Takes a CBPeer an places it into the peers list.
  @param self The CBAddressManager object.
  @param peer The CBPeer to take.
  */
-void CBAddressManagerTakeNode(CBAddressManager * self,CBPeer * peer);
+bool CBAddressManagerTakePeer(CBAddressManager * self,CBPeer * peer);
 
 #endif

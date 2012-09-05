@@ -86,8 +86,9 @@ void CBFreeBlockHeaders(void * self);
  @brief Adds a CBBlock into the block header list.
  @param self The CBBlockHeaders object
  @param address The CBBlock to add.
+ @returns true if the block header was added successfully or false on error.
  */
-void CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header);
+bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBBlockHeaders object.
@@ -110,7 +111,8 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self);
  @brief Takes a CBBlock for the block header list. This does not retain the CBBlock so you can pass an CBBlock into this while releasing control from the calling function.
  @param self The CBBlockHeaders object
  @param address The CBBlock to take.
+ @returns true if the block header was taken successfully or false on error.
  */
-void CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header);
+bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header);
 
 #endif

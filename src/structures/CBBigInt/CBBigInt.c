@@ -41,7 +41,14 @@ CBCompare CBBigIntCompareTo58(CBBigInt a){
 }
 void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
-		a->data = realloc(a->data, b->length);
+		uint8_t * temp = realloc(a->data, b->length);
+		if (NOT temp) {
+			free(a->data);
+			a->data = NULL;
+			a->length = 0;
+			return;
+		}
+		a->data = temp;
 		// Make certain data is empty
 		uint8_t diff = b->length - a->length;
 		memset(a->data + (b->length - diff), 0, diff);
@@ -53,7 +60,14 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	if (overflow) { // Add extra byte
 		a->length = b->length + 1;
-		a->data = realloc(a->data, a->length);
+		uint8_t * new = realloc(a->data, a->length);
+		if (NOT new) {
+			free(a->data);
+			a->data = NULL;
+			a->length = 0;
+			return;
+		}
+		a->data = new;
 		a->data[a->length - 1] = 1;
 	}else{
 		a->length = b->length;
@@ -76,7 +90,14 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 	}
 	if (NOT ans[a->length-1]) { // If last byte is zero, adjust length.
 		a->length--;
-		a->data = realloc(a->data, a->length);
+		uint8_t * new = realloc(a->data, a->length);
+		if (NOT new) {
+			free(a->data);
+			a->data = NULL;
+			a->length = 0;
+			return;
+		}
+		a->data = new;
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 	assert(a->data[a->length-1]);
@@ -85,7 +106,14 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 	if (NOT b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
-		a->data = realloc(a->data, 1);
+		uint8_t * new = realloc(a->data, 1);
+		if (NOT new) {
+			free(a->data);
+			a->data = NULL;
+			a->length = 0;
+			return;
+		}
+		a->data = new;
 		a->data[0] = 0;
 		return;
 	}
@@ -100,7 +128,14 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 	}
 	if (ans[a->length]) { // If last byte is not zero, adjust length.
 		a->length++;
-		a->data = realloc(a->data, a->length);
+		uint8_t * new = realloc(a->data, a->length);
+		if (NOT new) {
+			free(a->data);
+			a->data = NULL;
+			a->length = 0;
+			return;
+		}
+		a->data = new;
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 	assert(a->data[a->length-1]);
@@ -135,9 +170,20 @@ uint8_t CBBigIntModuloWith58(CBBigInt a){
 CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b){
 	CBBigInt bi;
 	bi.data = malloc(1);
+	if (NOT bi.data){
+		bi.length = 0;
+		bi.data = NULL;
+		return bi;
+	}
 	bi.length = 1;
 	bi.data[0] = 1;
 	uint8_t * temp = malloc(b);
+	if (NOT temp) {
+		free(bi.data);
+		bi.length = 0;
+		bi.data = NULL;
+		return bi;
+	}
 	for (uint8_t x = 0; x < b; x++) {
 		memset(temp, 0, bi.length);
 		CBBigIntEqualsMultiplicationByUInt8(&bi, a, temp);

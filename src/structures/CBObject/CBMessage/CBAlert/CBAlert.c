@@ -28,15 +28,27 @@
 
 CBAlert * CBNewAlert(int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,CBEvents * events){
 	CBAlert * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAlert\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeAlert;
-	CBInitAlert(self,version,relayUntil,expiration,ID,cancel,minVer,maxVer,priority,hiddenComment,displayedComment,reserved,signature,events);
-	return self;
+	if(CBInitAlert(self,version,relayUntil,expiration,ID,cancel,minVer,maxVer,priority,hiddenComment,displayedComment,reserved,signature,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBAlert * CBNewAlertFromData(CBByteArray * data,CBEvents * events){
 	CBAlert * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAlertFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeAlert;
-	CBInitAlertFromData(self,data,events);
-	return self;
+	if(CBInitAlertFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -98,14 +110,18 @@ void CBFreeAlert(void * vself){
 
 //  Functions
 
-void CBAlertAddCancelID(CBAlert * self,uint32_t ID){
+bool CBAlertAddCancelID(CBAlert * self,uint32_t ID){
 	self->setCancelNum++;
-	self->setCancel = realloc(self->setCancel, sizeof(*self->setCancel) * self->setCancelNum);
+	int32_t * temp = realloc(self->setCancel, sizeof(*self->setCancel) * self->setCancelNum);
+	if (NOT temp)
+		return false;
+	self->setCancel = temp;
 	self->setCancel[self->setCancelNum-1] = ID;
+	return true;
 }
-void CBAlertAddUserAgent(CBAlert * self,CBByteArray * userAgent){
-	CBAlertTakeUserAgent(self, userAgent);
+bool CBAlertAddUserAgent(CBAlert * self,CBByteArray * userAgent){
 	CBRetainObject(userAgent);
+	return CBAlertTakeUserAgent(self, userAgent);
 }
 uint32_t CBAlertCalculateLength(CBAlert * self){
 	uint32_t len = 40 + CBVarIntSizeOf(self->userAgentNum) + CBVarIntSizeOf(self->setCancelNum) + self->setCancelNum * 4;
@@ -170,6 +186,10 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	cursor += setCancelLen.size;
 	if (self->setCancelNum){
 		self->setCancel = malloc(sizeof(*self->setCancel) * self->setCancelNum);
+		if (NOT self->setCancel) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAlertDeserialise for the cancel set.",sizeof(*self->setCancel) * self->setCancelNum);
+			return 0;
+		}
 		for (uint16_t x = 0; x < self->setCancelNum; x++) {
 			CBByteArrayReadInt32(bytes, cursor);
 			cursor += 4;
@@ -183,30 +203,31 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	CBVarInt userAgentsLen = CBVarIntDecode(bytes, cursor);
 	if (payloadLen.val < 7 + cursor + userAgentsLen.size + userAgentsLen.val - payloadLen.size) { // 7 for priority and 3 strings
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set assuming empty strings.");
-		free(self->setCancel); // Free cancel ids
 		return 0;
 	}
 	self->userAgentNum = userAgentsLen.val;
 	cursor += userAgentsLen.size;
 	if (self->userAgentNum){
 		self->userAgents = malloc(sizeof(*self->userAgents) * self->userAgentNum);
+		if (NOT self->userAgents) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAlertDeserialise for the user agent set.",sizeof(*self->userAgents) * self->userAgentNum);
+			return 0;
+		}
 		for (uint16_t x = 0; x < self->userAgentNum; x++) {
 			// Add each user agent checking each time for space in the payload.
 			CBVarInt userAgentLen = CBVarIntDecode(bytes, cursor); // No need to check space as there is enough data afterwards for safety.
 			cursor += userAgentLen.size;
 			if (payloadLen.val < 7 + cursor + userAgentLen.val + self->userAgentNum - x - payloadLen.size) { // 7 for priority and 3 strings. The current user agent size and the rest as if empty strings.
 				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set up to user agent %u.",x);
-				// Release CBByteArrays for user agents and free the memory block.
-				for (uint16_t y = 0; y < x; y++) {
-					CBReleaseObject(self->userAgents[y]);
-				}
-				free(self->userAgents);
-				free(self->setCancel); // Free cancel ids
 				return 0;
 			}
 			// Enough space so set user agent
 			if (userAgentLen.val) {
 				self->userAgents[x] = CBNewByteArraySubReference(bytes, cursor, (uint32_t)userAgentLen.val);
+				if (NOT self->userAgents[x]) {
+					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for userAgent %i.\n",x);
+					return 0;
+				}
 			}else{
 				self->userAgents[x] = NULL;
 			}
@@ -232,6 +253,10 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 		if (payloadLen.val >= cursor + hiddenCommentLen.val + 2 - payloadLen.size) { // OK for hidden comment.
 			if (hiddenCommentLen.val) {
 				self->hiddenComment = CBNewByteArraySubReference(bytes, cursor, (uint32_t)hiddenCommentLen.val);
+				if (NOT self->hiddenComment) {
+					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the hidden comment.\n");
+					return 0;
+				}
 			}else{
 				self->hiddenComment = NULL;
 			}
@@ -252,6 +277,10 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 				if (payloadLen.val >= cursor + displayedCommentLen.val + 1 - payloadLen.size) { // OK for displayed comment.
 					if (displayedCommentLen.val) {
 						self->displayedComment = CBNewByteArraySubReference(bytes, cursor, (uint32_t)displayedCommentLen.val);
+						if (NOT self->displayedComment) {
+							CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the displayed comment.\n");
+							return 0;
+						}
 					}else{
 						self->displayedComment = NULL;
 					}
@@ -272,6 +301,10 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 						if (payloadLen.val == cursor + reservedLen.val - payloadLen.size) { // OK for all payload. Size is correct.
 							if (reservedLen.val) {
 								self->reserved = CBNewByteArraySubReference(bytes, cursor, (uint32_t)reservedLen.val);
+								if (NOT self->reserved) {
+									CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the reserved section\n");
+									return 0;
+								}
 							}else{
 								self->reserved = NULL;
 							}
@@ -291,8 +324,11 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 								cursor += size;
 								if (bytes->length >= cursor + sigLen.val){ // Can cover signature
 									self->signature = CBNewByteArraySubReference(bytes, cursor, (uint32_t)sigLen.val);
-									// Done signature OK. Now return successfully.
-									return cursor += sigLen.val;
+									if (self->signature) {
+										// Done signature OK. Now return successfully.
+										return cursor += sigLen.val;
+									}else
+										CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the signature\n");
 								}else{
 									CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a byte array length smaller than required to cover the signature.");
 								}
@@ -323,13 +359,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	}else{
 		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the hidden string var int.");
 	}
-	// Error. Free data
-	// Release CBByteArrays for user agents and free the memory block.
-	for (uint16_t x = 0; x < self->userAgentNum; x++) {
-		CBReleaseObject(self->userAgents[x]);
-	}
-	free(self->userAgents);
-	free(self->setCancel); // Free cancel ids
+	// Error
 	return 0;
 }
 CBByteArray * CBAlertGetPayload(CBAlert * self){
@@ -455,8 +485,12 @@ uint16_t CBAlertSerialiseSignature(CBAlert * self,uint16_t offset){
 	CBByteArrayChangeReference(self->signature, bytes, offset);
 	return offset + sigLen.val;
 }
-void CBAlertTakeUserAgent(CBAlert * self,CBByteArray * userAgent){
+bool CBAlertTakeUserAgent(CBAlert * self,CBByteArray * userAgent){
 	self->userAgentNum++;
-	self->userAgents = realloc(self->userAgents, sizeof(*self->userAgents) * self->userAgentNum);
+	CBByteArray ** temp = realloc(self->userAgents, sizeof(*self->userAgents) * self->userAgentNum);
+	if (NOT temp)
+		return false;
+	self->userAgents = temp;
 	self->userAgents[self->userAgentNum-1] = userAgent;
+	return true;
 }

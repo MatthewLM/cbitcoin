@@ -28,15 +28,27 @@
 
 CBInventoryBroadcast * CBNewInventoryBroadcast(CBEvents * events){
 	CBInventoryBroadcast * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryBroadcast\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeInventoryBroadcast;
-	CBInitInventoryBroadcast(self,events);
-	return self;
+	if(CBInitInventoryBroadcast(self,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data,CBEvents * events){
 	CBInventoryBroadcast * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryBroadcastFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeInventoryBroadcast;
-	CBInitInventoryBroadcastFromData(self,data,events);
-	return self;
+	if(CBInitInventoryBroadcastFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -92,25 +104,30 @@ uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 	}
 	// Run through the items and deserialise each one.
 	self->items = malloc(sizeof(*self->items) * (size_t)itemNum.val);
+	if (NOT self->items) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBInventoryBroadcastDeserialise",sizeof(*self->items) * (size_t)itemNum.val);
+		return 0;
+	}
 	self->itemNum = itemNum.val;
 	uint16_t cursor = itemNum.size;
 	for (uint16_t x = 0; x < itemNum.val; x++) {
 		// Make new CBInventoryItem from the rest of the data.
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+		if (NOT data) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create a new CBByteArray in CBInventoryBroadcastDeserialise for inventory broadcast number %u.",x);
+			return 0;
+		}
 		self->items[x] = CBNewInventoryItemFromData(data, CBGetMessage(self)->events);
+		if (NOT self->items[x]) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create a new CBInventoryItem in CBInventoryBroadcastDeserialise for inventory broadcast number %u.",x);
+			CBReleaseObject(data);
+			return 0;
+		}
 		// Deserialise
 		uint8_t len = CBInventoryItemDeserialise(self->items[x]);
-		if (NOT len) {
+		if (NOT len){
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBInventoryBroadcast cannot be deserialised because of an error with the CBInventoryItem number %u.",x);
-			// Release bytes
 			CBReleaseObject(data);
-			// Because of failure release the CBInventoryItems
-			for (uint16_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(self->items[y]);
-			}
-			free(self->items);
-			self->items = NULL;
-			self->itemNum = 0;
 			return 0;
 		}
 		// Adjust length
@@ -138,6 +155,10 @@ uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self){
 	uint16_t cursor = num.size;
 	for (uint16_t x = 0; x < num.val; x++) {
 		CBGetMessage(self->items[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+		if (NOT CBGetMessage(self->items[x])->bytes) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBInventoryBroadcastSerialise");
+			return 0;
+		}
 		uint32_t len = CBInventoryItemSerialise(self->items[x]);
 		if (NOT len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBInventoryBroadcast cannot be serialised because of an error with the CBInventoryItem number %u.",x);

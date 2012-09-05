@@ -28,15 +28,27 @@
 
 CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps,CBEvents * events){
 	CBAddressBroadcast * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressBroadcast\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeAddressBroadcast;
-	CBInitAddressBroadcast(self,timeStamps,events);
-	return self;
+	if (CBInitAddressBroadcast(self,timeStamps,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data,bool timeStamps,CBEvents * events){
 	CBAddressBroadcast * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressBroadcast\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeAddressBroadcast;
-	CBInitAddressBroadcastFromData(self,timeStamps,data,events);
-	return self;
+	if (CBInitAddressBroadcastFromData(self,timeStamps,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -76,9 +88,9 @@ void CBFreeAddressBroadcast(void * vself){
 
 //  Functions
 
-void CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address){
+bool CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address){
 	CBRetainObject(address);
-	CBAddressBroadcastTakeNetworkAddress(self,address);
+	return CBAddressBroadcastTakeNetworkAddress(self,address);
 }
 uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -96,24 +108,34 @@ uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self){
 		return 0;
 	}
 	self->addresses = malloc(sizeof(*self->addresses) * (size_t)num.val);
+	if (NOT self->addresses) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressBroadcastDeserialise\n",sizeof(*self->addresses) * (size_t)num.val);
+		return 0;
+	}
 	self->addrNum = num.val;
 	uint16_t cursor = num.size;
 	for (uint8_t x = 0; x < num.val; x++) {
 		// Make new CBNetworkAddress from the rest of the data.
+		uint8_t len;
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		self->addresses[x] = CBNewNetworkAddressFromData(data, CBGetMessage(self)->events);
-		// Deserialise
-		uint8_t len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);
+		if (data) {
+			self->addresses[x] = CBNewNetworkAddressFromData(data, CBGetMessage(self)->events);
+			if (self->addresses[x]){
+				// Deserialise
+				len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);
+				if (NOT len)
+					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be deserialised because of an error with the CBNetworkAddress number %u.",x);
+			}else{
+				len = 0;
+				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBNetworkAddress in CBAddressBroadcastDeserialise for network address %u.",x);
+			}
+		}else{
+			len = 0;
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBByteArray in CBAddressBroadcastDeserialise for network address %u.",x);
+		}
 		if (NOT len) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be deserialised because of an error with the CBNetworkAddress number %u.",x);
 			// Release bytes
 			CBReleaseObject(data);
-			// Because of failure release the CBNetworkAddresses
-			for (uint16_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(self->addresses[y]);
-			}
-			free(self->addresses);
-			self->addresses = NULL;
 			return 0;
 		}
 		// Adjust length
@@ -155,8 +177,13 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self){
 	}
 	return cursor;
 }
-void CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address){
+bool CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address){
 	self->addrNum++;
-	self->addresses = realloc(self->addresses, sizeof(*self->addresses) * self->addrNum);
+	CBNetworkAddress ** temp = realloc(self->addresses, sizeof(*self->addresses) * self->addrNum);
+	if (NOT temp) {
+		return false;
+	}
+	self->addresses = temp;
 	self->addresses[self->addrNum-1] = address;
+	return true;
 }

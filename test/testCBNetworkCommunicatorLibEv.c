@@ -4,26 +4,25 @@
 //
 //  Created by Matthew Mitchell on 10/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//
+//  
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//
+//  
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//
+//  
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 #include "CBNetworkCommunicator.h"
 #include "CBLibEventSockets.h"
-#include <event2/thread.h>
 #include <time.h>
 #include "stdarg.h"
 
@@ -88,16 +87,17 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester,void * vcomm,void * v
 	CBMessage * theMessage = peer->receive;
 	// Assign peer to tester progress.
 	uint8_t x = 0;
-	for (; x < tester->progNum; x++)
-		if (tester->peerToProg[x] == peer)
+	for (; x < tester->progNum; x++) {
+		if (tester->peerToProg[x] == peer) {
 			break;
+		}
+	}
 	if (x == tester->progNum) {
 		printf("NEW NODE OBJ: (%s,%p),(%p)\n",(comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"),(void *)comm,(void *)peer);
 		tester->peerToProg[x] = peer;
 		tester->progNum++;
 	}
 	TesterProgress * prog = tester->prog + x;
-	printf("%s onMessageReceived from %s (%p) WITH TESTER %i and PROG %i (%p)\n",(comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"),(CBGetNetworkAddress(peer)->port == 45562)? "L1" : ((CBGetNetworkAddress(peer)->port == 45563)? "L2" : ((CBGetNetworkAddress(peer)->port == 45564) ? "CN" : "UK")),(void *)peer,x,*prog,(void *)prog);
 	switch (theMessage->type) {
 		case CB_MESSAGE_TYPE_VERSION:
 			if (NOT ((peer->versionSent && *prog == GOTACK) || (*prog == 0))) {
@@ -209,7 +209,6 @@ int main(){
 	events.onMessageReceived = onMessageReceived;
 	events.onNetworkError = onNetworkError;
 	events.onTimeOut = onTimeOut;
-	evthread_use_pthreads();
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
 	CBByteArray * altMessages = CBNewByteArrayOfSize(0, &events);
 	CBByteArray * altMessages2 = CBNewByteArrayOfSize(0, &events);
@@ -241,8 +240,8 @@ int main(){
 	commListen->maxIncommingConnections = 3; // One for connector, one for the other listener and an extra so that we continue to share our address.
 	commListen->heartBeat = 1000;
 	commListen->timeOut = 2000;
-	commListen->sendTimeOut = 100;
-	commListen->recvTimeOut = 100;
+	commListen->sendTimeOut = 1000;
+	commListen->recvTimeOut = 1000;
 	commListen->responseTimeOut = 1000;
 	commListen->connectionTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen, altMessages, NULL);
@@ -263,8 +262,8 @@ int main(){
 	commListen2->maxIncommingConnections = 3;
 	commListen2->heartBeat = 1000;
 	commListen2->timeOut = 2000;
-	commListen2->sendTimeOut = 100;
-	commListen2->recvTimeOut = 100;
+	commListen2->sendTimeOut = 1000;
+	commListen2->recvTimeOut = 1000;
 	commListen2->responseTimeOut = 1000;
 	commListen2->connectionTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen2, altMessages2, NULL);
@@ -288,8 +287,8 @@ int main(){
 	commConnect->maxIncommingConnections = 0;
 	commConnect->heartBeat = 1000;
 	commConnect->timeOut = 2000;
-	commConnect->sendTimeOut = 100;
-	commConnect->recvTimeOut = 100;
+	commConnect->sendTimeOut = 1000;
+	commConnect->recvTimeOut = 1000;
 	commConnect->responseTimeOut = 1000;
 	commConnect->connectionTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commConnect, altMessages3, NULL);

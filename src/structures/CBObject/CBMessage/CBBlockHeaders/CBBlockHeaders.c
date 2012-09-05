@@ -28,15 +28,27 @@
 
 CBBlockHeaders * CBNewBlockHeaders(CBEvents * events){
 	CBBlockHeaders * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlockHeaders\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeBlockHeaders;
-	CBInitBlockHeaders(self,events);
-	return self;
+	if(CBInitBlockHeaders(self,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data,CBEvents * events){
 	CBBlockHeaders * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlockHeadersFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeBlockHeaders;
-	CBInitBlockHeadersFromData(self,data,events);
-	return self;
+	if(CBInitBlockHeadersFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -75,9 +87,9 @@ void CBFreeBlockHeaders(void * vself){
 
 //  Functions
 
-void CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header){
-	CBBlockHeadersTakeBlockHeader(self,header);
+bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header){
 	CBRetainObject(header);
+	return CBBlockHeadersTakeBlockHeader(self,header);
 }
 uint32_t CBBlockHeadersCalculateLength(CBBlockHeaders * self){
 	return CBVarIntSizeOf(self->headerNum) + self->headerNum * 81;
@@ -99,25 +111,30 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 	}
 	// Deserialise each header
 	self->blockHeaders = malloc(sizeof(*self->blockHeaders) * (size_t)headerNum.val);
+	if (NOT self->blockHeaders) {
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBBlockHeadersDeserialise\n",sizeof(*self->blockHeaders) * (size_t)headerNum.val);
+		return 0;
+	}
 	self->headerNum = headerNum.val;
 	uint16_t cursor = headerNum.size;
 	for (uint16_t x = 0; x < headerNum.val; x++) {
 		// Make new CBBlock from the rest of the data.
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+		if (NOT data) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray in CBBlockHeadersDeserialise for the header number %u.",x);
+			return 0;
+		}
 		self->blockHeaders[x] = CBNewBlockFromData(data, CBGetMessage(self)->events);
+		if (NOT self->blockHeaders[x]){
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBBlock in CBBlockHeadersDeserialise for the header number %u.",x);
+			CBReleaseObject(data);
+			return 0;
+		}
 		// Deserialise
 		uint8_t len = CBBlockDeserialise(self->blockHeaders[x],false); // false for no transactions. Only the header.
-		if (NOT len) {
+		if (NOT len){
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBBlockHeaders cannot be deserialised because of an error with the CBBlock number %u.",x);
-			// Release bytes
 			CBReleaseObject(data);
-			// Because of failure release the CBInventoryItems
-			for (uint16_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(self->blockHeaders[y]);
-			}
-			free(self->blockHeaders);
-			self->blockHeaders = NULL;
-			self->headerNum = 0;
 			return 0;
 		}
 		// Adjust length
@@ -142,6 +159,10 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self){
 	uint16_t cursor = num.size;
 	for (uint16_t x = 0; x < num.val; x++) {
 		CBGetMessage(self->blockHeaders[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+		if (NOT CBGetMessage(self->blockHeaders[x])->bytes) {
+			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBBlockHeadersSerialise for the header number %u",x);
+			return 0;
+		}
 		uint32_t len = CBBlockSerialise(self->blockHeaders[x],false); // false for no transactions.
 		if (NOT len) {
 			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBBlockHeaders cannot be serialised because of an error with the CBBlock number %u.",x);
@@ -156,8 +177,12 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self){
 	}
 	return cursor;
 }
-void CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header){
+bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header){
 	self->headerNum++;
-	self->blockHeaders = realloc(self->blockHeaders, sizeof(*self->blockHeaders) * self->headerNum);
+	CBBlock ** temp = realloc(self->blockHeaders, sizeof(*self->blockHeaders) * self->headerNum);
+	if (NOT temp)
+		return false;
+	self->blockHeaders = temp;
 	self->blockHeaders[self->headerNum-1] = header;
+	return true;
 }

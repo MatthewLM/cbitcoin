@@ -26,6 +26,8 @@
 
 CBMerkleNode * CBBuildMerkleTree(CBByteArray ** hashes, uint32_t numHashes){
 	CBMerkleNode * level = malloc(numHashes * sizeof(*level)); // Nodes on a level of the tree for processing.
+	if (NOT level)
+		return NULL;
 	// Create nodes from the CBByteArray hashes
 	for (uint32_t x = 0; x < numHashes; x++) {
 		memcpy(level[x].hash,CBByteArrayGetData(hashes[x]),32);
@@ -36,6 +38,10 @@ CBMerkleNode * CBBuildMerkleTree(CBByteArray ** hashes, uint32_t numHashes){
 	uint8_t hash[32];
 	uint8_t cat[64];
 	CBMerkleNode * nextLevel = malloc((numHashes + 1)/2 * sizeof(*level));
+	if (NOT nextLevel) {
+		free(level);
+		return NULL;
+	}
 	for (uint32_t x = 0;;) {
 		nextLevel[x/2].left = level + x;
 		if (x == numHashes - 1)
@@ -61,6 +67,10 @@ CBMerkleNode * CBBuildMerkleTree(CBByteArray ** hashes, uint32_t numHashes){
 				break;
 			x = 0;
 			nextLevel = malloc((numHashes + 1)/2 * sizeof(*level));
+			if (NOT nextLevel) {
+				CBFreeMerkleTree(level);
+				return NULL;
+			}
 		}
 	}
 	// Return last level which contains only the root node.

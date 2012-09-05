@@ -28,15 +28,27 @@
 
 CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,CBEvents * events){
 	CBInventoryItem * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryItem\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	CBInitInventoryItem(self,type,hash,events);
-	return self;
+	if(CBInitInventoryItem(self,type,hash,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,CBEvents * events){
 	CBInventoryItem * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryItemFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	CBInitInventoryItemFromData(self,data,events);
-	return self;
+	if(CBInitInventoryItemFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -84,6 +96,8 @@ uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	}
 	self->type = CBByteArrayReadInt32(bytes, 0);
 	self->hash = CBByteArraySubReference(bytes, 4, 32);
+	if (NOT self->hash)
+		return 0;
 	return 36;
 }
 uint32_t CBInventoryItemSerialise(CBInventoryItem * self){

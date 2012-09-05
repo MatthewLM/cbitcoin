@@ -28,15 +28,27 @@
 
 CBPingPong * CBNewPingPong(uint64_t ID,CBEvents * events){
 	CBPingPong * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewPingPong\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreePingPong;
-	CBInitPingPong(self,ID,events);
-	return self;
+	if(CBInitPingPong(self,ID,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBPingPong * CBNewPingPongFromData(CBByteArray * data,CBEvents * events){
 	CBPingPong * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewPingPongFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreePingPong;
-	CBInitPingPongFromData(self,data,events);
-	return self;
+	if(CBInitPingPongFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter

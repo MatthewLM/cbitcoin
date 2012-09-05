@@ -28,15 +28,27 @@
 
 CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script,CBEvents * events){
 	CBTransactionOutput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewTransactionOutput\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeTransactionOutput;
-	CBInitTransactionOutput(self,value,script,events);
-	return self;
+	if(CBInitTransactionOutput(self,value,script,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data,CBEvents * events){
 	CBTransactionOutput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewTransactionOutputFromData\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeTransactionOutput;
-	CBInitTransactionOutputFromData(self,data,events);
-	return self;
+	if(CBInitTransactionOutputFromData(self,data,events))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -111,6 +123,10 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->value = CBByteArrayReadInt64(bytes, 0);
 	self->scriptObject = CBNewScriptFromReference(bytes, 8 + scriptLen.size, (uint32_t) scriptLen.val);
+	if (NOT self->scriptObject){
+		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBScript in CBTransactionOutputDeserialise");
+		return 0;
+	}
 	return reqLen;
 }
 uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){

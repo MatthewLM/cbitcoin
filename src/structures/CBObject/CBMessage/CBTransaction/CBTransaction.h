@@ -91,14 +91,16 @@ void CBFreeTransaction(void * self);
  @brief Adds an CBTransactionInput to the CBTransaction.
  @param self The CBTransaction object.
  @param input The CBTransactionInput object.
+ @returns true if the transaction input was added successfully and false on error.
  */
-void CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
+bool CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction.
  @param self The CBTransaction object.
  @param input The CBTransactionOutput object.
+ @returns true if the transaction output was added successfully and false on error.
  */
-void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
+bool CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBTransaction object.
@@ -118,9 +120,9 @@ uint32_t CBTransactionDeserialise(CBTransaction * self);
  @param input The index of the input to sign.
  @param signType The type of signature to get the data for.
  @param hash The 32 byte data hash for signing or checking signatures.
- @returns NULL on error or the pointer passed into the function by "hash".
+ @returns CB_TX_HASH_OK if the hash has been retreived with no problems. CB_TX_HASH_BAD is returned if the hash is invalid and CB_TX_HASH_ERR is returned upon an error.
  */
-uint8_t * CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash);
+CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash);
 /**
  @brief Determines if a transaction is a coinbase transaction or not.
  @param self The CBTransaction object.
@@ -137,13 +139,15 @@ uint32_t CBTransactionSerialise(CBTransaction * self);
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.
  @param input The CBTransactionInput object.
+ @returns true if the transaction input was taken successfully and false on error.
  */
-void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input);
+bool CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.
  @param input The CBTransactionOutput object.
+ @returns true if the transaction output was taken successfully and false on error.
  */
-void CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output);
+bool CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output);
 
 #endif

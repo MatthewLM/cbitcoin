@@ -4,19 +4,19 @@
 //
 //  Created by Matthew Mitchell on 13/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//  
+//
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -105,7 +105,7 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,CBEvents * events);
  @param self The CBNetworkCommunicator object to free.
  */
 void CBFreeNetworkCommunicator(void * self);
- 
+
 //  Functions
 
 /**
@@ -141,7 +141,7 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vpeer);
  @param penalty Penalty to the score of the address.
  @param stopping If true, do not call "onNetworkError" because the CBNetworkCommunicator is stopping.
  */
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,u_int16_t penalty,bool stopping);
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,uint16_t penalty,bool stopping);
 /**
  @brief Gets a new version message for this.
  @param self The CBNetworkCommunicator object.
@@ -188,7 +188,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vpeer);
  */
 void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer * peer);
 /**
- @brief Called on an error with the socket event loop. The error event is given with CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL.  
+ @brief Called on an error with the socket event loop. The error event is given with CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL.
  @param vself The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorOnLoopError(void * vself);

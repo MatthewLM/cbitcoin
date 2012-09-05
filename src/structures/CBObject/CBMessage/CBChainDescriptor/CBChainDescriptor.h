@@ -86,8 +86,9 @@ void CBFreeChainDescriptor(void * self);
  @brief Adds a hash to the CBChainDescriptor onto the end.
  @param self The CBChainDescriptor object
  @param hash The hash to add.
+ @returns true if the hash was added successfully, false on error.
  */
-void CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash);
+bool CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash);
 /**
  @brief Deserialises a CBChainDescriptor so that it can be used as an object.
  @param self The CBChainDescriptor object
@@ -104,7 +105,8 @@ uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self);
  @brief Takes a hash for the CBChainDescriptor and puts it on the end. The hash is not retained so the calling function is releasing control.
  @param self The CBChainDescriptor object
  @param hash The hash to take.
+ @returns true if the hash was taken successfully, false on error.
  */
-void CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash);
+bool CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash);
 
 #endif

@@ -100,14 +100,16 @@ void CBFreeAlert(void * self);
  @brief Adds a ID to the cancel set
  @param self The CBAlert object
  @param ID The id to add.
+ @returns true if the cancel ID was added successfully or false on error.
  */
-void CBAlertAddCancelID(CBAlert * self,uint32_t ID);
+bool CBAlertAddCancelID(CBAlert * self,uint32_t ID);
 /**
  @brief Adds a user agent to the user agent set
  @param self The CBAlert object
  @param userAgent The user agent to add.
+ @returns true if the user agent was added successfully or false on error.
  */
-void CBAlertAddUserAgent(CBAlert * self,CBByteArray * userAgent);
+bool CBAlertAddUserAgent(CBAlert * self,CBByteArray * userAgent);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBAlert object.
@@ -143,7 +145,8 @@ uint16_t CBAlertSerialiseSignature(CBAlert * self,uint16_t offset);
  @brief Takes a user agent for the user agent set. This does not retain the CBByteArray so you can pass an CBByteArray into this while releasing control from the calling function.
  @param self The CBAlert object
  @param userAgent The user agent to take.
+ @returns true if the user agent was taken successfully or false on error.
  */
-void CBAlertTakeUserAgent(CBAlert * self,CBByteArray * userAgent);
+bool CBAlertTakeUserAgent(CBAlert * self,CBByteArray * userAgent);
 
 #endif

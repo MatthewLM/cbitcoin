@@ -4,19 +4,19 @@
 //
 //  Created by Matthew Mitchell on 07/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//  
+//
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -34,7 +34,7 @@ bool CBNewSecureRandomGenerator(uint64_t * gen){
 	return *gen;
 }
 void CBSecureRandomSeed(uint64_t gen){
-	FILE * f = fopen("/dev/random", "r");
+	FILE * f = fopen("/dev/urandom", "r"); // Using urandom for speed.
 	fread((void *)gen, 32, 1, f);
 }
 void CBRandomSeed(uint64_t gen,uint64_t seed){

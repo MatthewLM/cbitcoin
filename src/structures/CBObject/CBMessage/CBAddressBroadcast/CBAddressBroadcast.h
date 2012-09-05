@@ -87,8 +87,9 @@ void CBFreeAddressBroadcast(void * self);
  @brief Adds a CBNetworkAddress to the list for broadcasting.
  @param self The CBAddressBroadcast object
  @param address The CBNetworkAddress to add.
+ @returns true if the network address was added successfully, false if there was an error in doing so.
  */
-void CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
+bool CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBAddressBroadcast object.
@@ -111,7 +112,8 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self);
  @brief Takes a CBNetworkAddress to the list for broadcasting. This does not retain the CBNetworkAddress so you can pass an CBNetworkAddress into this while releasing control in the calling function.
  @param self The CBAddressBroadcast object
  @param address The CBNetworkAddress to take.
+ @returns true if the network address was taken successfully, false if there was an error in doing so.
  */
-void CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
+bool CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
 
 #endif

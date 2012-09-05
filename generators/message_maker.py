@@ -169,15 +169,27 @@ source.write("//\n\
 \n\
 CB"+name+" * CBNew"+name+"(CBEvents * events){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
+\tif (NOT self) { \n\
+\t\tevents->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,\"Cannot allocate %i bytes of memory in CBNew"+name+"\n\",sizeof(*self));\n\
+\t\treturn NULL;\n\
+\t}\n\
 \tCBGetObject(self)->free = CBFree"+name+";\n\
-\tCBInit"+name+"(self,events);\n\
-\treturn self;\n\
+\tif(CBInit"+name+"(self,events))\n\
+\t\treturn self;\n\
+\tfree(self);\n\
+\treturn NULL;\n\
 }\n\
 CB"+name+" * CBNew"+name+"FromData(CBByteArray * data,CBEvents * events){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
+\tif (NOT self) { \n\
+\t\tevents->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,\"Cannot allocate %i bytes of memory in CBNew"+name+"FromData\n\",sizeof(*self));\n\
+\t\treturn NULL;\n\
+\t}\n\
 \tCBGetObject(self)->free = CBFree"+name+";\n\
-\tCBInit"+name+"FromData(self,data,events);\n\
-\treturn self;\n\
+\tif(CBInit"+name+"FromData(self,data,events))\n\
+\t\treturn self;\n\
+\tfree(self);\n\
+\treturn NULL;\n\
 }\n\
 \n\
 //  Object Getter\n\

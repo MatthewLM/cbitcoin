@@ -33,6 +33,11 @@ CBBigInt CBCalculateBlockWork(uint32_t target){
 	CBBigInt work;
 	work.length = 29 - zeroBytes;
 	work.data = malloc(work.length);
+	if (NOT work.data) {
+		work.data = NULL;
+		work.length = 0;
+		return work;
+	}
 	// Do base-4294967296 long division and adjust for trailing zeros in target.
 	uint64_t temp = 0x01000000;
 	uint32_t workSeg;
@@ -129,7 +134,8 @@ bool CBTransactionIsFinal(CBTransaction * tx,uint64_t time,uint64_t height){
 	}
 	return true;
 }
-CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase){
+CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool * err){
+	*err = false;
 	if (NOT tx->inputNum || NOT tx->outputNum)
 		return NULL;
 	uint32_t length;
@@ -162,6 +168,10 @@ CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase){
 			return NULL;
 	// Check for duplicate transaction output spends and add them to a list of CBPrevOut structures.
 	CBPrevOut * prevOutputs = malloc(sizeof(*prevOutputs) * tx->inputNum);
+	if (NOT prevOutputs){
+		*err = true;
+		return NULL;
+	}
 	for (uint32_t x = 0; x < tx->inputNum; x++) {
 		for (uint32_t y = 0; y < x; y++)
 			if (CBByteArrayEquals(prevOutputs[y].hash, tx->inputs[x]->prevOut.hash)

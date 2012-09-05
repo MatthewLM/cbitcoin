@@ -34,13 +34,15 @@ CBScript * CBNewScriptOfSize(uint32_t size,CBEvents * events){
 }
 CBScript * CBNewScriptFromString(char * string,CBEvents * events){
 	CBScript * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeByteArray;
-	bool ok = CBInitScriptFromString(self,string,events);
-	if (NOT ok) {
-		free(self);
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewScriptFromString\n",sizeof(*self));
 		return NULL;
 	}
-	return self;
+	CBGetObject(self)->free = CBFreeByteArray;
+	if (CBInitScriptFromString(self,string,events))
+		return self;
+	free(self);
+	return NULL;
 }
 CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,CBEvents * events){
 	return CBNewByteArrayWithData(data, size, events);
@@ -71,7 +73,12 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 				}
 				space = false;
 				line = false;
-				data = realloc(data, dataLast + 1);
+				uint8_t * temp = realloc(data, dataLast + 1);
+				if (NOT temp) {
+					free(data);
+					return false;
+				}
+				data = temp;
 				if(NOT strncmp(cursor, "OP_FALSE",8)){
 					data[dataLast] = CB_SCRIPT_OP_0;
 					cursor += 8;
@@ -455,17 +462,32 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 					uint32_t num = diff/2;
 					// Create push operations. The number of bytes to push is represented in little endian.
 					if (num < 76) {
-						data = realloc(data, dataLast + 1);
+						uint8_t * temp = realloc(data, dataLast + 1);
+						if (NOT temp) {
+							free(data);
+							return false;
+						}
+						data = temp;
 						data[dataLast] = num;
 						dataLast++;
 					}else if (num < 256){
-						data = realloc(data, dataLast + 2);
+						uint8_t * temp = realloc(data, dataLast + 2);
+						if (NOT temp) {
+							free(data);
+							return false;
+						}
+						data = temp;
 						data[dataLast] = CB_SCRIPT_OP_PUSHDATA1;
 						dataLast++;
 						data[dataLast] = num;
 						dataLast++;
 					}else if (num < 65536){
-						data = realloc(data, dataLast + 3);
+						uint8_t * temp = realloc(data, dataLast + 3);
+						if (NOT temp) {
+							free(data);
+							return false;
+						}
+						data = temp;
 						data[dataLast] = CB_SCRIPT_OP_PUSHDATA2;
 						dataLast++;
 						data[dataLast] = num;
@@ -473,7 +495,12 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 						data[dataLast] = num >> 8;
 						dataLast++;
 					}else{
-						data = realloc(data, dataLast + 5);
+						uint8_t * temp = realloc(data, dataLast + 5);
+						if (NOT temp) {
+							free(data);
+							return false;
+						}
+						data = temp;
 						data[dataLast] = CB_SCRIPT_OP_PUSHDATA4;
 						dataLast++;
 						data[dataLast] = num;
@@ -497,7 +524,12 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 								|| (interpret[1] >= 'a' && interpret[1] <= 'f') 
 								|| (interpret[1] >= 'A' && interpret[1] <= 'F')) {
 								// Both
-								data = realloc(data, dataLast + 1);
+								uint8_t * temp = realloc(data, dataLast + 1);
+								if (NOT temp) {
+									free(data);
+									return false;
+								}
+								data = temp;
 								data[dataLast] = strtoul(interpret, NULL, 16);
 								dataLast++;
 							}else{
@@ -543,7 +575,7 @@ CBScriptStack CBNewEmptyScriptStack(){
 	stack.length = 0;
 	return stack;
 }
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh){
+CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh){
 	// ??? Adding syntax parsing to the begining of the interpreter is maybe a good idea.
 	// This looks confusing but isn't too bad, trust me.
 	CBScriptStack altStack = CBNewEmptyScriptStack();
@@ -552,18 +584,20 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 	uint32_t beginSubScript = 0;
 	uint32_t cursor = 0;
 	if (self->length > 10000)
-		return false; // Script is an illegal size.
+		return CB_SCRIPT_INVALID; // Script is an illegal size.
 	// Determine if P2SH https://en.bitcoin.it/wiki/BIP_0016
 	CBScriptStackItem p2shScript;
 	bool isP2SH;
 	if (p2sh && CBScriptIsP2SH(self)) {
 		p2shScript = CBScriptStackCopyItem(stack, 0);
+		if (NOT p2shScript.data && p2shScript.length)
+			return CB_SCRIPT_ERR;
 		isP2SH = true;
 	}else isP2SH = false;
 	for (uint8_t opCount = 0; self->length - cursor > 0;) {
 		CBScriptOp byte = CBByteArrayGetByte(self, cursor);
 		if (byte > CB_SCRIPT_OP_16 && ++opCount > 201)
-			return false; // Too many op codes
+			return CB_SCRIPT_INVALID; // Too many op codes
 		if (byte == CB_SCRIPT_OP_VERIF
 			|| byte == CB_SCRIPT_OP_VERNOTIF
 			|| byte == CB_SCRIPT_OP_CAT
@@ -582,7 +616,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 			|| byte == CB_SCRIPT_OP_MOD
 			|| byte == CB_SCRIPT_OP_LSHIFT
 			|| byte == CB_SCRIPT_OP_RSHIFT) {
-			return false; // Invalid op codes independent of execution
+			return CB_SCRIPT_INVALID; // Invalid op codes independent of execution
 		}
 		cursor++;
 		// Control management for skipping
@@ -601,69 +635,90 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 			if (NOT byte) {
 				// Push 0 onto stack. This is NULL due to counter intuitive rubbish in the C++ client.
 				CBScriptStackItem item = {NULL,0};
-				CBScriptStackPushItem(stack, item);
+				if (NOT CBScriptStackPushItem(stack, item))
+					return CB_SCRIPT_ERR;
 			}else if (byte < 76){
 				// Check size
 				if ((self->length - cursor) < byte)
-					return false; // Not enough space.
+					return CB_SCRIPT_INVALID; // Not enough space.
 				// Push data the size of the value of the byte
 				CBScriptStackItem item;
 				item.data = malloc(byte);
+				if (NOT item.data){
+					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during a script push operation. Attempted to push %i bytes\n",byte);
+					return CB_SCRIPT_ERR;
+				}
 				item.length = byte;
 				memmove(item.data, CBByteArrayGetData(self) + cursor, byte);
-				CBScriptStackPushItem(stack, item);
+				if (NOT CBScriptStackPushItem(stack, item))
+					return CB_SCRIPT_ERR;
 				cursor += byte;
 			}else if (byte < 79){
 				// Push data with the length of bytes represented by the next bytes. The number of bytes to push is in little endian unlike arithmetic operations which is weird.
 				uint32_t amount;
 				if(self->length - cursor < 1)
-					return false; // Needs at least one more byte
+					return CB_SCRIPT_INVALID; // Needs at least one more byte
 				if (byte == CB_SCRIPT_OP_PUSHDATA1){
 					amount = CBByteArrayGetByte(self, cursor);
 					cursor++;
 				}else if (byte == CB_SCRIPT_OP_PUSHDATA2){
 					if (self->length - cursor < 2)
-						return false; // Not enough space.
+						return CB_SCRIPT_INVALID; // Not enough space.
 					amount = CBByteArrayReadInt16(self, cursor);
 					cursor += 2;
 				}else{
 					if (self->length - cursor < 4)
-						return false; // Not enough space.
+						return CB_SCRIPT_INVALID; // Not enough space.
 					amount = CBByteArrayReadInt32(self, cursor);
 					cursor += 4;
 				}
 				// Check limitation
 				if (amount > 520)
-					return false; // Size of data to push is illegal.
+					return CB_SCRIPT_INVALID; // Size of data to push is illegal.
 				// Check size
 				if (self->length - cursor < amount)
-					return false; // Not enough space.
+					return CB_SCRIPT_INVALID; // Not enough space.
 				CBScriptStackItem item;
 				if (amount){
 					item.data = malloc(amount);
+					if (NOT item.data){
+						self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during a script push operation. Attempted to push %i bytes\n",amount);
+						return CB_SCRIPT_ERR;
+					}
 					memmove(item.data, CBByteArrayGetData(self) + cursor, amount);
 				}else{
 					item.data = NULL;
 				}
 				item.length = amount;
-				CBScriptStackPushItem(stack, item);
+				if (NOT CBScriptStackPushItem(stack, item))
+					return CB_SCRIPT_ERR;
 				cursor += amount;
 			}else if (byte == CB_SCRIPT_OP_1NEGATE){
 				// Push -1 onto the stack
 				CBScriptStackItem item;
 				item.data = malloc(1);
+				if (NOT item.data){
+					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_1NEGATE\n");
+					return CB_SCRIPT_ERR;
+				}
 				item.length = 1;
 				item.data[0] = 0x81; // 10000001 Not like normal signed integers, most significant bit applies sign, making the rest of the bits take away from zero.
-				CBScriptStackPushItem(stack, item);
+				if (NOT CBScriptStackPushItem(stack, item))
+					return CB_SCRIPT_ERR;
 			}else if(byte == CB_SCRIPT_OP_RESERVED){
-				return false;
+				return CB_SCRIPT_INVALID;
 			}else if (byte < 97){
 				// Push a number onto the stack
 				CBScriptStackItem item;
 				item.data = malloc(1);
+				if (NOT item.data){
+					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_%i\n",byte - CB_SCRIPT_OP_1 + 1);
+					return CB_SCRIPT_ERR;
+				}
 				item.length = 1;
 				item.data[0] = byte - CB_SCRIPT_OP_1 + 1;
-				CBScriptStackPushItem(stack, item);
+				if (NOT CBScriptStackPushItem(stack, item))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_NOP){
 				// Nothing...
 			}else if (byte == CB_SCRIPT_OP_IF 
@@ -671,7 +726,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				// If top of stack is true, continue, else goto OP_ELSE or OP_ENDIF.
 				ifElseSize++;
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				bool res = CBScriptStackEvalBool(stack);
 				if ((res && byte == CB_SCRIPT_OP_IF) 
 					|| (NOT res && byte == CB_SCRIPT_OP_NOTIF))
@@ -682,73 +737,100 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				CBScriptStackRemoveItem(stack);
 			}else if (byte == CB_SCRIPT_OP_ELSE){
 				if (NOT ifElseSize)
-					return false; // OP_ELSE on lowest level not possible
+					return CB_SCRIPT_INVALID; // OP_ELSE on lowest level not possible
 				skipIfElseBlock = ifElseSize; // Begin skipping
 			}else if (byte == CB_SCRIPT_OP_ENDIF){
 				if (NOT ifElseSize)
-					return false; // OP_ENDIF on lowest level not possible
+					return CB_SCRIPT_INVALID; // OP_ENDIF on lowest level not possible
 				ifElseSize--; // Lower level
 			}else if (byte == CB_SCRIPT_OP_VERIFY){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				if (CBScriptStackEvalBool(stack))
 					// Remove top stack item
 					CBScriptStackRemoveItem(stack);
 				else
-					return false; // Failed verification
+					return CB_SCRIPT_INVALID; // Failed verification
 			}else if (byte == CB_SCRIPT_OP_RETURN){
-				return false; // Failed verification with OP_RETURN.
+				return CB_SCRIPT_INVALID; // Failed verification with OP_RETURN.
 			}else if (byte == CB_SCRIPT_OP_TOALTSTACK){
 				if (NOT stack->length)
-					return false; // Stack empty
-				CBScriptStackPushItem(&altStack, CBScriptStackPopItem(stack));
+					return CB_SCRIPT_INVALID; // Stack empty
+				if (NOT CBScriptStackPushItem(&altStack, CBScriptStackPopItem(stack)))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_FROMALTSTACK){
 				if (NOT altStack.length)
-					return false; // Alternative stack empty
-				CBScriptStackPushItem(stack, CBScriptStackPopItem(&altStack));
+					return CB_SCRIPT_INVALID; // Alternative stack empty
+				if (NOT CBScriptStackPushItem(stack, CBScriptStackPopItem(&altStack)))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_IFDUP){
 				if (NOT stack->length)
-					return false; // Stack empty
-				if (CBScriptStackEvalBool(stack))
+					return CB_SCRIPT_INVALID; // Stack empty
+				if (CBScriptStackEvalBool(stack)){
 					//Duplicate top stack item
-					CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,0));
+					CBScriptStackItem item = CBScriptStackCopyItem(stack,0);
+					if (NOT item.data && item.length)
+						return CB_SCRIPT_ERR;
+					if (NOT CBScriptStackPushItem(stack, item))
+						return CB_SCRIPT_ERR;
+				}
 			}else if (byte == CB_SCRIPT_OP_DEPTH){
-				CBScriptStackPushItem(stack, CBInt64ToScriptStackItem((CBScriptStackItem){NULL,0}, stack->length));
+				CBScriptStackItem temp = CBInt64ToScriptStackItem((CBScriptStackItem){NULL,0}, stack->length);
+				if (NOT temp.data && temp.length)
+					return CB_SCRIPT_ERR;
+				if (NOT CBScriptStackPushItem(stack, temp))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_DROP){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				CBScriptStackRemoveItem(stack);
 			}else if (byte == CB_SCRIPT_OP_DUP){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				//Duplicate top stack item
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,0));
+				CBScriptStackItem item = CBScriptStackCopyItem(stack,0);
+				if (NOT item.data && item.length)
+					return CB_SCRIPT_ERR;
+				if (NOT CBScriptStackPushItem(stack, item))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_NIP){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				// Remove second from top item.
 				stack->length--;
 				free(stack->elements[stack->length-1].data);
 				stack->elements[stack->length-1] = stack->elements[stack->length]; // Top item moves down
-				stack->elements = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+				CBScriptStackItem * temp = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+				if (NOT temp) {
+					return CB_SCRIPT_ERR;
+				}
+				stack->elements = temp;
 			}else if (byte == CB_SCRIPT_OP_OVER){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,1)); // Copies second from top and pushes it on the top.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
+				CBScriptStackItem item = CBScriptStackCopyItem(stack,1);
+				if (NOT item.data && item.length)
+					return CB_SCRIPT_ERR;
+				if (NOT CBScriptStackPushItem(stack, item)) // Copies second from top and pushes it on the top.
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_PICK || byte == CB_SCRIPT_OP_ROLL){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				CBScriptStackItem item = CBScriptStackPopItem(stack);
 				if (item.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				int64_t i = CBScriptStackItemToInt64(item);
 				if (i < 0) // Negative
-					return false; // Must be positive
+					return CB_SCRIPT_INVALID; // Must be positive
 				if (i >= stack->length)
-					return false; // Must be smaller than the stack size
+					return CB_SCRIPT_INVALID; // Must be smaller than the stack size
 				if (byte == CB_SCRIPT_OP_PICK) {
 					// Copy element
-					CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,i));
+					CBScriptStackItem item = CBScriptStackCopyItem(stack,i);
+					if (NOT item.data && item.length)
+						return CB_SCRIPT_ERR;
+					if (NOT CBScriptStackPushItem(stack, item))
+						return CB_SCRIPT_ERR;
 				}else{ // CB_SCRIPT_OP_ROLL
 					// Move element.
 					CBScriptStackItem temp = stack->elements[stack->length-i-1]; // Get the item to "roll"
@@ -758,7 +840,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				}
 			}else if (byte == CB_SCRIPT_OP_ROT){
 				if (stack->length < 3)
-					return false; // Stack needs 3 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 3 or more elements.
 				// Rotate top three elements to the left.
 				CBScriptStackItem temp = stack->elements[stack->length-3];
 				stack->elements[stack->length-3] = stack->elements[stack->length-2];
@@ -766,44 +848,58 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				stack->elements[stack->length-1] = temp;
 			}else if (byte == CB_SCRIPT_OP_SWAP){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				CBScriptStackItem temp = stack->elements[stack->length-2];
 				stack->elements[stack->length-2] = stack->elements[stack->length-1];
 				stack->elements[stack->length-1] = temp;
 			}else if (byte == CB_SCRIPT_OP_TUCK){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				CBScriptStackItem item = CBScriptStackCopyItem(stack, 0);
+				if (NOT item.data && item.length)
+					return CB_SCRIPT_ERR;
 				// New copy three down.
 				stack->length++;
-				stack->elements = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+				CBScriptStackItem * temp = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+				if (NOT temp) {
+					return CB_SCRIPT_ERR;
+				}
+				stack->elements = temp;
 				stack->elements[stack->length-1] = stack->elements[stack->length-2];
 				stack->elements[stack->length-2] = stack->elements[stack->length-3];
 				stack->elements[stack->length-3] = item;
 			}else if (byte == CB_SCRIPT_OP_2DROP){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				CBScriptStackRemoveItem(stack);
 				CBScriptStackRemoveItem(stack);
-			}else if (byte == CB_SCRIPT_OP_2DUP){
-				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,1));
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,1));
-			}else if (byte == CB_SCRIPT_OP_3DUP){
-				if (stack->length < 3)
-					return false; // Stack needs 3 or more elements.
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,2));
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,2));
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,2));
+			}else if (byte == CB_SCRIPT_OP_2DUP
+					  || byte == CB_SCRIPT_OP_3DUP){
+				if (stack->length < byte - CB_SCRIPT_OP_2DUP + 2)
+					return CB_SCRIPT_INVALID; // Stack needs more elements.
+				for (uint8_t x = 0; x < byte - CB_SCRIPT_OP_2DUP + 2; x++) {
+					CBScriptStackItem i = CBScriptStackCopyItem(stack,byte - CB_SCRIPT_OP_2DUP + 1); 
+					if (NOT i.data && i.length)
+						return CB_SCRIPT_ERR;
+					if (NOT CBScriptStackPushItem(stack, i))
+						return CB_SCRIPT_ERR;
+				}
 			}else if (byte == CB_SCRIPT_OP_2OVER){
 				if (stack->length < 4)
-					return false; // Stack needs 4 or more elements.
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,3));
-				CBScriptStackPushItem(stack, CBScriptStackCopyItem(stack,3));
+					return CB_SCRIPT_INVALID; // Stack needs 4 or more elements.
+				CBScriptStackItem i = CBScriptStackCopyItem(stack,3);
+				if (NOT i.data && i.length)
+					return CB_SCRIPT_ERR;
+				if (NOT CBScriptStackPushItem(stack, i))
+					return CB_SCRIPT_ERR;
+				i = CBScriptStackCopyItem(stack,3);
+				if (NOT i.data && i.length)
+					return CB_SCRIPT_ERR;
+				if (NOT CBScriptStackPushItem(stack, i))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_2ROT){
 				if (stack->length < 6)
-					return false; // Stack needs 6 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 6 or more elements.
 				// Rotate top three pairs of elements to the left.
 				CBScriptStackItem temp = stack->elements[stack->length-6];
 				CBScriptStackItem temp2 = stack->elements[stack->length-5];
@@ -815,7 +911,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				stack->elements[stack->length-1] = temp2;
 			}else if (byte == CB_SCRIPT_OP_2SWAP){
 				if (stack->length < 4)
-					return false; // Stack needs 4 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 4 or more elements.
 				CBScriptStackItem temp = stack->elements[stack->length-4];
 				CBScriptStackItem temp2 = stack->elements[stack->length-3];
 				stack->elements[stack->length-4] = stack->elements[stack->length-2];
@@ -824,12 +920,16 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				stack->elements[stack->length-1] = temp2;
 			}else if (byte == CB_SCRIPT_OP_SIZE){
 				if (NOT stack->length)
-					return false; // Stack empty
-				CBScriptStackPushItem(stack, CBInt64ToScriptStackItem((CBScriptStackItem){NULL,0}, stack->elements[stack->length-1].length));
+					return CB_SCRIPT_INVALID; // Stack empty
+				CBScriptStackItem temp = CBInt64ToScriptStackItem((CBScriptStackItem){NULL,0}, stack->elements[stack->length-1].length);
+				if (NOT temp.data && temp.length)
+					return CB_SCRIPT_ERR;
+				if (NOT CBScriptStackPushItem(stack, temp))
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_EQUAL 
 					  || byte == CB_SCRIPT_OP_EQUALVERIFY){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				CBScriptStackItem i1 = CBScriptStackPopItem(stack);
 				CBScriptStackItem i2 = CBScriptStackPopItem(stack);
 				bool ok = true;
@@ -842,27 +942,32 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					}
 				if (byte == CB_SCRIPT_OP_EQUALVERIFY){
 					if (NOT ok)
-						return false; // Failed verification
+						return CB_SCRIPT_INVALID; // Failed verification
 				}else{
 					// Push result onto stack
 					CBScriptStackItem item;
 					if (ok) {
 						item.data = malloc(1);
+						if (NOT item.data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_EQUAL\n");
+							return CB_SCRIPT_ERR;
+						}
 						item.length = 1;
 						item.data[0] = 1;
 					}else{
 						item.data = NULL;
 						item.length = 0;
 					}
-					CBScriptStackPushItem(stack, item);
+					if (NOT CBScriptStackPushItem(stack, item))
+						return CB_SCRIPT_ERR;
 				}
 			}else if (byte == CB_SCRIPT_OP_1ADD 
 					  || byte == CB_SCRIPT_OP_1SUB){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				CBScriptStackItem item = stack->elements[stack->length-1];
 				if (item.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				// Convert to 64 bit integer.
 				int64_t res = CBScriptStackItemToInt64(item);
 				if (byte == CB_SCRIPT_OP_1ADD)
@@ -871,15 +976,22 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					res--;
 				// Convert back to bitcoin format. Re-assign item as length may have changed.
 				stack->elements[stack->length-1] = CBInt64ToScriptStackItem(item, res);
+				if (NOT stack->elements[stack->length-1].data && stack->elements[stack->length-1].length)
+					// Detected error.
+					return CB_SCRIPT_ERR;
 			}else if (byte == CB_SCRIPT_OP_NEGATE){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				CBScriptStackItem item = stack->elements[stack->length-1];
 				if (item.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				if (item.data == NULL) { // Zero
 					// Zero becomes 0x80 :-( Sorry, this madness comes from the C++ client which represents zero in a horrid way.
 					item.data = malloc(1);
+					if (NOT item.data){
+						self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_NEGATE\n");
+						return CB_SCRIPT_ERR;
+					}
 					item.length = 1;
 					item.data[0] = 0x80; // -0
 				}else if(item.data[0] != 0x80){
@@ -892,24 +1004,27 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				}
 			}else if (byte == CB_SCRIPT_OP_ABS){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				CBScriptStackItem item = stack->elements[stack->length-1];
 				if (item.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				if (item.data != NULL) { // If not zero
 					item.data[item.length-1] &= 0x7F; // Unsets most significant bit.
 				}
 			}else if (byte == CB_SCRIPT_OP_NOT 
 					  || byte == CB_SCRIPT_OP_0NOTEQUAL){
 				if (NOT stack->length)
-					return false; // Stack empty
+					return CB_SCRIPT_INVALID; // Stack empty
 				CBScriptStackItem item = stack->elements[stack->length-1];
 				if (item.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				bool res = CBScriptStackEvalBool(stack);
 				if ((NOT res && byte == CB_SCRIPT_OP_NOT) || (res && byte == CB_SCRIPT_OP_0NOTEQUAL)) {
 					item.length = 1;
-					item.data = realloc(item.data, 1);
+					uint8_t * temp = realloc(item.data, 1);
+					if (NOT temp)
+						return CB_SCRIPT_ERR;
+					item.data = temp;
 					item.data[0] = 1;
 				}else{
 					// Should be zero as NULL. Remember the C++ represents zero as an empty vector. Here NULL is used. This can be slightly annoying.
@@ -930,12 +1045,12 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					  || byte == CB_SCRIPT_OP_MIN 
 					  || byte == CB_SCRIPT_OP_MAX){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements.
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
 				// Take top two items, removing the top one. First on which is two down will be assigned the result.
 				CBScriptStackItem i1 = stack->elements[stack->length-2];
 				CBScriptStackItem i2 = CBScriptStackPopItem(stack);
 				if (i1.length > 4 || i2.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				int64_t res = CBScriptStackItemToInt64(i1);
 				int64_t second = CBScriptStackItemToInt64(i2);
 				free(i2.data); // No longer need i2
@@ -954,42 +1069,52 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				}
 				if (byte == CB_SCRIPT_OP_NUMEQUALVERIFY){
 					if (NOT res)
-						return false;
+						return CB_SCRIPT_INVALID;
 					CBScriptStackRemoveItem(stack); // Remove top item that will not hold the rest as this is OP_NUMEQUALVERIFY
-				}else
+				}else{
 					// Convert back to bitcoin format. Re-assign item as length may have changed. i1 now goes on top.
 					stack->elements[stack->length-1] = CBInt64ToScriptStackItem(i1, res);
-			}else if (byte == CB_SCRIPT_OP_BOOLAND 
+					if (NOT stack->elements[stack->length-1].data && stack->elements[stack->length-1].length)
+						// Detected error.
+						return CB_SCRIPT_ERR;
+				}
+			}else if (byte == CB_SCRIPT_OP_BOOLAND
 					  || byte == CB_SCRIPT_OP_BOOLOR){
 				if (stack->length < 2)
-					return false; // Stack needs 2 or more elements
+					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements
 				// Take top two items, removing the top one. First on which is two down will be assigned the result.
 				CBScriptStackItem i1 = stack->elements[stack->length-2];
 				bool i2bool = CBScriptStackEvalBool(stack);
 				CBScriptStackItem i2 = CBScriptStackPopItem(stack);
 				bool i1bool = CBScriptStackEvalBool(stack);
 				if (i1.length > 4 || i2.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				free(i2.data); // No longer need i2.
 				i1.length = 1;
-				i1.data = realloc(i1.data, 1);
+				uint8_t * temp = realloc(i1.data, 1);
+				if (NOT temp)
+					return CB_SCRIPT_ERR;
+				i1.data = temp;
 				i1.data[0] = (byte == CB_SCRIPT_OP_BOOLAND)? i1bool && i2bool : i1bool || i2bool;
 				stack->elements[stack->length-1] = i1;
 			}else if (byte == CB_SCRIPT_OP_WITHIN){
 				if (stack->length < 3)
-					return false; // Stack needs 3 or more elements
+					return CB_SCRIPT_INVALID; // Stack needs 3 or more elements
 				CBScriptStackItem item = stack->elements[stack->length-3];
 				CBScriptStackItem top = CBScriptStackPopItem(stack);
 				CBScriptStackItem bottom = CBScriptStackPopItem(stack);
 				if (item.length > 4 || top.length > 4 || bottom.length > 4)
-					return false; // Protocol does not except integers more than 32 bits.
+					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
 				int64_t res = CBScriptStackItemToInt64(item);
 				int64_t topi = CBScriptStackItemToInt64(top);
 				free(top.data); // No longer need top.
 				int64_t bottomi = CBScriptStackItemToInt64(bottom);
 				free(bottom.data); // No longer need bottom.
 				item.length = 1;
-				item.data = realloc(item.data, 1);
+				uint8_t * temp = realloc(item.data, 1);
+				if (NOT temp)
+					return CB_SCRIPT_ERR;
+				item.data = temp;
 				item.data[0] = bottomi <= res && res < topi;
 				stack->elements[stack->length-1] = item;
 			}else if (byte == CB_SCRIPT_OP_RIPEMD160
@@ -998,31 +1123,51 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					  || byte == CB_SCRIPT_OP_SHA256
 					  || byte == CB_SCRIPT_OP_HASH256){
 				if (NOT stack->length)
-					return false; // Stack cannot be empty
+					return CB_SCRIPT_INVALID; // Stack cannot be empty
 				CBScriptStackItem item = stack->elements[stack->length-1];
 				uint8_t * data;
 				uint8_t dataTemp[32];
 				switch (byte) {
 					case CB_SCRIPT_OP_RIPEMD160:
 						data = malloc(20);
+						if (NOT data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_RIPEMD160\n");
+							return CB_SCRIPT_ERR;
+						}
 						CBRipemd160(item.data,item.length,data);
 						break;
 					case CB_SCRIPT_OP_SHA1:
 						data = malloc(20);
+						if (NOT data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_SHA1\n");
+							return CB_SCRIPT_ERR;
+						}
 						CBSha160(item.data,item.length,data);
 						break;
 					case CB_SCRIPT_OP_HASH160:
 						CBSha256(item.data,item.length,dataTemp);
 						data = malloc(20);
+						if (NOT data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_HASH160\n");
+							return CB_SCRIPT_ERR;
+						}
 						CBRipemd160(dataTemp,32,data);
 						break;
 					case CB_SCRIPT_OP_SHA256:
 						data = malloc(32);
+						if (NOT data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_SHA256\n");
+							return CB_SCRIPT_ERR;
+						}
 						CBSha256(item.data,item.length,data);
 						break;
 					default:
 						CBSha256(item.data,item.length,dataTemp);
 						data = malloc(32);
+						if (NOT data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_HASH256\n");
+							return CB_SCRIPT_ERR;
+						}
 						CBSha256(dataTemp,32,data);
 						break;
 				}
@@ -1039,6 +1184,10 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				// Get sub script and remove OP_CODESEPARATORs
 				uint32_t subScriptLen = self->length - beginSubScript;
 				uint8_t * subScript = malloc(subScriptLen);
+				if (NOT subScript){
+					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during CHECKSIG operation\n");
+					return CB_SCRIPT_ERR;
+				}
 				uint8_t * sourceScript = CBByteArrayGetData(self);
 				uint8_t * subScriptCopyPointer = subScript;
 				uint8_t * lastSeparator = sourceScript + beginSubScript;
@@ -1099,7 +1248,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				}
 				if (fail) { // Push failure.
 					free(subScript);
-					return false;
+					return CB_SCRIPT_INVALID;
 				}
 				bool res;
 				uint8_t hash[32];
@@ -1107,7 +1256,7 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					|| byte == CB_SCRIPT_OP_CHECKSIGVERIFY){
 					if (stack->length < 2){
 						free(subScript);
-						return false; // Stack needs 2 or more elements
+						return CB_SCRIPT_INVALID; // Stack needs 2 or more elements
 					}
 					CBScriptStackItem publicKey = CBScriptStackPopItem(stack);
 					CBScriptStackItem signature = CBScriptStackPopItem(stack);
@@ -1120,9 +1269,21 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 						CBSubScriptRemoveSignature(subScript,&subScriptLen,signature);
 						// Complete verification
 						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->events);
-						getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
-						// Use minus one on the signature length because the hash type
-						res = CBEcdsaVerify(signature.data,signature.length-1,hash,publicKey.data,publicKey.length);
+						if (NOT subScriptByteArray) {
+							free(publicKey.data);
+							free(signature.data);
+							return CB_SCRIPT_ERR;
+						}
+						CBGetHashReturn hashRes = getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
+						if (hashRes == CB_TX_HASH_ERR){
+							free(publicKey.data);
+							free(signature.data);
+							CBReleaseObject(subScriptByteArray);
+							return CB_SCRIPT_ERR;
+						}else if (hashRes == CB_TX_HASH_OK){
+							// Use minus one on the signature length because the hash type
+							res = CBEcdsaVerify(signature.data,signature.length-1,hash,publicKey.data,publicKey.length);
+						}else res = false;
 						CBReleaseObject(subScriptByteArray);
 					}
 					free(publicKey.data);
@@ -1130,32 +1291,32 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 				}else{
 					if (stack->length < 5){
 						free(subScript);
-						return false; // Stack needs 5 or more elements. At least for numSig, numKeys, one key and signature and the dummy value due to an issue with the protocol.
+						return CB_SCRIPT_INVALID; // Stack needs 5 or more elements. At least for numSig, numKeys, one key and signature and the dummy value due to an issue with the protocol.
 					}
 					int64_t numKeys = CBScriptStackItemToInt64(stack->elements[stack->length-1]);
 					uint8_t sig = 3 + numKeys; // To first signature.
 					uint8_t key = 2; // To first key.
 					if (numKeys < 0 || numKeys > 20){
 						free(subScript);
-                        return false;
+                        return CB_SCRIPT_INVALID;
 					}
 					opCount += numKeys;
 					if (opCount > 201){
 						free(subScript);
-                        return false;
+                        return CB_SCRIPT_INVALID;
 					}
 					if (stack->length < numKeys + 4){
 						free(subScript);
-						return false; // Not enough space on stack for keys
+						return CB_SCRIPT_INVALID; // Not enough space on stack for keys
 					}
 					int64_t numSigs = CBScriptStackItemToInt64(stack->elements[stack->length-2-numKeys]); // Go back the number of keys to find the number of signatures.
 					if (numSigs < 0 || numSigs > numKeys){
 						free(subScript);
-                        return false; // The number of signatures must be positive and blow or equal to the number of keys.
+                        return CB_SCRIPT_INVALID; // The number of signatures must be positive and blow or equal to the number of keys.
 					}
 					if (stack->length < 3 + numKeys + numSigs){
 						free(subScript);
-						return false; // Not enough space for keys, signatures, numSig, numKeys and the dummy value.
+						return CB_SCRIPT_INVALID; // Not enough space for keys, signatures, numSig, numKeys and the dummy value.
 					}
 					// Remove signatures from subScript
 					for (uint8_t x = 0; x < numSigs; x++) {
@@ -1163,6 +1324,8 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 						CBSubScriptRemoveSignature(subScript, &subScriptLen, sigItem);
 					}
 					CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->events);
+					if (NOT subScriptByteArray)
+						return CB_SCRIPT_ERR;
 					res = true;
 					uint8_t removeItemsNum = 3 + numKeys + numSigs;
 					while (res && numSigs > 0){
@@ -1177,11 +1340,16 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 							// Get sign type
 							CBSignType signType = signature->data[signature->length-1];
 							// Check signature
-							getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
-							// Use minus one on the signature length because the hash type
-							if (CBEcdsaVerify(signature->data,signature->length-1,hash,publicKey.data,publicKey.length)){
-								sig++;
-								numSigs--;
+							CBGetHashReturn hashRes = getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
+							if (hashRes == CB_TX_HASH_ERR){
+								CBReleaseObject(subScriptByteArray);
+								return CB_SCRIPT_ERR;
+							}else if (hashRes == CB_TX_HASH_OK){
+								// Use minus one on the signature length because the hash type
+								if (CBEcdsaVerify(signature->data,signature->length-1,hash,publicKey.data,publicKey.length)){
+									sig++;
+									numSigs--;
+								}
 							}
 						}
                         key++;
@@ -1199,39 +1367,46 @@ bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashFo
 					CBScriptStackItem item;
 					if (res) {
 						item.data = malloc(1);
+						if (NOT item.data){
+							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during CHECKSIG operation push.\n");
+							return CB_SCRIPT_ERR;
+						}
 						item.length = 1;
 						item.data[0] = 1;
 					}else{
 						item.data = NULL;
 						item.length = 0;
 					}
-					CBScriptStackPushItem(stack, item);
+					if(NOT CBScriptStackPushItem(stack, item))
+						return CB_SCRIPT_ERR;
 				}else if (NOT res){
-					return false;
+					return CB_SCRIPT_INVALID;
 				}
 			}else if (byte > 175 && byte < 186){
 				// NOP
 			}else{
-				return false;
+				return CB_SCRIPT_INVALID;
 			}
 			if (stack->length + altStack.length > 1000)
-				return false; // Stack size over the limit
+				return CB_SCRIPT_INVALID; // Stack size over the limit
 		}
 	}
 	if (ifElseSize)
-		return false; // If/Else Block(s) not terminated.
+		return CB_SCRIPT_INVALID; // If/Else Block(s) not terminated.
 	if (NOT stack->length)
-		return false; // Stack empty.
+		return CB_SCRIPT_INVALID; // Stack empty.
 	if (CBScriptStackEvalBool(stack)) {
 		if (isP2SH){
 			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length, self->events);
+			if (NOT p2shScriptObj)
+				return CB_SCRIPT_ERR;
 			CBScriptStackRemoveItem(stack); // Remove OP_TRUE
 			bool res = CBScriptExecute(p2shScriptObj, stack, getHashForSig, transaction, inputIndex, false);
 			CBReleaseObject(p2shScriptObj);
 			return res;
 		}
-		return true;
-	}else return false;
+		return CB_SCRIPT_VALID;
+	}else return CB_SCRIPT_INVALID;
 }
 uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH){
 	uint32_t sigOps = 0;
@@ -1325,6 +1500,11 @@ CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack,uint8_t fromTop){
 		newItem.length = 0;
 	}else{
 		newItem.data = malloc(oldItem.length);
+		if (NOT newItem.data){
+			newItem.data = NULL;
+			newItem.length = 1; // Detect not zero.
+			return newItem;
+		}
 		newItem.length = oldItem.length;
 		memmove(newItem.data, oldItem.data, newItem.length);
 	}
@@ -1362,18 +1542,22 @@ int64_t CBScriptStackItemToInt64(CBScriptStackItem item){
 CBScriptStackItem CBScriptStackPopItem(CBScriptStack * stack){
 	stack->length--;
 	CBScriptStackItem item = stack->elements[stack->length];
-	stack->elements = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+	// Do not bother reallocing. Data will be freed at the end.
 	return item;
 }
-void CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item){
+bool CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item){
 	stack->length++;
-	stack->elements = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+	CBScriptStackItem * temp = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+	if (NOT temp)
+		return false;
+	stack->elements = temp;
 	stack->elements[stack->length-1] = item;
+	return true;
 }
 void CBScriptStackRemoveItem(CBScriptStack * stack){
 	stack->length--;
 	free(stack->elements[stack->length].data);
-	stack->elements = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
+	// Do not bother reallocing. Data will be freed at the end.
 }
 CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item,int64_t i){
 	if (i == 0) {
@@ -1397,7 +1581,14 @@ CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item,int64_t i){
 		if(NOT x)
 			break;
 	}
-	item.data = realloc(item.data, item.length);
+	uint8_t * temp = realloc(item.data, item.length);
+	if (NOT temp) {
+		free(item.data);
+		item.data = NULL;
+		item.length = 1; // Detect err and not zero.
+		return item;
+	}
+	item.data = temp;
 	// Add data
 	for (uint8_t x = 0; x < item.length; x++)
 		if (x == 8)

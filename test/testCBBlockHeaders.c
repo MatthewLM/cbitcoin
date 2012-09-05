@@ -107,7 +107,7 @@ int main(){
 		printf("DESERIALISATION FIRST HEADER TIME FAIL\n");
 		return 1;
 	}
-	if (blockHeaders->blockHeaders[0]->difficulty != 0x1B31FB67) {
+	if (blockHeaders->blockHeaders[0]->target != 0x1B31FB67) {
 		printf("DESERIALISATION FIRST HEADER DIFFICULTY FAIL\n");
 		return 1;
 	}
@@ -153,7 +153,7 @@ int main(){
 		printf("DESERIALISATION SECOND HEADER TIME FAIL\n");
 		return 1;
 	}
-	if (blockHeaders->blockHeaders[1]->difficulty != 0x0C21AB69) {
+	if (blockHeaders->blockHeaders[1]->target != 0x0C21AB69) {
 		printf("DESERIALISATION SECOND HEADER DIFFICULTY FAIL\n");
 		return 1;
 	}

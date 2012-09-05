@@ -148,9 +148,9 @@ CBScriptStack CBNewEmptyScriptStack(void);
  @param transaction Transaction for checking the signatures.
  @param inputIndex The index of the input for the signature.
  @param p2sh If false, do not allow any P2SH matches.
- @returns True is the program ended with true, false otherwise or on script failure.
+ @returns CB_SCRIPT_VALID is the program ended with true, CB_SCRIPT_INVALID on script failure or CB_SCRIPT_ERR if an error occured with the interpreter such as running of of memory.
  */
-bool CBScriptExecute(CBScript * self,CBScriptStack * stack,uint8_t * (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh);
+CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh);
 /**
  @brief Returns the number of sigops.
  @param self The CBScript object.
@@ -201,7 +201,7 @@ CBScriptStackItem CBScriptStackPopItem(CBScriptStack * stack);
  @param stack A pointer to the stack to push data onto.
  @param data The item to push on the stack.
  */
-void CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item);
+bool CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item);
 /**
  @brief Removes top item from the stack.
  @param stack A pointer to the stack to remove the data.

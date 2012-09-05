@@ -4,19 +4,19 @@
 //
 //  Created by Matthew Mitchell on 04/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//  
+//
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -200,7 +200,7 @@ int main(){
 		return 1;
 	}
 	// Test serialisation without timestamps
-	memset(CBByteArrayGetData(bytes), 0, 61);
+	memset(CBByteArrayGetData(bytes), 0, 53);
 	CBReleaseObject(addBroadcast->addresses[0]->ip);
 	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, &events);
 	CBReleaseObject(addBroadcast->addresses[1]->ip);

@@ -28,9 +28,13 @@
 
 CBObject * CBNewObject(){
 	CBObject * self = malloc(sizeof(*self));
+	if (NOT self)
+		return NULL;
 	self->free = CBFreeObject;
-	CBInitObject(self);
-	return self;
+	if(CBInitObject(self))
+		return self;
+	free(self);
+	return NULL;
 }
 
 //  Object Getter
@@ -59,7 +63,7 @@ void CBReleaseObject(void * self){
 	// Decrement reference counter. Free if no more references.
 	obj->references--;
 	if (obj->references < 1){
-		obj->free(obj); // Remembering to dereference self from CBObject ** to CBOject *
+		obj->free(obj);
 	}
 }
 void CBRetainObject(void * self){

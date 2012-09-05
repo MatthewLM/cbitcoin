@@ -28,10 +28,15 @@
 
 CBMessage * CBNewMessageByObject(CBEvents * events){
 	CBMessage * self = malloc(sizeof(*self));
+	if (NOT self) {
+		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewMessageByObject\n",sizeof(*self));
+		return NULL;
+	}
 	CBGetObject(self)->free = CBFreeMessage;
 	if (CBInitMessageByObject(self,events))
 		return self;
-	return NULL; //Initialisation failure
+	free(self);
+	return NULL;
 }
 
 //  Object Getter

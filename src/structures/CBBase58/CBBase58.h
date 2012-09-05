@@ -38,20 +38,20 @@ static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcde
 /**
  @brief Decodes base 58 string into byte data as a CBBigInt.
  @param str Base 58 string to decode.
- @returns Pointer to the byte data as a CBBigInt. The byte data will be created in this function. Remember to free the data.
+ @returns Pointer to the byte data as a CBBigInt. The byte data will be created in this function. Remember to free the data. On error the big int will have a NULL data pointer.
  */
 CBBigInt CBDecodeBase58(char * str);
 /**
  @brief Decodes base 58 string into byte data as a CBBigInt and checks a 4 byte checksum.
  @param str Base 58 string to decode.
- @returns Byte data as a CBBigInt. Is zero on failure. Checksum is included in returned data.
+ @returns Byte data as a CBBigInt. Is zero on failure. Checksum is included in returned data. On error the big int will have a NULL data pointer.
  */
 CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events);
 /**
  @brief Encodes byte data into base 58.
  @param bytes Pointer to byte data to encode. Will almost certainly be modified. Copy data beforehand if needed.
  @param len Length of bytes to encode.
- @returns Newly allocated string with encoded data. 
+ @returns Newly allocated string with encoded data or NULL on error.
  */
 char * CBEncodeBase58(uint8_t * bytes, uint8_t len);
 
