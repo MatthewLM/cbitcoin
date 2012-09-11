@@ -128,31 +128,32 @@ int main(){
 		return 1;
 	}
 	// Test basic transaction validation
-	if (NOT CBTransactionValidateBasic(tx, false)) {
+	bool err;
+	if (NOT CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION FAIL\n");
 		return 1;
 	}
 	CBByteArraySetByte(tx->inputs[1]->prevOut.hash, 5, 0xFF);
 	tx->inputs[1]->prevOut.index = 3;
-	if (CBTransactionValidateBasic(tx, false)) {
+	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION DUPLICATE PREV OUT FAIL\n");
 		return 1;
 	}
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 4, 0x00);
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 5, 0x00);
-	if (CBTransactionValidateBasic(tx, false)) {
+	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION NULL HASH FAIL\n");
 		return 1;
 	}
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 0, 0x01);
 	tx->outputs[0]->value = CB_MAX_MONEY - 39959;
-	if (CBTransactionValidateBasic(tx, false)) {
+	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION OVER MAX MONEY FAIL\n");
 		return 1;
 	}
 	tx->outputs[0]->value = 0xFFFFFFFFFFFFFFFF;
 	tx->outputs[1]->value = 2;
-	if (CBTransactionValidateBasic(tx, false)) {
+	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION OVERFLOW FAIL\n");
 		return 1;
 	}
@@ -168,11 +169,11 @@ int main(){
 	script = CBNewScriptWithDataCopy((uint8_t [1]){0}, 1, &events);
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(50, script, &events));
 	CBReleaseObject(script);
-	if (NOT CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx))) {
+	if (NOT CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx), &err)) {
 		printf("BASIC VALIDATION COINBASE FAIL\n");
 		return 1;
 	}
-	if (CBTransactionValidateBasic(tx, false)) {
+	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION COINBASE FALSE FAIL\n");
 		return 1;
 	}

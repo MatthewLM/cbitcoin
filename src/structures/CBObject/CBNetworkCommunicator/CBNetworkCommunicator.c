@@ -60,6 +60,7 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,CBEvents * events){
 	self->ourIPv4 = NULL;
 	self->ourIPv6 = NULL;
 	self->pingTimer = 0;
+	self->nounce = 0;
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	return true;
@@ -72,7 +73,7 @@ void CBFreeNetworkCommunicator(void * vself){
 	CBNetworkCommunicator * self = vself;
 	if (self->isStarted)
 		CBNetworkCommunicatorStop(self);
-	CBReleaseObject(self->alternativeMessages);
+	if (self->alternativeMessages) CBReleaseObject(self->alternativeMessages);
 	CBReleaseObject(self->addresses);
 	if (self->ourIPv4) CBReleaseObject(self->ourIPv4);
 	if (self->ourIPv6) CBReleaseObject(self->ourIPv6);
@@ -600,42 +601,59 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vpeer){
 			// Get the message we are sending.
 			CBMessage * toSend = peer->sendQueue[peer->sendQueueFront];
 			// Message type text
-			if (toSend->type == CB_MESSAGE_TYPE_VERSION)
-				memcpy(peer->sendingHeader + 4, "version\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_VERACK)
-				memcpy(peer->sendingHeader + 4, "verack\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_ADDR)
-				memcpy(peer->sendingHeader + 4, "addr\0\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_INV)
-				memcpy(peer->sendingHeader + 4, "inv\0\0\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_GETDATA)
-				memcpy(peer->sendingHeader + 4, "getdata\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_GETBLOCKS)
-				memcpy(peer->sendingHeader + 4, "getblocks\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_GETHEADERS)
-				memcpy(peer->sendingHeader + 4, "getheaders\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_TX)
-				memcpy(peer->sendingHeader + 4, "tx\0\0\0\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_BLOCK)
-				memcpy(peer->sendingHeader + 4, "block\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_HEADERS)
-				memcpy(peer->sendingHeader + 4, "headers\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_GETADDR)
-				memcpy(peer->sendingHeader + 4, "getaddr\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_PING)
-				memcpy(peer->sendingHeader + 4, "ping\0\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_PONG)
-				memcpy(peer->sendingHeader + 4, "pong\0\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_ALERT)
-				memcpy(peer->sendingHeader + 4, "alert\0\0\0\0\0\0\0", 12);
-			else if (toSend->type == CB_MESSAGE_TYPE_ALT)
-				memcpy(peer->sendingHeader + 4, toSend->altText, 12);
+			switch (toSend->type) {
+				case CB_MESSAGE_TYPE_VERSION:
+					memcpy(peer->sendingHeader + 4, "version\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_VERACK:
+					memcpy(peer->sendingHeader + 4, "verack\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_ADDR:
+					memcpy(peer->sendingHeader + 4, "addr\0\0\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_INV:
+					memcpy(peer->sendingHeader + 4, "inv\0\0\0\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_GETDATA:
+					memcpy(peer->sendingHeader + 4, "getdata\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_GETBLOCKS:
+					memcpy(peer->sendingHeader + 4, "getblocks\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_GETHEADERS:
+					memcpy(peer->sendingHeader + 4, "getheaders\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_TX:
+					memcpy(peer->sendingHeader + 4, "tx\0\0\0\0\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_BLOCK:
+					memcpy(peer->sendingHeader + 4, "block\0\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_HEADERS:
+					memcpy(peer->sendingHeader + 4, "headers\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_GETADDR:
+					memcpy(peer->sendingHeader + 4, "getaddr\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_PING:
+					memcpy(peer->sendingHeader + 4, "ping\0\0\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_PONG:
+					memcpy(peer->sendingHeader + 4, "pong\0\0\0\0\0\0\0\0", 12);
+					break;
+				case CB_MESSAGE_TYPE_ALERT:
+					memcpy(peer->sendingHeader + 4, "alert\0\0\0\0\0\0\0", 12);
+					break;
+				default:
+					memcpy(peer->sendingHeader + 4, toSend->altText, 12);
+					break;
+			}
 			// Length
 			if (toSend->bytes){
 				peer->sendingHeader[16] = toSend->bytes->length;
-				peer->sendingHeader[17] = toSend->bytes->length << 8;
-				peer->sendingHeader[18] = toSend->bytes->length << 16;
-				peer->sendingHeader[19] = toSend->bytes->length << 24;
+				peer->sendingHeader[17] = toSend->bytes->length >> 8;
+				peer->sendingHeader[18] = toSend->bytes->length >> 16;
+				peer->sendingHeader[19] = toSend->bytes->length >> 24;
 			}else{
 				memset(peer->sendingHeader + 16, 0, 4);
 			}
@@ -645,7 +663,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself,void * vpeer){
 			peer->sendingHeader[22] = toSend->checksum[2];
 			peer->sendingHeader[23] = toSend->checksum[3];
 		}
-		int8_t len = CBSocketSend(peer->socketID, peer->sendingHeader + peer->messageSent, 24 - peer->messageSent);
+		int32_t len = CBSocketSend(peer->socketID, peer->sendingHeader + peer->messageSent, 24 - peer->messageSent);
 		if (len == CB_SOCKET_FAILURE) {
 			free(peer->sendingHeader);
 			CBNetworkCommunicatorDisconnect(self, peer, 0, false);
@@ -859,21 +877,23 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer *
 	}else{
 		// Either alternative or invalid
 		error = true; // Default error until OK alternative message found.
-		for (uint16_t x = 0; x < self->alternativeMessages->length / 12; x++) {
-			// Check this alternative message
-			if (NOT memcmp(CBByteArrayGetData(typeBytes), CBByteArrayGetData(self->alternativeMessages) + 12 * x, 12)){
-				// Alternative message
-				type = CB_MESSAGE_TYPE_ALT;
-				// Check payload size
-				size = CBByteArrayReadInt32(header, 16);
-				uint32_t altSize;
-				if (self->altMaxSizes)
-					altSize = self->altMaxSizes[x];
-				else
-					altSize = CB_BLOCK_MAX_SIZE;
-				if (size <= altSize) // Should correspond to the user given value
-					error = false;
-				break;
+		if (self->alternativeMessages) {
+			for (uint16_t x = 0; x < self->alternativeMessages->length / 12; x++) {
+				// Check this alternative message
+				if (NOT memcmp(CBByteArrayGetData(typeBytes), CBByteArrayGetData(self->alternativeMessages) + 12 * x, 12)){
+					// Alternative message
+					type = CB_MESSAGE_TYPE_ALT;
+					// Check payload size
+					size = CBByteArrayReadInt32(header, 16);
+					uint32_t altSize;
+					if (self->altMaxSizes)
+						altSize = self->altMaxSizes[x];
+					else
+						altSize = CB_BLOCK_MAX_SIZE;
+					if (size <= altSize) // Should correspond to the user given value
+						error = false;
+					break;
+				}
 			}
 		}
 	}
@@ -1267,7 +1287,7 @@ void CBNetworkCommunicatorSetAddressManager(CBNetworkCommunicator * self,CBAddre
 	self->addresses = addrMan;
 }
 void CBNetworkCommunicatorSetAlternativeMessages(CBNetworkCommunicator * self,CBByteArray * altMessages,uint32_t * altMaxSizes){
-	CBRetainObject(altMessages);
+	if (altMessages) CBRetainObject(altMessages);
 	self->alternativeMessages = altMessages;
 	self->altMaxSizes = altMaxSizes;
 }
@@ -1394,8 +1414,8 @@ void CBNetworkCommunicatorTryConnections(CBNetworkCommunicator * self){
 			(self->addresses->buckets + bucketIndex)->addresses[addrIndex] = realloc(peer, sizeof(CBNetworkAddress));
 			if (NOT (self->addresses->buckets + bucketIndex)->addresses[addrIndex])
 				remove = true;
-			// Add penalty if bad
-			if (res == CB_CONNECT_BAD)
+			else if (res == CB_CONNECT_BAD)
+				// Add penalty if bad
 				(self->addresses->buckets + bucketIndex)->addresses[addrIndex]->score -= 3600;
 		}else remove = true;
 		if (remove){

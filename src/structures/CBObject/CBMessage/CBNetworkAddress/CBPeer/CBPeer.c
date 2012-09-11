@@ -69,6 +69,7 @@ bool CBInitNodeByTakingNetworkAddress(CBPeer * self){
 	self->downloadTimerStart = 0;
 	self->sendQueueFront = 0;
 	self->sendQueueSize = 0;
+	self->messageReceived = false;
 	return true;
 }
 
