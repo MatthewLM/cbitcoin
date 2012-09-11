@@ -1,25 +1,49 @@
 cbitcoin - A Bitcoin Library In The C Programming Language
 ==========================================================
 
-cbitcoin is a bitcoin library in development that will use nothing but the standard C library. The aim for this project is to create a simple, portable and powerful library for bitcoin in C. The library should be easy to use but provide many configurable features. Using only standard C, the library should be small, efficient and portable. The library will be low-level such that it will provide a basic abstraction on the bitcoin protocol that enables programmers to make a diverse range of bitcoin applications. The library is not intended to become a simple client interface. cbitcoin may become useful for projects involving embedded devices.
+cbitcoin is a bitcoin library written in standard C99. It is currently in alpha-stage and should only be used experimentally. The purpose of the library is to make it easier for developers to create bitcoin applications and the library should be versatile enough to be used in many bitcoin projects. It is not a client library, rather it provides the basic building blocks of the bitcoin protocol. 
 
-THE LIBRARY IS STILL IN DEVELOPMENT.
+The features includes:
 
-If you wish to contact Matthew Mitchell about this project please email cbitcoin@thelibertyportal.com
+* Bitcoin message structures including serailisation and deserialisation functions.
+* A bitcoin script interpreter.
+* Functions for building and verifying merkle trees.
+* Basic functions which can be used in various validation models (full nodes, pruning nodes, SPV nodes or whatever).
+* Asynchronous networking code whcih provides a simple interface to the bitcoin network for sending and receiving messages.
+* A network address manager
+* Automatic bitcoin handshakes.
+* Automatic peer discovery.
+* Automatic pings.
+* Base-58 bitcoin address encoding.
+* Simple reference counting memory management.
+* Doxygen documentation and well-documented source code.
+* Purely standard C99 with weakly linked function prototypes for cryptography, PRNG and network dependencies.
+* Implementations of the dependencies using libevent and openssl.
 
-**To help support cbitcoin financially, please send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9**
+If you wish to contact the project leader, Matthew Mitchell, about this project please email cbitcoin@thelibertyportal.com
+
+**To help support cbitcoin financially, please send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9 Thank you**
 
 Contributors
 ------------
 
-Anyone who contributes to this project can have their name and a bitcoin address placed here.
+The following list is for all people that have contributed work that has been accepted into cbitcoin. Please consider making your own contribution to be added to the list.
 
 Matthew Mitchell - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9
 
 Installation
 ------------
 
-Installation instructions will come later. For now look at BUILD.py (OSX only). This library should not be used for live applications yet but feel free to experiment and provide feedback to cbitcoin@thelibertyportal.com
+cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13. To use you should have python installed. Run the BUILD.py file with a python 2 (tested 2.5 to 2.7) interpreter. The library will be built into a ./build/bin directory. The BUILD.py script takes the following parameters:
+
+**--all** Compile all the source files, even for source files whih are older than any existing object files.
+**--test** Build and run the test programs.
+**--universal** Attempt to build a universal library when building for OSX.
+**--debug** Compile with the "-g" flag and do not use optimisations.
+
+The top of the BUILD.py file contains a configuration section. This section allows you to add your own linker and compilation flags and also provide the locations of libraries for building the tests if you have passed "--test". By default the script will use settings depending on wether you are on OSX or Linux but you can modify the configuration for your own platform. Ensure AUTO_CONFIG is False if you are doing this.
+
+The script has only been tested on OSX Mountain Lion 10.8.1 and Linux Mint 13 Maya. Contributions for successful builds on other systems are welcome.
 
 Making a Contribution
 ---------------------
