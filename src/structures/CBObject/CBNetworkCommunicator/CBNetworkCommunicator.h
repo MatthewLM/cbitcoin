@@ -64,7 +64,7 @@ typedef struct {
 	uint16_t recvTimeOut; /**< When receiving data after the initial response, the time to wait for the following data before timeout. */
 	uint16_t responseTimeOut; /**< Time to wait for a peer to respond to a request before timeout.  */
 	uint16_t connectionTimeOut; /**< Time to wait for a socket to connect before timeout. */
-	CBByteArray * alternativeMessages; /**< Alternative messages to accept. This should be the 12 byte command names each after another with nothing between. */
+	CBByteArray * alternativeMessages; /**< Alternative messages to accept. This should be the 12 byte command names each after another with nothing between. Pass NULL for no alternative message types. */
 	uint32_t * altMaxSizes; /**< Sizes for the alternative messages. Will be freed by this object, so malloc this and give it to this object. Send in NULL for a default CB_BLOCK_MAX_SIZE. */
 	uint64_t listeningSocketIPv4; /**< The id of a listening socket on the IPv4 network. */
 	uint64_t listeningSocketIPv6; /**< The id of a listening socket on the IPv6 network. */
