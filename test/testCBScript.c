@@ -48,6 +48,7 @@ int main(){
 			if (line[strlen(line)-1] == '\n') break; // Got to the end of the line
 			lineLen += 100;
 		}
+		if(eof) break;
 		line[strlen(line)-1] = '\0';
 		if (!(line[0] == '/' && line[1] == '/') && strlen(line)){
 			x++;
@@ -72,7 +73,6 @@ int main(){
 				fseek(f, 1, SEEK_CUR);
 			}
 		}
-		if(eof) break;
 		free(line);
 	}
 	fclose(f);

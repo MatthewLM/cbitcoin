@@ -4,19 +4,19 @@
 //
 //  Created by Matthew Mitchell on 28/04/2012.
 //  Copyright (c) 2012 Matthew Mitchell
-//  
+//
 //  This file is part of cbitcoin.
 //
 //  cbitcoin is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  cbitcoin is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 //
@@ -72,7 +72,6 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	}else{
 		a->length = b->length;
 	}
-	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 	if (a->length == 1 && NOT a->data[0]) { // "a" is zero
@@ -100,7 +99,6 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 		a->data = new;
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
-	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 	if (NOT b) {
@@ -138,7 +136,6 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 		a->data = new;
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
-	assert(a->data[a->length-1]);
 }
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
 	uint8_t sub = b;
@@ -152,7 +149,6 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
 		}
 	}
 	CBBigIntNormalise(a);
-	assert(a->data[a->length-1]);
 }
 uint8_t CBBigIntModuloWith58(CBBigInt a){
 	// Use method presented here: http://stackoverflow.com/a/10441333/238411

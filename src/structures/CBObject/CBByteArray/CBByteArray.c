@@ -23,6 +23,7 @@
 //  SEE HEADER FILE FOR DOCUMENTATION
 
 #include "CBByteArray.h"
+#include <assert.h>
 
 //  Constructor
 
@@ -209,6 +210,7 @@ void CBByteArrayCopyByteArray(CBByteArray * self,uint32_t writeOffset,CBByteArra
 	memmove(self->sharedData->data + self->offset + writeOffset,source->sharedData->data + source->offset,source->length);
 }
 void CBByteArrayCopySubByteArray(CBByteArray * self,uint32_t writeOffset,CBByteArray * source,uint32_t readOffset,uint32_t length){
+	assert(length);
 	memmove(self->sharedData->data + self->offset + writeOffset,source->sharedData->data + source->offset + readOffset,length);
 }
 bool CBByteArrayEquals(CBByteArray * self,CBByteArray * second){

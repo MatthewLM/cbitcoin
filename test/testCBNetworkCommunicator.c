@@ -211,9 +211,6 @@ int main(){
 	events.onTimeOut = onTimeOut;
 	evthread_use_pthreads();
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
-	CBByteArray * altMessages = CBNewByteArrayOfSize(0, &events);
-	CBByteArray * altMessages2 = CBNewByteArrayOfSize(0, &events);
-	CBByteArray * altMessages3 = CBNewByteArrayOfSize(0, &events);
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,127,0,0,1}, 16, &events);
 	CBByteArray * loopBack2 = CBByteArrayCopy(loopBack); // Do not use in more than one thread.
 	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0, &events);
@@ -241,11 +238,11 @@ int main(){
 	commListen->maxIncommingConnections = 3; // One for connector, one for the other listener and an extra so that we continue to share our address.
 	commListen->heartBeat = 1000;
 	commListen->timeOut = 2000;
-	commListen->sendTimeOut = 100;
-	commListen->recvTimeOut = 100;
+	commListen->sendTimeOut = 1000;
+	commListen->recvTimeOut = 1000;
 	commListen->responseTimeOut = 1000;
 	commListen->connectionTimeOut = 1000;
-	CBNetworkCommunicatorSetAlternativeMessages(commListen, altMessages, NULL);
+	CBNetworkCommunicatorSetAlternativeMessages(commListen, NULL, NULL);
 	CBNetworkCommunicatorSetAddressManager(commListen, addrManListen);
 	CBNetworkCommunicatorSetUserAgent(commListen, userAgent);
 	CBNetworkCommunicatorSetOurIPv4(commListen, addrListen);
@@ -263,11 +260,11 @@ int main(){
 	commListen2->maxIncommingConnections = 3;
 	commListen2->heartBeat = 1000;
 	commListen2->timeOut = 2000;
-	commListen2->sendTimeOut = 100;
-	commListen2->recvTimeOut = 100;
+	commListen2->sendTimeOut = 1000;
+	commListen2->recvTimeOut = 1000;
 	commListen2->responseTimeOut = 1000;
 	commListen2->connectionTimeOut = 1000;
-	CBNetworkCommunicatorSetAlternativeMessages(commListen2, altMessages2, NULL);
+	CBNetworkCommunicatorSetAlternativeMessages(commListen2, NULL, NULL);
 	CBNetworkCommunicatorSetAddressManager(commListen2, addrManListen2);
 	CBNetworkCommunicatorSetUserAgent(commListen2, userAgent2);
 	CBNetworkCommunicatorSetOurIPv4(commListen2, addrListen2);
@@ -288,17 +285,16 @@ int main(){
 	commConnect->maxIncommingConnections = 0;
 	commConnect->heartBeat = 1000;
 	commConnect->timeOut = 2000;
-	commConnect->sendTimeOut = 100;
-	commConnect->recvTimeOut = 100;
+	commConnect->sendTimeOut = 1000;
+	commConnect->recvTimeOut = 1000;
 	commConnect->responseTimeOut = 1000;
 	commConnect->connectionTimeOut = 1000;
-	CBNetworkCommunicatorSetAlternativeMessages(commConnect, altMessages3, NULL);
+	CBNetworkCommunicatorSetAlternativeMessages(commConnect, NULL, NULL);
 	CBNetworkCommunicatorSetAddressManager(commConnect, addrManConnect);
 	CBNetworkCommunicatorSetUserAgent(commConnect, userAgent3);
 	CBNetworkCommunicatorSetOurIPv4(commConnect, addrConnect);
 	commConnect->callbackHandler = &tester;
 	// Release objects
-	CBReleaseObject(altMessages);
 	CBReleaseObject(userAgent);
 	// Give tester communicators
 	tester.comms[0] = commListen;
