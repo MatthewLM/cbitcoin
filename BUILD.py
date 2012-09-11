@@ -27,7 +27,7 @@
 
 ########################    CONFIGURATION SECTION    ########################
 
-AUTO_CONGIG = True # True for automatic configuration of the following variables. Does not override OPTIMISATION_LEVEL
+AUTO_CONFIG = True # True for automatic configuration of the following variables. Does not override OPTIMISATION_LEVEL
 LIBEVENT_LOCATION = "" # Needed for tests
 OPENSSL_LOCATION = "" # Needed for tests
 LIBEV_LOCATION = "" # Needed for tests
@@ -45,7 +45,7 @@ def compile(flags,output,source,clean):
 	else:
 		print "USING PREVIOUS " + output
 # Auto config
-if AUTO_CONGIG:
+if AUTO_CONFIG:
 	# At the moment it jsut assumes cetain things about different OSes.
 	if platform.system() == 'Darwin':
 		# Assuming macports installations or other installations in /opt/local/
@@ -110,7 +110,7 @@ for root, dirnames, filenames in os.walk(srcPath):
 		headerLoc = os.path.join(incPath,filename)
 		shutil.copyfile(header,headerLoc)
 shutil.copyfile(os.path.join(currentDir,"dependencies","sockets","CBLibEventSockets.h"),os.path.join(incPath,"CBLibEventSockets.h"))
-shutil.copyfile(os.path.join(currentDir,"dependencies","sockets","CBLibevSockets.h"),os.path.join(incPath,"CBLibevSockets.h"))
+#shutil.copyfile(os.path.join(currentDir,"dependencies","sockets","CBLibevSockets.h"),os.path.join(incPath,"CBLibevSockets.h"))
 # Compile object files
 objects = ""
 for root, dirnames, filenames in os.walk(srcPath):
@@ -125,10 +125,13 @@ print "LINKING " + targetPath
 subprocess.check_call("gcc " + lflags + " -o " + targetPath + objects, shell=True)
 # Build and run tests if specified
 if test:
+	# Script tests
+	shutil.copyfile(os.path.join(testPath,"scriptCases.txt"),os.path.join(binPath,"scriptCases.txt"))
+	os.chdir(binPath)
 	# OpenSSL dependency
 	opensslFlags = " -lssl -lcrypto -L" + OPENSSL_LOCATION + "lib/ " + ADDITIONAL_OPENSSL_LFLAGS
 	opensslCFlags = " -I" + OPENSSL_LOCATION + "include/"
-	opensslReq = ["testCBAddress", "testCBAddressManager", "testCBAlert", "testCBTransaction", "testCBBase58", "testCBBlock", "testCBNetworkCommunicator", "testCBNetworkCommunicatorLibEv"]
+	opensslReq = ["testCBAddress", "testCBAddressManager", "testCBAlert", "testCBTransaction", "testCBBase58", "testCBBlock", "testCBNetworkCommunicator", "testCBNetworkCommunicatorLibEv","testCBScript","testValidation"]
 	source = os.path.join(currentDir,"dependencies", "crypto", "CBOpenSSLCrypto.c")
 	opensslOutput = os.path.join(objPath,"CBOpenSSLCrypto.o")
 	compile(cflags + opensslCFlags,opensslOutput,source,clean)
@@ -146,15 +149,15 @@ if test:
 	source = os.path.join(currentDir,"dependencies","sockets","CBLibEventSockets.c")
 	libeventOutput = os.path.join(objPath,"CBLibEventSockets.o")
 	compile(cflags + libeventCFlags,libeventOutput,source,clean)
-	# Libev
-	libevFlags = " -L" + LIBEV_LOCATION + "lib/ -lev"
+	# Libev - Not working, hence commented out. Use libevent for now
+	'''libevFlags = " -L" + LIBEV_LOCATION + "lib/ -lev"
 	libevCFlags = " -I" + LIBEV_LOCATION + "include/"
 	if platform.system() == 'Linux':
 	    libevCFlags += " -D_POSIX_SOURCE"
 	libevReq = ["testCBNetworkCommunicatorLibEv"]
 	source = os.path.join(currentDir,"dependencies","sockets","CBLibevSockets.c")
 	libevOutput = os.path.join(objPath,"CBLibevSockets.o")
-	compile(cflags + libevCFlags,libevOutput,source,clean)
+	compile(cflags + libevCFlags,libevOutput,source,clean)'''
 	for root, dirnames, filenames in os.walk(testPath):
 		for filename in fnmatch.filter(filenames, '*.c'):
 			source = os.path.join(root,filename)
@@ -179,10 +182,10 @@ if test:
 				linkerFlags += libeventFlags
 				objFiles += " " + libeventOutput
 				additionalCFlags += libeventCFlags
-			if filename[:-2] in libevReq:
+			'''if filename[:-2] in libevReq:
 				linkerFlags += libevFlags
 				objFiles += " " + libevOutput
-				additionalCFlags += libevCFlags
+				additionalCFlags += libevCFlags'''
 			compile(cflags + additionalCFlags,output,source,clean)
 			print "LINKING " + targetPath
 			subprocess.check_call("gcc " + objFiles + linkerFlags + " -o " + targetPath, shell=True)
