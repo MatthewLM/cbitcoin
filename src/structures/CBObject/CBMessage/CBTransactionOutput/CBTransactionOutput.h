@@ -47,12 +47,12 @@ typedef struct{
  @brief Creates a new CBTransactionOutput object.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script,CBEvents * events);
+CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBTransactionOutput object from byte data. Should be serialised for object data.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data, CBEvents * events);
+CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data, void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBTransactionOutput from another object. Use this to avoid casts.
@@ -66,13 +66,13 @@ CBTransactionOutput * CBGetTransactionOutput(void * self);
  @param self The CBTransactionOutput object to initialise.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script,CBEvents * events);
+bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBTransactionOutput object.
  @param self The CBTransactionOutput object to initialise.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data,CBEvents * events);
+bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBTransactionOutput object.

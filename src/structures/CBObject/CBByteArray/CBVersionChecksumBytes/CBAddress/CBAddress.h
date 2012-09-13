@@ -46,20 +46,19 @@ typedef struct{
  @param network A CBNetworkParameters object with the network information.
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events Events for errors.
- @param dependencies Takes the SHA-256 function for the checksum.
+ @param onErrorReceived Callback for errors.
  @returns A new CBAddress object.
  */
-CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash,uint8_t networkCode,bool cacheString,CBEvents * events);
+CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash,uint8_t networkCode,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
  @param string The base-58 encoded CBString with a termination character.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events Events for errors.
+ @param onErrorReceived Callback for errors.
  @returns A new CBAddress object. Returns NULL on failure such as an invalid bitcoin address.
  */
-CBAddress * CBNewAddressFromString(CBByteArray * string,bool cacheString,CBEvents * events);
+CBAddress * CBNewAddressFromString(CBByteArray * string,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBAddress from another object. Use this to avoid casts.
@@ -74,19 +73,19 @@ CBAddress * CBGetAddress(void * self);
  @param network A CBNetworkParameters object with the network information.
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events Events for errors.
+ @param onErrorReceived Events for errors.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,uint8_t networkCode,uint8_t * hash,bool cacheString,CBEvents * events);
+bool CBInitAddressFromRIPEMD160Hash(CBAddress * self,uint8_t networkCode,uint8_t * hash,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
  @param string The base-58 encoded CBString with a termination character.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events Events for errors.
+ @param onErrorReceived Events for errors.
  @returns true on success, false on failure.
  */
-bool CBInitAddressFromString(CBAddress * self,CBByteArray * string,bool cacheString,CBEvents * events);
+bool CBInitAddressFromString(CBAddress * self,CBByteArray * string,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBAddress object.

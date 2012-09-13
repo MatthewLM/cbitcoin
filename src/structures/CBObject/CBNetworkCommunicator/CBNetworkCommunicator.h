@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Used for communicating to other peers. The network communicator holds function pointers for receiving messages and functions to send messages. The timeouts are in milliseconds. It is important to understant that a CBNetworkCommunicator does not guarentee thread safety for everything. Thread safety is only given to the "peers" list. This means it is completely okay to add and remove peers from multiple threads. Two threads may try to access the list at once such as if the CBNetworkCommunicator receives a socket timeout event and tries to remove an peer at the same time as a thread made by a program using cbitcoin tries to add a new peer. When using a CBNetworkCommunicator, threading and networking dependencies need to be satisfied, @see CBDependencies.h Inherits CBObject
+ @brief Used for communicating to other peers. The network communicator can send and receive bitcoin messages and uses function pointers for message handlers. The timeouts are in milliseconds. It is important to understant that a CBNetworkCommunicator does not guarentee thread safety for everything. Thread safety is only given to the "peers" list. This means it is completely okay to add and remove peers from multiple threads. Two threads may try to access the list at once such as if the CBNetworkCommunicator receives a socket timeout event and tries to remove an peer at the same time as a thread made by a program using cbitcoin tries to add a new peer. When using a CBNetworkCommunicator, threading and networking dependencies need to be satisfied, @see CBDependencies.h Inherits CBObject
 */
 
 #ifndef CBNETWORKCOMMUNICATORH
@@ -74,17 +74,20 @@ typedef struct {
 	uint64_t acceptEventIPv4; /**< Event for accepting connections on IPv4 */
 	uint64_t acceptEventIPv6; /**< Event for accepting connections on IPv6 */
 	uint64_t nounce; /**< Value sent in version messages to check for connections to self */
-	CBEvents * events; /**< Events. */
 	uint64_t pingTimer; /**< Timer for ping event */
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
 	void * callbackHandler; /**< Sent to event callbacks */
+	bool stoppedListening; /**< True if listening was stopped because there are too many connections */
+	void (*onTimeOut)(void *,void *,void *,CBTimeOutType); /**< Timeout event callback with a void pointer argument for the callback handler followed by a CBNetworkCommunicator and CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The second argument is the CBNetworkCommunicator responsible for the timeout. The third argument is the peer with the timeout. Lastly there is the CBTimeOutType */
+	CBOnMessageReceivedAction (*onMessageReceived)(void *,void *,void *); /**< The callback for when a message has been received from a peer. The first argument in the void pointer for the callback handler. The second argument is the CBNetworkCommunicator responsible for receiving the message. The third argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
+	void (*onNetworkError)(void *,void *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the callback handler and then the CBNetworkCommunicator. */
 } CBNetworkCommunicator;
 
 /**
  @brief Creates a new CBNetworkCommunicator object.
  @returns A new CBNetworkCommunicator object.
  */
-CBNetworkCommunicator * CBNewNetworkCommunicator(CBEvents * events);
+CBNetworkCommunicator * CBNewNetworkCommunicator(void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBNetworkCommunicator from another object. Use this to avoid casts.
@@ -98,7 +101,7 @@ CBNetworkCommunicator * CBGetNetworkCommunicator(void * self);
  @param self The CBNetworkCommunicator object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,CBEvents * events);
+bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBNetworkCommunicator object.

@@ -40,8 +40,8 @@
 typedef struct{
 	CBMessage base; /**< CBObject base structure */
 	uint32_t score; /**< Address score. */
-	uint64_t services; /**< Services bit field */
-	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. The CBNetworkAddress should have exclusive access to the CBByteArray to avoid potential threading issues as the CBNetworkAddresses are protected by mutexes maintained by CBNetworkCommunicators but the ip is not. */
+	CBVersionServices services; /**< Services bit field */
+	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. IPv4 addresses should use the IPv4 mapped IPv6 addresses. */
 	CBIPType type; /**< The type of the IP */
 	uint16_t port; /**< Port number */
 	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
@@ -53,12 +53,12 @@ typedef struct{
  @param ip The IP address in a 16 byte IPv6 format. If NULL, the IP will be a 16 byte CBByteArray set will all zero.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddress(uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,CBEvents * events);
+CBNetworkAddress * CBNewNetworkAddress(uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data,CBEvents * events);
+CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBNetworkAddress from another object. Use this to avoid casts.
@@ -72,13 +72,13 @@ CBNetworkAddress * CBGetNetworkAddress(void * self);
  @param self The CBNetworkAddress object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,CBEvents * events);
+bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,CBEvents * events);
+bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBNetworkAddress object.

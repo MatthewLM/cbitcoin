@@ -24,8 +24,8 @@
 #include "CBAddress.h"
 #include <time.h>
 
-void err(CBError a,char * b,...);
-void err(CBError a,char * b,...){
+void onErrorReceived(CBError a,char * b,...);
+void onErrorReceived(CBError a,char * b,...){
 	printf("%s\n",b);
 	exit(EXIT_FAILURE);
 }
@@ -35,10 +35,8 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
-	CBEvents events;
-	events.onErrorReceived = err;
-	CBByteArray * addstr = CBNewByteArrayFromString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", true, &events);
-	CBAddress * add = CBNewAddressFromString(addstr, false, &events);
+	CBByteArray * addstr = CBNewByteArrayFromString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", true, onErrorReceived);
+	CBAddress * add = CBNewAddressFromString(addstr, false, onErrorReceived);
 	CBReleaseObject(addstr);
 	uint8_t v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
 	if (v != CB_PRODUCTION_NETWORK_BYTE) {
@@ -52,8 +50,8 @@ int main(){
 	}
 	CBReleaseObject(str);
 	CBReleaseObject(add);
-	addstr = CBNewByteArrayFromString("mzCk9JXXF9we7MB2Gdt59tcfj6Lr2rSzpu", true,&events);
-	add = CBNewAddressFromString(addstr, false, &events);
+	addstr = CBNewByteArrayFromString("mzCk9JXXF9we7MB2Gdt59tcfj6Lr2rSzpu", true,onErrorReceived);
+	add = CBNewAddressFromString(addstr, false, onErrorReceived);
 	CBReleaseObject(addstr);
 	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
 	if (v != CB_TEST_NETWORK_BYTE) {
@@ -61,8 +59,8 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(add);
-	addstr = CBNewByteArrayFromString("19tknf38VozS4GfoxHe6vUP3NRghbGGT6H", true, &events);
-	add = CBNewAddressFromString(addstr, true, &events);
+	addstr = CBNewByteArrayFromString("19tknf38VozS4GfoxHe6vUP3NRghbGGT6H", true, onErrorReceived);
+	add = CBNewAddressFromString(addstr, true, onErrorReceived);
 	CBReleaseObject(addstr);
 	str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "19tknf38VozS4GfoxHe6vUP3NRghbGGT6H")){
@@ -75,7 +73,7 @@ int main(){
 	uint8_t * hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false, &events);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false, onErrorReceived);
 	free(hash);
 	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
 	if (v != CB_PRODUCTION_NETWORK_BYTE) {
@@ -86,7 +84,7 @@ int main(){
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_TEST_NETWORK_BYTE, false, &events);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_TEST_NETWORK_BYTE, false, onErrorReceived);
 	free(hash);
 	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
 	if (v != CB_TEST_NETWORK_BYTE) {
@@ -98,7 +96,7 @@ int main(){
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = x;
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false, &events);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false, onErrorReceived);
 	free(hash);
 	str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB")){

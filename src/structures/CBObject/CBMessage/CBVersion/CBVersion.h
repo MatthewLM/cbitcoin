@@ -52,13 +52,13 @@ typedef struct{
  @brief Creates a new CBVersion object.
  @returns A new CBVersion object.
  */
-CBVersion * CBNewVersion(int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events);
+CBVersion * CBNewVersion(int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBVersion object from serialised data.
  @param data A CBByteArray holding the serialised data.
  @returns A new CBVersion object.
  */
-CBVersion * CBNewVersionFromData(CBByteArray * data,CBEvents * events);
+CBVersion * CBNewVersionFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBVersion from another object. Use this to avoid casts.
@@ -72,14 +72,14 @@ CBVersion * CBGetVersion(void * self);
  @param self The CBVersion object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitVersion(CBVersion * self,int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,CBEvents * events);
+bool CBInitVersion(CBVersion * self,int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a new CBVersion object from serialised data.
  @param self The CBVersion object to initialise
  @param data A CBByteArray holding the serialised data.
  @returns true on success, false on failure.
  */
-bool CBInitVersionFromData(CBVersion * self,CBByteArray * data,CBEvents * events);
+bool CBInitVersionFromData(CBVersion * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBVersion object.

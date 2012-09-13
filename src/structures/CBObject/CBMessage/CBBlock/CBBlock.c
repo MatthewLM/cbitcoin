@@ -26,38 +26,38 @@
 
 //  Constructor2
 
-CBBlock * CBNewBlock(CBEvents * events){
+CBBlock * CBNewBlock(void (*onErrorReceived)(CBError error,char *,...)){
 	CBBlock * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlock\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlock\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlock(self,events))
+	if(CBInitBlock(self,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBBlock * CBNewBlockFromData(CBByteArray * data,CBEvents * events){
+CBBlock * CBNewBlockFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	CBBlock * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlockFromData\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlockFromData\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlockFromData(self,data,events))
+	if(CBInitBlockFromData(self,data,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBBlock * CBNewBlockGenesis(CBEvents * events){
+CBBlock * CBNewBlockGenesis(void (*onErrorReceived)(CBError error,char *,...)){
 	CBBlock * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlockGenesis\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewBlockGenesis\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlockGenesis(self,events))
+	if(CBInitBlockGenesis(self,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -71,36 +71,36 @@ CBBlock * CBGetBlock(void * self){
 
 //  Initialiser
 
-bool CBInitBlock(CBBlock * self,CBEvents * events){
+bool CBInitBlock(CBBlock * self,void (*onErrorReceived)(CBError error,char *,...)){
 	self->prevBlockHash = NULL;
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
 	self->hash = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,CBEvents * events){
+bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	self->prevBlockHash = NULL;
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
 	self->hash = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitBlockGenesis(CBBlock * self,CBEvents * events){
-	CBByteArray * data = CBNewByteArrayWithDataCopy((uint8_t [285]){0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3B,0xA3,0xED,0xFD,0x7A,0x7B,0x12,0xB2,0x7A,0xC7,0x2C,0x3E,0x67,0x76,0x8F,0x61,0x7F,0xC8,0x1B,0xC3,0x88,0x8A,0x51,0x32,0x3A,0x9F,0xB8,0xAA,0x4B,0x1E,0x5E,0x4A,0x29,0xAB,0x5F,0x49,0xFF,0xFF,0x00,0x1D,0x1D,0xAC,0x2B,0x7C,0x01,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,0x4D,0x04,0xFF,0xFF,0x00,0x1D,0x01,0x04,0x45,0x54,0x68,0x65,0x20,0x54,0x69,0x6D,0x65,0x73,0x20,0x30,0x33,0x2F,0x4A,0x61,0x6E,0x2F,0x32,0x30,0x30,0x39,0x20,0x43,0x68,0x61,0x6E,0x63,0x65,0x6C,0x6C,0x6F,0x72,0x20,0x6F,0x6E,0x20,0x62,0x72,0x69,0x6E,0x6B,0x20,0x6F,0x66,0x20,0x73,0x65,0x63,0x6F,0x6E,0x64,0x20,0x62,0x61,0x69,0x6C,0x6F,0x75,0x74,0x20,0x66,0x6F,0x72,0x20,0x62,0x61,0x6E,0x6B,0x73,0xFF,0xFF,0xFF,0xFF,0x01,0x00,0xF2,0x05,0x2A,0x01,0x00,0x00,0x00,0x43,0x41,0x04,0x67,0x8A,0xFD,0xB0,0xFE,0x55,0x48,0x27,0x19,0x67,0xF1,0xA6,0x71,0x30,0xB7,0x10,0x5C,0xD6,0xA8,0x28,0xE0,0x39,0x09,0xA6,0x79,0x62,0xE0,0xEA,0x1F,0x61,0xDE,0xB6,0x49,0xF6,0xBC,0x3F,0x4C,0xEF,0x38,0xC4,0xF3,0x55,0x04,0xE5,0x1E,0xC1,0x12,0xDE,0x5C,0x38,0x4D,0xF7,0xBA,0x0B,0x8D,0x57,0x8A,0x4C,0x70,0x2B,0x6B,0xF1,0x1D,0x5F,0xAC,0x00,0x00,0x00,0x00}, 285, events);
+bool CBInitBlockGenesis(CBBlock * self,void (*onErrorReceived)(CBError error,char *,...)){
+	CBByteArray * data = CBNewByteArrayWithDataCopy((uint8_t [285]){0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3B,0xA3,0xED,0xFD,0x7A,0x7B,0x12,0xB2,0x7A,0xC7,0x2C,0x3E,0x67,0x76,0x8F,0x61,0x7F,0xC8,0x1B,0xC3,0x88,0x8A,0x51,0x32,0x3A,0x9F,0xB8,0xAA,0x4B,0x1E,0x5E,0x4A,0x29,0xAB,0x5F,0x49,0xFF,0xFF,0x00,0x1D,0x1D,0xAC,0x2B,0x7C,0x01,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,0x4D,0x04,0xFF,0xFF,0x00,0x1D,0x01,0x04,0x45,0x54,0x68,0x65,0x20,0x54,0x69,0x6D,0x65,0x73,0x20,0x30,0x33,0x2F,0x4A,0x61,0x6E,0x2F,0x32,0x30,0x30,0x39,0x20,0x43,0x68,0x61,0x6E,0x63,0x65,0x6C,0x6C,0x6F,0x72,0x20,0x6F,0x6E,0x20,0x62,0x72,0x69,0x6E,0x6B,0x20,0x6F,0x66,0x20,0x73,0x65,0x63,0x6F,0x6E,0x64,0x20,0x62,0x61,0x69,0x6C,0x6F,0x75,0x74,0x20,0x66,0x6F,0x72,0x20,0x62,0x61,0x6E,0x6B,0x73,0xFF,0xFF,0xFF,0xFF,0x01,0x00,0xF2,0x05,0x2A,0x01,0x00,0x00,0x00,0x43,0x41,0x04,0x67,0x8A,0xFD,0xB0,0xFE,0x55,0x48,0x27,0x19,0x67,0xF1,0xA6,0x71,0x30,0xB7,0x10,0x5C,0xD6,0xA8,0x28,0xE0,0x39,0x09,0xA6,0x79,0x62,0xE0,0xEA,0x1F,0x61,0xDE,0xB6,0x49,0xF6,0xBC,0x3F,0x4C,0xEF,0x38,0xC4,0xF3,0x55,0x04,0xE5,0x1E,0xC1,0x12,0xDE,0x5C,0x38,0x4D,0xF7,0xBA,0x0B,0x8D,0x57,0x8A,0x4C,0x70,0x2B,0x6B,0xF1,0x1D,0x5F,0xAC,0x00,0x00,0x00,0x00}, 285, onErrorReceived);
 	if (NOT data)
 		return false;
-	self->hash = CBNewByteArrayWithDataCopy((uint8_t []){0x6F,0xE2,0x8C,0x0A,0xB6,0xF1,0xB3,0x72,0xC1,0xA6,0xA2,0x46,0xAE,0x63,0xF7,0x4F,0x93,0x1E,0x83,0x65,0xE1,0x5A,0x08,0x9C,0x68,0xD6,0x19,0x00,0x00,0x00,0x00,0x00}, 32, events);
+	self->hash = CBNewByteArrayWithDataCopy((uint8_t []){0x6F,0xE2,0x8C,0x0A,0xB6,0xF1,0xB3,0x72,0xC1,0xA6,0xA2,0x46,0xAE,0x63,0xF7,0x4F,0x93,0x1E,0x83,0x65,0xE1,0x5A,0x08,0x9C,0x68,0xD6,0x19,0x00,0x00,0x00,0x00,0x00}, 32, onErrorReceived);
 	if (NOT self->hash) {
 		CBReleaseObject(data);
 		return false;
 	}
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events)){
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived)){
 		CBReleaseObject(data);
 		CBReleaseObject(self->hash);
 		return false;
@@ -132,12 +132,12 @@ CBByteArray * CBBlockCalculateHash(CBBlock * self){
 	uint8_t hash1[32];
 	uint8_t * hash2 = malloc(32);
 	if (NOT hash2) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate 32 bytes of memory in CBBlockCalculateHash\n");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate 32 bytes of memory in CBBlockCalculateHash\n");
 		return NULL;
 	}
 	CBSha256(headerData, 80, hash1);
 	CBSha256(hash1, 32, hash2);
-	return CBNewByteArrayWithData(hash2, 32, CBGetMessage(self)->events);
+	return CBNewByteArrayWithData(hash2, 32, CBGetMessage(self)->onErrorReceived);
 }
 uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions){
 	uint32_t len = 80 + CBVarIntSizeOf(self->transactionNum);
@@ -154,22 +154,22 @@ uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions){
 uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBBlock with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBBlock with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 82) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with less than 82 bytes. Minimum for header (With null byte).");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with less than 82 bytes. Minimum for header (With null byte).");
 		return 0;
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	self->prevBlockHash = CBByteArraySubReference(bytes, 4, 32);
 	if (NOT self->prevBlockHash){
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create the previous block hash CBByteArray in CBBlockDeserialise.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create the previous block hash CBByteArray in CBBlockDeserialise.");
 		return 0;
 	}
 	self->merkleRoot = CBByteArraySubReference(bytes, 36, 32);
 	if (NOT self->merkleRoot){
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create the merkle root CBByteArray in CBBlockDeserialise.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create the merkle root CBByteArray in CBBlockDeserialise.");
 		return 0;
 	}
 	self->time = CBByteArrayReadInt32(bytes, 68);
@@ -180,35 +180,35 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 	if (transactions && firstByte) {
 		// More to come
 		if (bytes->length < 89) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with a non-zero varint with less than 89 bytes.");
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with a non-zero varint with less than 89 bytes.");
 			return 0;
 		}
 		CBVarInt transactionNumVarInt = CBVarIntDecode(bytes, 80);
 		if (transactionNumVarInt.val*60 > bytes->length - 81) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with too many transactions for the byte data length.");
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock with too many transactions for the byte data length.");
 			return 0;
 		}
 		self->transactionNum = (uint32_t)transactionNumVarInt.val;
 		self->transactions = malloc(sizeof(*self->transactions) * self->transactionNum);
 		if (NOT self->transactionNum) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBBlockDeserialise\n",sizeof(*self->transactions) * self->transactionNum);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBBlockDeserialise\n",sizeof(*self->transactions) * self->transactionNum);
 			return 0;
 		}
 		uint32_t cursor = 80 + transactionNumVarInt.size;
 		for (uint16_t x = 0; x < self->transactionNum; x++) {
 			CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 			if (NOT data) {
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create a new CBByteArray in CBBlockDeserialise for the transaction number %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create a new CBByteArray in CBBlockDeserialise for the transaction number %u.",x);
 			}
-			CBTransaction * transaction = CBNewTransactionFromData(data, CBGetMessage(self)->events);
+			CBTransaction * transaction = CBNewTransactionFromData(data, CBGetMessage(self)->onErrorReceived);
 			if (NOT transaction){
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create a new CBTransaction in CBBlockDeserialise for the transaction number %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create a new CBTransaction in CBBlockDeserialise for the transaction number %u.",x);
 				CBReleaseObject(data);
 				return 0;
 			}
 			uint32_t len = CBTransactionDeserialise(transaction);
 			if (NOT len){
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBBlock cannot be deserialised because of an error with the transaction number %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBBlock cannot be deserialised because of an error with the transaction number %u.",x);
 				CBReleaseObject(data);
 				return 0;
 			}
@@ -231,13 +231,13 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 			x = 8;
 		}
 		if (bytes->length < 80 + x + 1) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock header with not enough space to cover the var int.");
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock header with not enough space to cover the var int.");
 			return 0;
 		}
 		self->transactionNum = (uint32_t)CBVarIntDecode(bytes, 80).val; // This value is undefined in the protocol. Should best be zero when getting the headers since there is not supposed to be any transactions. Would have probably been better if the var int was dropped completely for headers only.
 		// Ensure null byte is null. This null byte is a bit of a nuissance but it exists in the protocol when there are no transactions.
 		if (CBByteArrayGetByte(bytes, 80 + x) != 0) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock header with a final byte which is not null. This is not what it is supposed to be but you already knew that right?");
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBBlock header with a final byte which is not null. This is not what it is supposed to be but you already knew that right?");
 			return 0;
 		}
 		return 80 + x + 1; // 80 header bytes, the var int and the null byte
@@ -253,13 +253,13 @@ CBByteArray * CBBlockGetHash(CBBlock * self){
 uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBBlock with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBBlock with no bytes.");
 		return 0;
 	}
 	CBVarInt transactionNum = CBVarIntFromUInt64(self->transactionNum);
 	uint32_t cursor = 80 + transactionNum.size;
 	if (bytes->length < cursor + 1) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBBlock with less bytes than required for the header, transaction number var int and at least a null byte. %i < %i\n",bytes->length, cursor);
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBBlock with less bytes than required for the header, transaction number var int and at least a null byte. %i < %i\n",bytes->length, cursor);
 		return 0;
 	}
 	// Do header
@@ -277,12 +277,12 @@ uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 		for (uint32_t x = 0; x < self->transactionNum; x++) {
 			CBGetMessage(self->transactions[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 			if (NOT CBGetMessage(self->transactions[x])->bytes) {
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBBlockSerialise for the transaction number %u",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBBlockSerialise for the transaction number %u",x);
 				return 0;
 			}
 			uint32_t len = CBTransactionSerialise(self->transactions[x]);
 			if (NOT len) {
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBBlock cannot be serialised because of an error with the transaction number %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBBlock cannot be serialised because of an error with the transaction number %u.",x);
 				return 0;
 			}
 			CBGetMessage(self->transactions[x])->bytes->length = len;

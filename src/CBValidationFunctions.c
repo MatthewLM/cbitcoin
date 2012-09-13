@@ -174,7 +174,7 @@ CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool *
 	}
 	for (uint32_t x = 0; x < tx->inputNum; x++) {
 		for (uint32_t y = 0; y < x; y++)
-			if (CBByteArrayEquals(prevOutputs[y].hash, tx->inputs[x]->prevOut.hash)
+			if (CBByteArrayCompare(prevOutputs[y].hash, tx->inputs[x]->prevOut.hash) == CB_COMPARE_EQUAL
 				&& prevOutputs[y].index == tx->inputs[x]->prevOut.index) {
 				// Duplicate previous output
 				free(prevOutputs);

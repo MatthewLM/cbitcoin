@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief File for weak linked functions for dependency injection. All these functions are unimplemented. The functions include the crytography functions which are key for the functioning of bitcoin. Sockets must be non-blocking and use an asynchronous events-type system. The use of the sockets is designed to be compatible with libevent. The random number functions should be cryptographically secure. See the dependecies folder for implementations.
+ @brief File for weak linked functions for dependency injection. All these functions are unimplemented. The functions include the crytography functions which are key for the functioning of bitcoin. Sockets must be non-blocking and use an asynchronous onErrorReceived-type system. The use of the sockets is designed to be compatible with libevent. The random number functions should be cryptographically secure. See the dependecies folder for implementations.
  */
 
 #ifndef CBDEPENDENCIESH
@@ -146,17 +146,17 @@ bool CBSocketListen(uint64_t socketID,uint16_t maxConnections);
  */
 bool CBSocketAccept(uint64_t socketID,uint64_t * connectionSocketID);
 /**
- @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
+ @brief Starts a event loop for socket onErrorReceived on a seperate thread. Access to the loop id should be thread safe.
  @param loopID A uint64_t storing an integer or pointer representation of the new event loop.
  @param onError If the event loop fails during execution of the thread, this function should be called.
- @param onDidTimeout The function to call for timeout events. The second argument is for the peer given by events. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
+ @param onDidTimeout The function to call for timeout onErrorReceived. The second argument is for the peer given by onErrorReceived. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
  @param communicator A CBNetworkCommunicator to pass to all event functions (first parameter), including "onError" and "onDidTimeout"
  @returns true on success, false on failure.
  */
 bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeout)(void *,void *,CBTimeOutType),void * communicator);
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
- @param loopID The loop id for socket events.
+ @param loopID The loop id for socket onErrorReceived.
  @param socketID The socket id
  @param onCanAccept The function to call for the event. Accepts "onEventArg" and the socket ID.
  @returns true on success, false on failure.
@@ -164,7 +164,7 @@ bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeou
 bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanAccept)(void *,uint64_t));
 /**
  @brief Sets a function pointer for the event where a socket has connected. The event only needs to fire once on the successful connection or timeout.
- @param loopID The loop id for socket events.
+ @param loopID The loop id for socket onErrorReceived.
  @param socketID The socket id
  @param onDidConnect The function to call for the event.
  @param peer The peer to send to the "onDidConnect" or "onDidTimeout" function.
@@ -173,7 +173,7 @@ bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID
 bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for sending data. This should be persistent.
- @param loopID The loop id for socket events.
+ @param loopID The loop id for socket onErrorReceived.
  @param socketID The socket id
  @param onCanSend The function to call for the event.
  @param peer The peer to send to the "onCanSend" or "onDidTimeout" function.
@@ -182,7 +182,7 @@ bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketI
 bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for receiving data. This should be persistent.
- @param loopID The loop id for socket events.
+ @param loopID The loop id for socket onErrorReceived.
  @param socketID The socket id
  @param onCanReceive The function to call for the event.
  @param peer The peer to send to the "onCanReceive" or "onDidTimeout" function.
@@ -197,7 +197,7 @@ bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketI
  */
 bool CBSocketAddEvent(uint64_t eventID,uint32_t timeout);
 /**
- @brief Removes an event so no more events are made.
+ @brief Removes an event so no more onErrorReceived are made.
  @param eventID The event ID to remove
  @returns true if sucessful, false otherwise.
  */
@@ -225,7 +225,7 @@ int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len);
 int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len);
 /**
  @brief Calls a callback every "time" seconds, until the timer is ended.
- @param loopID The loop id for events.
+ @param loopID The loop id for onErrorReceived.
  @param timer The timer sent by reference to be set.
  @param time The number of milliseconds between each call of the callback.
  @param callback The callback function.

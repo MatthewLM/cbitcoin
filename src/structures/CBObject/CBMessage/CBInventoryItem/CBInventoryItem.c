@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,CBEvents * events){
+CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,void (*onErrorReceived)(CBError error,char *,...)){
 	CBInventoryItem * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryItem\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryItem\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	if(CBInitInventoryItem(self,type,hash,events))
+	if(CBInitInventoryItem(self,type,hash,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,CBEvents * events){
+CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	CBInventoryItem * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryItemFromData\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewInventoryItemFromData\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	if(CBInitInventoryItemFromData(self,data,events))
+	if(CBInitInventoryItemFromData(self,data,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -59,17 +59,17 @@ CBInventoryItem * CBGetInventoryItem(void * self){
 
 //  Initialisers
 
-bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteArray * hash,CBEvents * events){
+bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteArray * hash,void (*onErrorReceived)(CBError error,char *,...)){
 	self->type = type;
 	self->hash = hash;
 	CBRetainObject(hash);
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,CBEvents * events){
+bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	self->hash = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
 }
@@ -87,11 +87,11 @@ void CBFreeInventoryItem(void * vself){
 uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBInventoryItem with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBInventoryItem with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 36) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBInventoryItem with less than 36 bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBInventoryItem with less than 36 bytes.");
 		return 0;
 	}
 	self->type = CBByteArrayReadInt32(bytes, 0);
@@ -103,11 +103,11 @@ uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 uint32_t CBInventoryItemSerialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBInventoryItem with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBInventoryItem with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 36) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBInventoryItem with less than 36 bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBInventoryItem with less than 36 bytes.");
 		return 0;
 	}
 	CBByteArraySetInt32(bytes, 0, self->type);

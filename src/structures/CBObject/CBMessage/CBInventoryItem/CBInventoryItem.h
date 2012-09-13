@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBInventoryItem object.
  @returns A new CBInventoryItem object.
 */
-CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,CBEvents * events);
+CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBInventoryItem object from serialised data.
  @param data Serialised CBInventoryItem data.
  @returns A new CBInventoryItem object.
 */
-CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,CBEvents * events);
+CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBInventoryItem from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBInventoryItem * CBGetInventoryItem(void * self);
  @param self The CBInventoryItem object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteArray * hash,CBEvents * events);
+bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteArray * hash,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBInventoryItem object from serialised data
  @param self The CBInventoryItem object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,CBEvents * events);
+bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBInventoryItem object.

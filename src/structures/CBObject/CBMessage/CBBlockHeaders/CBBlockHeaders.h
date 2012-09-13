@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBBlockHeaders object.
  @returns A new CBBlockHeaders object.
 */
-CBBlockHeaders * CBNewBlockHeaders(CBEvents * events);
+CBBlockHeaders * CBNewBlockHeaders(void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBBlockHeaders object from serialised data.
  @param data Serialised CBBlockHeaders data.
  @returns A new CBBlockHeaders object.
 */
-CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data,CBEvents * events);
+CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBBlockHeaders from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBBlockHeaders * CBGetBlockHeaders(void * self);
  @param self The CBBlockHeaders object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitBlockHeaders(CBBlockHeaders * self,CBEvents * events);
+bool CBInitBlockHeaders(CBBlockHeaders * self,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBBlockHeaders object from serialised data
  @param self The CBBlockHeaders object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitBlockHeadersFromData(CBBlockHeaders * self,CBByteArray * data,CBEvents * events);
+bool CBInitBlockHeadersFromData(CBBlockHeaders * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBBlockHeaders object.

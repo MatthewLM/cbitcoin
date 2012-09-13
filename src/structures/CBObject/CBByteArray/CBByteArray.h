@@ -51,24 +51,24 @@ typedef struct{
 	CBSharedData * sharedData; /**< Underlying byte data */
 	uint32_t offset; /**< Offset from the begining of the byte data to the begining of this array */
 	uint32_t length; /**< Length of byte array. Set to CB_BYTE_ARRAY_UNKNOWN_LENGTH if unknown. */
-	CBEvents * events;
+	void (*onErrorReceived)(CBError error,char *,...);
 } CBByteArray;
 
 /**
  @brief Creates a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.
  @param string The string to put into a CBByteArray.
  @param terminator If true, include the termination character.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns A new CBByteArray object.
  */
-CBByteArray * CBNewByteArrayFromString(char * string, bool terminator, CBEvents * events);
+CBByteArray * CBNewByteArrayFromString(char * string, bool terminator, void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates an empty CBByteArray object.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns An empty CBByteArray object.
  */
-CBByteArray * CBNewByteArrayOfSize(uint32_t size,CBEvents * events);
+CBByteArray * CBNewByteArrayOfSize(uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a CBByteArray object referencing another CBByteArrayObject
  @param ref The CBByteArray to reference.
@@ -81,18 +81,18 @@ CBByteArray * CBNewByteArraySubReference(CBByteArray * ref,uint32_t offset,uint3
  @brief Creates a new CBByteArray using data.
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns The new CBByteArray object.
  */
-CBByteArray * CBNewByteArrayWithData(uint8_t * data,uint32_t size,CBEvents * events);
+CBByteArray * CBNewByteArrayWithData(uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBByteArray using data which is copied.
  @param data The data. This data is copied.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns The new CBByteArray object.
  */
-CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data,uint32_t size,CBEvents * events);
+CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBByteArray from another object. Use this to avoid casts.
@@ -106,18 +106,18 @@ CBByteArray * CBGetByteArray(void * self);
  @param self The CBByteArray object to initialise
  @param string The string to put into a CBByteArray.
  @param terminator If tru, include the termination character.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator, CBEvents * events);
+bool CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator, void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises an empty CBByteArray object
  @param self The CBByteArray object to initialise
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayOfSize(CBByteArray * self,uint32_t size,CBEvents * events);
+bool CBInitByteArrayOfSize(CBByteArray * self,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a reference CBByteArray to a subsection of an CBByteArray.
  @param self The CBByteArray object to initialise.
@@ -132,19 +132,19 @@ bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,uint32_t o
  @param self The CBByteArray object to initialise
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayWithData(CBByteArray * self,uint8_t * data,uint32_t size,CBEvents * events);
+bool CBInitByteArrayWithData(CBByteArray * self,uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBByteArray using data which is copied.
  @param self The CBByteArray object to initialise
  @param data The data. This data is copied.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitByteArrayWithDataCopy(CBByteArray * self,uint8_t * data,uint32_t size,CBEvents * events);
+bool CBInitByteArrayWithDataCopy(CBByteArray * self,uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBByteArray object.
@@ -160,6 +160,13 @@ void CBByteArrayReleaseSharedData(CBByteArray * self);
  
 //  Functions
 
+/**
+ @brief Compares a CBByteArray to another CBByteArray and returns with a CBCompare value.
+ @param self The CBByteArray object to compare
+ @param second Another CBByteArray object to compare with
+ @returns If the lengths are different, CB_COMPARE_MORE_THAN if "self" if longer, else CB_COMPARE_LESS_THAN. If the bytes are equal CB_COMPARE_EQUAL, else CB_COMPARE_MORE_THAN if the first different byte if higher in "self", otherwise CB_COMPARE_LESS_THAN. The return value can be treated like the return value to memcmp.
+ */
+CBCompare CBByteArrayCompare(CBByteArray * self,CBByteArray * second);
 /**
  @brief Copies a CBByteArray
  @param self The CBByteArray object to copy
@@ -182,13 +189,6 @@ void CBByteArrayCopyByteArray(CBByteArray * self,uint32_t writeOffset,CBByteArra
  @param length The length to copy.
  */
 void CBByteArrayCopySubByteArray(CBByteArray * self,uint32_t writeOffset,CBByteArray * source,uint32_t readOffset,uint32_t length);
-/**
- @brief Compares a CBByteArray to another CBByteArray and returns true if equal.
- @param self The CBByteArray object to compare
- @param second Another CBByteArray object to compare with
- @returns True if equal, false if not equal.
- */
-bool CBByteArrayEquals(CBByteArray * self,CBByteArray * second);
 /**
  @brief Get a byte from the CBByteArray object. A byte will be returned from self->offset+index in the underlying data.
  @param self The CBByteArray object.
