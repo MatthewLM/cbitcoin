@@ -25,8 +25,8 @@
 #include <time.h>
 #include "stdarg.h"
 
-void err(CBError a,char * format,...);
-void err(CBError a,char * format,...){
+void onErrorReceived(CBError a,char * format,...);
+void onErrorReceived(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -39,8 +39,6 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
-	CBEvents events;
-	events.onErrorReceived = err;
 	// Test deserialisation
 	uint8_t data[91] = {
 		0x6A,0x00,0x00,0x00, // Version 106
@@ -52,8 +50,8 @@ int main(){
 		0x06,'H','e','l','l','o','!', // User agent is "Hello!"
 		0x55,0x81,0x01,0x00 // Last block received is 98645 
 	};
-	CBByteArray * versionBytes = CBNewByteArrayWithDataCopy(data, 91, &events);
-	CBVersion * version = CBNewVersionFromData(versionBytes, &events);
+	CBByteArray * versionBytes = CBNewByteArrayWithDataCopy(data, 91, onErrorReceived);
+	CBVersion * version = CBNewVersionFromData(versionBytes, onErrorReceived);
 	if(CBVersionDeserialise(version) != 91){
 		printf("DESERIALISATION LEN FAIL\n");
 		return 1;
@@ -127,11 +125,11 @@ int main(){
 	// Test serialisation
 	memset(CBByteArrayGetData(versionBytes), 0, 91);
 	CBReleaseObject(version->userAgent);
-	version->userAgent = CBNewByteArrayFromString("Hello!", false, &events);
+	version->userAgent = CBNewByteArrayFromString("Hello!", false, onErrorReceived);
 	CBReleaseObject(version->addRecv->ip);
-	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, &events);
+	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, onErrorReceived);
 	CBReleaseObject(version->addSource->ip);
-	version->addSource->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xBA,0xF2,0x30,0x01}, 16, &events);
+	version->addSource->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xBA,0xF2,0x30,0x01}, 16, onErrorReceived);
 	if(CBVersionSerialise(version) != 91){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
@@ -157,8 +155,8 @@ int main(){
 		0xFA,0x3A,0xF3,0x4F,0x00,0x00,0x00,0x00, // Time 1341340410
 		0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01,0x20,0x8D, // Destination socket and services
 	};
-	versionBytes = CBNewByteArrayWithDataCopy(data2, 46, &events);
-	version = CBNewVersionFromData(versionBytes, &events);
+	versionBytes = CBNewByteArrayWithDataCopy(data2, 46, onErrorReceived);
+	version = CBNewVersionFromData(versionBytes, onErrorReceived);
 	if(CBVersionDeserialise(version) != 46){
 		printf("DESERIALISATION OLD LEN FAIL\n");
 		return 1;
@@ -199,7 +197,7 @@ int main(){
 	// Test old serialisation
 	memset(CBByteArrayGetData(versionBytes), 0, 46);
 	CBReleaseObject(version->addRecv->ip);
-	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, &events);
+	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, onErrorReceived);
 	if(CBVersionSerialise(version) != 46){
 		printf("SERIALISATION OLD LEN FAIL\n");
 		return 1;

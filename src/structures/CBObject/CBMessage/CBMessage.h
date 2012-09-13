@@ -43,7 +43,7 @@ typedef struct CBMessage{
 	uint8_t * altText; /**< For an alternative message: This is the type text. */
 	CBByteArray * bytes; /**< Raw message data minus the message header. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */
 	uint8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
-	CBEvents * events; /**< Pointer to bitcoin event centre for errors */
+	void (*onErrorReceived)(CBError error,char *,...); /**< Pointer to bitcoin event centre for errors */
 	CBMessageType expectResponse; /**< Set to zero if no message expected or the type of message expected as a response. */
 } CBMessage;
 
@@ -52,7 +52,7 @@ typedef struct CBMessage{
  @param 
  @returns A new CBMessage object.
  */
-CBMessage * CBNewMessageByObject(CBEvents * events);
+CBMessage * CBNewMessageByObject(void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBMessage from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBMessage * CBGetMessage(void * self);
  @param self The CBMessage object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitMessageByObject(CBMessage * self,CBEvents * events);
+bool CBInitMessageByObject(CBMessage * self,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBMessage object from byte data.
  @param self The CBMessage object to initialise
  @param data The byte data for the object. The data will not be copied but retained by this object. 
  @returns true on success, false on failure.
  */
-bool CBInitMessageByData(CBMessage * self,CBByteArray * data,CBEvents * events);
+bool CBInitMessageByData(CBMessage * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBMessage object.

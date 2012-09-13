@@ -46,19 +46,19 @@ typedef struct{
  @brief Creates a new CBVersionChecksumBytes object from a base-58 encoded string. The base-58 string will be validated by it's checksum. This returns NULL if the string is invalid. The CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT error is given if the decoded data is less than 4 bytes. CB_ERROR_BASE58_DECODE_CHECK_INVALID is given if the checksum does not match.
  @param string A base-58 encoded CBString to make a CBVersionChecksumBytes object with a termination character.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events A CBEngine for errors.
+ @param onErrorReceived A CBEngine for errors.
  @returns A new CBVersionChecksumBytes object or NULL on failure.
  */
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string,bool cacheString,CBEvents * events);
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBVersionChecksumBytes object from bytes.
  @param bytes The bytes for the CBVersionChecksumBytes object.
  @param size The size of the byte data.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events A CBEngine for errors.
+ @param onErrorReceived A CBEngine for errors.
  @returns A new CBVersionChecksumBytes object.
  */
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events);
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes,uint32_t size,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBVersionChecksumBytes from another object. Use this to avoid casts.
@@ -72,20 +72,20 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self);
  @param self The CBVersionChecksumBytes object to initialise.
  @param string A CBString to make a CBVersionChecksumBytes object with a termination character.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events A CBEngine for errors.
+ @param onErrorReceived A CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteArray * string,bool cacheString,CBEvents * events);
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteArray * string,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a new CBVersionChecksumBytes object from bytes.
  @param self The CBVersionChecksumBytes object to initialise.
  @param bytes The bytes for the CBVersionChecksumBytes object.
  @param size The size of the byte data.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @param events A CBEngine for errors.
+ @param onErrorReceived A CBEngine for errors.
  @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,uint8_t * bytes,uint32_t size,bool cacheString,CBEvents * events);
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,uint8_t * bytes,uint32_t size,bool cacheString,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBVersionChecksumBytes object.

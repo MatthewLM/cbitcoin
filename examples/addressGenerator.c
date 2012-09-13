@@ -55,8 +55,6 @@ void getLine(char * ptr) {
 }
 
 int main(){
-	CBEvents events;
-	events.onErrorReceived = err;
 	printf("OpenSSL version: %s\n",OPENSSL_VERSION_TEXT);
 	printf("Enter the number of keys: ");
 	fflush(stdout);
@@ -95,7 +93,7 @@ int main(){
 		}
 		SHA256(pubKey, pubSize, shaHash);
 		RIPEMD160(shaHash, 32, ripemdHash);
-		CBAddress * address = CBNewAddressFromRIPEMD160Hash(ripemdHash, CB_PRODUCTION_NETWORK_BYTE, false, &events);
+		CBAddress * address = CBNewAddressFromRIPEMD160Hash(ripemdHash, CB_PRODUCTION_NETWORK_BYTE, false, err);
 		CBByteArray * string = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;

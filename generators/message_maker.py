@@ -87,13 +87,13 @@ typedef struct{\n\
  @brief Creates a new CB"+name+" object.\n\
  @returns A new CB"+name+" object.\n\
 */\n\
-CB"+name+" * CBNew"+name+"(CBEvents * events);\n\
+CB"+name+" * CBNew"+name+"(void (*onErrorReceived)(CBError error,char *,...));\n\
 /**\n\
 @brief Creates a new CB"+name+" object from serialised data.\n\
  @param data Serialised CB"+name+" data.\n\
  @returns A new CB"+name+" object.\n\
 */\n\
-CB"+name+" * CBNew"+name+"FromData(CBByteArray * data,CBEvents * events);\n\
+CB"+name+" * CBNew"+name+"FromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));\n\
 \n\
 /**\n\
  @brief Gets a CB"+name+" from another object. Use this to avoid casts.\n\
@@ -107,14 +107,14 @@ CB"+name+" * CBGet"+name+"(void * self);\n\
  @param self The CB"+name+" object to initialise\n\
  @returns true on success, false on failure.\n\
 */\n\
-bool CBInit"+name+"(CB"+name+" * self,CBEvents * events);\n\
+bool CBInit"+name+"(CB"+name+" * self,void (*onErrorReceived)(CBError error,char *,...));\n\
 /**\n\
  @brief Initialises a CB"+name+" object from serialised data\n\
  @param self The CB"+name+" object to initialise\n\
  @param data The serialised data.\n\
  @returns true on success, false on failure.\n\
 */\n\
-bool CBInit"+name+"FromData(CB"+name+" * self,CBByteArray * data,CBEvents * events);\n\
+bool CBInit"+name+"FromData(CB"+name+" * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));\n\
 \n\
 /**\n\
  @brief Frees a CB"+name+" object.\n\
@@ -167,26 +167,26 @@ source.write("//\n\
 \n\
 //  Constructors\n\
 \n\
-CB"+name+" * CBNew"+name+"(CBEvents * events){\n\
+CB"+name+" * CBNew"+name+"(void (*onErrorReceived)(CBError error,char *,...)){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
 \tif (NOT self) { \n\
-\t\tevents->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,\"Cannot allocate %i bytes of memory in CBNew"+name+"\n\",sizeof(*self));\n\
+\t\tonErrorReceived(CB_ERROR_OUT_OF_MEMORY,\"Cannot allocate %i bytes of memory in CBNew"+name+"\n\",sizeof(*self));\n\
 \t\treturn NULL;\n\
 \t}\n\
 \tCBGetObject(self)->free = CBFree"+name+";\n\
-\tif(CBInit"+name+"(self,events))\n\
+\tif(CBInit"+name+"(self,onErrorReceived))\n\
 \t\treturn self;\n\
 \tfree(self);\n\
 \treturn NULL;\n\
 }\n\
-CB"+name+" * CBNew"+name+"FromData(CBByteArray * data,CBEvents * events){\n\
+CB"+name+" * CBNew"+name+"FromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
 \tif (NOT self) { \n\
-\t\tevents->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,\"Cannot allocate %i bytes of memory in CBNew"+name+"FromData\n\",sizeof(*self));\n\
+\t\tonErrorReceived(CB_ERROR_OUT_OF_MEMORY,\"Cannot allocate %i bytes of memory in CBNew"+name+"FromData\n\",sizeof(*self));\n\
 \t\treturn NULL;\n\
 \t}\n\
 \tCBGetObject(self)->free = CBFree"+name+";\n\
-\tif(CBInit"+name+"FromData(self,data,events))\n\
+\tif(CBInit"+name+"FromData(self,data,onErrorReceived))\n\
 \t\treturn self;\n\
 \tfree(self);\n\
 \treturn NULL;\n\
@@ -200,13 +200,13 @@ CB"+name+" * CBGet"+name+"(void * self){\n\
 \n\
 //  Initialisers\n\
 \n\
-bool CBInit"+name+"(CB"+name+" * self,CBEvents * events){\n\
-\tif (NOT CBInitMessageByObject(CBGetMessage(self), events))\n\
+bool CBInit"+name+"(CB"+name+" * self,void (*onErrorReceived)(CBError error,char *,...)){\n\
+\tif (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\
-bool CBInit"+name+"FromData(CB"+name+" * self,CBByteArray * data,CBEvents * events){\n\
-\tif (NOT CBInitMessageByData(CBGetMessage(self), data, events))\n\
+bool CBInit"+name+"FromData(CB"+name+" * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){\n\
+\tif (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\
@@ -222,14 +222,14 @@ void CBFree"+name+"(void * self){\n\
 uint32_t CB"+name+"Deserialise(CB"+name+" * self){\n\
 \tCBByteArray * bytes = CBGetMessage(self)->bytes;\n\
 \tif (NOT bytes) {\n\
-\t\tCBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,\"Attempting to deserialise a CB"+name+" with no bytes.\");\n\
+\t\tCBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,\"Attempting to deserialise a CB"+name+" with no bytes.\");\n\
 \t\treturn 0;\n\
 \t}\n\
 }\n\
 uint32_t CB"+name+"Serialise(CB"+name+" * self){\n\
 \tCBByteArray * bytes = CBGetMessage(self)->bytes;\n\
 \tif (NOT bytes) {\n\
-\t\tCBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,\"Attempting to serialise a CB"+name+" with no bytes.\");\n\
+\t\tCBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,\"Attempting to serialise a CB"+name+" with no bytes.\");\n\
 \t\treturn 0;\n\
 \t}\n\
 }\n\

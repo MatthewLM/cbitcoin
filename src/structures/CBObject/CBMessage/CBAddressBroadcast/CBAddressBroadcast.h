@@ -46,13 +46,13 @@ typedef struct{
  @brief Creates a new CBAddressBroadcast object.
  @returns A new CBAddressBroadcast object.
  */
-CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps,CBEvents * events);
+CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps,void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBAddressBroadcast object from serialised data.
  @param data Serialised CBAddressBroadcast data.
  @returns A new CBAddressBroadcast object.
 */
-CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data,bool timeStamps,CBEvents * events);
+CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data,bool timeStamps,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBAddressBroadcast from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBAddressBroadcast * CBGetAddressBroadcast(void * self);
  @param self The CBAddressBroadcast object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitAddressBroadcast(CBAddressBroadcast * self,bool timeStamps,CBEvents * events);
+bool CBInitAddressBroadcast(CBAddressBroadcast * self,bool timeStamps,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBAddressBroadcast object from serialised data
  @param self The CBAddressBroadcast object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self,bool timeStamps,CBByteArray * data,CBEvents * events);
+bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self,bool timeStamps,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBAddressBroadcast object.

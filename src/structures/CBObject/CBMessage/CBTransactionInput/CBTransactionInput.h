@@ -56,18 +56,18 @@ typedef struct{
  @brief Creates a new CBTransactionInput object.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
+CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,CBEvents * events);
+CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new unsigned CBTransactionInput object and links it to a given output.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
+CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBTransactionInput from another object. Use this to avoid casts.
@@ -81,20 +81,20 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
+bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise
  @param data The byte data.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data,CBEvents * events);
+bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises an unsigned CBTransactionInput object.
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,CBEvents * events);
+bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBTransactionInput object.

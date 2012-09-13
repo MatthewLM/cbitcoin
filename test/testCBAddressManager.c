@@ -25,13 +25,18 @@
 #include <time.h>
 #include "stdarg.h"
 
-void err(CBError a,char * format,...);
-void err(CBError a,char * format,...){
+void onErrorReceived(CBError a,char * format,...);
+void onErrorReceived(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
     va_end(argptr);
 	printf("\n");
+}
+void onBadTime(void * foo);
+void onBadTime(void * foo){
+	printf("BAD TIME FAIL\n");
+	exit(EXIT_FAILURE);
 }
 
 int main(){
@@ -39,8 +44,6 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
-	CBEvents events;
-	events.onErrorReceived = err;
 	// Test deserialisation
 	uint8_t dataRepeat[94] = {
 		0x02,0x00, // Two addresses.
@@ -80,8 +83,8 @@ int main(){
 	for (uint8_t x = 0; x < (CB_BUCKET_NUM-1)/2; x++)
 		memcpy(data + 4 + 94*x , dataRepeat, 94);
 	memcpy(data + 11942, dataRepeat, 62);
-	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 12012, &events);
-	CBAddressManager * addrMan = CBNewAddressManagerFromData(bytes, &events);
+	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 12012, onErrorReceived);
+	CBAddressManager * addrMan = CBNewAddressManagerFromData(bytes, onErrorReceived,onBadTime);
 	addrMan->maxAddressesInBucket = 500;
 	uint32_t len = CBAddressManagerDeserialise(addrMan);
 	if(len != 12012){
@@ -145,10 +148,10 @@ int main(){
 		CBBucket * bucket = addrMan->buckets + x;
 		bool odd = x % 2;
 		CBReleaseObject(bucket->addresses[0]->ip);
-		bucket->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, &events);
+		bucket->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, onErrorReceived);
 		if (!odd) {
 			CBReleaseObject(bucket->addresses[1]->ip);
-			bucket->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, &events);
+			bucket->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, onErrorReceived);
 		}
 	}
 	if(CBAddressManagerSerialise(addrMan) != 12012){
@@ -170,9 +173,9 @@ int main(){
 	CBReleaseObject(bytes);
 	// Test adding 4 peers. Check order.
 	int16_t timeOffsets[] = {-4,-10,19,-5};
-	CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16, &events);
+	CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16, onErrorReceived);
 	for (int x = 0; x < 4; x++) {
-		CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
+		CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, onErrorReceived);
 		CBPeer * peer = CBNewNodeByTakingNetworkAddress(addr);
 		peer->timeOffset = timeOffsets[x];
 		CBAddressManagerTakePeer(addrMan, peer);
@@ -185,7 +188,7 @@ int main(){
 		}
 	}
 	// Test if we got peers
-	CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
+	CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, onErrorReceived);
 	if(NOT CBAddressManagerGotNode(addrMan, addr)){
 		printf("GOT NODE FAIL\n");
 		return 1;
@@ -195,7 +198,7 @@ int main(){
 	CBReleaseObject(ip);
 	ip = temp;
 	CBByteArraySetByte(ip, 0, CBByteArrayGetByte(ip, 0) + 1);
-	addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
+	addr = CBNewNetworkAddress(0, ip, 0, 0, onErrorReceived);
 	if(CBAddressManagerGotNode(addrMan, addr)){
 		printf("GOT NOT NODE FAIL\n");
 		return 1;
@@ -219,9 +222,9 @@ int main(){
 		CBReleaseObject(ip);
 		ip = temp;
 		CBByteArraySetByte(ip, 0, CBByteArrayGetByte(ip, 0) + 1);
-		CBAddressManagerTakeAddress(addrMan, CBNewNetworkAddress(0, ip, 0, 0, &events));
+		CBAddressManagerTakeAddress(addrMan, CBNewNetworkAddress(0, ip, 0, 0, onErrorReceived));
 	}
-	addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
+	addr = CBNewNetworkAddress(0, ip, 0, 0, onErrorReceived);
 	if(NOT CBAddressManagerGotNetworkAddress(addrMan, addr)){
 		printf("GOT ADDR FAIL\n");
 		return 1;
@@ -231,7 +234,7 @@ int main(){
 	CBReleaseObject(ip);
 	ip = temp;
 	CBByteArraySetByte(ip, 0, CBByteArrayGetByte(ip, 0) + 1);
-	addr = CBNewNetworkAddress(0, ip, 0, 0, &events);
+	addr = CBNewNetworkAddress(0, ip, 0, 0, onErrorReceived);
 	if(CBAddressManagerGotNetworkAddress(addrMan, addr)){
 		printf("GOT NOT ADDR FAIL\n");
 		return 1;

@@ -81,10 +81,10 @@ CBBigInt CBDecodeBase58(char * str){
 	}
 	return bi;
 }
-CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
+CBBigInt CBDecodeBase58Checked(char * str,void (*onErrorReceived)(CBError error,char *,...)){
 	CBBigInt bi = CBDecodeBase58(str);
 	if (bi.length < 4){
-		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short or there was a memory failure.");
+		onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short or there was a memory failure.");
 		bi.length = 0;
 		bi.data = NULL;
 		return bi;
@@ -92,7 +92,7 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 	// Reverse bytes for checksum generation
 	uint8_t * reversed = malloc(bi.length-4);
 	if (NOT reversed) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBDecodeBase58Checked",bi.length-4);
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBDecodeBase58Checked",bi.length-4);
 		bi.length = 0;
 		bi.data = NULL;
 		return bi;
@@ -110,7 +110,7 @@ CBBigInt CBDecodeBase58Checked(char * str,CBEvents * events){
 		if (checksum2[x] != bi.data[3-x])
 			ok = false;
 	if(NOT ok){
-		events->onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
+		onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		bi.length = 1;
 		bi.data[0] = 0;
 		return bi;

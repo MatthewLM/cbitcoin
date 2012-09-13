@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Here are functions for doing parts of bitcoin validation. cbitcoin is designed to make a broad variety of bitcoin development easier and is not designed to implement a client node. Therefore, cbitcoin does not provide provide functions for validating block chains as there are different methods for doing so. So wether you want to use SPV, block-chain pruning, full validation or whatever, you can use these functions to help. Also see @see CBScript.c and @see CBMerkleNode.c for validation. @see CBNetworkCommunicator.c has message size checks and message deserialisation functions check messages for syntax and sizes.
+ @brief Here are functions for doing parts of bitcoin validation. cbitcoin is designed to make a broad variety of bitcoin development easier and is not designed to implement a client node. Therefore, cbitcoin does not provide provide functions for validating block chains as there are different methods for doing so. So wether you want to use SPV, block-chain pruning, full validation or whatever, you can use these functions to help. Also see CBScript.h and CBMerkleNode.h for validation. CBNetworkCommunicator.h has message size checks and message deserialisation functions check messages for syntax and sizes.
  */
 
 #ifndef CBVALIDATIONFUNCTIONSH

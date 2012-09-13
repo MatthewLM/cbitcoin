@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBAddressManager * CBNewAddressManager(CBEvents * events){
+CBAddressManager * CBNewAddressManager(void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *)){
 	CBAddressManager * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressManager\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressManager\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeAddressManager;
-	if(CBInitAddressManager(self,events))
+	if(CBInitAddressManager(self,onErrorReceived,onBadTime))
 		return self;
 	free(self);
 	return NULL;
 }
-CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data,CBEvents * events){
+CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *)){
 	CBAddressManager * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressManagerFromData\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressManagerFromData\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeAddressManager;
-	if(CBInitAddressManagerFromData(self,data,events))
+	if(CBInitAddressManagerFromData(self,data,onErrorReceived,onBadTime))
 		return self;
 	free(self);
 	return NULL;
@@ -59,18 +59,20 @@ CBAddressManager * CBGetAddressManager(void * self){
 
 //  Initialisers
 
-bool CBInitAddressManager(CBAddressManager * self,CBEvents * events){
+bool CBInitAddressManager(CBAddressManager * self,void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *)){
 	if (NOT CBAddressManagerSetup(self)) return false;
 	self->secret = CBSecureRandomInteger(self->rndGen);
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events)){
+	self->onBadTime = onBadTime;
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived)){
 		CBFreeSecureRandomGenerator(self->rndGen);
 		return false;
 	}
 	return true;
 }
-bool CBInitAddressManagerFromData(CBAddressManager * self,CBByteArray * data,CBEvents * events){
+bool CBInitAddressManagerFromData(CBAddressManager * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *)){
 	if (NOT CBAddressManagerSetup(self)) return false;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events)){
+	self->onBadTime = onBadTime;
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived)){
 		CBFreeSecureRandomGenerator(self->rndGen);
 		return false;
 	}
@@ -110,18 +112,18 @@ void CBAddressManagerAdjustTime(CBAddressManager * self){
 			if (self->peers[x]->timeOffset < 300 && self->peers[x]->timeOffset)
 				found = true;
 		if (NOT found)
-			CBGetMessage(self)->events->onBadTime(self->callbackHandler,self);
+			self->onBadTime(self->callbackHandler);
 	}else
 		self->networkTimeOffset = median;
 }
 uint32_t CBAddressManagerDeserialise(CBAddressManager * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAddressManager with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAddressManager with no bytes.");
 		return 0;
 	}
 	if (bytes->length < CB_BUCKET_NUM * 2 + 12) { // The minimum size is to hold the 16 bit integers for the number of addresses, the version and the secret integer.
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressManager with too few bytes");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressManager with too few bytes");
 		return 0;
 	}
 	uint32_t cursor = 4;
@@ -130,12 +132,12 @@ uint32_t CBAddressManagerDeserialise(CBAddressManager * self){
 		bucket->addrNum = CBByteArrayReadInt16(bytes, cursor);
 		cursor += 2;
 		if (bytes->length < cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressManager with too few bytes at bucket %u: %u < %u",x,bytes->length, cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressManager with too few bytes at bucket %u: %u < %u",x,bytes->length, cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8);
 			return 0;
 		}
 		bucket->addresses = malloc(sizeof(*bucket->addresses) * bucket->addrNum);
 		if (NOT bucket->addresses) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressManagerDeserialise",sizeof(*bucket->addresses) * bucket->addrNum);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressManagerDeserialise",sizeof(*bucket->addresses) * bucket->addrNum);
 			// Free data.
 			for (uint8_t y = 0; y < x; y++) {
 				CBBucket * freeBucket = self->buckets + y;
@@ -148,18 +150,18 @@ uint32_t CBAddressManagerDeserialise(CBAddressManager * self){
 		for (uint16_t y = 0; y < bucket->addrNum; y++) {
 			CBByteArray * data = CBByteArraySubReference(bytes, cursor, 30);
 			if (NOT data) {
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBByteArray in CBAddressManager for the network address number %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBByteArray in CBAddressManager for the network address number %u.",x);
 				return 0;
 			}
-			bucket->addresses[y] = CBNewNetworkAddressFromData(data, CBGetMessage(self)->events);
+			bucket->addresses[y] = CBNewNetworkAddressFromData(data, CBGetMessage(self)->onErrorReceived);
 			if (NOT bucket->addresses[y]) {
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBNetworkAddress in CBAddressManager for the network address number %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBNetworkAddress in CBAddressManager for the network address number %u.",x);
 				CBReleaseObject(data);
 				return 0;
 			}
 			CBReleaseObject(data);
 			if(NOT CBNetworkAddressDeserialise(bucket->addresses[y], true)){
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Cannot deserialise a CBAddressManager due to an error with the network address number %u",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Cannot deserialise a CBAddressManager due to an error with the network address number %u",x);
 				return 0;
 			}
 			cursor += 30;
@@ -175,7 +177,7 @@ CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self,u
 	int16_t firstEmpty = -1;
 	CBNetworkAddressLocator * addrs = malloc(sizeof(*addrs) * (num + 1)); // Plus one for termination
 	if (NOT addrs) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressManagerGetAddresses\n",sizeof(*addrs) * (num + 1));
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressManagerGetAddresses\n",sizeof(*addrs) * (num + 1));
 		return NULL;
 	}
 	uint8_t x = 0;
@@ -330,11 +332,11 @@ void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer){
 uint32_t CBAddressManagerSerialise(CBAddressManager * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAddressManager with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAddressManager with no bytes.");
 		return 0;
 	}
 	if (bytes->length < CB_BUCKET_NUM * 2 + 12) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAddressManager with too few bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAddressManager with too few bytes.");
 		return 0;
 	}
 	CBByteArraySetInt32(bytes, 0, CB_LIBRARY_VERSION);
@@ -344,14 +346,14 @@ uint32_t CBAddressManagerSerialise(CBAddressManager * self){
 		CBByteArraySetInt16(bytes, cursor, bucket->addrNum);
 		cursor += 2;
 		if (bytes->length < cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAddressManager with too few bytes at the bucket %u.",x);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAddressManager with too few bytes at the bucket %u.",x);
 			bucket->addrNum = 0; // Modify so that freeing works.
 			return 0;
 		}
 		for (uint16_t y = 0; y < bucket->addrNum; y++) {
 			CBGetMessage(bucket->addresses[y])->bytes = CBByteArraySubReference(bytes, cursor, 30);
 			if (NOT CBGetMessage(bucket->addresses[y])->bytes) {
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBAddressManagerSerialise for the network address %u - %u.",x,y);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBAddressManagerSerialise for the network address %u - %u.",x,y);
 				bucket->addrNum = y; // Modify so that we can free the address manager later.
 				return 0;
 			}

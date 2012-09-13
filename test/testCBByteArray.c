@@ -26,8 +26,8 @@
 #include "stdarg.h"
 #include "string.h"
 
-void err(CBError a,char * format,...);
-void err(CBError a,char * format,...){
+void onErrorReceived(CBError a,char * format,...);
+void onErrorReceived(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -39,11 +39,9 @@ int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %ui\n",s);
 	srand(s);
-	CBEvents events;
-	events.onErrorReceived = err;
 	// Test string
 	char * string = "Hello World!";
-	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string), &events);
+	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string), onErrorReceived);
 	if (strcmp(string, (char *)CBByteArrayGetData(ba))) {
 		printf("STRING COPY FAIL\n");
 		return 1;

@@ -45,13 +45,13 @@ typedef struct{
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
  @returns A new CBPingPong object.
 */
-CBPingPong * CBNewPingPong(uint64_t ID,CBEvents * events);
+CBPingPong * CBNewPingPong(uint64_t ID,void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBPingPong object from serialised data.
  @param data Serialised CBPingPong data.
  @returns A new CBPingPong object.
 */
-CBPingPong * CBNewPingPongFromData(CBByteArray * data,CBEvents * events);
+CBPingPong * CBNewPingPongFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBPingPong from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBPingPong * CBGetPingPong(void * self);
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
  @returns true on success, false on failure.
 */
-bool CBInitPingPong(CBPingPong * self,uint64_t ID,CBEvents * events);
+bool CBInitPingPong(CBPingPong * self,uint64_t ID,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBPingPong object from serialised data
  @param self The CBPingPong object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitPingPongFromData(CBPingPong * self,CBByteArray * data,CBEvents * events);
+bool CBInitPingPongFromData(CBPingPong * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBPingPong object.

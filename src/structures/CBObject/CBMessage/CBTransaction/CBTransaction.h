@@ -51,12 +51,12 @@ typedef struct{
  @brief Creates a new CBTransaction object with no inputs or outputs.
  @returns A new CBTransaction object.
  */
-CBTransaction * CBNewTransaction(uint32_t lockTime, uint32_t version, CBEvents * events);
+CBTransaction * CBNewTransaction(uint32_t lockTime, uint32_t version, void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBTransaction object from byte data. Should be serialised for object data.
  @returns A new CBTransaction object.
  */
-CBTransaction * CBNewTransactionFromData(CBByteArray * bytes, CBEvents * events);
+CBTransaction * CBNewTransactionFromData(CBByteArray * bytes, void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBTransaction from another object. Use this to avoid casts.
@@ -70,14 +70,14 @@ CBTransaction * CBGetTransaction(void * self);
  @param self The CBTransaction object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version, CBEvents * events);
+bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version, void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a new CBTransaction object from the byte data.
  @param self The CBTransaction object to initialise
  @param data The byte data.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data,CBEvents * events);
+bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBTransaction object.

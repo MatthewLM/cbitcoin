@@ -59,13 +59,13 @@ typedef struct{
  @brief Creates a new CBAlert object.
  @returns A new CBAlert object.
 */
-CBAlert * CBNewAlert(int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,CBEvents * events);
+CBAlert * CBNewAlert(int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBAlert object from serialised data.
  @param data Serialised CBAlert data.
  @returns A new CBAlert object.
 */
-CBAlert * CBNewAlertFromData(CBByteArray * data,CBEvents * events);
+CBAlert * CBNewAlertFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBAlert from another object. Use this to avoid casts.
@@ -79,14 +79,14 @@ CBAlert * CBGetAlert(void * self);
  @param self The CBAlert object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitAlert(CBAlert * self,int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,CBEvents * events);
+bool CBInitAlert(CBAlert * self,int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBAlert object from serialised data
  @param self The CBAlert object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitAlertFromData(CBAlert * self,CBByteArray * data,CBEvents * events);
+bool CBInitAlertFromData(CBAlert * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBAlert object.
