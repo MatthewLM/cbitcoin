@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBChainDescriptor object.
  @returns A new CBChainDescriptor object.
 */
-CBChainDescriptor * CBNewChainDescriptor(CBEvents * events);
+CBChainDescriptor * CBNewChainDescriptor(void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBChainDescriptor object from serialised data.
  @param data Serialised CBChainDescriptor data.
  @returns A new CBChainDescriptor object.
 */
-CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,CBEvents * events);
+CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBChainDescriptor from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBChainDescriptor * CBGetChainDescriptor(void * self);
  @param self The CBChainDescriptor object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitChainDescriptor(CBChainDescriptor * self,CBEvents * events);
+bool CBInitChainDescriptor(CBChainDescriptor * self,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBChainDescriptor object from serialised data
  @param self The CBChainDescriptor object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,CBEvents * events);
+bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBChainDescriptor object.

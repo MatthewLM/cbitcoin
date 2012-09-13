@@ -29,26 +29,26 @@
 CBScript * CBNewScriptFromReference(CBByteArray * program,uint32_t offset,uint32_t len){
 	return CBNewByteArraySubReference(program, offset, len);
 }
-CBScript * CBNewScriptOfSize(uint32_t size,CBEvents * events){
-	return CBNewByteArrayOfSize(size, events);
+CBScript * CBNewScriptOfSize(uint32_t size,void (*onErrorReceived)(CBError error,char *,...)){
+	return CBNewByteArrayOfSize(size, onErrorReceived);
 }
-CBScript * CBNewScriptFromString(char * string,CBEvents * events){
+CBScript * CBNewScriptFromString(char * string,void (*onErrorReceived)(CBError error,char *,...)){
 	CBScript * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewScriptFromString\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewScriptFromString\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if (CBInitScriptFromString(self,string,events))
+	if (CBInitScriptFromString(self,string,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,CBEvents * events){
-	return CBNewByteArrayWithData(data, size, events);
+CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...)){
+	return CBNewByteArrayWithData(data, size, onErrorReceived);
 }
-CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,CBEvents * events){
-	return CBNewByteArrayWithDataCopy(data, size, events);
+CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...)){
+	return CBNewByteArrayWithDataCopy(data, size, onErrorReceived);
 }
 
 //  Object Getter
@@ -59,7 +59,7 @@ CBScript * CBGetScript(void * self){
 
 //  Initialiser
 
-bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
+bool CBInitScriptFromString(CBScript * self,char * string,void (*onErrorReceived)(CBError error,char *,...)){
 	uint8_t * data = NULL;
 	uint32_t dataLast = 0;
 	bool space = false;
@@ -557,7 +557,7 @@ bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events){
 		}
 	}
 	// Got data. Now create script byte array for data
-	if (NOT CBInitByteArrayWithData(self, data, dataLast, events))
+	if (NOT CBInitByteArrayWithData(self, data, dataLast, onErrorReceived))
 		return false;
 	return true;
 }
@@ -645,7 +645,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				CBScriptStackItem item;
 				item.data = malloc(byte);
 				if (NOT item.data){
-					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during a script push operation. Attempted to push %i bytes\n",byte);
+					self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during a script push operation. Attempted to push %i bytes\n",byte);
 					return CB_SCRIPT_ERR;
 				}
 				item.length = byte;
@@ -682,7 +682,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				if (amount){
 					item.data = malloc(amount);
 					if (NOT item.data){
-						self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during a script push operation. Attempted to push %i bytes\n",amount);
+						self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during a script push operation. Attempted to push %i bytes\n",amount);
 						return CB_SCRIPT_ERR;
 					}
 					memmove(item.data, CBByteArrayGetData(self) + cursor, amount);
@@ -698,7 +698,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				CBScriptStackItem item;
 				item.data = malloc(1);
 				if (NOT item.data){
-					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_1NEGATE\n");
+					self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_1NEGATE\n");
 					return CB_SCRIPT_ERR;
 				}
 				item.length = 1;
@@ -712,7 +712,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				CBScriptStackItem item;
 				item.data = malloc(1);
 				if (NOT item.data){
-					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_%i\n",byte - CB_SCRIPT_OP_1 + 1);
+					self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_%i\n",byte - CB_SCRIPT_OP_1 + 1);
 					return CB_SCRIPT_ERR;
 				}
 				item.length = 1;
@@ -949,7 +949,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					if (ok) {
 						item.data = malloc(1);
 						if (NOT item.data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_EQUAL\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_EQUAL\n");
 							return CB_SCRIPT_ERR;
 						}
 						item.length = 1;
@@ -989,7 +989,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					// Zero becomes 0x80 :-( Sorry, this madness comes from the C++ client which represents zero in a horrid way.
 					item.data = malloc(1);
 					if (NOT item.data){
-						self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_NEGATE\n");
+						self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_NEGATE\n");
 						return CB_SCRIPT_ERR;
 					}
 					item.length = 1;
@@ -1131,7 +1131,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					case CB_SCRIPT_OP_RIPEMD160:
 						data = malloc(20);
 						if (NOT data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_RIPEMD160\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_RIPEMD160\n");
 							return CB_SCRIPT_ERR;
 						}
 						CBRipemd160(item.data,item.length,data);
@@ -1139,7 +1139,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					case CB_SCRIPT_OP_SHA1:
 						data = malloc(20);
 						if (NOT data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_SHA1\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_SHA1\n");
 							return CB_SCRIPT_ERR;
 						}
 						CBSha160(item.data,item.length,data);
@@ -1148,7 +1148,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 						CBSha256(item.data,item.length,dataTemp);
 						data = malloc(20);
 						if (NOT data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_HASH160\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_HASH160\n");
 							return CB_SCRIPT_ERR;
 						}
 						CBRipemd160(dataTemp,32,data);
@@ -1156,7 +1156,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					case CB_SCRIPT_OP_SHA256:
 						data = malloc(32);
 						if (NOT data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_SHA256\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_SHA256\n");
 							return CB_SCRIPT_ERR;
 						}
 						CBSha256(item.data,item.length,data);
@@ -1165,7 +1165,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 						CBSha256(item.data,item.length,dataTemp);
 						data = malloc(32);
 						if (NOT data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_HASH256\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_HASH256\n");
 							return CB_SCRIPT_ERR;
 						}
 						CBSha256(dataTemp,32,data);
@@ -1185,7 +1185,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				uint32_t subScriptLen = self->length - beginSubScript;
 				uint8_t * subScript = malloc(subScriptLen);
 				if (NOT subScript){
-					self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during CHECKSIG operation\n");
+					self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during CHECKSIG operation\n");
 					return CB_SCRIPT_ERR;
 				}
 				uint8_t * sourceScript = CBByteArrayGetData(self);
@@ -1268,7 +1268,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 						// Delete any instances of the signature
 						CBSubScriptRemoveSignature(subScript,&subScriptLen,signature);
 						// Complete verification
-						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->events);
+						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->onErrorReceived);
 						if (NOT subScriptByteArray) {
 							free(publicKey.data);
 							free(signature.data);
@@ -1323,7 +1323,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 						CBScriptStackItem sigItem = stack->elements[stack->length-sig-x];
 						CBSubScriptRemoveSignature(subScript, &subScriptLen, sigItem);
 					}
-					CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->events);
+					CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->onErrorReceived);
 					if (NOT subScriptByteArray)
 						return CB_SCRIPT_ERR;
 					res = true;
@@ -1368,7 +1368,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					if (res) {
 						item.data = malloc(1);
 						if (NOT item.data){
-							self->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during CHECKSIG operation push.\n");
+							self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during CHECKSIG operation push.\n");
 							return CB_SCRIPT_ERR;
 						}
 						item.length = 1;
@@ -1397,7 +1397,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 		return CB_SCRIPT_INVALID; // Stack empty.
 	if (CBScriptStackEvalBool(stack)) {
 		if (isP2SH){
-			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length, self->events);
+			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length, self->onErrorReceived);
 			if (NOT p2shScriptObj)
 				return CB_SCRIPT_ERR;
 			CBScriptStackRemoveItem(stack); // Remove OP_TRUE

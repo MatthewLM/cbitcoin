@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBAlert * CBNewAlert(int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,CBEvents * events){
+CBAlert * CBNewAlert(int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,void (*onErrorReceived)(CBError error,char *,...)){
 	CBAlert * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAlert\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAlert\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeAlert;
-	if(CBInitAlert(self,version,relayUntil,expiration,ID,cancel,minVer,maxVer,priority,hiddenComment,displayedComment,reserved,signature,events))
+	if(CBInitAlert(self,version,relayUntil,expiration,ID,cancel,minVer,maxVer,priority,hiddenComment,displayedComment,reserved,signature,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBAlert * CBNewAlertFromData(CBByteArray * data,CBEvents * events){
+CBAlert * CBNewAlertFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	CBAlert * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAlertFromData\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAlertFromData\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeAlert;
-	if(CBInitAlertFromData(self,data,events))
+	if(CBInitAlertFromData(self,data,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -59,7 +59,7 @@ CBAlert * CBGetAlert(void * self){
 
 //  Initialisers
 
-bool CBInitAlert(CBAlert * self,int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,CBEvents * events){
+bool CBInitAlert(CBAlert * self,int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,void (*onErrorReceived)(CBError error,char *,...)){
 	self->version = version;
 	self->relayUntil = relayUntil;
 	self->expiration = expiration;
@@ -76,18 +76,18 @@ bool CBInitAlert(CBAlert * self,int32_t version,int64_t relayUntil,int64_t expir
 	if (reserved) CBRetainObject(reserved);
 	self->signature = signature;
 	CBRetainObject(signature);
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitAlertFromData(CBAlert * self,CBByteArray * data,CBEvents * events){
+bool CBInitAlertFromData(CBAlert * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	self->setCancel = NULL;
 	self->userAgents = NULL;
 	self->hiddenComment = NULL;
 	self->displayedComment = NULL;
 	self->reserved = NULL;
 	self->signature = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
 }
@@ -145,24 +145,24 @@ uint32_t CBAlertCalculateLength(CBAlert * self){
 uint32_t CBAlertDeserialise(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAlert with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAlert with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 47) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with less than 47 bytes minimally required.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with less than 47 bytes minimally required.");
 		return 0;
 	}
 	CBVarInt payloadLen = CBVarIntDecode(bytes, 0);
 	if (bytes->length < payloadLen.size + payloadLen.val + 1) { // Plus one byte for signature var int. After this check the payload size is used to check the payload contents.
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with less bytes than required for payload.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with less bytes than required for payload.");
 		return 0;
 	}
 	if (payloadLen.val > 2000) { // Prevent too much memory being used.
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int larger than 2000 bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int larger than 2000 bytes.");
 		return 0;
 	}
 	if (payloadLen.val < 45) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than 45.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than 45.");
 		return 0;
 	}
 	uint16_t cursor = payloadLen.size;
@@ -179,7 +179,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	// Add cancel ids
 	CBVarInt setCancelLen = CBVarIntDecode(bytes, cursor);
 	if (payloadLen.val < 44 + setCancelLen.size + setCancelLen.val * 4) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set.");
 		return 0;
 	}
 	self->setCancelNum = setCancelLen.val;
@@ -187,7 +187,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	if (self->setCancelNum){
 		self->setCancel = malloc(sizeof(*self->setCancel) * self->setCancelNum);
 		if (NOT self->setCancel) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAlertDeserialise for the cancel set.",sizeof(*self->setCancel) * self->setCancelNum);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAlertDeserialise for the cancel set.",sizeof(*self->setCancel) * self->setCancelNum);
 			return 0;
 		}
 		for (uint16_t x = 0; x < self->setCancelNum; x++) {
@@ -202,7 +202,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	// User Agent strings
 	CBVarInt userAgentsLen = CBVarIntDecode(bytes, cursor);
 	if (payloadLen.val < 7 + cursor + userAgentsLen.size + userAgentsLen.val - payloadLen.size) { // 7 for priority and 3 strings
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set assuming empty strings.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set assuming empty strings.");
 		return 0;
 	}
 	self->userAgentNum = userAgentsLen.val;
@@ -210,7 +210,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	if (self->userAgentNum){
 		self->userAgents = malloc(sizeof(*self->userAgents) * self->userAgentNum);
 		if (NOT self->userAgents) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAlertDeserialise for the user agent set.",sizeof(*self->userAgents) * self->userAgentNum);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAlertDeserialise for the user agent set.",sizeof(*self->userAgents) * self->userAgentNum);
 			return 0;
 		}
 		for (uint16_t x = 0; x < self->userAgentNum; x++) {
@@ -218,14 +218,14 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 			CBVarInt userAgentLen = CBVarIntDecode(bytes, cursor); // No need to check space as there is enough data afterwards for safety.
 			cursor += userAgentLen.size;
 			if (payloadLen.val < 7 + cursor + userAgentLen.val + self->userAgentNum - x - payloadLen.size) { // 7 for priority and 3 strings. The current user agent size and the rest as if empty strings.
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set up to user agent %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set up to user agent %u.",x);
 				return 0;
 			}
 			// Enough space so set user agent
 			if (userAgentLen.val) {
 				self->userAgents[x] = CBNewByteArraySubReference(bytes, cursor, (uint32_t)userAgentLen.val);
 				if (NOT self->userAgents[x]) {
-					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for userAgent %i.\n",x);
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for userAgent %i.\n",x);
 					return 0;
 				}
 			}else{
@@ -254,7 +254,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 			if (hiddenCommentLen.val) {
 				self->hiddenComment = CBNewByteArraySubReference(bytes, cursor, (uint32_t)hiddenCommentLen.val);
 				if (NOT self->hiddenComment) {
-					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the hidden comment.\n");
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the hidden comment.\n");
 					return 0;
 				}
 			}else{
@@ -278,7 +278,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 					if (displayedCommentLen.val) {
 						self->displayedComment = CBNewByteArraySubReference(bytes, cursor, (uint32_t)displayedCommentLen.val);
 						if (NOT self->displayedComment) {
-							CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the displayed comment.\n");
+							CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the displayed comment.\n");
 							return 0;
 						}
 					}else{
@@ -302,7 +302,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 							if (reservedLen.val) {
 								self->reserved = CBNewByteArraySubReference(bytes, cursor, (uint32_t)reservedLen.val);
 								if (NOT self->reserved) {
-									CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the reserved section\n");
+									CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the reserved section\n");
 									return 0;
 								}
 							}else{
@@ -328,36 +328,36 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 										// Done signature OK. Now return successfully.
 										return cursor += sigLen.val;
 									}else
-										CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the signature\n");
+										CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBAlertDeserialise for the signature\n");
 								}else{
-									CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a byte array length smaller than required to cover the signature.");
+									CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a byte array length smaller than required to cover the signature.");
 								}
 							}else{
-								CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a byte array length smaller than required to cover the signature var int.");
+								CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a byte array length smaller than required to cover the signature var int.");
 							}
 							// Did not pass signature. Release third string.
 							if (self->reserved) CBReleaseObject(self->reserved);
 						}else{
-							CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the reserved string.");
+							CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the reserved string.");
 						}
 					}else{
-						CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the reserved string var int.");
+						CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the reserved string var int.");
 					}
 					// Did not pass third string. Release second.
 					if (self->displayedComment) CBReleaseObject(self->displayedComment);
 				}else{
-					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string. %u < %u",payloadLen.val, cursor + displayedCommentLen.val + 1);
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string. %u < %u",payloadLen.val, cursor + displayedCommentLen.val + 1);
 				}
 			}else{
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string var int.");
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string var int.");
 			}
 			// Did not pass second string. Release first.
 			if (self->hiddenComment) CBReleaseObject(self->hiddenComment);
 		}else{
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the hidden string.");
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the hidden string.");
 		}
 	}else{
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the hidden string var int.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the hidden string var int.");
 	}
 	// Error
 	return 0;
@@ -370,7 +370,7 @@ CBByteArray * CBAlertGetPayload(CBAlert * self){
 CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAlert with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAlert with no bytes.");
 		return NULL;
 	}
 	// Calculate length
@@ -402,7 +402,7 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 	CBVarInt payloadLen = CBVarIntFromUInt64(length); // So far length is for payload so make payload var int.
 	length += payloadLen.size; // Add the length of this var int.
 	if (bytes->length < length + 1) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAlert with less bytes than required for the payload and a signature var int.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAlert with less bytes than required for the payload and a signature var int.");
 		return NULL;
 	}
 	// Serialise the payload section.
@@ -471,12 +471,12 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 uint16_t CBAlertSerialiseSignature(CBAlert * self,uint16_t offset){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAlert with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAlert with no bytes.");
 		return 0;
 	}
 	CBVarInt sigLen = CBVarIntFromUInt64(self->signature->length);
 	if (bytes->length < offset + sigLen.size + sigLen.val) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAlert with less bytes than required for the signature.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAlert with less bytes than required for the signature.");
 		return 0;
 	}
 	CBVarIntEncode(bytes, offset, sigLen);

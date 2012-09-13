@@ -33,7 +33,7 @@ CBIPType CBGetIPType(uint8_t * IP){
 	}
 	if (x == 16)
 		return CB_IP_INVALID;
-	if(NOT x && CBIsTor(IP)) // Check x first to see that the first byte was not zero. Just prevents uneccessary memory comparisons.
+	if(NOT x && CBIsTor(IP)) // Check x first to see that the first byte was not zero. Just pronErrorReceived uneccessary memory comparisons.
 		return CB_IP_TOR;
 	if(NOT x && CBIsI2P(IP))
 		return CB_IP_I2P;

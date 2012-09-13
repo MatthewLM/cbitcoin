@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBPingPong * CBNewPingPong(uint64_t ID,CBEvents * events){
+CBPingPong * CBNewPingPong(uint64_t ID,void (*onErrorReceived)(CBError error,char *,...)){
 	CBPingPong * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewPingPong\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewPingPong\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreePingPong;
-	if(CBInitPingPong(self,ID,events))
+	if(CBInitPingPong(self,ID,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBPingPong * CBNewPingPongFromData(CBByteArray * data,CBEvents * events){
+CBPingPong * CBNewPingPongFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	CBPingPong * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewPingPongFromData\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewPingPongFromData\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreePingPong;
-	if(CBInitPingPongFromData(self,data,events))
+	if(CBInitPingPongFromData(self,data,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -59,14 +59,14 @@ CBPingPong * CBGetPingPong(void * self){
 
 //  Initialisers
 
-bool CBInitPingPong(CBPingPong * self,uint64_t ID,CBEvents * events){
+bool CBInitPingPong(CBPingPong * self,uint64_t ID,void (*onErrorReceived)(CBError error,char *,...)){
 	self->ID = ID;
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitPingPongFromData(CBPingPong * self,CBByteArray * data,CBEvents * events){
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
+bool CBInitPingPongFromData(CBPingPong * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
 }
@@ -82,11 +82,11 @@ void CBFreePingPong(void * self){
 uint8_t CBPingPongDeserialise(CBPingPong * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBPingPong with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBPingPong with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 8) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBPingPong with less than 8 bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBPingPong with less than 8 bytes.");
 		return 0;
 	}
 	self->ID = CBByteArrayReadInt64(bytes, 0);
@@ -95,11 +95,11 @@ uint8_t CBPingPongDeserialise(CBPingPong * self){
 uint8_t CBPingPongSerialise(CBPingPong * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBPingPong with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBPingPong with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 8) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBPingPong with less than 8 bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBPingPong with less than 8 bytes.");
 		return 0;
 	}
 	CBByteArraySetInt64(bytes, 0, self->ID);

@@ -46,13 +46,13 @@ typedef struct{
  @brief Creates a new CBGetBlocks object.
  @returns A new CBGetBlocks object.
 */
-CBGetBlocks * CBNewGetBlocks(uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events);
+CBGetBlocks * CBNewGetBlocks(uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBGetBlocks object from serialised data.
  @param data Serialised CBGetBlocks data.
  @returns A new CBGetBlocks object.
 */
-CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data,CBEvents * events);
+CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBGetBlocks from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBGetBlocks * CBGetGetBlocks(void * self);
  @param self The CBGetBlocks object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocks(CBGetBlocks * self,uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,CBEvents * events);
+bool CBInitGetBlocks(CBGetBlocks * self,uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBGetBlocks object from serialised data
  @param self The CBGetBlocks object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocksFromData(CBGetBlocks * self,CBByteArray * data,CBEvents * events);
+bool CBInitGetBlocksFromData(CBGetBlocks * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBGetBlocks object.

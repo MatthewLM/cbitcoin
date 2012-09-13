@@ -25,8 +25,8 @@
 #include "CBMerkleNode.h"
 #include <stdarg.h>
 
-void err(CBError a,char * format,...);
-void err(CBError a,char * format,...){
+void onErrorReceived(CBError a,char * format,...);
+void onErrorReceived(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -35,8 +35,6 @@ void err(CBError a,char * format,...){
 }
 
 int main(){
-	CBEvents events;
-	events.onErrorReceived = err;
 	// Test retargeting
 	if (CBCalculateTarget(0x1D008000, CB_TARGET_INTERVAL * 2) != CB_MAX_TARGET) {
 		printf("RETARGET MAXIMUM FAIL\n");
@@ -71,7 +69,7 @@ int main(){
 	memset(hashData, 0, 32);
 	hashData[4] = 0xFF;
 	hashData[5] = 0xFF;
-	CBByteArray * hash = CBNewByteArrayWithDataCopy(hashData, 32, &events);
+	CBByteArray * hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
 	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
 		printf("CHECK POW MAX EQUAL FAIL\n");
 		return 1;
@@ -106,22 +104,22 @@ int main(){
 	}
 	CBReleaseObject(hash);
 	// Test CBTransactionGetSigOps
-	CBTransaction * tx = CBNewTransaction(0, 1, &events);
-	CBScript * script = CBNewScriptWithDataCopy((uint8_t [14]){CB_SCRIPT_OP_PUSHDATA1,0x02,0x00,0x0F,CB_SCRIPT_OP_CHECKSIG,CB_SCRIPT_OP_CHECKSIG,0x4,0xAB,0x40,0xBE,0x29,CB_SCRIPT_OP_CHECKSIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIG}, 14, &events);
-	hash = CBNewByteArrayWithDataCopy(hashData, 32, &events);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 3, &events));
+	CBTransaction * tx = CBNewTransaction(0, 1, onErrorReceived);
+	CBScript * script = CBNewScriptWithDataCopy((uint8_t [14]){CB_SCRIPT_OP_PUSHDATA1,0x02,0x00,0x0F,CB_SCRIPT_OP_CHECKSIG,CB_SCRIPT_OP_CHECKSIG,0x4,0xAB,0x40,0xBE,0x29,CB_SCRIPT_OP_CHECKSIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIG}, 14, onErrorReceived);
+	hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 3, onErrorReceived));
 	CBReleaseObject(script);
 	CBReleaseObject(hash);
-	script = CBNewScriptWithDataCopy((uint8_t [7]){CB_SCRIPT_OP_CHECKMULTISIG,CB_SCRIPT_OP_PUSHDATA2,0x02,0x00,0x20,0x10,CB_SCRIPT_OP_CHECKSIGVERIFY}, 7, &events);
+	script = CBNewScriptWithDataCopy((uint8_t [7]){CB_SCRIPT_OP_CHECKMULTISIG,CB_SCRIPT_OP_PUSHDATA2,0x02,0x00,0x20,0x10,CB_SCRIPT_OP_CHECKSIGVERIFY}, 7, onErrorReceived);
 	hashData[5] = 0xFE;
-	hash = CBNewByteArrayWithDataCopy(hashData, 32, &events);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 1, &events));
+	hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 1, onErrorReceived));
 	CBReleaseObject(script);
-	script = CBNewScriptWithDataCopy((uint8_t [17]){CB_SCRIPT_OP_PUSHDATA4,0x02,0x00,0x00,0x00,0x00,0x0F,CB_SCRIPT_OP_CHECKSIG,CB_SCRIPT_OP_CHECKSIG,0x4,0xAB,0x40,0xBE,0x29,CB_SCRIPT_OP_CHECKSIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIG}, 17, &events);
-	CBTransactionTakeOutput(tx, CBNewTransactionOutput(4500, script, &events));
+	script = CBNewScriptWithDataCopy((uint8_t [17]){CB_SCRIPT_OP_PUSHDATA4,0x02,0x00,0x00,0x00,0x00,0x0F,CB_SCRIPT_OP_CHECKSIG,CB_SCRIPT_OP_CHECKSIG,0x4,0xAB,0x40,0xBE,0x29,CB_SCRIPT_OP_CHECKSIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIG}, 17, onErrorReceived);
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(4500, script, onErrorReceived));
 	CBReleaseObject(script);
-	script = CBNewScriptWithDataCopy((uint8_t [5]){CB_SCRIPT_OP_CHECKMULTISIG,0x02,0x20,0x10,CB_SCRIPT_OP_CHECKSIGVERIFY}, 5, &events);
-	CBTransactionTakeOutput(tx, CBNewTransactionOutput(39960, script, &events));
+	script = CBNewScriptWithDataCopy((uint8_t [5]){CB_SCRIPT_OP_CHECKMULTISIG,0x02,0x20,0x10,CB_SCRIPT_OP_CHECKSIGVERIFY}, 5, onErrorReceived);
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(39960, script, onErrorReceived));
 	CBReleaseObject(script);
 	if (CBTransactionGetSigOps(tx) != 128) {
 		printf("GET SIG OPS FAIL %i != 128\n",CBTransactionGetSigOps(tx));
@@ -158,16 +156,16 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(tx);
-	tx = CBNewTransaction(0, 1, &events);
-	script = CBNewScriptWithDataCopy((uint8_t [2]){0x01,0x00}, 2, &events);
+	tx = CBNewTransaction(0, 1, onErrorReceived);
+	script = CBNewScriptWithDataCopy((uint8_t [2]){0x01,0x00}, 2, onErrorReceived);
 	hashData[4] = 0;
 	hashData[5] = 0;
-	hash = CBNewByteArrayWithDataCopy(hashData, 32, &events);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 0xFFFFFFFF, &events));
+	hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 0xFFFFFFFF, onErrorReceived));
 	CBReleaseObject(script);
 	CBReleaseObject(hash);
-	script = CBNewScriptWithDataCopy((uint8_t [1]){0}, 1, &events);
-	CBTransactionTakeOutput(tx, CBNewTransactionOutput(50, script, &events));
+	script = CBNewScriptWithDataCopy((uint8_t [1]){0}, 1, onErrorReceived);
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(50, script, onErrorReceived));
 	CBReleaseObject(script);
 	if (NOT CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx), &err)) {
 		printf("BASIC VALIDATION COINBASE FAIL\n");
@@ -197,7 +195,7 @@ int main(){
 	// Test merkle tree generation
 	CBByteArray * hashObjs[6];
 	for (int x = 0; x < 6; x++) {
-		hashObjs[x] = CBNewByteArrayWithDataCopy(hashes + x*32, 32, &events);
+		hashObjs[x] = CBNewByteArrayWithDataCopy(hashes + x*32, 32, onErrorReceived);
 	}
 	CBMerkleNode * root = CBBuildMerkleTree(hashObjs, 6);
 	if (memcmp(root->hash, (uint8_t []){0x77,0xed,0x2a,0xf8,0x7a,0xa4,0xf9,0xf4,0x50,0xf8,0xdb,0xd1,0x52,0x84,0x72,0x0c,0x3f,0xd9,0x6f,0x56,0x5a,0x13,0xc9,0xde,0x42,0xa3,0xc1,0x44,0x0b,0x7f,0xc6,0xa5}, 32)) {

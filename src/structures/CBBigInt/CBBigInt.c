@@ -152,7 +152,7 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
 }
 uint8_t CBBigIntModuloWith58(CBBigInt a){
 	// Use method presented here: http://stackoverflow.com/a/10441333/238411
-	uint16_t result = 0; // Prevents overflow in calculations
+	uint16_t result = 0; // Prevent overflow in calculations
 	for(uint8_t x = a.length - 1;; x--){
 		result *= (256 % 58);
 		result %= 58;

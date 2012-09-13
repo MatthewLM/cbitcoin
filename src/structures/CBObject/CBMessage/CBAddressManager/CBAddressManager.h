@@ -68,19 +68,20 @@ typedef struct{
 	uint64_t rndGen; /**< Random number generator instance. */
 	uint64_t rndGenForBucketIndexes; /**< Random number generator used for generating bucket indexes. */
 	void * callbackHandler; /**< Sent to onBadTime callback */
+	void (*onBadTime)(void *); /**< Called when cbitcoin detects a divergence between the network time and system time which suggests the system time may be wrong, in the same way bitcoin-qt detects it. Has an argument for the callback handler. */
 } CBAddressManager;
 
 /**
  @brief Creates a new CBAddressManager object.
  @returns A new CBAddressManager object.
 */
-CBAddressManager * CBNewAddressManager(CBEvents * events);
+CBAddressManager * CBNewAddressManager(void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *));
 /**
 @brief Creates a new CBAddressManager object from serialised data.
  @param data Serialised CBAddressManager data.
  @returns A new CBAddressManager object.
 */
-CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data,CBEvents * events);
+CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *));
 
 /**
  @brief Gets a CBAddressManager from another object. Use this to avoid casts.
@@ -94,14 +95,14 @@ CBAddressManager * CBGetAddressManager(void * self);
  @param self The CBAddressManager object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitAddressManager(CBAddressManager * self,CBEvents * events);
+bool CBInitAddressManager(CBAddressManager * self,void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *));
 /**
  @brief Initialises a CBAddressManager object from serialised data
  @param self The CBAddressManager object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitAddressManagerFromData(CBAddressManager * self,CBByteArray * data,CBEvents * events);
+bool CBInitAddressManagerFromData(CBAddressManager * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...),void (*onBadTime)(void *));
 
 /**
  @brief Frees a CBAddressManager object.

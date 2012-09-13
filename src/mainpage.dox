@@ -1,0 +1,35 @@
+/**
+\mainpage 
+Refer to the following list of files for cbitcoin features:
+
+CBAddress.h - An extension on CBVersionChecksumBytes for bitcoin addresses.\n
+CBAddressBroadcast.h - This is the "addr" message structure with functions.\n
+CBAddressManager.h - A structure with functions for managing CBNetworkAddress objects and CBPeer objects.\n
+CBAlert.h - This is the "alert" message structure with functions.\n
+CBBase58.h - Base-58 encoding and decoding, used for bitcoin addresses.\n
+CBBigInt.h - Basic bignum functionality required by the library and also exposed by the library.\n
+CBBlock.h - This is the "block" message structure with functions.\n
+CBBlockHeaders.h - This is the "headers" message structure with functions.\n
+CBByteArray.h - A structure with functions for creating references to byte data.\n
+CBChainDescriptor.h - This is a structure refered to as a block locator elsewhere which is used for CBGetBlocks.\n
+CBConstants.h - Constants and enumeration types used throughout the library.\n
+CBDependencies.h - Weak-linked function prototypes. You may need to implement some of these funtions to use the parts of cbitcoin you want. Look in the dependencies folder for some implementations already available for you.\n
+CBGetBlocks.h - This is a structure with functions for the "getblocks" and "getheaders" messages.\n
+CBInventoryBroadcast.h - This is a structure with functions for the "inv" and "getdata" messages.\n
+CBMerkleNode.h - Graph node structure for merkle trees and functions for building and using merkle trees.\n
+CBMessage.h - The base structure for bitcoin messages which contain data to be passed over the bitcoin network.\n
+CBNetworkAddress.h - A network address structure with functions used to represent a socket address in the bitcoin network.\n
+CBNetworkCommunicator.h - A structure with functions for interfacing with the bitcoin network.\n
+CBNetworkFunctions.h - Basic IP functions.\n
+CBObject.h - The base structure for other cbitcoin structures which use reference-counting.\n
+CBPeer.h - An extention to CBNetworkAddress for connected peers.\n
+CBPingPong.h - This is a structure with functions for the "ping" and "pong" messages.\n
+CBScript.h - Contains a bitcoin script interpreter and compiler (compiles text format into byte-code).\n
+CBTransaction.h - This is the "tx" message structure with functions.\n
+CBTransactionInput.h - Transaction input structure and functions for CBTransaction.\n
+CBTransactionOutput.h - Transaction output structure and functions for CBTransaction.\n
+CBValidationFunctions.h - Contains basic validation functions useful for validating transactions and blocks.\n
+CBVarInt.h - A structure for representing bitcoin varints.\n
+CBVersion.h - This is the "version" message structure with functions.\n
+CBVersionChecksumBytes.h - A structure with functions for base-58 encoded data in a format used by bitcoin.\n
+*/

@@ -24,8 +24,8 @@
 #include "CBBase58.h"
 #include <time.h>
 
-void err(CBError a,char * b,...);
-void err(CBError a,char * b,...){
+void onErrorReceived(CBError a,char * b,...);
+void onErrorReceived(CBError a,char * b,...){
 	printf("%s\n",b);
 }
 
@@ -34,11 +34,9 @@ int main(){
 	printf("Session = %ui\n",s);
 	srand(s);
 	// Test checked decode
-	CBEvents events;
-	events.onErrorReceived = err;
-	CBDecodeBase58Checked("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", &events); // Valid
+	CBDecodeBase58Checked("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", onErrorReceived); // Valid
 	printf("END VALID\n");
-	CBDecodeBase58Checked("1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", &events); // Invalid
+	CBDecodeBase58Checked("1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", onErrorReceived); // Invalid
 	unsigned char * test = malloc(29);
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989

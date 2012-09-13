@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps,CBEvents * events){
+CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps,void (*onErrorReceived)(CBError error,char *,...)){
 	CBAddressBroadcast * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressBroadcast\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressBroadcast\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeAddressBroadcast;
-	if (CBInitAddressBroadcast(self,timeStamps,events))
+	if (CBInitAddressBroadcast(self,timeStamps,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data,bool timeStamps,CBEvents * events){
+CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data,bool timeStamps,void (*onErrorReceived)(CBError error,char *,...)){
 	CBAddressBroadcast * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressBroadcast\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewAddressBroadcast\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeAddressBroadcast;
-	if (CBInitAddressBroadcastFromData(self,timeStamps,data,events))
+	if (CBInitAddressBroadcastFromData(self,timeStamps,data,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -59,19 +59,19 @@ CBAddressBroadcast * CBGetAddressBroadcast(void * self){
 
 //  Initialisers
 
-bool CBInitAddressBroadcast(CBAddressBroadcast * self,bool timeStamps,CBEvents * events){
+bool CBInitAddressBroadcast(CBAddressBroadcast * self,bool timeStamps,void (*onErrorReceived)(CBError error,char *,...)){
 	self->timeStamps = timeStamps;
 	self->addrNum = 0;
 	self->addresses = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self,bool timeStamps,CBByteArray * data,CBEvents * events){
+bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self,bool timeStamps,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	self->timeStamps = timeStamps;
 	self->addrNum = 0;
 	self->addresses = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
 }
@@ -95,21 +95,21 @@ bool CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddr
 uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAddressBroadcast with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBAddressBroadcast with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 26 + self->timeStamps * 4) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressBroadcast without enough bytes to cover one address.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressBroadcast without enough bytes to cover one address.");
 		return 0;
 	}
 	CBVarInt num = CBVarIntDecode(bytes, 0);
 	if (num.val > 30) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressBroadcast with a var int over 30.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBAddressBroadcast with a var int over 30.");
 		return 0;
 	}
 	self->addresses = malloc(sizeof(*self->addresses) * (size_t)num.val);
 	if (NOT self->addresses) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressBroadcastDeserialise\n",sizeof(*self->addresses) * (size_t)num.val);
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBAddressBroadcastDeserialise\n",sizeof(*self->addresses) * (size_t)num.val);
 		return 0;
 	}
 	self->addrNum = num.val;
@@ -119,19 +119,19 @@ uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self){
 		uint8_t len;
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		if (data) {
-			self->addresses[x] = CBNewNetworkAddressFromData(data, CBGetMessage(self)->events);
+			self->addresses[x] = CBNewNetworkAddressFromData(data, CBGetMessage(self)->onErrorReceived);
 			if (self->addresses[x]){
 				// Deserialise
 				len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);
 				if (NOT len)
-					CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be deserialised because of an error with the CBNetworkAddress number %u.",x);
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be deserialised because of an error with the CBNetworkAddress number %u.",x);
 			}else{
 				len = 0;
-				CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBNetworkAddress in CBAddressBroadcastDeserialise for network address %u.",x);
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBNetworkAddress in CBAddressBroadcastDeserialise for network address %u.",x);
 			}
 		}else{
 			len = 0;
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBByteArray in CBAddressBroadcastDeserialise for network address %u.",x);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Could not create CBByteArray in CBAddressBroadcastDeserialise for network address %u.",x);
 		}
 		if (NOT len) {
 			// Release bytes
@@ -151,11 +151,11 @@ uint32_t CBAddressBroadcastCalculateLength(CBAddressBroadcast * self){
 uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAddressBroadcast with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAddressBroadcast with no bytes.");
 		return 0;
 	}
 	if (bytes->length < (26 + self->timeStamps * 4) * self->addrNum) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAddressBroadcast without enough bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBAddressBroadcast without enough bytes.");
 		return 0;
 	}
 	CBVarInt num = CBVarIntFromUInt64(self->addrNum);
@@ -165,7 +165,7 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self){
 		CBGetMessage(self->addresses[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		uint32_t len = CBNetworkAddressSerialise(self->addresses[x],self->timeStamps);
 		if (NOT len) {
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be serialised because of an error with the CBNetworkAddress number %u.",x);
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be serialised because of an error with the CBNetworkAddress number %u.",x);
 			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
 			for (uint8_t y = 0; y < x + 1; y++) {
 				CBReleaseObject(CBGetMessage(self->addresses[y])->bytes);

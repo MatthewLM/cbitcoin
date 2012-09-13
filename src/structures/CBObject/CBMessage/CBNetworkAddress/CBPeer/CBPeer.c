@@ -30,7 +30,7 @@ CBPeer * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
 	CBPeer * self = CBGetNode(addr);
 	self = realloc(self,sizeof(*self));
 	if (NOT self) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n",sizeof(*self));
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNode;

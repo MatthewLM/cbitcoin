@@ -53,19 +53,19 @@ typedef struct{
  @brief Creates a new CBBlock object. Set the members after creating the block object.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlock(CBEvents * events);
+CBBlock * CBNewBlock(void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBBlock object.
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlockFromData(CBByteArray * data,CBEvents * events);
+CBBlock * CBNewBlockFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlockGenesis(CBEvents * events);
+CBBlock * CBNewBlockGenesis(void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBBlock from another object. Use this to avoid casts.
@@ -79,14 +79,14 @@ CBBlock * CBGetBlock(void * self);
  @param self The CBBlock object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitBlock(CBBlock * self,CBEvents * events);
+bool CBInitBlock(CBBlock * self,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBBlock object from serialised data
  @param self The CBBlock object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
  */
-bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,CBEvents * events);
+bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Initialises a CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
@@ -94,7 +94,7 @@ bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,CBEvents * events);
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
-bool CBInitBlockGenesis(CBBlock * self,CBEvents * events);
+bool CBInitBlockGenesis(CBBlock * self,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBBlock object.

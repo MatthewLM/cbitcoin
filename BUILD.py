@@ -123,18 +123,19 @@ for root, dirnames, filenames in os.walk(srcPath):
 # Link object files into dynamic library
 print "LINKING " + targetPath
 subprocess.check_call("gcc " + lflags + " -o " + targetPath + objects, shell=True)
+# OpenSSL information
+opensslFlags = " -lssl -lcrypto -L" + OPENSSL_LOCATION + "lib/ " + ADDITIONAL_OPENSSL_LFLAGS
+opensslCFlags = " -I" + OPENSSL_LOCATION + "include/"
+opensslReq = ["testCBAddress", "testCBAddressManager", "testCBAlert", "testCBTransaction", "testCBBase58", "testCBBlock", "testCBNetworkCommunicator", "testCBNetworkCommunicatorLibEv","testCBScript","testValidation"]
+opensslOutput = os.path.join(objPath,"CBOpenSSLCrypto.o")
+opensslSource = os.path.join(currentDir,"dependencies", "crypto", "CBOpenSSLCrypto.c")
 # Build and run tests if specified
 if test:
 	# Script tests
 	shutil.copyfile(os.path.join(testPath,"scriptCases.txt"),os.path.join(binPath,"scriptCases.txt"))
 	os.chdir(binPath)
 	# OpenSSL dependency
-	opensslFlags = " -lssl -lcrypto -L" + OPENSSL_LOCATION + "lib/ " + ADDITIONAL_OPENSSL_LFLAGS
-	opensslCFlags = " -I" + OPENSSL_LOCATION + "include/"
-	opensslReq = ["testCBAddress", "testCBAddressManager", "testCBAlert", "testCBTransaction", "testCBBase58", "testCBBlock", "testCBNetworkCommunicator", "testCBNetworkCommunicatorLibEv","testCBScript","testValidation"]
-	source = os.path.join(currentDir,"dependencies", "crypto", "CBOpenSSLCrypto.c")
-	opensslOutput = os.path.join(objPath,"CBOpenSSLCrypto.o")
-	compile(cflags + opensslCFlags,opensslOutput,source,clean)
+	compile(cflags + opensslCFlags,opensslOutput,opensslSource,clean)
 	# PRNG dependency
 	randReq = ["testCBAddressManager", "testCBNetworkCommunicator", "testCBNetworkCommunicatorLibEv"]
 	source = os.path.join(currentDir,"dependencies","random","CBRand.c")
@@ -193,4 +194,14 @@ if test:
 			subprocess.check_call(targetPath,shell=True)
 # Build example if specified
 if sys.argv[-1] == "addressGenerator":
-	subprocess.check_call("gcc " + execflags + " -o " + os.path.join(binPath,"addressGenerator") + " " + os.path.join(examplesPath,"addressGenerator.c"), shell=True)
+	compile(cflags + opensslCFlags,opensslOutput,opensslSource,clean)
+	output = os.path.join(objPath,"addressGenerator.o")
+	compile(cflags + opensslCFlags,output,os.path.join(examplesPath,"addressGenerator.c"),clean)
+	targetPath = os.path.join(binPath,"addressGenerator")
+	print "LINKING " + targetPath
+	linkerFlags = " -L" + binPath + " -lcbitcoin"
+	if platform.system() == 'Linux':
+		linkerFlags += " -Wl,-rpath," + binPath
+		linkerFlags += ":" + OPENSSL_LOCATION + "lib/"
+	linkerFlags += opensslFlags
+	subprocess.check_call("gcc " + output + " " + opensslOutput + linkerFlags + " -o " + targetPath, shell=True)

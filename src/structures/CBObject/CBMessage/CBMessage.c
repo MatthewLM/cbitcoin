@@ -26,14 +26,14 @@
 
 //  Constructor
 
-CBMessage * CBNewMessageByObject(CBEvents * events){
+CBMessage * CBNewMessageByObject(void (*onErrorReceived)(CBError error,char *,...)){
 	CBMessage * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewMessageByObject\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewMessageByObject\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeMessage;
-	if (CBInitMessageByObject(self,events))
+	if (CBInitMessageByObject(self,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -47,20 +47,20 @@ CBMessage * CBGetMessage(void * self){
 
 //  Initialiser
 
-bool CBInitMessageByObject(CBMessage * self,CBEvents * events){
+bool CBInitMessageByObject(CBMessage * self,void (*onErrorReceived)(CBError error,char *,...)){
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->bytes = NULL;
-	self->events = events;
+	self->onErrorReceived = onErrorReceived;
 	self->expectResponse = false;
 	return true;
 }
-bool CBInitMessageByData(CBMessage * self,CBByteArray * data,CBEvents * events){
+bool CBInitMessageByData(CBMessage * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->bytes = data;
 	CBRetainObject(data); // Retain data for this object.
-	self->events = events;
+	self->onErrorReceived = onErrorReceived;
 	self->expectResponse = false;
 	return true;
 }

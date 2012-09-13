@@ -63,7 +63,7 @@ CBScript * CBNewScriptFromReference(CBByteArray * program,uint32_t offset,uint32
  @brief Creates a new CBScript object with a given size.
  @returns A new CBScript object.
  */
-CBScript * CBNewScriptOfSize(uint32_t size,CBEvents * events);
+CBScript * CBNewScriptOfSize(uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBScript object from a string. The script text should follow the following Backus–Naur Form:
  /code
@@ -84,26 +84,26 @@ CBScript * CBNewScriptOfSize(uint32_t size,CBEvents * events);
  Be warned that the scripts do not use two's compliment for hex values. To represent a negative number the far left digit should be 8 or higher. Adding 8 to the far left digit give the number a negative sign such that 0x81 = -1. Negative numbers should have an even number of digits. 0x8FF will not give -255, instead 0x80FF is needed. 
  @param params The network parameters.
  @param string The string to compile into a CBScript object.
- @param events The CBEvents structure.
+ @param onErrorReceived The CBEvents structure.
  @returns A new CBScript object or NULL on failure.
  */
-CBScript * CBNewScriptFromString(char * string,CBEvents * events);
+CBScript * CBNewScriptFromString(char * string,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBScript using data.
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns The new CBScript object.
  */
-CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,CBEvents * events);
+CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBScript using data which is copied.
  @param data The data. This data is copied.
  @param size Size in bytes for the new array.
- @param events CBEngine for errors.
+ @param onErrorReceived CBEngine for errors.
  @returns The new CBScript object.
  */
-CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,CBEvents * events);
+CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBScript from another object. Use this to avoid casts.
@@ -117,10 +117,10 @@ CBScript * CBGetScript(void * self);
  @param self The CBScript object to initialise
  @param params The network parameters.
  @param string The string to compile into a CBScript object.
- @param events The CBEvents structure.
+ @param onErrorReceived The CBEvents structure.
  @returns true on success, false on failure.
  */
-bool CBInitScriptFromString(CBScript * self,char * string,CBEvents * events);
+bool CBInitScriptFromString(CBScript * self,char * string,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Does the processing to free a CBScript object. Should be called by the children when freeing objects.

@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBInventoryBroadcast object.
  @returns A new CBInventoryBroadcast object.
 */
-CBInventoryBroadcast * CBNewInventoryBroadcast(CBEvents * events);
+CBInventoryBroadcast * CBNewInventoryBroadcast(void (*onErrorReceived)(CBError error,char *,...));
 /**
 @brief Creates a new CBInventoryBroadcast object from serialised data.
  @param data Serialised CBInventoryBroadcast data.
  @returns A new CBInventoryBroadcast object.
 */
-CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data,CBEvents * events);
+CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Gets a CBInventoryBroadcast from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBInventoryBroadcast * CBGetInventoryBroadcast(void * self);
  @param self The CBInventoryBroadcast object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitInventoryBroadcast(CBInventoryBroadcast * self,CBEvents * events);
+bool CBInitInventoryBroadcast(CBInventoryBroadcast * self,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBInventoryBroadcast object from serialised data
  @param self The CBInventoryBroadcast object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self,CBByteArray * data,CBEvents * events);
+bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...));
 
 /**
  @brief Frees a CBInventoryBroadcast object.

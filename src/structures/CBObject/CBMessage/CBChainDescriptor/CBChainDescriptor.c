@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBChainDescriptor * CBNewChainDescriptor(CBEvents * events){
+CBChainDescriptor * CBNewChainDescriptor(void (*onErrorReceived)(CBError error,char *,...)){
 	CBChainDescriptor * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewChainDescriptor\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewChainDescriptor\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeChainDescriptor;
-	if(CBInitChainDescriptor(self,events))
+	if(CBInitChainDescriptor(self,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
 }
-CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,CBEvents * events){
+CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	CBChainDescriptor * self = malloc(sizeof(*self));
 	if (NOT self) {
-		events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewChainDescriptorFromData\n",sizeof(*self));
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewChainDescriptorFromData\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeChainDescriptor;
-	if(CBInitChainDescriptorFromData(self,data,events))
+	if(CBInitChainDescriptorFromData(self,data,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -59,17 +59,17 @@ CBChainDescriptor * CBGetChainDescriptor(void * self){
 
 //  Initialisers
 
-bool CBInitChainDescriptor(CBChainDescriptor * self,CBEvents * events){
+bool CBInitChainDescriptor(CBChainDescriptor * self,void (*onErrorReceived)(CBError error,char *,...)){
 	self->hashNum = 0;
 	self->hashes = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self), events))
+	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
 }
-bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,CBEvents * events){
+bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
 	self->hashNum = 0;
 	self->hashes = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, events))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
 }
@@ -94,26 +94,26 @@ bool CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash){
 uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBChainDescriptor with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,"Attempting to deserialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 33) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBChainDescriptor with less bytes than required for one hash.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBChainDescriptor with less bytes than required for one hash.");
 		return 0;
 	}
 	CBVarInt hashNum = CBVarIntDecode(bytes, 0);
 	if (hashNum.val > 500) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBChainDescriptor with a var int over 500.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBChainDescriptor with a var int over 500.");
 		return 0;
 	}
 	if (bytes->length < hashNum.size + hashNum.val * 32) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBChainDescriptor with less bytes than required for the hashes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBChainDescriptor with less bytes than required for the hashes.");
 		return 0;
 	}
 	// Deserialise each hash
 	self->hashes = malloc(sizeof(*self->hashes) * (size_t)hashNum.val);
 	if (NOT self->hashes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBChainDescriptorDeserialise\n",sizeof(*self->hashes) * (size_t)hashNum.val);
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBChainDescriptorDeserialise\n",sizeof(*self->hashes) * (size_t)hashNum.val);
 		return 0;
 	}
 	self->hashNum = hashNum.val;
@@ -121,7 +121,7 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	for (uint16_t x = 0; x < self->hashNum; x++) {
 		self->hashes[x] = CBNewByteArraySubReference(bytes, cursor, 32);
 		if (NOT self->hashes[x]){
-			CBGetMessage(self)->events->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBChainDescriptorDeserialise\n");
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create new CBByteArray in CBChainDescriptorDeserialise\n");
 			return 0;
 		}
 		cursor += 32;
@@ -131,12 +131,12 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBChainDescriptor with no bytes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
 	CBVarInt hashNum = CBVarIntFromUInt64(self->hashNum);
 	if (bytes->length < hashNum.size + self->hashNum * 32) {
-		CBGetMessage(self)->events->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBChainDescriptor with less bytes than required for the hashes.");
+		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"Attempting to serialise a CBChainDescriptor with less bytes than required for the hashes.");
 		return 0;
 	}
 	CBVarIntEncode(bytes, 0, hashNum);
