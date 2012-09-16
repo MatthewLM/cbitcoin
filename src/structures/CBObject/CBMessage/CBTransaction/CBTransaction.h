@@ -39,6 +39,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
+	CBByteArray * hash; /**< The hash for this transaction. NULL if not set. */
 	uint32_t version; /**< Version of the transaction data format. */
 	uint32_t inputNum; /**< Number of CBTransactionInputs */
 	CBTransactionInput ** inputs;
@@ -102,6 +103,12 @@ bool CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
  */
 bool CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
 /**
+ @brief Calculates the hash for a transaction
+ @param self The CBTransaction object. This should be serialised.
+ @returns The hash for the transaction. This is a 32 byte long, double SHA-256 hash.
+ */
+CBByteArray * CBTransactionCalculateHash(CBTransaction * self);
+/**
  @brief Calculates the length needed to serialise the object.
  @param self The CBTransaction object.
  @returns The length read on success, 0 on failure.
@@ -113,6 +120,12 @@ uint32_t CBTransactionCalculateLength(CBTransaction * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionDeserialise(CBTransaction * self);
+/**
+ @brief Retrieves or calculates the hash for a transaction. Hashes taken from this fuction are cached.
+ @param self The CBTransaction object. This should be serialised.
+ @returns The hash for the transaction. This is a 32 byte long, double SHA-256 hash.
+ */
+CBByteArray * CBTransactionGetHash(CBTransaction * self);
 /**
  @brief Gets the hash for signing or signature checking for a transaction input. The transaction input needs to contain the outPointerHash, outPointerIndex and sequence. If these are modifed afterwards then the signiture is invalid.
  @param vself The CBTransaction object.
