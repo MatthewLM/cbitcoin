@@ -39,7 +39,7 @@
 typedef struct{
 	CBMessage base; /**< CBObject base structure */
 	int32_t version; /**< The protocol version. There appears to be no good reason why this is signed. */
-	uint64_t services; /**< The services which a peer is offering. */
+	CBVersionServices services; /**< The services which a peer is offering. */
 	int64_t time; /**< The timestamp of this peer. This assumes time(NULL) returns a correct 64 bit timestamp which it should to avoid massive problems in the future. */
 	CBNetworkAddress * addRecv; /**< Socket information for the recieving peer. */
 	CBNetworkAddress * addSource; /**< The socket information for the source address. */
@@ -52,7 +52,7 @@ typedef struct{
  @brief Creates a new CBVersion object.
  @returns A new CBVersion object.
  */
-CBVersion * CBNewVersion(int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...));
+CBVersion * CBNewVersion(int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBVersion object from serialised data.
  @param data A CBByteArray holding the serialised data.
@@ -72,7 +72,7 @@ CBVersion * CBGetVersion(void * self);
  @param self The CBVersion object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitVersion(CBVersion * self,int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...));
+bool CBInitVersion(CBVersion * self,int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a new CBVersion object from serialised data.
  @param self The CBVersion object to initialise

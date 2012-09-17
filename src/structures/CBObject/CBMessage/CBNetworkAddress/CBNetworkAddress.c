@@ -26,7 +26,7 @@
 
 //  Constructor
 
-CBNetworkAddress * CBNewNetworkAddress(uint32_t time,CBByteArray * ip,uint16_t port,uint64_t services,void (*onErrorReceived)(CBError error,char *,...)){
+CBNetworkAddress * CBNewNetworkAddress(uint32_t time,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*onErrorReceived)(CBError error,char *,...)){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	if (NOT self) {
 		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewNetworkAddress\n",sizeof(*self));
@@ -59,7 +59,7 @@ CBNetworkAddress * CBGetNetworkAddress(void * self){
 
 //  Initialiser
 
-bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,void (*onErrorReceived)(CBError error,char *,...)){
+bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*onErrorReceived)(CBError error,char *,...)){
 	self->score = score;
 	self->ip = ip;
 	if (NOT ip) {
@@ -118,7 +118,7 @@ uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score){
 		self->score = 0;
 		cursor = 0;
 	}
-	self->services = CBByteArrayReadInt64(bytes, cursor);
+	self->services = (CBVersionServices) CBByteArrayReadInt64(bytes, cursor);
 	cursor += 8;
 	self->ip = CBNewByteArraySubReference(bytes, cursor, 16);
 	if (NOT self->ip)

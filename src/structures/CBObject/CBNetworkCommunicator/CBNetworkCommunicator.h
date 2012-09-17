@@ -48,7 +48,7 @@ typedef struct {
 	uint32_t networkID; /**< The 4 byte id for sending and receiving messages for a given network. */
 	CBNetworkCommunicatorFlags flags; /**< Flags for the operation of the CBNetworkCommunicator. */
 	int32_t version; /**< Used for automatic handshaking. This version will be advertised to peers. */
-	uint64_t services; /**< Used for automatic handshaking. These services will be advertised */
+	CBVersionServices services; /**< Used for automatic handshaking. These services will be advertised */
 	CBByteArray * userAgent; /**< Used for automatic handshaking. This user agent will be advertised. */
 	int32_t blockHeight; /** Set to the current block height for advertising to peers during the automated handshake. */
 	CBNetworkAddress * ourIPv4; /**< IPv4 network address for us. */

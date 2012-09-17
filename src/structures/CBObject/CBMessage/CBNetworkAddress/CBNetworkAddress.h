@@ -53,7 +53,7 @@ typedef struct{
  @param ip The IP address in a 16 byte IPv6 format. If NULL, the IP will be a 16 byte CBByteArray set will all zero.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddress(uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,void (*onErrorReceived)(CBError error,char *,...));
+CBNetworkAddress * CBNewNetworkAddress(uint32_t score,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
  @returns A new CBNetworkAddress object.
@@ -72,7 +72,7 @@ CBNetworkAddress * CBGetNetworkAddress(void * self);
  @param self The CBNetworkAddress object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,uint64_t services,void (*onErrorReceived)(CBError error,char *,...));
+bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
