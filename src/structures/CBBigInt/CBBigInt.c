@@ -20,10 +20,6 @@
 //  You should have received a copy of the GNU General Public License
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 //
-//  Contains BIGDIGITS multiple-precision arithmetic code originally
-//  written by David Ireland, copyright (c) 2001-11 by D.I. Management
-//  Services Pty Limited <www.di-mgt.com.au>, and is used with
-//  permission.
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
