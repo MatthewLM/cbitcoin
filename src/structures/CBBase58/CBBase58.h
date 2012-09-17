@@ -30,7 +30,6 @@
 
 #include <stdlib.h>
 #include "CBBigInt.h"
-#include "CBEvents.h"
 #include "CBDependencies.h"
 
 static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
