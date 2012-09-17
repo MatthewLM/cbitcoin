@@ -184,7 +184,7 @@ CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool *
 	}
 	return prevOutputs;
 }
-bool CBValidateProofOfWork(CBByteArray * hash, uint32_t target){
+bool CBValidateProofOfWork(uint8_t * hash, uint32_t target){
 	// Get trailing zero bytes
 	uint8_t zeroBytes = target >> 24;
 	// Check target is less than or equal to maximum.
@@ -197,13 +197,13 @@ bool CBValidateProofOfWork(CBByteArray * hash, uint32_t target){
 		return false;
 	// Fail if hash is above target. First check leading bytes to significant part
 	for (uint8_t x = 0; x < 32 - zeroBytes; x++)
-		if (CBByteArrayGetByte(hash, x))
+		if (hash[x])
 			// A byte leading to the significant part is not zero
 			return false;
 	// Check significant part
-	uint32_t significantPart = CBByteArrayGetByte(hash, 32 - zeroBytes) << 16;
-	significantPart |= CBByteArrayGetByte(hash, 33 - zeroBytes) << 8;
-	significantPart |= CBByteArrayGetByte(hash, 34 - zeroBytes);
+	uint32_t significantPart = hash[32 - zeroBytes] << 16;
+	significantPart |= hash[33 - zeroBytes] << 8;
+	significantPart |= hash[34 - zeroBytes];
 	if (significantPart > target)
 		return false;
 	return true;

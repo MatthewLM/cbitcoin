@@ -65,48 +65,47 @@ int main(){
 		return 1;
 	}
 	// Test proof of work validation
-	uint8_t * hashData = malloc(32);
+	uint8_t hashData[32];
 	memset(hashData, 0, 32);
 	hashData[4] = 0xFF;
 	hashData[5] = 0xFF;
-	CBByteArray * hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
-	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
+	if (NOT CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
 		printf("CHECK POW MAX EQUAL FAIL\n");
 		return 1;
 	}
-	if (CBValidateProofOfWork(hash, 0x1D010000)) {
+	if (CBValidateProofOfWork(hashData, 0x1D010000)) {
 		printf("CHECK POW HIGH TARGET FAIL\n");
 		return 1;
 	}
-	if (CBValidateProofOfWork(hash, 0x1C800000)) {
+	if (CBValidateProofOfWork(hashData, 0x1C800000)) {
 		printf("CHECK POW BAD MANTISSA FAIL\n");
 		return 1;
 	}
-	if (CBValidateProofOfWork(hash, 0x1D00FFFE)) {
+	if (CBValidateProofOfWork(hashData, 0x1D00FFFE)) {
 		printf("CHECK POW HIGH HASH MANTISSA FAIL\n");
 		return 1;
 	}
-	if (CBValidateProofOfWork(hash, 0x1C00FFFF)) {
+	if (CBValidateProofOfWork(hashData, 0x1C00FFFF)) {
 		printf("CHECK POW HIGH HASH EXPONENT FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(hash, 5, 0xFE);
-	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
+	hashData[5] = 0xFE;
+	if (NOT CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
 		printf("CHECK POW LOW HASH MANTISSA FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(hash, 4, 0x00);
-	CBByteArraySetByte(hash, 5, 0xFF);
-	CBByteArraySetByte(hash, 6, 0xFF);
-	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
+	hashData[4] = 0x00;
+	hashData[5] = 0xFF;
+	hashData[6] = 0xFF;
+	if (NOT CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
 		printf("CHECK POW LOW HASH EXPONENT FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(hash);
+	hashData[6] = 0x00;
 	// Test CBTransactionGetSigOps
 	CBTransaction * tx = CBNewTransaction(0, 1, onErrorReceived);
 	CBScript * script = CBNewScriptWithDataCopy((uint8_t [14]){CB_SCRIPT_OP_PUSHDATA1,0x02,0x00,0x0F,CB_SCRIPT_OP_CHECKSIG,CB_SCRIPT_OP_CHECKSIG,0x4,0xAB,0x40,0xBE,0x29,CB_SCRIPT_OP_CHECKSIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIGVERIFY,CB_SCRIPT_OP_CHECKMULTISIG}, 14, onErrorReceived);
-	hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
+	CBByteArray * hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
 	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 3, onErrorReceived));
 	CBReleaseObject(script);
 	CBReleaseObject(hash);
@@ -176,7 +175,6 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(tx);
-	free(hashData);
 	// Test merkle root calculation from block 100,004
 	uint8_t hashes[192] = {
 		0x2b,0xa9,0x74,0xce,0xdd,0x1d,0xb4,0x7c,0x60,0xce,0xb1,0x91,0x04,0xd7,0x0c,0xaf,0xd8,0x8f,0xa5,0x41,0x10,0x1b,0xc5,0x3d,0x41,0xe5,0x3f,0x93,0x23,0xd4,0x7e,0xab

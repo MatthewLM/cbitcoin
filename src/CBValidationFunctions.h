@@ -84,6 +84,6 @@ bool CBTransactionIsFinal(CBTransaction * tx,uint64_t time,uint64_t height);
  @brief hash Block hash.
  @returns true if the validation passed, false otherwise.
  */
-bool CBValidateProofOfWork(CBByteArray * hash,uint32_t target);
+bool CBValidateProofOfWork(uint8_t * hash,uint32_t target);
 
 #endif
