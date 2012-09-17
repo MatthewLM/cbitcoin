@@ -26,7 +26,7 @@
 
 //  Constructor
 
-CBVersion * CBNewVersion(int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
+CBVersion * CBNewVersion(int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
 	CBVersion * self = malloc(sizeof(*self));
 	if (NOT self) {
 		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewVersion\n",sizeof(*self));
@@ -59,7 +59,7 @@ CBVersion * CBGetVersion(void * self){
 
 //  Initialiser
 
-bool CBInitVersion(CBVersion * self,int32_t version,uint64_t services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
+bool CBInitVersion(CBVersion * self,int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
 	self->version = version;
 	self->services = services;
 	self->time = time;
@@ -107,7 +107,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 		return 0;
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
-	self->services = CBByteArrayReadInt64(bytes, 4);
+	self->services = (CBVersionServices) CBByteArrayReadInt64(bytes, 4);
 	self->time = CBByteArrayReadInt64(bytes, 12);
 	CBByteArray * data = CBByteArraySubReference(bytes, 20, bytes->length-20); // Get data from 20 bytes to the end of the byte array to deserialise the recieving network address.
 	if (NOT data) {

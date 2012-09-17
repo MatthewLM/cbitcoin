@@ -43,7 +43,7 @@ typedef struct CBMessage{
 	uint8_t * altText; /**< For an alternative message: This is the type text. */
 	CBByteArray * bytes; /**< Raw message data minus the message header. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */
 	uint8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
-	void (*onErrorReceived)(CBError error,char *,...); /**< Pointer to bitcoin event centre for errors */
+	void (*onErrorReceived)(CBError error,char *,...); /**< Pointer to error callback */
 	CBMessageType expectResponse; /**< Set to zero if no message expected or the type of message expected as a response. */
 } CBMessage;
 

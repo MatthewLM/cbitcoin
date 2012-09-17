@@ -31,7 +31,6 @@
 //  Includes
 
 #include "CBObject.h"
-#include "CBEvents.h"
 #include <stdbool.h>
 #include <string.h>
 
