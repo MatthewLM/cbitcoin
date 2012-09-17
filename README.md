@@ -36,9 +36,9 @@ Installation
 
 cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13. To use you should have python installed. Run the BUILD.py file with a python 2 (tested 2.5 to 2.7) interpreter. The library will be built into a ./build/bin directory. The BUILD.py script takes the following parameters:
 
-**--all** Compile all the source files, even for source files whih are older than any existing object files.
-**--test** Build and run the test programs.
-**--universal** Attempt to build a universal library when building for OSX.
+**--all** Compile all the source files, even for source files whih are older than any existing object files.  
+**--test** Build and run the test programs.  
+**--universal** Attempt to build a universal library when building for OSX.  
 **--debug** Compile with the "-g" flag and do not use optimisations.
 
 The top of the BUILD.py file contains a configuration section. This section allows you to add your own linker and compilation flags and also provide the locations of libraries for building the tests if you have passed "--test". By default the script will use settings depending on wether you are on OSX or Linux but you can modify the configuration for your own platform. Ensure AUTO_CONFIG is False if you are doing this.
@@ -121,7 +121,7 @@ Functions should be documented like this:
 	 @param someParam Brief decription of the function parameter.
 	 @returns What the function returns.
 	 */
-	int someFunc(int someParam);
+	int CBSomeFunc(int someParam);
  
 It may be that other elements are documented and should be documented in a similar fashion and please leave helpful comments in the source code.
 
