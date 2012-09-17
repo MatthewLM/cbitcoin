@@ -65,11 +65,11 @@ int main(){
 		0x20,0x8D, // Port 8333
 	};
 	uint8_t * data = malloc(12012);
-	// cbitcoin version 1
-	data[0] = 0x01;
-	data[1] = 0x00;
-	data[2] = 0x00;
-	data[3] = 0x00;
+	// cbitcoin version
+	data[0] = CB_LIBRARY_VERSION;
+	data[1] = CB_LIBRARY_VERSION >> 8;
+	data[2] = CB_LIBRARY_VERSION >> 16;
+	data[3] = CB_LIBRARY_VERSION >> 24;
 	// secret 0x56AFE32056AFE320
 	data[12004] = 0x20;
 	data[12005] = 0xE3;
@@ -159,8 +159,13 @@ int main(){
 		return 1;
 	}
 	if (memcmp(data, CBByteArrayGetData(bytes), 12012)) {
-		printf("SERIALISATION FAIL 0x\n");
+		printf("SERIALISATION FAIL");
 		uint8_t * d = CBByteArrayGetData(bytes);
+		for (int x = 0; x < 12012; x++) {
+			if (data[x] != d[x]) {
+				printf(" AT %i\n 0x",x);
+			}
+		}
 		for (int x = 0; x < 12012; x++) {
 			printf("%.2X",d[x]);
 		}
