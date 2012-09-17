@@ -105,17 +105,11 @@ bool CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output){
 	CBRetainObject(output);
 	return CBTransactionTakeOutput(self, output);
 }
-CBByteArray * CBTransactionCalculateHash(CBTransaction * self){
+void CBTransactionCalculateHash(CBTransaction * self, uint8_t * hash){
 	uint8_t * data = CBByteArrayGetData(CBGetMessage(self)->bytes);
-	uint8_t hash1[32];
-	uint8_t * hash2 = malloc(32);
-	if (NOT hash2) {
-		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate 32 bytes of memory in CBTransactionCalculateHash\n");
-		return NULL;
-	}
-	CBSha256(data, CBGetMessage(self)->bytes->length, hash1);
-	CBSha256(hash1, 32, hash2);
-	return CBNewByteArrayWithData(hash2, 32, CBGetMessage(self)->onErrorReceived);
+	uint8_t hash2[32];
+	CBSha256(data, CBGetMessage(self)->bytes->length, hash2);
+	CBSha256(hash2, 32, hash);
 }
 uint32_t CBTransactionCalculateLength(CBTransaction * self){
 	uint32_t len = 8 + CBVarIntSizeOf(self->inputNum) + self->inputNum * 40 + CBVarIntSizeOf(self->outputNum) + self->outputNum * 8; // 8 is for version and lockTime.
@@ -225,10 +219,9 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 	self->lockTime = CBByteArrayReadInt32(bytes, cursor);
 	return cursor + 4;
 }
-CBByteArray * CBTransactionGetHash(CBTransaction * self){
+uint8_t * CBTransactionGetHash(CBTransaction * self){
 	if (NOT self->hash)
-		self->hash = CBTransactionCalculateHash(self);
-	CBRetainObject(self->hash);
+		CBTransactionCalculateHash(self, self->hash);
 	return self->hash;
 }
 CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){

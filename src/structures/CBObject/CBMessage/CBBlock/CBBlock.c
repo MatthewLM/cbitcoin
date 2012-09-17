@@ -76,7 +76,6 @@ bool CBInitBlock(CBBlock * self,void (*onErrorReceived)(CBError error,char *,...
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
-	self->hash = NULL;
 	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
@@ -86,7 +85,6 @@ bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,void (*onErrorReceive
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
-	self->hash = NULL;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
@@ -127,17 +125,11 @@ void CBFreeBlock(void * vself){
 
 //  Functions
 
-CBByteArray * CBBlockCalculateHash(CBBlock * self){
+void CBBlockCalculateHash(CBBlock * self, uint8_t * hash){
 	uint8_t * headerData = CBByteArrayGetData(CBGetMessage(self)->bytes);
-	uint8_t hash1[32];
-	uint8_t * hash2 = malloc(32);
-	if (NOT hash2) {
-		CBGetMessage(self)->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate 32 bytes of memory in CBBlockCalculateHash\n");
-		return NULL;
-	}
-	CBSha256(headerData, 80, hash1);
-	CBSha256(hash1, 32, hash2);
-	return CBNewByteArrayWithData(hash2, 32, CBGetMessage(self)->onErrorReceived);
+	uint8_t hash2[32];
+	CBSha256(headerData, 80, hash2);
+	CBSha256(hash2, 32, hash);
 }
 uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions){
 	uint32_t len = 80 + CBVarIntSizeOf(self->transactionNum);
@@ -244,10 +236,9 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 	}
 }
 
-CBByteArray * CBBlockGetHash(CBBlock * self){
+uint8_t * CBBlockGetHash(CBBlock * self){
 	if (NOT self->hash)
-		self->hash = CBBlockCalculateHash(self);
-	CBRetainObject(self->hash);
+		CBBlockCalculateHash(self,self->hash);
 	return self->hash;
 }
 uint32_t CBBlockSerialise(CBBlock * self,bool transactions){

@@ -38,7 +38,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	CBByteArray * hash; /**< The hash for this block. NULL if it needs to be calculated or set. */
+	uint8_t hash[32]; /**< The hash for this block. NULL if it needs to be calculated or set. */
 	uint32_t version;
 	CBByteArray * prevBlockHash; /**< The previous block hash. */
 	CBByteArray * merkleRoot; /**< The merkle tree root hash. */
@@ -107,9 +107,9 @@ void CBFreeBlock(void * vself);
 /**
  @brief Calculates the hash for a block.
  @param self The CBBlock object. This should be serialised.
- @returns The hash for the block. This is a 32 byte long, double SHA-256 hash.
+ @param The hash for the block to be set. This should be 32 bytes long.
  */
-CBByteArray * CBBlockCalculateHash(CBBlock * self);
+void CBBlockCalculateHash(CBBlock * self, uint8_t * hash);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBBlock object.
@@ -127,9 +127,9 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions);
 /**
  @brief Retrieves or calculates the hash for a block. Hashes taken from this fuction are cached.
  @param self The CBBlock object. This should be serialised.
- @returns The hash for the block. This is a 32 byte long, double SHA-256 hash.
+ @returns The hash for the block. This is a 32 byte long, double SHA-256 hash and is a pointer to the hash field in the block.
  */
-CBByteArray * CBBlockGetHash(CBBlock * self);
+uint8_t * CBBlockGetHash(CBBlock * self);
 /**
  @brief Serialises a CBBlock to the byte data.
  @param self The CBBlock object
