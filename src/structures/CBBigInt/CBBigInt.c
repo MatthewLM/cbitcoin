@@ -39,6 +39,21 @@ CBCompare CBBigIntCompareTo58(CBBigInt a){
 		return CB_COMPARE_LESS_THAN;
 	return CB_COMPARE_EQUAL;
 }
+CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
+	if (a.length > b.length)
+		return CB_COMPARE_MORE_THAN;
+	else if (a.length < b.length)
+		return CB_COMPARE_LESS_THAN;
+	for (u_int8_t x = a.length - 1;; x--) {
+		if (a.data[x] < b.data[x])
+			return CB_COMPARE_LESS_THAN;
+		else if (a.data[x] > b.data[x])
+			return CB_COMPARE_MORE_THAN;
+		if (!x)
+			break;
+	}
+	return CB_COMPARE_EQUAL;
+}
 void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
 		uint8_t * temp = realloc(a->data, b->length);

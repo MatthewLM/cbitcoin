@@ -49,6 +49,13 @@ typedef struct{
  */
 CBCompare CBBigIntCompareTo58(CBBigInt a);
 /**
+ @brief Compares two CBBigInt. You can replicate "a op b" as "CBBigIntCompare(a,b) op 0" replacing "op" with a comparison operator.
+ @param a The first CBBigInt
+ @param b The second CBBigInt
+ @returns The result of the comparison as a CBCompare constant. Returns what a is in relation to b.
+ */
+CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b);
+/**
  @brief Calculates the result of an addition of a CBBigInt structure by another CBBigInt structure and the first CBBigInt becomes this new figure. Like "a += b".
  @param a A pointer to the CBBigInt
  @param b A pointer to the second CBBigInt
