@@ -68,7 +68,7 @@ uint32_t CBTransactionGetSigOps(CBTransaction * tx);
  @param tx The transaction to validate. This should be deserialised.
  @param coinbase true to validate for a coinbase transaction, false to validate for a non-coinbase transaction.
  @param err Pointer to error which is set true when a memory failure occurs.
- @returns A memory block of previous transaction ouputs spent by this transaction if validation passed or NULL. The outputs can be used for further validation that the transaction is not a double-spend. The block of CBPrevOuts needs to be freed. The hashes are not retained, so the data is good until the transaction is freed. Do not try to release the hashes, thinking they have been retained in this function.
+ @returns A memory block of previous transaction ouputs spent by this transaction if validation passed or NULL. The outputs can be used for further validation that the transaction is not a double-spend or spends non-existant outputs. The block of CBPrevOuts needs to be freed. The hashes are not retained, so the data is good until the transaction is freed. Do not try to release the hashes, thinking they have been retained in this function.
  */
 CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool * err);
 /**

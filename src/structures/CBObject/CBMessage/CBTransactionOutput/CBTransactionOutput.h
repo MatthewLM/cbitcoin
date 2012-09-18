@@ -40,7 +40,6 @@ typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint64_t value; /**< The transaction value */
 	CBScript * scriptObject; /**< The output script object */
-	void * spentBy; /**< CBTransactionInput that spent this output if any */
 } CBTransactionOutput;
 
 /**
