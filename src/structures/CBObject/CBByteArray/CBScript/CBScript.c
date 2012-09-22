@@ -1450,6 +1450,34 @@ bool CBScriptIsP2SH(CBScript * self){
 			&& CBByteArrayGetByte(self,1) == 0x14
 			&& CBByteArrayGetByte(self,22) == CB_SCRIPT_OP_EQUAL);
 }
+bool CBScriptIsPushOnly(CBScript * self){
+	uint32_t x = 0;
+	for (; x < self->length;) { 
+		CBScriptOp op = CBByteArrayGetByte(self, x);
+		if (op && op < 79) {
+			// Is a push operation
+			x++;
+			uint32_t a;
+			if (op < 76){
+				x += op;
+				a = 0;
+			}else if (op == CB_SCRIPT_OP_PUSHDATA1){
+				a = CBByteArrayGetByte(self, x);
+				x++;
+			}else if (op == CB_SCRIPT_OP_PUSHDATA2){
+				a = CBByteArrayReadInt16(self, x);
+				x += 2;
+			}else{
+				a = CBByteArrayReadInt32(self, x);
+				x += 4;
+			}
+			if (a > 520)
+				return false;
+			x += a;
+		}else return false;
+	}
+	return x == self->length;
+}
 void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBScriptStackItem signature){
 	if (signature.data == NULL) return; // Signature zero
 	uint8_t * ptr = subScript;

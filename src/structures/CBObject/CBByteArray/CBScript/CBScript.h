@@ -165,6 +165,12 @@ uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH);
  */
 bool CBScriptIsP2SH(CBScript * self);
 /**
+ @brief Determines if a script has only push operations.
+ @param self The CBScript object.
+ @retuns true if the script has only push operations, false otherwise. Also returns false when an invalid push operation if found.
+ */
+bool CBScriptIsPushOnly(CBScript * self);
+/**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.
  @param subScriptLen A pointer to the length of the sub script. The length will be modified to the new length.
