@@ -31,8 +31,8 @@
 #define CB_MIN_PROTO_VERSION 209
 #define CB_ADDR_TIME_VERSION 31402 // Version where times are included in addr messages.
 #define CB_PONG_VERSION 60000 // Version where pings are responded with pongs.
-#define CB_LIBRARY_VERSION 2 // Goes up in increments
-#define CB_LIBRARY_VERSION_STRING "1.0 alpha-2" // Features.Non-features pre-alpha/alpha/beta
+#define CB_LIBRARY_VERSION 3 // Goes up in increments
+#define CB_LIBRARY_VERSION_STRING "1.0 alpha-3" // Features.Non-features pre-alpha/alpha/beta
 #define CB_USER_AGENT_SEGMENT "/cbitcoin:1.0(alpha-2)/"
 #define CB_PRODUCTION_NETWORK_BYTE 0 // The normal network for trading
 #define CB_TEST_NETWORK_BYTE 111 // The network for testing
