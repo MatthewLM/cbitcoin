@@ -1483,10 +1483,10 @@ void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBSc
 	uint8_t * ptr = subScript;
 	uint8_t * end = subScript + *subScriptLen;
 	for (;ptr < end;) {
-		if (*ptr && *ptr < 78) { // Push
+		if (*ptr && *ptr < 79) { // Push
 			// Move to data for push and record movement to next operation. No checking of push data bounds since it should have already been done.
 			uint32_t move;
-			if (*ptr < 75) {
+			if (*ptr < 76) {
 				move = *ptr;
 				ptr++;
 			}else if (*ptr == CB_SCRIPT_OP_PUSHDATA1){
