@@ -65,6 +65,7 @@
 #define CB_MAX_TARGET 0x1D00FFFF
 #define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
 #define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
+#define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
 
 //  Enums
 
