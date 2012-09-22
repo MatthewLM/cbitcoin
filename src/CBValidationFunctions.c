@@ -134,7 +134,7 @@ bool CBTransactionIsFinal(CBTransaction * tx,uint64_t time,uint64_t height){
 	}
 	return true;
 }
-CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool * err){
+CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * outputValue, bool * err){
 	*err = false;
 	if (NOT tx->inputNum || NOT tx->outputNum)
 		return NULL;
@@ -149,12 +149,12 @@ CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, bool *
 		return NULL;
 	}
 	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the C++ client on this where an attacker could overflow very large outputs to equal small inputs.
-	uint64_t total = 0;
+	*outputValue = 0;
 	for (uint32_t x = 0; x < tx->outputNum; x++) {
 		if (tx->outputs[x]->value > CB_MAX_MONEY)
 			return NULL;
-		total += tx->outputs[x]->value;
-		if (total > CB_MAX_MONEY)
+		*outputValue += tx->outputs[x]->value;
+		if (*outputValue > CB_MAX_MONEY)
 			return NULL;
 	}
 	if (coinbase){
