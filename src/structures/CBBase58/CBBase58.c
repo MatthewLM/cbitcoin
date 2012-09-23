@@ -55,7 +55,7 @@ CBBigInt CBDecodeBase58(char * str){
 			CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
 			memset(temp, 0, bi2.length + 1);
 			CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
-			CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
+			CBBigIntEqualsAdditionByBigInt(&bi,&bi2);
 			free(bi2.data);
 		}
 		if (NOT x)

@@ -60,7 +60,7 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b);
  @param a A pointer to the CBBigInt
  @param b A pointer to the second CBBigInt
  */
-void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b);
+void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b);
 /**
  @brief Calculates the result of a division of a CBBigInt structure by 58 and the CBBigInt becomes this new figure. Like "a /= 58".
  @param a A pointer to the CBBigInt
@@ -74,6 +74,12 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans);
  @param ans A memory block the same size as the CBBigInt data memory block to store temporary data in calculations. Should be set with zeros.
  */
 void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans);
+/**
+ @brief Calculates the result of a subtraction of a CBBigInt structure with another CBBigInt structure and the CBBigInt becomes this new figure. Like "a -= b".
+ @param a A pointer to a CBBigInt
+ @param b A pointer to a CBBigInt
+ */
+void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a,CBBigInt * b);
 /**
  @brief Calculates the result of a subtraction of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a -= b".
  @param a A pointer to the CBBigInt

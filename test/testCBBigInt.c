@@ -104,7 +104,7 @@ int main(){
 		bi2.length = 32;
 		memmove(bi.data, bytes[x], 32);
 		memmove(bi2.data, bytes[99-x], 32);
-		CBBigIntEqualsAdditionByCBBigInt(&bi, &bi2);
+		CBBigIntEqualsAdditionByBigInt(&bi, &bi2);
 		z = add_results[x][31] == 0;
 		for (int y = 0; y < 32 - z; y++) {
 			if (bi.data[y] != add_results[x][y]){
@@ -185,9 +185,9 @@ int main(){
 		return 1;
 	}
 	CBBigInt bi3 = CBBigIntFromPowUInt8(3,9);
-	CBBigIntEqualsAdditionByCBBigInt(&bi, &bi3);
+	CBBigIntEqualsAdditionByBigInt(&bi, &bi3);
 	if (bi.length != 2 || bi.data[0] != 0xe3 || bi.data[1] != 0x4c) {
-		printf("CBBigIntEqualsAdditionByCBBigInt WITH ZERO FAILURE\n");
+		printf("CBBigIntEqualsAdditionByBigInt WITH ZERO FAILURE\n");
 		return 1;
 	}
 	return 0;

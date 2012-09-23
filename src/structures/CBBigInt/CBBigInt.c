@@ -50,7 +50,7 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
 	}
 	return CB_COMPARE_EQUAL;
 }
-void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b){
+void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
 		uint8_t * temp = realloc(a->data, b->length);
 		if (NOT temp) {
@@ -147,6 +147,22 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 		a->data = new;
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
+}
+void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a,CBBigInt * b){
+	// ??? Needs a test for this function.
+	for (uint8_t x = 0; x < b->length; x++) {
+		uint8_t sub = b->data[x];
+		for (uint8_t y = x; y < a->length; y++) {
+			if (a->data[y] >= sub) {
+				a->data[y] -= sub;
+				break;
+			}else{
+				a->data[y] = 255 - (sub - a->data[y] - 1);
+				sub = 1;
+			}
+		}
+	}
+	CBBigIntNormalise(a);
 }
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
 	uint8_t sub = b;
