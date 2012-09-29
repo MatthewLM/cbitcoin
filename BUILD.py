@@ -96,9 +96,9 @@ if debug:
 	cflags += " -g"
 else:
 	cflags += " -O" + OPTIMISATION_LEVEL
-lflags = "-flat_namespace " + ADDITIONAL_LFLAGS
+lflags = ADDITIONAL_LFLAGS
 if platform.system() == 'Darwin':
-    lflags += " -dynamiclib -undefined dynamic_lookup"
+    lflags += " -flat_namespace -dynamiclib -undefined dynamic_lookup"
     targetPath = os.path.join(binPath,"libcbitcoin.dylib")
 else:
     lflags += " -shared"
