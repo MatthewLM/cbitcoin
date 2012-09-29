@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <openssl/ssl.h>
 #include <openssl/ripemd.h>
+#include <openssl/rand.h>
 #include "CBAddress.h"
 
 void err(CBError a,char * format,...);
@@ -58,12 +59,22 @@ int main(){
 	printf("OpenSSL version: %s\n",OPENSSL_VERSION_TEXT);
 	printf("Enter the number of keys: ");
 	fflush(stdout);
-	char stringMatch[30];
+	char stringMatch[31];
 	getLine(stringMatch);
 	unsigned long int i = strtol(stringMatch, NULL, 0);
-	printf("Enter a string of text (30 max): ");
+	printf("Enter a string of text for the key (30 max): ");
 	fflush(stdout);
 	getLine(stringMatch);
+	printf("Waiting for entropy... Move the cursor around...\n");
+	fflush(stdout);
+	char entropy[32];
+	FILE * f = fopen("/dev/random", "r");
+	if (fread(entropy, 32, 1, f) != 1){
+		printf("FAILURING GETTING ENTROPY!");
+		return 1;
+	}
+	RAND_add(entropy, 32, 32);
+	fclose(f);
 	printf("Making %lu addresses for \"%s\"\n\n",i,stringMatch);
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
 	uint8_t * pubKey = NULL;

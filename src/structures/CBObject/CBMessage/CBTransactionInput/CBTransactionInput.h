@@ -49,7 +49,7 @@ typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint32_t sequence; /**< The version of this transaction input. Not used in protocol v0.3.18.00. Set to 0 for transactions that may somday be open to change after broadcast, set to CB_TRANSACTION_INPUT_FINAL if this input never needs to be changed after broadcast. */
 	CBScript * scriptObject; /**< Contains script information as a CBScript. */
-	CBPrevOut prevOut; /**< A locator for a previous output being spent */
+	CBPrevOut prevOut; /**< A locator for a previous output being spent. */
 } CBTransactionInput;
 
 /**
