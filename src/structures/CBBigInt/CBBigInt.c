@@ -40,7 +40,7 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
 		return CB_COMPARE_MORE_THAN;
 	else if (a.length < b.length)
 		return CB_COMPARE_LESS_THAN;
-	for (u_int8_t x = a.length - 1;; x--) {
+	for (uint8_t x = a.length - 1;; x--) {
 		if (a.data[x] < b.data[x])
 			return CB_COMPARE_LESS_THAN;
 		else if (a.data[x] > b.data[x])
