@@ -29,10 +29,10 @@
 CBCompare CBBigIntCompareTo58(CBBigInt a){
 	if(a.length > 1)
 		return CB_COMPARE_MORE_THAN;
-	if (a.data[0] > 58)
-		return CB_COMPARE_MORE_THAN;
-	else if (a.data[0] < 58)
+	if (a.length == 0 || a.data[0] < 58)
 		return CB_COMPARE_LESS_THAN;
+	else if (a.data[0] > 58)
+		return CB_COMPARE_MORE_THAN;
 	return CB_COMPARE_EQUAL;
 }
 CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
@@ -40,13 +40,11 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
 		return CB_COMPARE_MORE_THAN;
 	else if (a.length < b.length)
 		return CB_COMPARE_LESS_THAN;
-	for (uint8_t x = a.length - 1;; x--) {
+	for (int8_t x = a.length - 1; x >= 0; x--) {
 		if (a.data[x] < b.data[x])
 			return CB_COMPARE_LESS_THAN;
 		else if (a.data[x] > b.data[x])
 			return CB_COMPARE_MORE_THAN;
-		if (!x)
-			break;
 	}
 	return CB_COMPARE_EQUAL;
 }
@@ -60,17 +58,34 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 			return;
 		}
 		a->data = temp;
-		// Make certain data is empty
-		uint8_t diff = b->length - a->length;
-		memset(a->data + (b->length - diff), 0, diff);
+		// Make certain expansion of data is empty
+		memset(a->data + a->length, 0, b->length - a->length);
+		a->length = b->length;
 	}
-	uint8_t overflow = 0;
+	/* a->length >= b->length */
+	unsigned overflow = 0;
 	for (uint8_t x = 0; x < b->length; x++) {
-		a->data[x] += b->data[x] + overflow;
-		overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
+		overflow = a->data[x] + b->data[x] + overflow;
+		a->data[x] = overflow & 0xff;
+		overflow >>= 8;
+		/* The following does not work as expected when b->data[x] == 0xff and overflow == 1 :
+		 *   a->data[x] += b->data[x] + overflow;
+		 *   overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
+		 */
+		/* To stay with byte arithmetic one could use:
+		 ( uint8_t tmp = a->data[x] + overflow;
+		 ( overflow = tmp < a->data[x];
+		 ( a->data[x] = tmp + b->data[x];
+		 ( overflow += a->data[x] < tmp;
+		 */
+	}
+	while (overflow && x < a->length) {
+		a->data[x] += overflow;
+		overflow == !a->data[x];
+		x++;
 	}
 	if (overflow) { // Add extra byte
-		a->length = b->length + 1;
+		a->length++;
 		uint8_t * new = realloc(a->data, a->length);
 		if (NOT new) {
 			free(a->data);
@@ -80,8 +95,6 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 		}
 		a->data = new;
 		a->data[a->length - 1] = 1;
-	}else{
-		a->length = b->length;
 	}
 }
 void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){

@@ -46,7 +46,7 @@ def compile(flags,output,source,clean):
 		print "USING PREVIOUS " + output
 # Auto config
 if AUTO_CONFIG:
-	# At the moment it jsut assumes cetain things about different OSes.
+	# At the moment it just assumes certain things about different OSes.
 	if platform.system() == 'Darwin':
 		# Assuming macports installations or other installations in /opt/local/
 		LIBEVENT_LOCATION = "/opt/local/"
