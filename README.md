@@ -1,15 +1,15 @@
 cbitcoin - A Bitcoin Library In The C Programming Language
 ==========================================================
 
-cbitcoin is a bitcoin library written in standard C99. It is currently in alpha-stage and should only be used experimentally. The purpose of the library is to make it easier for developers to create bitcoin applications and the library should be versatile enough to be used in many bitcoin projects. It is not a client library, rather it provides the basic building blocks of the bitcoin protocol. 
+cbitcoin is a bitcoin library written in standard C99. It is currently in alpha-stage and should only be used experimentally. The purpose of the library is to make it easier for developers to create bitcoin applications and the library should be versatile enough to be used in many bitcoin projects. It is not a client library, rather it provides the basic building blocks of the bitcoin protocol.
 
 The features includes:
 
-* Bitcoin message structures including serailisation and deserialisation functions.
+* Bitcoin message structures including serialisation and deserialisation functions.
 * A bitcoin script interpreter.
-* Functions for building and verifying merkle trees.
+* Functions for building and verifying Merkle trees.
 * Basic functions which can be used in various validation models (full nodes, pruning nodes, SPV nodes or whatever).
-* Asynchronous networking code whcih provides a simple interface to the bitcoin network for sending and receiving messages.
+* Asynchronous networking code which provides a simple interface to the bitcoin network for sending and receiving messages.
 * A network address manager
 * Automatic bitcoin handshakes.
 * Automatic peer discovery.
@@ -18,7 +18,7 @@ The features includes:
 * Simple reference counting memory management.
 * Doxygen documentation and well-documented source code.
 * Purely standard C99 with weakly linked function prototypes for cryptography, PRNG and network dependencies.
-* Implementations of the dependencies using libevent and openssl.
+* Implementations of the dependencies using libevent and OpenSSL.
 
 If you wish to contact the project leader, Matthew Mitchell, about this project please email cbitcoin@thelibertyportal.com
 
@@ -36,12 +36,12 @@ Installation
 
 cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13. To use you should have python installed. Run the BUILD.py file with a python 2 (tested 2.5 to 2.7) interpreter. The library will be built into a ./build/bin directory. The BUILD.py script takes the following parameters:
 
-**--all** Compile all the source files, even for source files whih are older than any existing object files.  
+**--all** Compile all the source files, even for source files which are older than any existing object files.  
 **--test** Build and run the test programs.  
 **--universal** Attempt to build a universal library when building for OSX.  
-**--debug** Compile with the "-g" flag and do not use optimisations.
+**--debug** Compile with the "-g" flag and do not use optimisations.  
 
-The top of the BUILD.py file contains a configuration section. This section allows you to add your own linker and compilation flags and also provide the locations of libraries for building the tests if you have passed "--test". By default the script will use settings depending on wether you are on OSX or Linux but you can modify the configuration for your own platform. Ensure AUTO_CONFIG is False if you are doing this.
+The top of the BUILD.py file contains a configuration section. This section allows you to add your own linker and compilation flags and also provide the locations of libraries for building the tests if you have passed "--test". By default the script will use settings depending on whether you are on OSX or Linux but you can modify the configuration for your own platform. Ensure AUTO_CONFIG is False if you are doing this.
 
 The script has only been tested on OSX Mountain Lion 10.8.1 and Linux Mint 13 Maya. Contributions for successful builds on other systems are welcome.
 
@@ -58,14 +58,14 @@ Making a Contribution
 Coding Guidelines
 -----------------
 
-* cbitcoin uses an object-orientated approach by implememting reference counting and inheritance on structures. New code should be consistent with this approach. Use the supplied structure_maker.py to make a new structure which inherits CBObject. All structures inheriting CBObject should go into the structures directory as shown. message_maker.py is similar to structure_maker but is for CBMessage structures.
+* cbitcoin uses an object-orientated approach by implementing reference counting and inheritance on structures. New code should be consistent with this approach. Use the supplied structure_maker.py to make a new structure which inherits CBObject. All structures inheriting CBObject should go into the structures directory as shown. message_maker.py is similar to structure_maker but is for CBMessage structures.
 * The rule for memory management is to retain an object before returning it, to retain an object when giving it to another object, and to release an object once the object is no longer needed by an object or function. When a new object is created it should be retained. There are some exceptions to the rules, such as functions which take a reference from the caller.
 * Filenames should begin with CB.
 * Functions, types and variables with linker visibility outside the library should begin with CB.
 * CamelCase should be used. lowerCamelCase should be used for structure fields and variables except where inappropriate.
 * Constants should be ALL_UPPERCASE_WITH_UNDERSCORES.
 * Constants made visible throughout the library should go in CBConstants.h
-* CBGet functions should be prefered over type-casting.
+* CBGet functions should be preferred over type-casting.
 * Use comments where appropriate, especially in obscure sections.
 * In structure files, please order functions under "//  Functions" alphabetically.
 * Use "???" in comments for areas of confusion or uncertainty where the code may need improving or changed. Look for "???" to find parts in the code that may need work.
@@ -81,7 +81,7 @@ cbitcoin should contain the following header for each file:
 	//
 	//  Created by Full Name on DD/MM/YYYY.
 	//  Copyright (c) 2012 Matthew Mitchell
-	//  
+	//
 	//  This file is part of cbitcoin.
 	//
 	//  cbitcoin is free software: you can redistribute it and/or modify
@@ -93,11 +93,11 @@ cbitcoin should contain the following header for each file:
 	//  but WITHOUT ANY WARRANTY; without even the implied warranty of
 	//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	//  GNU General Public License for more details.
-	//  
+	//
 	//  You should have received a copy of the GNU General Public License
 	//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
-Header files should contain information for documentation. cbitcoin uses a DoxyGen syntax (See http://www.stack.nl/~dimitri/doxygen/manual.html). Please document all files as well as structures and functions that are exposed by the library. Brief descriptions should be included. Details can be added at a later date, especailly once code has been properly implemented. Files should be documented like this:
+Header files should contain information for documentation. cbitcoin uses a Doxygen syntax (See http://www.stack.nl/~dimitri/doxygen/manual.html). Please document all files as well as structures and functions that are exposed by the library. Brief descriptions should be included. Details can be added at a later date, especially once code has been properly implemented. Files should be documented like this:
 
 	/**
 	 @file

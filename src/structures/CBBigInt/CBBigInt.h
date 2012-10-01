@@ -35,7 +35,7 @@
 #include <stdint.h>
 
 /**
- @brief Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first. 
+ @brief Contains byte data with the length of this data to represent a large integer. The byte data is in little-endian which stores the smallest byte first. On an error data is set to NULL and length is 0.
  */
 typedef struct{
 	uint8_t * data; /**< The byte data. Should be little-endian */
@@ -49,7 +49,7 @@ typedef struct{
  */
 CBCompare CBBigIntCompareTo58(CBBigInt a);
 /**
- @brief Calculates the result of an addition of a CBBigInt structure by another CBBigInt structure and the first CBBigInt becomes this new figure. Like "a += b".
+ @brief Calculates the result of an addition of a CBBigInt structure by another CBBigInt structure and the first CBBigInt becomes this new figure. Like "a += b". a becomes {NULL,0} on error. Check for this otherwise it will likely force a crash in your program!
  @param a A pointer to the CBBigInt
  @param b A pointer to the second CBBigInt
  */
@@ -61,7 +61,7 @@ void CBBigIntEqualsAdditionByCBBigInt(CBBigInt * a,CBBigInt * b);
  */
 void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans);
 /**
- @brief Calculates the result of a multiplication of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a *= b".
+ @brief Calculates the result of a multiplication of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a *= b". a becomes {NULL,0} on error. Check for this otherwise it will likely force a crash in your program!
  @param a A pointer to the CBBigInt
  @param b An 8 bit integer
  @param ans A memory block the same size as the CBBigInt data memory block to store temporary data in calculations. Should be set with zeros.
@@ -83,7 +83,7 @@ uint8_t CBBigIntModuloWith58(CBBigInt a);
  @brief Makes a new CBBigInt from an exponentiation of an unsigned 8 bit intger with another unsigned 8 bit integer. Like "a^b". Data must be freed.
  @param a The base
  @param b The exponent.
- @returns The new CBBigInt. Free the CBBigInt data when done.
+ @returns The new CBBigInt or {NULL,0} on error (You should check for this). Free the CBBigInt data when done.
  */
 CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b);
 /**
