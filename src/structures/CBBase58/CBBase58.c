@@ -53,9 +53,32 @@ CBBigInt CBDecodeBase58(char * str){
 				alphaIndex -= 65;
 			}
 			CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
+			if (NOT bi2.data){
+				// Error occured.
+				free(bi.data);
+				bi.data = NULL;
+				bi.length = 0;
+				return bi;
+			}
 			memset(temp, 0, bi2.length + 1);
 			CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
+			if (NOT bi2.data){
+				// Error occured.
+				free(bi2.data);
+				free(bi.data);
+				bi.data = NULL;
+				bi.length = 0;
+				return bi;
+			}
 			CBBigIntEqualsAdditionByBigInt(&bi,&bi2);
+			if (NOT bi.data){
+				// Error occured.
+				free(bi2.data);
+				free(bi.data);
+				bi.data = NULL;
+				bi.length = 0;
+				return bi;
+			}
 			free(bi2.data);
 		}
 		if (NOT x)
@@ -86,6 +109,7 @@ CBBigInt CBDecodeBase58Checked(char * str,void (*onErrorReceived)(CBError error,
 	if (bi.length < 4){
 		onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short or there was a memory failure.");
 		bi.length = 0;
+		free(bi.data);
 		bi.data = NULL;
 		return bi;
 	}

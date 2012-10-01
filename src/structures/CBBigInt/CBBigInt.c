@@ -29,10 +29,10 @@
 CBCompare CBBigIntCompareTo58(CBBigInt a){
 	if(a.length > 1)
 		return CB_COMPARE_MORE_THAN;
-	if (a.length == 0 || a.data[0] < 58)
-		return CB_COMPARE_LESS_THAN;
-	else if (a.data[0] > 58)
+	if (a.data[0] > 58)
 		return CB_COMPARE_MORE_THAN;
+	else if (a.data[0] < 58)
+		return CB_COMPARE_LESS_THAN;
 	return CB_COMPARE_EQUAL;
 }
 CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
@@ -40,11 +40,13 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
 		return CB_COMPARE_MORE_THAN;
 	else if (a.length < b.length)
 		return CB_COMPARE_LESS_THAN;
-	for (int8_t x = a.length - 1; x >= 0; x--) {
+	for (uint8_t x = a.length - 1;; x--) {
 		if (a.data[x] < b.data[x])
 			return CB_COMPARE_LESS_THAN;
 		else if (a.data[x] > b.data[x])
 			return CB_COMPARE_MORE_THAN;
+		if (!x)
+			break;
 	}
 	return CB_COMPARE_EQUAL;
 }
@@ -52,6 +54,7 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
 		uint8_t * temp = realloc(a->data, b->length);
 		if (NOT temp) {
+			// ERROR (Not zero as some might find confusing)
 			free(a->data);
 			a->data = NULL;
 			a->length = 0;
@@ -62,32 +65,19 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 		memset(a->data + a->length, 0, b->length - a->length);
 		a->length = b->length;
 	}
-	/* a->length >= b->length */
-	unsigned overflow = 0;
+	// a->length >= b->length
+	bool overflow = 0;
 	for (uint8_t x = 0; x < b->length; x++) {
-		overflow = a->data[x] + b->data[x] + overflow;
-		a->data[x] = overflow & 0xff;
-		overflow >>= 8;
-		/* The following does not work as expected when b->data[x] == 0xff and overflow == 1 :
-		 *   a->data[x] += b->data[x] + overflow;
-		 *   overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
-		 */
-		/* To stay with byte arithmetic one could use:
-		 ( uint8_t tmp = a->data[x] + overflow;
-		 ( overflow = tmp < a->data[x];
-		 ( a->data[x] = tmp + b->data[x];
-		 ( overflow += a->data[x] < tmp;
-		 */
-	}
-	while (overflow && x < a->length) {
-		a->data[x] += overflow;
-		overflow == !a->data[x];
-		x++;
+		a->data[x] += b->data[x] + overflow;
+		// a->data[x] now equals the result of the addition.
+		// The overflow will never go beyond 1. Imagine a->data[x] == 0xff, b->data[x] == 0xff and the overflow is 1, the new overflow is still 1 and a->data[x] is 0xff. Therefore it does work.
+		overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
 	}
 	if (overflow) { // Add extra byte
 		a->length++;
 		uint8_t * new = realloc(a->data, a->length);
 		if (NOT new) {
+			// ERROR (Not zero as some might find confusing)
 			free(a->data);
 			a->data = NULL;
 			a->length = 0;
@@ -114,13 +104,10 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 	if (NOT ans[a->length-1]) { // If last byte is zero, adjust length.
 		a->length--;
 		uint8_t * new = realloc(a->data, a->length);
-		if (NOT new) {
-			free(a->data);
-			a->data = NULL;
-			a->length = 0;
-			return;
-		}
-		a->data = new;
+		if (new)
+			// Use new memory block as it was successfully created
+			a->data = new;
+		// Else we just continue to use the larger memory block.
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
@@ -129,13 +116,10 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
 		uint8_t * new = realloc(a->data, 1);
-		if (NOT new) {
-			free(a->data);
-			a->data = NULL;
-			a->length = 0;
-			return;
-		}
-		a->data = new;
+		if (new)
+			// Use new memory block as it was successfully created
+			a->data = new;
+		// Else we just continue to use the larger memory block.
 		a->data[0] = 0;
 		return;
 	}
@@ -152,6 +136,7 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 		a->length++;
 		uint8_t * new = realloc(a->data, a->length);
 		if (NOT new) {
+			// ERROR (Not zero as some might find confusing)
 			free(a->data);
 			a->data = NULL;
 			a->length = 0;
@@ -207,6 +192,7 @@ CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b){
 	CBBigInt bi;
 	bi.data = malloc(1);
 	if (NOT bi.data){
+		// ERROR (Not zero as some might find confusing)
 		bi.length = 0;
 		bi.data = NULL;
 		return bi;
@@ -215,6 +201,7 @@ CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b){
 	bi.data[0] = 1;
 	uint8_t * temp = malloc(b);
 	if (NOT temp) {
+		// ERROR (Not zero as some might find confusing)
 		free(bi.data);
 		bi.length = 0;
 		bi.data = NULL;
@@ -223,6 +210,9 @@ CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b){
 	for (uint8_t x = 0; x < b; x++) {
 		memset(temp, 0, bi.length);
 		CBBigIntEqualsMultiplicationByUInt8(&bi, a, temp);
+		if (NOT bi.data)
+			// Error occured. Return with bi in the error state.
+			break;
 	}
 	free(temp);
 	return bi;
