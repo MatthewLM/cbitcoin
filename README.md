@@ -36,8 +36,8 @@ Installation
 
 cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13. To use you should have python installed. Run the BUILD.py file with a python 2 (tested 2.5 to 2.7) interpreter. The library will be built into a ./build/bin directory. The BUILD.py script takes the following parameters:
 
-**--all** Compile all the source files, even for source files which are older than any existing object files.
-**--test** Build and run the test programs.  
+**--all** Compile all the source files, even for source files which are older than any existing object files.  
+**--test** Build and run the test programs.
 **--universal** Attempt to build a universal library when building for OSX.
 **--debug** Compile with the "-g" flag and do not use optimizations.  
 
