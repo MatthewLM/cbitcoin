@@ -49,7 +49,7 @@ typedef struct{
 	CBObject base; /**< CBObject base structure */
 	CBSharedData * sharedData; /**< Underlying byte data */
 	uint32_t offset; /**< Offset from the begining of the byte data to the begining of this array */
-	uint32_t length; /**< Length of byte array. Set to CB_BYTE_ARRAY_UNKNOWN_LENGTH if unknown. */
+	uint32_t length; /**< Length of byte array. */
 	void (*onErrorReceived)(CBError error,char *,...);
 } CBByteArray;
 
