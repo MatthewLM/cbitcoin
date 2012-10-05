@@ -186,24 +186,50 @@ int main(){
 		return 1;
 	}
 	CBBigInt bi3;
-	CBBigIntAlloc(&bi3, 1);
+	CBBigIntAlloc(&bi3, 2);
 	CBBigIntFromPowUInt8(&bi3, 3, 9);
 	CBBigIntEqualsAdditionByBigInt(&bi, &bi3);
 	if (bi.length != 2 || bi.data[0] != 0xe3 || bi.data[1] != 0x4c) {
 		printf("CBBigIntEqualsAdditionByBigInt WITH ZERO FAILURE\n");
 		return 1;
 	}
-	// Additional addition tests
+	// Overflow tests.
 	CBBigInt a,b;
-	CBBigIntAlloc(&a, 3);
+	CBBigIntAlloc(&a, 4);
 	CBBigIntAlloc(&b, 2);
 	a.data[0] = 0xFF;
 	a.length = 1;
 	b.data[0] = 1;
 	b.length = 1;
 	CBBigIntEqualsAdditionByBigInt(&a, &b);
-	if (a.data[0] != 0 && a.data[1] != 1) {
-		printf("0xFF + 1 FAIL");
+	if (a.data[0] != 0 || a.data[1] != 1 || a.length != 2) {
+		printf("0xFF + 1 FAIL\n");
+		return 1;
+	}
+	a.data[0] = 0xFF;
+	a.data[1] = 1;
+	a.length = 2;
+	CBBigIntEqualsAdditionByBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 2 || a.length != 2) {
+		printf("0x1FF + 1 FAIL\n");
+		return 1;
+	}
+	a.data[0] = 0xFF;
+	a.data[1] = 0xFF;
+	CBBigIntEqualsAdditionByBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 0 || a.data[2] != 1 || a.length != 3) {
+		printf("0xFFFF + 1 FAIL\n");
+		return 1;
+	}
+	a.data[0] = 0xFF;
+	a.data[1] = 0x00;
+	a.data[2] = 0xFF;
+	b.data[0] = 1;
+	b.data[1] = 0xFF;
+	b.length = 2;
+	CBBigIntEqualsAdditionByBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 0 || a.data[2] != 0 || a.data[3] != 1 || a.length != 4) {
+		printf("0xFF00FF + 0xFF01 FAIL\n");
 		return 1;
 	}
 	return 0;

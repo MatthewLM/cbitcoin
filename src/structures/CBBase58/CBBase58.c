@@ -27,7 +27,8 @@
 bool CBDecodeBase58(CBBigInt * bi, char * str){
 	// ??? Quite likely these functions can be improved
 	CBBigInt bi2;
-	CBBigIntAlloc(&bi2, 1);
+	if (NOT CBBigIntAlloc(&bi2, 1))
+		return false;
 	bi->data[0] = 0;
 	bi->length = 1;
 	uint8_t temp[189];
@@ -64,11 +65,11 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 				free(bi2.data);
 				return false;
 			}
-			free(bi2.data);
 		}
 		if (NOT x)
 			break;
 	}
+	free(bi2.data);
 	// Got CBBigInt from base-58 string. Add zeros on end.
 	uint8_t zeros = 0;
 	for (uint8_t x = 0; x < strlen(str); x++)

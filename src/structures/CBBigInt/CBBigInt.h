@@ -111,7 +111,7 @@ bool CBBigIntFromPowUInt8(CBBigInt * bi,uint8_t a,uint8_t b);
  */
 uint8_t CBBigIntModuloWith58(CBBigInt * a);
 /**
- @brief Normalises a CBBigInt so that there are no uneccessary trailing zeros.
+ @brief Normalises a CBBigInt so that there are no unnecessary trailing zeros.
  @param a A pointer to the CBBigInt
  */
 void CBBigIntNormalise(CBBigInt * a);

@@ -69,7 +69,7 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteAr
 	self->cacheString = cacheString;
 	// Get bytes from string conversion
 	CBBigInt bytes;
-	CBBigIntAlloc(&bytes, 20); // 20 is the number of bytes for bitcoin addresses.
+	CBBigIntAlloc(&bytes, 25); // 25 is the number of bytes for bitcoin addresses.
 	if (NOT CBDecodeBase58Checked(&bytes, (char *)CBByteArrayGetData(string), onErrorReceived))
 		return false;
 	// Take over the bytes with the CBByteArray

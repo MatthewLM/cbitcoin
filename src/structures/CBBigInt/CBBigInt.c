@@ -59,16 +59,22 @@ bool CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
 		if (NOT CBBigIntRealloc(a, b->length))
 			return false;
+		// Make certain expansion of data is empty
+		memset(a->data + a->length, 0, b->length - a->length);
 		a->length = b->length;
 	}
 	// a->length >= b->length
 	bool overflow = 0;
-	for (uint8_t x = 0; x < b->length; x++) {
+	uint8_t x = 0;
+	for (; x < b->length; x++) {
 		a->data[x] += b->data[x] + overflow;
 		// a->data[x] now equals the result of the addition.
 		// The overflow will never go beyond 1. Imagine a->data[x] == 0xff, b->data[x] == 0xff and the overflow is 1, the new overflow is still 1 and a->data[x] is 0xff. Therefore it does work.
 		overflow = (a->data[x] < (b->data[x] + overflow))? 1 : 0;
 	}
+	// Propagate overflow up the whole length of a if necessary
+	while (overflow && x < a->length)
+		overflow = NOT ++a->data[x++]; // Index at x, increment x, increment data, test new value for overflow.
 	if (overflow) { // Add extra byte
 		a->length++;
 		if (NOT CBBigIntRealloc(a, a->length))
