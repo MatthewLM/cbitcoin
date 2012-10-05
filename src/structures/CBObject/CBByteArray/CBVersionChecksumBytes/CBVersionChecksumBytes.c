@@ -108,9 +108,13 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 		// Make string
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Make this into little-endian
 		char * string = CBEncodeBase58(CBByteArrayGetData(CBGetByteArray(self)),CBGetByteArray(self)->length);
-		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->onErrorReceived);
-		if (NOT str) 
+		if (NOT string)
 			return NULL;
+		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->onErrorReceived);
+		if (NOT str) {
+			free(string);
+			return NULL;
+		}
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Now the string is got, back to big-endian.
 		if (self->cacheString) {
 			self->cachedString = str;
