@@ -112,9 +112,13 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 		bytes.length = CBGetByteArray(self)->length;
 		memcpy(bytes.data, CBByteArrayGetData(CBGetByteArray(self)), bytes.length);
 		char * string = CBEncodeBase58(&bytes);
-		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->onErrorReceived);
-		if (NOT str) 
+		if (NOT string)
 			return NULL;
+		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->onErrorReceived);
+		if (NOT str) {
+			free(string);
+			return NULL;
+		}
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Now the string is got, back to big-endian.
 		if (self->cacheString) {
 			self->cachedString = str;
