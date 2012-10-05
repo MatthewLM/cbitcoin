@@ -68,10 +68,10 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteAr
 		self->cachedString = NULL;
 	self->cacheString = cacheString;
 	// Get bytes from string conversion
-	CBBigInt bytes = CBDecodeBase58Checked((char *)CBByteArrayGetData(string), onErrorReceived);
-	if (bytes.length == 1) {
+	CBBigInt bytes;
+	CBBigIntAlloc(&bytes, 20); // 20 is the number of bytes for bitcoin addresses.
+	if (NOT CBDecodeBase58Checked(&bytes, (char *)CBByteArrayGetData(string), onErrorReceived))
 		return false;
-	}
 	// Take over the bytes with the CBByteArray
 	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length, onErrorReceived))
 		return false;
@@ -107,7 +107,11 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 	}else{
 		// Make string
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Make this into little-endian
-		char * string = CBEncodeBase58(CBByteArrayGetData(CBGetByteArray(self)),CBGetByteArray(self)->length);
+		CBBigInt bytes;
+		CBBigIntAlloc(&bytes, CBGetByteArray(self)->length);
+		bytes.length = CBGetByteArray(self)->length;
+		memcpy(bytes.data, CBByteArrayGetData(CBGetByteArray(self)), bytes.length);
+		char * string = CBEncodeBase58(&bytes);
 		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->onErrorReceived);
 		if (NOT str) 
 			return NULL;

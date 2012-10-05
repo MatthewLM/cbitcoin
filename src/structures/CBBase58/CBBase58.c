@@ -24,16 +24,12 @@
 
 #include "CBBase58.h"
 
-CBBigInt CBDecodeBase58(char * str){
+bool CBDecodeBase58(CBBigInt * bi, char * str){
 	// ??? Quite likely these functions can be improved
-	CBBigInt bi;
-	bi.data = malloc(1);
-	if (NOT bi.data) {
-		bi.length = 0;
-		return bi;
-	}
-	bi.data[0] = 0;
-	bi.length = 1;
+	CBBigInt bi2;
+	CBBigIntAlloc(&bi2, 1);
+	bi->data[0] = 0;
+	bi->length = 1;
 	uint8_t temp[189];
 	for (uint8_t x = strlen(str) - 1;; x--){ // Working backwards
 		// Get index in alphabet array
@@ -52,32 +48,21 @@ CBBigInt CBDecodeBase58(char * str){
 			}else{ // m-z
 				alphaIndex -= 65;
 			}
-			CBBigInt bi2 = CBBigIntFromPowUInt8(58, strlen(str) - 1 - x);
-			if (NOT bi2.data){
+			if (NOT CBBigIntFromPowUInt8(&bi2, 58, strlen(str) - 1 - x)){
 				// Error occured.
-				free(bi.data);
-				bi.data = NULL;
-				bi.length = 0;
-				return bi;
+				free(bi2.data);
+				return false;
 			}
 			memset(temp, 0, bi2.length + 1);
-			CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp);
-			if (NOT bi2.data){
+			if (NOT CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp)){
 				// Error occured.
 				free(bi2.data);
-				free(bi.data);
-				bi.data = NULL;
-				bi.length = 0;
-				return bi;
+				return false;
 			}
-			CBBigIntEqualsAdditionByBigInt(&bi,&bi2);
-			if (NOT bi.data){
+			if (NOT CBBigIntEqualsAdditionByBigInt(bi,&bi2)){
 				// Error occured.
 				free(bi2.data);
-				free(bi.data);
-				bi.data = NULL;
-				bi.length = 0;
-				return bi;
+				return false;
 			}
 			free(bi2.data);
 		}
@@ -92,65 +77,55 @@ CBBigInt CBDecodeBase58(char * str){
 		else
 			break;
 	if (zeros) {
-		bi.length += zeros;
-		uint8_t * temp = realloc(bi.data, bi.length);
-		if (NOT temp) {
-			free(bi.data);
-			bi.length = 0;
-			return bi;
-		}
-		bi.data = temp;
-		memset(bi.data + bi.length - zeros, 0, zeros);
+		bi->length += zeros;
+		if (NOT CBBigIntRealloc(bi, bi->length))
+			return false;
+		memset(bi->data + bi->length - zeros, 0, zeros);
 	}
-	return bi;
+	return true;
 }
-CBBigInt CBDecodeBase58Checked(char * str,void (*onErrorReceived)(CBError error,char *,...)){
-	CBBigInt bi = CBDecodeBase58(str);
-	if (bi.length < 4){
-		onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short or there was a memory failure.");
-		bi.length = 0;
-		free(bi.data);
-		bi.data = NULL;
-		return bi;
+bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*onErrorReceived)(CBError error,char *,...)){
+	if(NOT CBDecodeBase58(bi, str)) {
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Memory failure in CBDecodeBase58.");
+		return false;
+	}
+	if (bi->length < 4){
+		onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short.");
+		return false;
 	}
 	// Reverse bytes for checksum generation
-	uint8_t * reversed = malloc(bi.length-4);
+	uint8_t * reversed = malloc(bi->length - 4);
 	if (NOT reversed) {
-		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBDecodeBase58Checked",bi.length-4);
-		bi.length = 0;
-		bi.data = NULL;
-		return bi;
+		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBDecodeBase58Checked",bi->length - 4);
+		return false;
 	}
-	for (uint8_t x = 4; x < bi.length; x++) {
-		reversed[bi.length-1-x] = bi.data[x];
-	}
+	for (uint8_t x = 4; x < bi->length; x++)
+		reversed[bi->length - 1 - x] = bi->data[x];
 	// The checksum uses SHA-256, twice, for some reason unknown to man.
 	uint8_t checksum[32];
 	uint8_t checksum2[32];
-	CBSha256(reversed,bi.length-4,checksum);
-	CBSha256(checksum,32,checksum2);
+	CBSha256(reversed, bi->length - 4, checksum);
+	free(reversed);
+	CBSha256(checksum, 32, checksum2);
 	bool ok = true;
 	for (uint8_t x = 0; x < 4; x++)
-		if (checksum2[x] != bi.data[3-x])
+		if (checksum2[x] != bi->data[3-x])
 			ok = false;
-	if(NOT ok){
+	if (NOT ok){
 		onErrorReceived(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
-		bi.length = 1;
-		bi.data[0] = 0;
-		return bi;
+		return false;
 	}
-	return bi;
+	return true;
 }
-char * CBEncodeBase58(uint8_t * bytes, uint8_t len){
-	// ??? Improvement?
+char * CBEncodeBase58(CBBigInt * bi){
+	// ??? Improvements?
 	uint8_t x = 0;
-	char * str = malloc(len);
+	char * str = malloc(bi->length);
 	if (NOT str)
 		return NULL;
-	uint8_t size = len;
 	// Zeros
-	for (uint8_t y = len - 1;; y--)
-		if (NOT bytes[y]){
+	for (uint8_t y = bi->length - 1;; y--)
+		if (NOT bi->data[y]){
 			str[x] = '1';
 			x++;
 			if (NOT y)
@@ -158,43 +133,34 @@ char * CBEncodeBase58(uint8_t * bytes, uint8_t len){
 		}else
 			break;
 	uint8_t zeros = x;
-	// Make CBBigInt
-	CBBigInt bi;
-	bi.data = malloc(len);
-	if (NOT bi.data){
-		free(str);
-		return NULL;
-	}
-	memmove(bi.data, bytes, len);
-	bi.length = len;
-	CBBigIntNormalise(&bi);
 	// Make temporary data store
-	uint8_t * temp = malloc(len);
+	uint8_t * temp = malloc(bi->length);
 	if (NOT temp) {
 		free(str);
-		free(bi.data);
 		return NULL;
 	}
 	// Encode
 	uint8_t mod;
+	size_t size = bi->length;
 	for (;CBBigIntCompareTo58(bi) >= 0;x++) {
 		mod = CBBigIntModuloWith58(bi);
-		if (size < x + 3) {
+		if (bi->length < x + 3) {
 			size = x + 3;
-			char * temp = realloc(str, size);
-			if (NOT temp){
-				free(str);
-				return NULL;
+			if (size > bi->length) {
+				char * temp = realloc(str, size);
+				if (NOT temp){
+					free(str);
+					return NULL;
+				}
+				str = temp;
 			}
-			str = temp;
 		}
 		str[x] = base58Characters[mod];
-		CBBigIntEqualsSubtractionByUInt8(&bi, mod);
-		memset(temp, 0, len);
-		CBBigIntEqualsDivisionBy58(&bi, temp);
+		CBBigIntEqualsSubtractionByUInt8(bi, mod);
+		memset(temp, 0, bi->length);
+		CBBigIntEqualsDivisionBy58(bi, temp);
 	}
-	str[x] = base58Characters[bi.data[bi.length-1]];
-	free(bi.data);
+	str[x] = base58Characters[bi->data[bi->length-1]];
 	x++;
 	// Reversal
 	for (uint8_t y = 0; y < (x-zeros) / 2; y++) {

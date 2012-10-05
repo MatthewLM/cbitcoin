@@ -37,8 +37,8 @@ int main(){
 	srand(s);
 	// Little test
 	CBBigInt bil;
+	CBBigIntAlloc(&bil, 3);
 	bil.length = 3;
-	bil.data = malloc(3);
 	bil.data[0] = 0xfa;
 	bil.data[1] = 0xce;
 	bil.data[2] = 0x04;
@@ -46,7 +46,7 @@ int main(){
 	CBBigIntEqualsMultiplicationByUInt8(&bil,180,templ);
 	printf("(%.2x,%.2x,%.2x,%.2x)\n",bil.data[0],bil.data[1],bil.data[2],bil.data[3]);
 	// Exp
-	bil = CBBigIntFromPowUInt8(185,16);
+	CBBigIntFromPowUInt8(&bil,185,16);
 	// Full test
 	uint8_t temp[255];
 	CBBigInt bi;
@@ -70,7 +70,7 @@ int main(){
 		// Mod
 		bi.length = 32;
 		memmove(bi.data, bytes[x], 32);
-		int mod_test = CBBigIntModuloWith58(bi);
+		int mod_test = CBBigIntModuloWith58(&bi);
 		if (mod_test != mod_results[x]) {
 			printf("BIGNUM MODULO FAILURE = %i: 0x%x != 0x%x\n",x,mod_test, mod_results[x]);
 			return 1;
@@ -143,18 +143,19 @@ int main(){
 		}else{
 			expected = -1;
 		}
-		int ans = CBBigIntCompareTo58(bi);
+		int ans = CBBigIntCompareTo58(&bi);
 		if (expected != ans) {
 			printf("BIGNUM COMPARE FAILURE = %i: %i != %i (%i,%i)\n",x,expected, ans,(int)bi.data[0],(int)bi.data[1]);
 			return 1;
 		}
 		// Exp
 		uint8_t b = rand();
-		CBBigInt bi2 = CBBigIntFromPowUInt8(58,b);
+		CBBigInt bi2;
+		CBBigIntAlloc(&bi2, 1);
+		CBBigIntFromPowUInt8(&bi2, 58, b);
 		memset(temp, 0, 255);
-		for (int x = 0; x < b; x++) {
+		for (int x = 0; x < b; x++)
 			CBBigIntEqualsDivisionBy58(&bi2, temp);
-		}
 		if (bi2.data[0] != 1) {
 			printf("BIGNUM EXPONENTIATION/DIVISION FAILURE = %i: %i != 1 Base=58 Exp=%i \n",x,bi2.data[0], b);
 			return 1;
@@ -169,7 +170,7 @@ int main(){
 		printf("CBBigIntNormalise WITH ZERO FAILURE\n");
 		return 1;
 	}
-	uint8_t test = CBBigIntModuloWith58(bi);
+	uint8_t test = CBBigIntModuloWith58(&bi);
 	if (bi.data[0] != 0 || bi.length != 1 || test) {
 		printf("CBBigIntModuloWithUInt8 WITH ZERO FAILURE\n");
 		return 1;
@@ -184,10 +185,25 @@ int main(){
 		printf("CBBigIntEqualsDivisionByUInt8 WITH ZERO FAILURE\n");
 		return 1;
 	}
-	CBBigInt bi3 = CBBigIntFromPowUInt8(3,9);
+	CBBigInt bi3;
+	CBBigIntAlloc(&bi3, 1);
+	CBBigIntFromPowUInt8(&bi3, 3, 9);
 	CBBigIntEqualsAdditionByBigInt(&bi, &bi3);
 	if (bi.length != 2 || bi.data[0] != 0xe3 || bi.data[1] != 0x4c) {
 		printf("CBBigIntEqualsAdditionByBigInt WITH ZERO FAILURE\n");
+		return 1;
+	}
+	// Additional addition tests
+	CBBigInt a,b;
+	CBBigIntAlloc(&a, 3);
+	CBBigIntAlloc(&b, 2);
+	a.data[0] = 0xFF;
+	a.length = 1;
+	b.data[0] = 1;
+	b.length = 1;
+	CBBigIntEqualsAdditionByBigInt(&a, &b);
+	if (a.data[0] != 0 && a.data[1] != 1) {
+		printf("0xFF + 1 FAIL");
 		return 1;
 	}
 	return 0;

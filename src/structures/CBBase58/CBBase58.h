@@ -36,22 +36,23 @@ static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcde
 
 /**
  @brief Decodes base 58 string into byte data as a CBBigInt.
+ @param bi The CBBigInt which should be preallocated with at least one byte.
  @param str Base 58 string to decode.
- @returns Pointer to the byte data as a CBBigInt. The byte data will be created in this function. Remember to free the data. On error the big int will have a NULL data pointer.
+ @returns true on success, false on failure.
  */
-CBBigInt CBDecodeBase58(char * str);
+bool CBDecodeBase58(CBBigInt * bi, char * str);
 /**
  @brief Decodes base 58 string into byte data as a CBBigInt and checks a 4 byte checksum.
+ @param bi The CBBigInt which should be preallocated with at least one byte.
  @param str Base 58 string to decode.
- @returns Byte data as a CBBigInt. Is zero on failure. Checksum is included in returned data. On error the big int will have a NULL data pointer.
+ @returns true on success, false on failure.
  */
-CBBigInt CBDecodeBase58Checked(char * str,void (*onErrorReceived)(CBError error,char *,...));
+bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Encodes byte data into base 58.
- @param bytes Pointer to byte data to encode. Will almost certainly be modified. Copy data beforehand if needed.
- @param len Length of bytes to encode.
+ @param bytes Pointer to a normalised CBBigInt containing the byte data to encode. Will almost certainly be modified. Copy data beforehand if needed.
  @returns Newly allocated string with encoded data or NULL on error.
  */
-char * CBEncodeBase58(uint8_t * bytes, uint8_t len);
+char * CBEncodeBase58(CBBigInt * bi);
 
 #endif

@@ -26,43 +26,39 @@
 #include "CBBigInt.h"
 #include <assert.h>
 
-CBCompare CBBigIntCompareTo58(CBBigInt a){
-	if(a.length > 1)
+bool CBBigIntAlloc(CBBigInt * bi, uint8_t allocLen){
+	bi->allocLen = allocLen;
+	bi->data = malloc(allocLen);
+	return bi->data;
+}
+CBCompare CBBigIntCompareTo58(CBBigInt * a){
+	if(a->length > 1)
 		return CB_COMPARE_MORE_THAN;
-	if (a.data[0] > 58)
+	if (a->data[0] > 58)
 		return CB_COMPARE_MORE_THAN;
-	else if (a.data[0] < 58)
+	else if (a->data[0] < 58)
 		return CB_COMPARE_LESS_THAN;
 	return CB_COMPARE_EQUAL;
 }
-CBCompare CBBigIntCompareToBigInt(CBBigInt a,CBBigInt b){
-	if (a.length > b.length)
+CBCompare CBBigIntCompareToBigInt(CBBigInt * a,CBBigInt * b){
+	if (a->length > b->length)
 		return CB_COMPARE_MORE_THAN;
-	else if (a.length < b.length)
+	else if (a->length < b->length)
 		return CB_COMPARE_LESS_THAN;
-	for (uint8_t x = a.length - 1;; x--) {
-		if (a.data[x] < b.data[x])
+	for (uint8_t x = a->length - 1;; x--) {
+		if (a->data[x] < b->data[x])
 			return CB_COMPARE_LESS_THAN;
-		else if (a.data[x] > b.data[x])
+		else if (a->data[x] > b->data[x])
 			return CB_COMPARE_MORE_THAN;
 		if (!x)
 			break;
 	}
 	return CB_COMPARE_EQUAL;
 }
-void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
+bool CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 	if (a->length < b->length) {
-		uint8_t * temp = realloc(a->data, b->length);
-		if (NOT temp) {
-			// ERROR (Not zero as some might find confusing)
-			free(a->data);
-			a->data = NULL;
-			a->length = 0;
-			return;
-		}
-		a->data = temp;
-		// Make certain expansion of data is empty
-		memset(a->data + a->length, 0, b->length - a->length);
+		if (NOT CBBigIntRealloc(a, b->length))
+			return false;
 		a->length = b->length;
 	}
 	// a->length >= b->length
@@ -75,22 +71,15 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	if (overflow) { // Add extra byte
 		a->length++;
-		uint8_t * new = realloc(a->data, a->length);
-		if (NOT new) {
-			// ERROR (Not zero as some might find confusing)
-			free(a->data);
-			a->data = NULL;
-			a->length = 0;
-			return;
-		}
-		a->data = new;
+		if (NOT CBBigIntRealloc(a, a->length))
+			return false;
 		a->data[a->length - 1] = 1;
 	}
+	return true;
 }
 void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
-	if (a->length == 1 && NOT a->data[0]) { // "a" is zero
+	if (a->length == 1 && NOT a->data[0]) // "a" is zero
 		return;
-	}
 	// base-256 long division.
 	uint16_t temp = 0;
 	for (uint8_t x = a->length-1;; x--) {
@@ -101,31 +90,19 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 		if (NOT x)
 			break;
 	}
-	if (NOT ans[a->length-1]) { // If last byte is zero, adjust length.
+	if (NOT ans[a->length-1]) // If last byte is zero, adjust length.
 		a->length--;
-		uint8_t * new = realloc(a->data, a->length);
-		if (new)
-			// Use new memory block as it was successfully created
-			a->data = new;
-		// Else we just continue to use the larger memory block.
-	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
-void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
+bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 	if (NOT b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
-		uint8_t * new = realloc(a->data, 1);
-		if (new)
-			// Use new memory block as it was successfully created
-			a->data = new;
-		// Else we just continue to use the larger memory block.
 		a->data[0] = 0;
-		return;
+		return true;
 	}
-	if (a->length == 1 && NOT a->data[0]) { // "a" is zero
-		return;
-	}
+	if (a->length == 1 && NOT a->data[0]) // "a" is zero
+		return true;
 	// Multiply b by each byte and then add to answer
 	for (uint8_t x = 0; x < a->length; x++) {
 		uint16_t mult = ans[x] + a->data[x] * b; // Allow for overflow onto next byte.
@@ -134,17 +111,11 @@ void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 	}
 	if (ans[a->length]) { // If last byte is not zero, adjust length.
 		a->length++;
-		uint8_t * new = realloc(a->data, a->length);
-		if (NOT new) {
-			// ERROR (Not zero as some might find confusing)
-			free(a->data);
-			a->data = NULL;
-			a->length = 0;
-			return;
-		}
-		a->data = new;
+		if (NOT CBBigIntRealloc(a, a->length))
+			return false;
 	}
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
+	return true;
 }
 void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a,CBBigInt * b){
 	// ??? Needs a test for this function.
@@ -175,47 +146,34 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
 	}
 	CBBigIntNormalise(a);
 }
-uint8_t CBBigIntModuloWith58(CBBigInt a){
+bool CBBigIntFromPowUInt8(CBBigInt * bi,uint8_t a,uint8_t b){
+	bi->length = 1;
+	bi->data[0] = 1;
+	uint8_t * temp = malloc(b);
+	if (NOT temp)
+		// ERROR
+		return false;
+	for (uint8_t x = 0; x < b; x++) {
+		memset(temp, 0, bi->length);
+		if (NOT CBBigIntEqualsMultiplicationByUInt8(bi, a, temp))
+			// ERROR
+			return false;
+	}
+	free(temp);
+	return true;
+}
+uint8_t CBBigIntModuloWith58(CBBigInt * a){
 	// Use method presented here: http://stackoverflow.com/a/10441333/238411
 	uint16_t result = 0; // Prevent overflow in calculations
-	for(uint8_t x = a.length - 1;; x--){
+	for(uint8_t x = a->length - 1;; x--){
 		result *= (256 % 58);
 		result %= 58;
-		result += a.data[x] % 58;
+		result += a->data[x] % 58;
 		result %= 58;
 		if (NOT x)
 			break;
 	}
 	return result;
-}
-CBBigInt CBBigIntFromPowUInt8(uint8_t a,uint8_t b){
-	CBBigInt bi;
-	bi.data = malloc(1);
-	if (NOT bi.data){
-		// ERROR (Not zero as some might find confusing)
-		bi.length = 0;
-		bi.data = NULL;
-		return bi;
-	}
-	bi.length = 1;
-	bi.data[0] = 1;
-	uint8_t * temp = malloc(b);
-	if (NOT temp) {
-		// ERROR (Not zero as some might find confusing)
-		free(bi.data);
-		bi.length = 0;
-		bi.data = NULL;
-		return bi;
-	}
-	for (uint8_t x = 0; x < b; x++) {
-		memset(temp, 0, bi.length);
-		CBBigIntEqualsMultiplicationByUInt8(&bi, a, temp);
-		if (NOT bi.data)
-			// Error occured. Return with bi in the error state.
-			break;
-	}
-	free(temp);
-	return bi;
 }
 void CBBigIntNormalise(CBBigInt * a){
 	for (uint8_t x = a->length - 1;; x--){
@@ -230,4 +188,14 @@ void CBBigIntNormalise(CBBigInt * a){
 			break;
 		}
 	}
+}
+bool CBBigIntRealloc(CBBigInt * bi, uint8_t allocLen){
+	if (bi->allocLen < allocLen) {
+		uint8_t * temp = realloc(bi->data, allocLen);
+		if (NOT temp)
+			return false;
+		bi->data = temp;
+		bi->allocLen = allocLen;
+	}
+	return true;
 }
