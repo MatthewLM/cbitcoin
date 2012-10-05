@@ -190,5 +190,44 @@ int main(){
 		printf("CBBigIntEqualsAdditionByCBBigInt WITH ZERO FAILURE\n");
 		return 1;
 	}
+	// Overflow tests.
+	CBBigInt a,b;
+	a.data = malloc(4);
+	b.data = malloc(2);
+	a.data[0] = 0xFF;
+	a.length = 1;
+	b.data[0] = 1;
+	b.length = 1;
+	CBBigIntEqualsAdditionByCBBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 1 || a.length != 2) {
+		printf("0xFF + 1 FAIL\n");
+		return 1;
+	}
+	a.data[0] = 0xFF;
+	a.data[1] = 1;
+	a.length = 2;
+	CBBigIntEqualsAdditionByCBBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 2 || a.length != 2) {
+		printf("0x1FF + 1 FAIL\n");
+		return 1;
+	}
+	a.data[0] = 0xFF;
+	a.data[1] = 0xFF;
+	CBBigIntEqualsAdditionByCBBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 0 || a.data[2] != 1 || a.length != 3) {
+		printf("0xFFFF + 1 FAIL\n");
+		return 1;
+	}
+	a.data[0] = 0xFF;
+	a.data[1] = 0x00;
+	a.data[2] = 0xFF;
+	b.data[0] = 1;
+	b.data[1] = 0xFF;
+	b.length = 2;
+	CBBigIntEqualsAdditionByCBBigInt(&a, &b);
+	if (a.data[0] != 0 || a.data[1] != 0 || a.data[2] != 0 || a.data[3] != 1 || a.length != 4) {
+		printf("0xFF00FF + 0xFF01 FAIL\n");
+		return 1;
+	}
 	return 0;
 }

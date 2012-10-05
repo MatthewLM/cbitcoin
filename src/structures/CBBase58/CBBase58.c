@@ -70,7 +70,7 @@ CBBigInt CBDecodeBase58(char * str){
 				bi.length = 0;
 				return bi;
 			}
-			CBBigIntEqualsAdditionByBigInt(&bi,&bi2);
+			CBBigIntEqualsAdditionByCBBigInt(&bi,&bi2);
 			if (NOT bi.data){
 				// Error occured.
 				free(bi2.data);
