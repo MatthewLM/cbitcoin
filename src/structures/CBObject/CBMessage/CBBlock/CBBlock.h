@@ -39,6 +39,7 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint8_t hash[32]; /**< The hash for this block. NULL if it needs to be calculated or set. */
+	bool hashSet; /**< True if the hash has been set, false otherwise */
 	uint32_t version;
 	CBByteArray * prevBlockHash; /**< The previous block hash. */
 	CBByteArray * merkleRoot; /**< The merkle tree root hash. */

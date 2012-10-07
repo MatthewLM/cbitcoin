@@ -204,5 +204,6 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(genesisBlock);
+	// ??? Add test for non-genesis blocks
 	return 0;
 }

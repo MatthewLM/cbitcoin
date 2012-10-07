@@ -76,6 +76,8 @@ bool CBInitBlock(CBBlock * self,void (*onErrorReceived)(CBError error,char *,...
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
+	self->hashSet = false;
+	memset(self->hash, 0, 32);
 	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
@@ -85,6 +87,8 @@ bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,void (*onErrorReceive
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
+	self->hashSet = false;
+	memset(self->hash, 0, 32);
 	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
@@ -95,6 +99,7 @@ bool CBInitBlockGenesis(CBBlock * self,void (*onErrorReceived)(CBError error,cha
 		return false;
 	uint8_t genesisHash[32] = {0x6F,0xE2,0x8C,0x0A,0xB6,0xF1,0xB3,0x72,0xC1,0xA6,0xA2,0x46,0xAE,0x63,0xF7,0x4F,0x93,0x1E,0x83,0x65,0xE1,0x5A,0x08,0x9C,0x68,0xD6,0x19,0x00,0x00,0x00,0x00,0x00};
 	memcpy(self->hash, genesisHash, 32);
+	self->hashSet = true;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived)){
 		CBReleaseObject(data);
 		CBReleaseObject(self->hash);
@@ -234,8 +239,10 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 }
 
 uint8_t * CBBlockGetHash(CBBlock * self){
-	if (NOT self->hash)
+	if (NOT self->hashSet){
 		CBBlockCalculateHash(self,self->hash);
+		self->hashSet = true;
+	}
 	return self->hash;
 }
 uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
