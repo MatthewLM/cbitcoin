@@ -31,7 +31,7 @@ CBBigInt CBCalculateBlockWork(uint32_t target){
 	target &= 0x00FFFFFF;
 	// Allocate CBBigInt data
 	CBBigInt work;
-	work.length = 29 - zeroBytes;
+	work.length = 32;
 	work.data = malloc(work.length);
 	if (NOT work.data) {
 		work.data = NULL;
@@ -43,11 +43,13 @@ CBBigInt CBCalculateBlockWork(uint32_t target){
 	uint32_t workSeg;
 	for (uint8_t x = 0;; x++) {
 		workSeg = (uint32_t)(temp / target);
-		uint8_t i = 31 - x * 4 - zeroBytes;
+		uint8_t i = 31 - x * 4 - zeroBytes + 4;
 		for (uint8_t y = 0; y < 4; y++){
 			work.data[i] = workSeg >> ((3 - y) * 8);
-			if (NOT i)
+			if (NOT i){
+				CBBigIntNormalise(&work);
 				return work;
+			}
 			i--;
 		}
 		temp -= workSeg * target;
