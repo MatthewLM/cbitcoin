@@ -40,6 +40,7 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint8_t hash[32]; /**< The hash for this transaction. NULL if not set. */
+	bool hashSet; /**< True if the hash has been set, false otherwise */
 	uint32_t version; /**< Version of the transaction data format. */
 	uint32_t inputNum; /**< Number of CBTransactionInputs */
 	CBTransactionInput ** inputs;

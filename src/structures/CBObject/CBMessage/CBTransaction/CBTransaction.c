@@ -68,6 +68,7 @@ bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version
 	self->inputs = NULL;
 	self->outputs = NULL;
 	self->version = version;
+	self->hashSet = false;
 	if (NOT CBInitMessageByObject(CBGetMessage(self), onErrorReceived))
 		return false;
 	return true;
@@ -77,6 +78,7 @@ bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data,void (*o
 	self->outputNum = 0;
 	self->inputs = NULL;
 	self->outputs = NULL;
+	self->hashSet = false;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data, onErrorReceived))
 		return false;
 	return true;
@@ -220,8 +222,10 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 	return cursor + 4;
 }
 uint8_t * CBTransactionGetHash(CBTransaction * self){
-	if (NOT self->hash)
+	if (NOT self->hashSet){
 		CBTransactionCalculateHash(self, self->hash);
+		self->hashSet = true;
+	}
 	return self->hash;
 }
 CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){
