@@ -30,7 +30,7 @@ bool CBCalculateBlockWork(CBBigInt * work,uint32_t target){
 	uint8_t zeroBytes = target >> 24;
 	target &= 0x00FFFFFF;
 	// Allocate CBBigInt data
-	work->length = 29 - zeroBytes;
+	work->length = 32;
 	CBBigIntAlloc(work, work->length);
 	if (NOT work->data)
 		return false;
@@ -39,17 +39,18 @@ bool CBCalculateBlockWork(CBBigInt * work,uint32_t target){
 	uint32_t workSeg;
 	for (uint8_t x = 0;; x++) {
 		workSeg = (uint32_t)(temp / target);
-		uint8_t i = 31 - x * 4 - zeroBytes;
+		uint8_t i = 31 - x * 4 - zeroBytes + 4;
 		for (uint8_t y = 0; y < 4; y++){
 			work->data[i] = workSeg >> ((3 - y) * 8);
-			if (NOT i)
-				return false;
+			if (NOT i){
+				CBBigIntNormalise(work);
+				return true;
+			}
 			i--;
 		}
 		temp -= workSeg * target;
 		temp <<= 32;
 	}
-	return true;
 }
 void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum){
 	uint8_t hash[32];
