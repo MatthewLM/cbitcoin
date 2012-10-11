@@ -195,15 +195,15 @@ bool CBValidateProofOfWork(CBByteArray * hash, uint32_t target){
 	// Check mantissa is below 0x800000.
 	if (target > 0x7FFFFF)
 		return false;
-	// Fail if hash is above target. First check leading bytes to significant part
+	// Fail if hash is above target. First check leading bytes to significant part. As the hash is seen as little-endian, do this backwards.
 	for (uint8_t x = 0; x < 32 - zeroBytes; x++)
-		if (CBByteArrayGetByte(hash, x))
+		if (CBByteArrayGetByte(hash, 31 - x))
 			// A byte leading to the significant part is not zero
 			return false;
 	// Check significant part
-	uint32_t significantPart = CBByteArrayGetByte(hash, 32 - zeroBytes) << 16;
-	significantPart |= CBByteArrayGetByte(hash, 33 - zeroBytes) << 8;
-	significantPart |= CBByteArrayGetByte(hash, 34 - zeroBytes);
+	uint32_t significantPart = CBByteArrayGetByte(hash, zeroBytes - 1) << 16;
+	significantPart |= CBByteArrayGetByte(hash, zeroBytes - 2) << 8;
+	significantPart |= CBByteArrayGetByte(hash, zeroBytes - 3);
 	if (significantPart > target)
 		return false;
 	return true;

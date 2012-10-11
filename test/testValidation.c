@@ -67,8 +67,8 @@ int main(){
 	// Test proof of work validation
 	uint8_t * hashData = malloc(32);
 	memset(hashData, 0, 32);
-	hashData[4] = 0xFF;
-	hashData[5] = 0xFF;
+	hashData[27] = 0xFF;
+	hashData[26] = 0xFF;
 	CBByteArray * hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
 	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
 		printf("CHECK POW MAX EQUAL FAIL\n");
@@ -90,14 +90,14 @@ int main(){
 		printf("CHECK POW HIGH HASH EXPONENT FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(hash, 5, 0xFE);
+	CBByteArraySetByte(hash, 26, 0xFE);
 	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
 		printf("CHECK POW LOW HASH MANTISSA FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(hash, 4, 0x00);
-	CBByteArraySetByte(hash, 5, 0xFF);
-	CBByteArraySetByte(hash, 6, 0xFF);
+	CBByteArraySetByte(hash, 27, 0x00);
+	CBByteArraySetByte(hash, 26, 0xFF);
+	CBByteArraySetByte(hash, 25, 0xFF);
 	if (NOT CBValidateProofOfWork(hash, CB_MAX_TARGET)) {
 		printf("CHECK POW LOW HASH EXPONENT FAIL\n");
 		return 1;
@@ -111,7 +111,7 @@ int main(){
 	CBReleaseObject(script);
 	CBReleaseObject(hash);
 	script = CBNewScriptWithDataCopy((uint8_t [7]){CB_SCRIPT_OP_CHECKMULTISIG,CB_SCRIPT_OP_PUSHDATA2,0x02,0x00,0x20,0x10,CB_SCRIPT_OP_CHECKSIGVERIFY}, 7, onErrorReceived);
-	hashData[5] = 0xFE;
+	hashData[26] = 0xFE;
 	hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
 	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 1, onErrorReceived));
 	CBReleaseObject(script);
@@ -131,19 +131,19 @@ int main(){
 		printf("BASIC VALIDATION FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(tx->inputs[1]->prevOut.hash, 5, 0xFF);
+	CBByteArraySetByte(tx->inputs[1]->prevOut.hash, 26, 0xFF);
 	tx->inputs[1]->prevOut.index = 3;
 	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION DUPLICATE PREV OUT FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 4, 0x00);
-	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 5, 0x00);
+	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 27, 0x00);
+	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 26, 0x00);
 	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION NULL HASH FAIL\n");
 		return 1;
 	}
-	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 0, 0x01);
+	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 31, 0x01);
 	tx->outputs[0]->value = CB_MAX_MONEY - 39959;
 	if (CBTransactionValidateBasic(tx, false, &err)) {
 		printf("BASIC VALIDATION OVER MAX MONEY FAIL\n");
@@ -158,8 +158,8 @@ int main(){
 	CBReleaseObject(tx);
 	tx = CBNewTransaction(0, 1, onErrorReceived);
 	script = CBNewScriptWithDataCopy((uint8_t [2]){0x01,0x00}, 2, onErrorReceived);
-	hashData[4] = 0;
-	hashData[5] = 0;
+	hashData[27] = 0;
+	hashData[26] = 0;
 	hash = CBNewByteArrayWithDataCopy(hashData, 32, onErrorReceived);
 	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 0xFFFFFFFF, onErrorReceived));
 	CBReleaseObject(script);
