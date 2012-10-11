@@ -25,19 +25,15 @@
 uint64_t CBCalculateBlockReward(uint64_t blockHeight){
 	return (50 * CB_ONE_BITCOIN) >> (blockHeight / 210000);
 }
-CBBigInt CBCalculateBlockWork(uint32_t target){
+bool CBCalculateBlockWork(CBBigInt * work,uint32_t target){
 	// Get the base-256 exponent and the mantissa.
 	uint8_t zeroBytes = target >> 24;
 	target &= 0x00FFFFFF;
 	// Allocate CBBigInt data
-	CBBigInt work;
-	work.length = 29 - zeroBytes;
-	work.data = malloc(work.length);
-	if (NOT work.data) {
-		work.data = NULL;
-		work.length = 0;
-		return work;
-	}
+	work->length = 29 - zeroBytes;
+	CBBigIntAlloc(work, work->length);
+	if (NOT work->data)
+		return false;
 	// Do base-4294967296 long division and adjust for trailing zeros in target.
 	uint64_t temp = 0x01000000;
 	uint32_t workSeg;
@@ -45,14 +41,15 @@ CBBigInt CBCalculateBlockWork(uint32_t target){
 		workSeg = (uint32_t)(temp / target);
 		uint8_t i = 31 - x * 4 - zeroBytes;
 		for (uint8_t y = 0; y < 4; y++){
-			work.data[i] = workSeg >> ((3 - y) * 8);
+			work->data[i] = workSeg >> ((3 - y) * 8);
 			if (NOT i)
-				return work;
+				return false;
 			i--;
 		}
 		temp -= workSeg * target;
 		temp <<= 32;
 	}
+	return true;
 }
 void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum){
 	uint8_t hash[32];
