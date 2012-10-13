@@ -288,5 +288,7 @@ uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 		CBByteArraySetByte(bytes, cursor, 0);
 		cursor++;
 	}
+	// Reset hash
+	self->hashSet = false;
 	return cursor;
 }
