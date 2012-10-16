@@ -220,10 +220,13 @@ CBByteArray * CBByteArrayCopy(CBByteArray * self){
 	return new;
 }
 void CBByteArrayCopyByteArray(CBByteArray * self,uint32_t writeOffset,CBByteArray * source){
+	if (NOT source->length)
+		return;
 	memmove(self->sharedData->data + self->offset + writeOffset,source->sharedData->data + source->offset,source->length);
 }
 void CBByteArrayCopySubByteArray(CBByteArray * self,uint32_t writeOffset,CBByteArray * source,uint32_t readOffset,uint32_t length){
-	assert(length);
+	if (NOT length)
+		return;
 	memmove(self->sharedData->data + self->offset + writeOffset,source->sharedData->data + source->offset + readOffset,length);
 }
 uint8_t CBByteArrayGetByte(CBByteArray * self,uint32_t index){
