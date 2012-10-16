@@ -122,18 +122,22 @@ bool CBInitByteArrayOfSize(CBByteArray * self,uint32_t size,void (*onErrorReceiv
 		return false;
 	self->onErrorReceived = onErrorReceived;
 	self->length = size;
+	self->offset = 0;
+	if (NOT size){
+		self->sharedData = NULL;
+		return true;
+	}
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	if (NOT self->sharedData) {
 		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBInitByteArrayOfSize for the sharedData structure.\n",sizeof(*self->sharedData));
 		return false;
 	}
+	self->sharedData->references = 1;
 	self->sharedData->data = malloc(size);
 	if (NOT self->sharedData->data) {
 		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBInitByteArrayOfSize for the shared data.\n",size);
 		return false;
 	}
-	self->sharedData->references = 1;
-	self->offset = 0;
 	return true;
 }
 bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,uint32_t offset,uint32_t length){
@@ -189,6 +193,8 @@ void CBFreeByteArray(void * self){
 	CBFreeObject(CBGetObject(self));
 }
 void CBByteArrayReleaseSharedData(CBByteArray * self){
+	if (NOT self->sharedData)
+		return;
 	self->sharedData->references--;
 	if (self->sharedData->references < 1) {
 		// Shared data now owned by nothing so free it 

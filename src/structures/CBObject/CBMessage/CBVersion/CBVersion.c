@@ -26,14 +26,14 @@
 
 //  Constructor
 
-CBVersion * CBNewVersion(int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
+CBVersion * CBNewVersion(int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nonce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
 	CBVersion * self = malloc(sizeof(*self));
 	if (NOT self) {
 		onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Cannot allocate %i bytes of memory in CBNewVersion\n",sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeVersion;
-	if(CBInitVersion(self,version,services,time,addRecv,addSource,nounce,userAgent,blockHeight,onErrorReceived))
+	if(CBInitVersion(self,version,services,time,addRecv,addSource,nonce,userAgent,blockHeight,onErrorReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -59,7 +59,7 @@ CBVersion * CBGetVersion(void * self){
 
 //  Initialiser
 
-bool CBInitVersion(CBVersion * self,int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nounce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
+bool CBInitVersion(CBVersion * self,int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nonce,CBByteArray * userAgent,int32_t blockHeight,void (*onErrorReceived)(CBError error,char *,...)){
 	self->version = version;
 	self->services = services;
 	self->time = time;
@@ -67,7 +67,7 @@ bool CBInitVersion(CBVersion * self,int32_t version,CBVersionServices services,i
 	CBRetainObject(addRecv);
 	self->addSource = addSource;
 	CBRetainObject(addSource);
-	self->nounce = nounce;
+	self->nonce = nonce;
 	self->userAgent = userAgent;
 	CBRetainObject(userAgent);
 	self->blockHeight = blockHeight;
@@ -155,7 +155,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 		// Readjust CBByteArray length for source address
 		data->length = len;
 		CBReleaseObject(data);
-		self->nounce = CBByteArrayReadInt64(bytes, 72);
+		self->nonce = CBByteArrayReadInt64(bytes, 72);
 		uint8_t x = CBByteArrayGetByte(bytes, 80); // Check length for decoding CBVarInt
 		if (x > 253){
 			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to deserialise a CBVersion with a var string that is too big.");
@@ -184,7 +184,7 @@ uint32_t CBVersionCalculateLength(CBVersion * self){
 	if (self->version >= 106) {
 		if (self->userAgent->length > 400)
 			return 0;
-		len += 38 + CBVarIntSizeOf(self->userAgent->length) + self->userAgent->length; // Source address, nounce, user-agent and block height.
+		len += 38 + CBVarIntSizeOf(self->userAgent->length) + self->userAgent->length; // Source address, nonce, user-agent and block height.
 	}
 	return len;
 }
@@ -236,7 +236,7 @@ uint32_t CBVersionSerialise(CBVersion * self){
 			return 0;
 		}
 		CBGetMessage(self->addSource)->bytes->length = len;
-		CBByteArraySetInt64(bytes, 72, self->nounce);
+		CBByteArraySetInt64(bytes, 72, self->nonce);
 		CBVarInt varInt = CBVarIntFromUInt64(self->userAgent->length);
 		CBVarIntEncode(bytes, 80, varInt);
 		if (bytes->length < 84 + varInt.size + varInt.val) {

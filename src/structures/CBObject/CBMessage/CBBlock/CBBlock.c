@@ -168,7 +168,7 @@ uint32_t CBBlockDeserialise(CBBlock * self,bool transactions){
 	}
 	self->time = CBByteArrayReadInt32(bytes, 68);
 	self->target = CBByteArrayReadInt32(bytes, 72);
-	self->nounce = CBByteArrayReadInt32(bytes, 76);
+	self->nonce = CBByteArrayReadInt32(bytes, 76);
 	// If first VarInt byte is zero, then stop here for headers, otherwise look for 8 more bytes and continue
 	uint8_t firstByte = CBByteArrayGetByte(bytes, 80);
 	if (transactions && firstByte) {
@@ -265,7 +265,7 @@ uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 	CBByteArrayChangeReference(self->merkleRoot, bytes, 36);
 	CBByteArraySetInt32(bytes, 68, self->time);
 	CBByteArraySetInt32(bytes, 72, self->target);
-	CBByteArraySetInt32(bytes, 76, self->nounce);
+	CBByteArraySetInt32(bytes, 76, self->nonce);
 	// Do Transactions
 	CBVarIntEncode(bytes, 80, transactionNum);
 	if (transactions) {

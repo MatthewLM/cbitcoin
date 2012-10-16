@@ -73,7 +73,7 @@ typedef struct {
 	uint64_t eventLoop; /**< Socket event loop */
 	uint64_t acceptEventIPv4; /**< Event for accepting connections on IPv4 */
 	uint64_t acceptEventIPv6; /**< Event for accepting connections on IPv6 */
-	uint64_t nounce; /**< Value sent in version messages to check for connections to self */
+	uint64_t nonce; /**< Value sent in version messages to check for connections to self */
 	uint64_t pingTimer; /**< Timer for ping event */
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
 	void * callbackHandler; /**< Sent to event callbacks */

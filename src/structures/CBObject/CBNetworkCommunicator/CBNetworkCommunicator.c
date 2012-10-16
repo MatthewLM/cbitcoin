@@ -59,7 +59,7 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,void (*onErrorReceiv
 	self->ourIPv4 = NULL;
 	self->ourIPv6 = NULL;
 	self->pingTimer = 0;
-	self->nounce = 0;
+	self->nonce = 0;
 	self->stoppedListening = false;
 	self->onErrorReceived = onErrorReceived;
 	if (NOT CBInitObject(CBGetObject(self)))
@@ -259,8 +259,8 @@ CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBNetwo
 		sourceAddr = self->ourIPv6;
 	else if (self->ourIPv4)
 		sourceAddr = self->ourIPv4;
-	self->nounce = rand();
-	CBVersion * version = CBNewVersion(self->version, self->services, time(NULL), addRecv, sourceAddr, self->nounce, self->userAgent, self->blockHeight, self->onErrorReceived);
+	self->nonce = rand();
+	CBVersion * version = CBNewVersion(self->version, self->services, time(NULL), addRecv, sourceAddr, self->nonce, self->userAgent, self->blockHeight, self->onErrorReceived);
 	return version;
 }
 CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self,CBPeer * peer){
@@ -412,9 +412,9 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
 	bool endHandshake = false;
 	if (peer->receive->type == CB_MESSAGE_TYPE_VERSION) {
 		// Node sent us their version. How very nice of them.
-		// Check version and nounce.
+		// Check version and nonce.
 		if (CBGetVersion(peer->receive)->version < CB_MIN_PROTO_VERSION
-			|| (CBGetVersion(peer->receive)->nounce == self->nounce && self->nounce > 0))
+			|| (CBGetVersion(peer->receive)->nonce == self->nonce && self->nonce > 0))
 			// Disconnect peer
 			return CB_MESSAGE_ACTION_DISCONNECT;
 		else{ // Version OK

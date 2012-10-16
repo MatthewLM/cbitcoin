@@ -95,7 +95,7 @@ int main(){
 		printf("GENESIS BLOCK DIFFICULTY FAIL\n0x");
 		return 1;
 	}
-	if (genesisBlock->nounce != 2083236893) {
+	if (genesisBlock->nonce != 2083236893) {
 		printf("GENESIS BLOCK DIFFICULTY FAIL\n0x");
 		return 1;
 	}
@@ -181,7 +181,7 @@ int main(){
 	block->merkleRoot = genesisMerkleRoot;
 	block->target = 0x1D00FFFF;
 	block->time = 1231006505;
-	block->nounce = 2083236893;
+	block->nonce = 2083236893;
 	block->transactionNum = 1;
 	block->transactions = malloc(sizeof(*block->transactions));
 	block->transactions[0] = CBNewTransaction(0, 1, onErrorReceived);

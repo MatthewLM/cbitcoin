@@ -63,7 +63,7 @@ typedef struct{
 CBByteArray * CBNewByteArrayFromString(char * string, bool terminator, void (*onErrorReceived)(CBError error,char *,...));
 /**
  @brief Creates an empty CBByteArray object.
- @param size Size in bytes for the new array.
+ @param size Size in bytes for the new array. Can be zero.
  @param onErrorReceived CBEngine for errors.
  @returns An empty CBByteArray object.
  */

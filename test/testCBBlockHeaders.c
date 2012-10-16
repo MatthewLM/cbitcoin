@@ -109,7 +109,7 @@ int main(){
 		printf("DESERIALISATION FIRST HEADER DIFFICULTY FAIL\n");
 		return 1;
 	}
-	if (blockHeaders->blockHeaders[0]->nounce != 0x9C022BAB) {
+	if (blockHeaders->blockHeaders[0]->nonce != 0x9C022BAB) {
 		printf("DESERIALISATION FIRST HEADER NOUNCE FAIL\n");
 		return 1;
 	}
@@ -155,7 +155,7 @@ int main(){
 		printf("DESERIALISATION SECOND HEADER DIFFICULTY FAIL\n");
 		return 1;
 	}
-	if (blockHeaders->blockHeaders[1]->nounce != 0x0D31AFB2) {
+	if (blockHeaders->blockHeaders[1]->nonce != 0x0D31AFB2) {
 		printf("DESERIALISATION SECOND HEADER NOUNCE FAIL\n");
 		return 1;
 	}
