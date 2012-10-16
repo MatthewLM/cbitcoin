@@ -182,18 +182,8 @@ uint8_t CBBigIntModuloWith58(CBBigInt * a){
 	return result;
 }
 void CBBigIntNormalise(CBBigInt * a){
-	for (uint8_t x = a->length - 1;; x--){
-		if (a->data[x]){
-			if (x == a->length - 1)
-				break;
-			a->length = x + 1;
-			break;
-		}else if (NOT x){
-			// Start with zero
-			a->length = 1;
-			break;
-		}
-	}
+	while (a->length > 1 && NOT a->data[a->length-1])
+		a->length--;
 }
 bool CBBigIntRealloc(CBBigInt * bi, uint8_t allocLen){
 	if (bi->allocLen < allocLen) {
