@@ -148,7 +148,7 @@ uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self){
 uint32_t CBAddressBroadcastCalculateLength(CBAddressBroadcast * self){
 	return CBVarIntSizeOf(self->addrNum) + self->addrNum * (self->timeStamps ? 30 : 26);
 }
-uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self){
+uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAddressBroadcast with no bytes.");
@@ -162,19 +162,27 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self){
 	CBVarIntEncode(bytes, 0, num);
 	uint16_t cursor = num.size;
 	for (uint8_t x = 0; x < num.val; x++) {
-		CBGetMessage(self->addresses[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		uint32_t len = CBNetworkAddressSerialise(self->addresses[x],self->timeStamps);
-		if (NOT len) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be serialised because of an error with the CBNetworkAddress number %u.",x);
-			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
-			for (uint8_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(CBGetMessage(self->addresses[y])->bytes);
+		if (force && CBGetMessage(self->addresses[x])->serialised)
+			CBReleaseObject(CBGetMessage(self->addresses[x])->bytes);
+		if (NOT CBGetMessage(self->addresses[x])->serialised || force) {
+			CBGetMessage(self->addresses[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+			uint32_t len = CBNetworkAddressSerialise(self->addresses[x],self->timeStamps);
+			if (NOT len) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBAddressBroadcast cannot be serialised because of an error with the CBNetworkAddress number %u.",x);
+				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+				for (uint8_t y = 0; y < x + 1; y++)
+					CBReleaseObject(CBGetMessage(self->addresses[y])->bytes);
+				return 0;
 			}
-			return 0;
+			CBGetMessage(self->addresses[x])->bytes->length = len;
+		}else if (CBGetMessage(self->addresses[x])->bytes->sharedData != bytes->sharedData){
+			// Move serialsed data to one location
+			CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(self->addresses[x])->bytes);
+			CBByteArrayChangeReference(CBGetMessage(self->addresses[x])->bytes, bytes, cursor);
 		}
-		CBGetMessage(self->addresses[x])->bytes->length = len;
-		cursor += len;
+		cursor += CBGetMessage(self->addresses[x])->bytes->length;
 	}
+	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
 bool CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address){

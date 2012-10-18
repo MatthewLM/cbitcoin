@@ -53,6 +53,7 @@ bool CBInitMessageByObject(CBMessage * self,void (*onErrorReceived)(CBError erro
 	self->bytes = NULL;
 	self->onErrorReceived = onErrorReceived;
 	self->expectResponse = false;
+	self->serialised = false;
 	return true;
 }
 bool CBInitMessageByData(CBMessage * self,CBByteArray * data,void (*onErrorReceived)(CBError error,char *,...)){
@@ -62,6 +63,7 @@ bool CBInitMessageByData(CBMessage * self,CBByteArray * data,void (*onErrorRecei
 	CBRetainObject(data); // Retain data for this object.
 	self->onErrorReceived = onErrorReceived;
 	self->expectResponse = false;
+	self->serialised = true;
 	return true;
 }
 

@@ -140,7 +140,7 @@ uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 uint32_t CBInventoryBroadcastCalculateLength(CBInventoryBroadcast * self){
 	return CBVarIntSizeOf(self->itemNum) + self->itemNum * 36;
 }
-uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self){
+uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBInventoryBroadcast with no bytes.");
@@ -154,23 +154,31 @@ uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self){
 	CBVarIntEncode(bytes, 0, num);
 	uint16_t cursor = num.size;
 	for (uint16_t x = 0; x < num.val; x++) {
-		CBGetMessage(self->items[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		if (NOT CBGetMessage(self->items[x])->bytes) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBInventoryBroadcastSerialise");
-			return 0;
-		}
-		uint32_t len = CBInventoryItemSerialise(self->items[x]);
-		if (NOT len) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBInventoryBroadcast cannot be serialised because of an error with the CBInventoryItem number %u.",x);
-			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
-			for (uint8_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(CBGetMessage(self->items[y])->bytes);
+		if (force && CBGetMessage(self->items[x])->serialised)
+			CBReleaseObject(CBGetMessage(self->items[x])->bytes);
+		if (NOT CBGetMessage(self->items[x])->serialised || force) {
+			CBGetMessage(self->items[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+			if (NOT CBGetMessage(self->items[x])->bytes) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBInventoryBroadcastSerialise");
+				return 0;
 			}
-			return 0;
+			uint32_t len = CBInventoryItemSerialise(self->items[x]);
+			if (NOT len) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBInventoryBroadcast cannot be serialised because of an error with the CBInventoryItem number %u.",x);
+				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+				for (uint8_t y = 0; y < x + 1; y++)
+					CBReleaseObject(CBGetMessage(self->items[y])->bytes);
+				return 0;
+			}
+			CBGetMessage(self->items[x])->bytes->length = len;
+		}else if (CBGetMessage(self->items[x])->bytes->sharedData != bytes->sharedData){
+			// Move serialsed data to one location
+			CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(self->items[x])->bytes);
+			CBByteArrayChangeReference(CBGetMessage(self->items[x])->bytes, bytes, cursor);
 		}
-		CBGetMessage(self->items[x])->bytes->length = len;
-		cursor += len;
+		cursor += CBGetMessage(self->items[x])->bytes->length;
 	}
+	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
 

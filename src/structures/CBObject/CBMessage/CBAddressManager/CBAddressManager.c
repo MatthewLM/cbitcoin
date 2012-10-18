@@ -329,7 +329,7 @@ void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer){
 	// Re-adjust time without this peer. If no peers are available do not adjust anything.
 	if (self->peersNum) CBAddressManagerAdjustTime(self);
 }
-uint32_t CBAddressManagerSerialise(CBAddressManager * self){
+uint32_t CBAddressManagerSerialise(CBAddressManager * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBAddressManager with no bytes.");
@@ -351,17 +351,26 @@ uint32_t CBAddressManagerSerialise(CBAddressManager * self){
 			return 0;
 		}
 		for (uint16_t y = 0; y < bucket->addrNum; y++) {
-			CBGetMessage(bucket->addresses[y])->bytes = CBByteArraySubReference(bytes, cursor, 30);
-			if (NOT CBGetMessage(bucket->addresses[y])->bytes) {
-				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBAddressManagerSerialise for the network address %u - %u.",x,y);
-				bucket->addrNum = y; // Modify so that we can free the address manager later.
-				return 0;
+			if (force && CBGetMessage(bucket->addresses[y])->serialised)
+				CBReleaseObject(CBGetMessage(bucket->addresses[y])->bytes);
+			if (NOT CBGetMessage(bucket->addresses[y])->serialised || force) {
+				CBGetMessage(bucket->addresses[y])->bytes = CBByteArraySubReference(bytes, cursor, 30);
+				if (NOT CBGetMessage(bucket->addresses[y])->bytes) {
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBAddressManagerSerialise for the network address %u - %u.",x,y);
+					bucket->addrNum = y; // Modify so that we can free the address manager later.
+					return 0;
+				}
+				CBNetworkAddressSerialise(bucket->addresses[y], true);
+			}else if (CBGetMessage(bucket->addresses[y])->bytes->sharedData != bytes->sharedData){
+				// Move serialsed data to one location
+				CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(bucket->addresses[y])->bytes);
+				CBByteArrayChangeReference(CBGetMessage(bucket->addresses[y])->bytes, bytes, cursor);
 			}
-			CBNetworkAddressSerialise(bucket->addresses[y], true);
 			cursor += 30;
 		}
 	}
 	CBByteArraySetInt64(bytes, cursor, self->secret);
+	CBGetMessage(self)->serialised = true;
 	return cursor + 8;
 }
 void CBAddressManagerSetReachability(CBAddressManager * self, CBIPType type, bool reachable){

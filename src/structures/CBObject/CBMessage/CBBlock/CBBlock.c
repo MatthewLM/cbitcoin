@@ -245,7 +245,7 @@ uint8_t * CBBlockGetHash(CBBlock * self){
 	}
 	return self->hash;
 }
-uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
+uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBBlock with no bytes.");
@@ -270,18 +270,26 @@ uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 	CBVarIntEncode(bytes, 80, transactionNum);
 	if (transactions) {
 		for (uint32_t x = 0; x < self->transactionNum; x++) {
-			CBGetMessage(self->transactions[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-			if (NOT CBGetMessage(self->transactions[x])->bytes) {
-				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBBlockSerialise for the transaction number %u",x);
-				return 0;
+			if (force && CBGetMessage(self->transactions[x])->serialised)
+				CBReleaseObject(CBGetMessage(self->transactions[x])->bytes);
+			if (NOT CBGetMessage(self->transactions[x])->serialised || force) {
+				CBGetMessage(self->transactions[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+				if (NOT CBGetMessage(self->transactions[x])->bytes) {
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBBlockSerialise for the transaction number %u",x);
+					return 0;
+				}
+				uint32_t len = CBTransactionSerialise(self->transactions[x], force);
+				if (NOT len) {
+					CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBBlock cannot be serialised because of an error with the transaction number %u.",x);
+					return 0;
+				}
+				CBGetMessage(self->transactions[x])->bytes->length = len;
+			}else if (CBGetMessage(self->transactions[x])->bytes->sharedData != bytes->sharedData){
+				// Move serialsed data to one location
+				CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(self->transactions[x])->bytes);
+				CBByteArrayChangeReference(CBGetMessage(self->transactions[x])->bytes, bytes, cursor);
 			}
-			uint32_t len = CBTransactionSerialise(self->transactions[x]);
-			if (NOT len) {
-				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBBlock cannot be serialised because of an error with the transaction number %u.",x);
-				return 0;
-			}
-			CBGetMessage(self->transactions[x])->bytes->length = len;
-			cursor += len;
+			cursor += CBGetMessage(self->transactions[x])->bytes->length;
 		}
 	}else{
 		// Add null byte since there are to be no transactions (header only).
@@ -290,5 +298,6 @@ uint32_t CBBlockSerialise(CBBlock * self,bool transactions){
 	}
 	// Reset hash
 	self->hashSet = false;
+	CBGetMessage(self)->serialised = true;
 	return cursor;
 }

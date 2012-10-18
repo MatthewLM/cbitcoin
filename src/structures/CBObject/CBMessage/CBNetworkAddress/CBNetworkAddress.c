@@ -156,6 +156,7 @@ uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool score){
 	CBByteArrayChangeReference(self->ip, bytes, cursor);
 	cursor += 16;
 	CBByteArraySetPort(bytes, cursor, self->port);
+	CBGetMessage(self)->serialised = true;
 	return cursor + 2;
 
 }

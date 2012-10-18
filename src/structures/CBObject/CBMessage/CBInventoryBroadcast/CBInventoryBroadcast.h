@@ -97,8 +97,9 @@ uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self);
 /**
  @brief Serialises a CBInventoryBroadcast to the byte data.
  @param self The CBInventoryBroadcast object
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length written on success, 0 on failure.
 */
-uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self);
+uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self, bool force);
 
 #endif

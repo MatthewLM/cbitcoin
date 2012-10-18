@@ -113,6 +113,7 @@ uint32_t CBInventoryItemSerialise(CBInventoryItem * self){
 	CBByteArraySetInt32(bytes, 0, self->type);
 	CBByteArrayCopyByteArray(bytes, 4, self->hash);
 	CBByteArrayChangeReference(self->hash, bytes, 4);
+	CBGetMessage(self)->serialised = true;
 	return 36;
 }
 

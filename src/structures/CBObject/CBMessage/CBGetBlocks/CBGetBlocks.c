@@ -134,7 +134,7 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 uint32_t CBGetBlocksCalculateLength(CBGetBlocks * self){
 	return 36 + self->chainDescriptor->hashNum * 32 + CBVarIntSizeOf(self->chainDescriptor->hashNum);
 }
-uint16_t CBGetBlocksSerialise(CBGetBlocks * self){
+uint16_t CBGetBlocksSerialise(CBGetBlocks * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBGetBlocks with no bytes.");
@@ -146,22 +146,33 @@ uint16_t CBGetBlocksSerialise(CBGetBlocks * self){
 	}
 	CBByteArraySetInt32(bytes, 0, self->version);
 	// Serialise chain descriptor
-	CBGetMessage(self->chainDescriptor)->bytes = CBByteArraySubReference(bytes, 4, bytes->length-4);
-	if (NOT CBGetMessage(self->chainDescriptor)->bytes) {
-		CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBGetBlocksSerialise");
-		return 0;
-	}
-	uint32_t len = CBChainDescriptorSerialise(self->chainDescriptor);
-	if (NOT len) {
-		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBGetBlocks cannot be serialised because of an error with the chain descriptor. This error should never occur... :o");
-		// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
+	uint32_t len;
+	if (force && CBGetMessage(self->chainDescriptor)->serialised)
 		CBReleaseObject(CBGetMessage(self->chainDescriptor)->bytes);
-		return 0;
+	if (NOT CBGetMessage(self->chainDescriptor)->serialised || force) {
+		CBGetMessage(self->chainDescriptor)->bytes = CBByteArraySubReference(bytes, 4, bytes->length-4);
+		if (NOT CBGetMessage(self->chainDescriptor)->bytes) {
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBGetBlocksSerialise");
+			return 0;
+		}
+		len = CBChainDescriptorSerialise(self->chainDescriptor);
+		if (NOT len) {
+			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,"CBGetBlocks cannot be serialised because of an error with the chain descriptor. This error should never occur... :o");
+			// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
+			CBReleaseObject(CBGetMessage(self->chainDescriptor)->bytes);
+			return 0;
+		}
+		CBGetMessage(self->chainDescriptor)->bytes->length = len;
+	}else if (CBGetMessage(self->chainDescriptor)->bytes->sharedData != bytes->sharedData){
+		// Move serialsed data to one location
+		CBByteArrayCopyByteArray(bytes, 4, CBGetMessage(self->chainDescriptor)->bytes);
+		CBByteArrayChangeReference(CBGetMessage(self->chainDescriptor)->bytes, bytes, 4);
+		len = CBGetMessage(self->chainDescriptor)->bytes->length;
 	}
-	CBGetMessage(self->chainDescriptor)->bytes->length = len;
 	// Serialise stopAtHash
 	CBByteArrayCopyByteArray(bytes, len + 4, self->stopAtHash);
 	CBByteArrayChangeReference(self->stopAtHash, bytes, len + 4);
+	CBGetMessage(self)->serialised = true;
 	return len + 36;
 }
 

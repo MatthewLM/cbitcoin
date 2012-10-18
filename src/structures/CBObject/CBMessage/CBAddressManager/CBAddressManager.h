@@ -194,9 +194,10 @@ void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer);
 /**
  @brief Serialises a CBAddressManager to the byte data.
  @param self The CBAddressManager object
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length written on success, 0 on failure.
 */
-uint32_t CBAddressManagerSerialise(CBAddressManager * self);
+uint32_t CBAddressManagerSerialise(CBAddressManager * self, bool force);
 /**
  @brief Sets the reachability of an IP type.
  @param self The CBAddressManager object

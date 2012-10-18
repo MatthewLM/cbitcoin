@@ -345,7 +345,7 @@ bool CBTransactionIsCoinBase(CBTransaction * self){
 			&& self->inputs[0]->prevOut.index == 0xFFFFFFFF
 			&& CBByteArrayIsNull(self->inputs[0]->prevOut.hash));
 }
-uint32_t CBTransactionSerialise(CBTransaction * self){
+uint32_t CBTransactionSerialise(CBTransaction * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,"Attempting to serialise a CBTransaction with no bytes. Now that you think about it, that was a bit stupid wasn't it?");
@@ -362,22 +362,29 @@ uint32_t CBTransactionSerialise(CBTransaction * self){
 	CBByteArraySetInt32(bytes, 0, self->version);
 	CBVarIntEncode(bytes, 4, inputNum);
 	for (uint32_t x = 0; x < self->inputNum; x++) {
-		CBGetMessage(self->inputs[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		if (NOT CBGetMessage(self->inputs[x])->bytes) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBTransactionSerialise for input number %u",x);
-			return 0;
-		}
-		uint32_t len = CBTransactionInputSerialise(self->inputs[x]);
-		if (NOT len) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be serialised because of an error with the input number %u.",x);
-			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
-			for (uint32_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(CBGetMessage(self->inputs[y])->bytes);
+		if (force && CBGetMessage(self->inputs[x])->serialised)
+			CBReleaseObject(CBGetMessage(self->inputs[x])->bytes);
+		if (NOT CBGetMessage(self->inputs[x])->serialised || force) {
+			CBGetMessage(self->inputs[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+			if (NOT CBGetMessage(self->inputs[x])->bytes) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBTransactionSerialise for input number %u",x);
+				return 0;
 			}
-			return 0;
+			uint32_t len = CBTransactionInputSerialise(self->inputs[x]);
+			if (NOT len) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be serialised because of an error with the input number %u.",x);
+				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+				for (uint32_t y = 0; y < x + 1; y++)
+					CBReleaseObject(CBGetMessage(self->inputs[y])->bytes);
+				return 0;
+			}
+			CBGetMessage(self->inputs[x])->bytes->length = len;
+		}else if (CBGetMessage(self->inputs[x])->bytes->sharedData != bytes->sharedData){
+			// Move serialsed data to one location
+			CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(self->inputs[x])->bytes);
+			CBByteArrayChangeReference(CBGetMessage(self->inputs[x])->bytes, bytes, cursor);
 		}
-		CBGetMessage(self->inputs[x])->bytes->length = len;
-		cursor += len;
+		cursor += CBGetMessage(self->inputs[x])->bytes->length;
 	}
 	if (bytes->length < cursor + 5) { // Check room for output number and lockTime.
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransaction with less bytes than required for output number and the lockTime. %i < %i\n",bytes->length, cursor + 5);
@@ -386,25 +393,31 @@ uint32_t CBTransactionSerialise(CBTransaction * self){
 	CBVarIntEncode(bytes, cursor, outputNum);
 	cursor += outputNum.size;
 	for (uint32_t x = 0; x < self->outputNum; x++) {
-		CBGetMessage(self->outputs[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		if (NOT CBGetMessage(self->outputs[x])->bytes) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBTransactionSerialise for output number %u",x);
-			return 0;
-		}
-		uint32_t len = CBTransactionOutputSerialise(self->outputs[x]);
-		if (NOT len) {
-			CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be serialised because of an error with the output number %u.",x);
-			// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
-			for (uint32_t y = 0; y < self->inputNum; y++) {
-				CBReleaseObject(CBGetMessage(self->inputs[y])->bytes);
+		if (force && CBGetMessage(self->outputs[x])->serialised)
+			CBReleaseObject(CBGetMessage(self->outputs[x])->bytes);
+		if (NOT CBGetMessage(self->outputs[x])->serialised || force) {
+			CBGetMessage(self->outputs[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
+			if (NOT CBGetMessage(self->outputs[x])->bytes) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_INIT_FAIL,"Cannot create a new CBByteArray sub reference in CBTransactionSerialise for output number %u",x);
+				return 0;
 			}
-			for (uint32_t y = 0; y < x + 1; y++) {
-				CBReleaseObject(CBGetMessage(self->outputs[y])->bytes);
+			uint32_t len = CBTransactionOutputSerialise(self->outputs[x]);
+			if (NOT len) {
+				CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"CBTransaction cannot be serialised because of an error with the output number %u.",x);
+				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
+				for (uint32_t y = 0; y < self->inputNum; y++)
+					CBReleaseObject(CBGetMessage(self->inputs[y])->bytes);
+				for (uint32_t y = 0; y < x + 1; y++)
+					CBReleaseObject(CBGetMessage(self->outputs[y])->bytes);
+				return 0;
 			}
-			return 0;
+			CBGetMessage(self->outputs[x])->bytes->length = len;
+		}else if (CBGetMessage(self->outputs[x])->bytes->sharedData != bytes->sharedData){
+			// Move serialsed data to one location
+			CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(self->outputs[x])->bytes);
+			CBByteArrayChangeReference(CBGetMessage(self->outputs[x])->bytes, bytes, cursor);
 		}
-		CBGetMessage(self->outputs[x])->bytes->length = len;
-		cursor += len;
+		cursor += CBGetMessage(self->outputs[x])->bytes->length;
 	}
 	if (bytes->length < cursor + 4) { // Check room for lockTime.
 		CBGetMessage(self)->onErrorReceived(CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,"Attempting to serialise a CBTransaction with less bytes than required for the lockTime. %i < %i\n",bytes->length, cursor + 4);
@@ -416,6 +429,7 @@ uint32_t CBTransactionSerialise(CBTransaction * self){
 		return 0;
 	}
 	CBByteArraySetInt32(bytes, cursor, self->lockTime);
+	CBGetMessage(self)->serialised = true;
 	return cursor + 4;
 }
 bool CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input){

@@ -105,9 +105,10 @@ uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self);
 /**
  @brief Serialises a CBAddressBroadcast to the byte data.
  @param self The CBAddressBroadcast object
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length written on success, 0 on failure.
 */
-uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self);
+uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self, bool force);
 /**
  @brief Takes a CBNetworkAddress to the list for broadcasting. This does not retain the CBNetworkAddress so you can pass an CBNetworkAddress into this while releasing control in the calling function.
  @param self The CBAddressBroadcast object

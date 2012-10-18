@@ -104,9 +104,10 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self);
 /**
  @brief Serialises a CBBlockHeaders to the byte data.
  @param self The CBBlockHeaders object
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length written on success, 0 on failure.
 */
-uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self);
+uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force);
 /**
  @brief Takes a CBBlock for the block header list. This does not retain the CBBlock so you can pass an CBBlock into this while releasing control from the calling function.
  @param self The CBBlockHeaders object

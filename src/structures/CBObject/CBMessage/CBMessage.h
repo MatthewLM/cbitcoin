@@ -45,6 +45,7 @@ typedef struct CBMessage{
 	uint8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
 	void (*onErrorReceived)(CBError error,char *,...); /**< Pointer to error callback */
 	CBMessageType expectResponse; /**< Set to zero if no message expected or the type of message expected as a response. */
+	bool serialised; /**< True if this object has been serialised. If an object as already been serialised it is not serialised by parent objects. For instance when serialising a block, the transactions are not serialised if they have been already. However objects can be explicitly reserialised */
 } CBMessage;
 
 /**

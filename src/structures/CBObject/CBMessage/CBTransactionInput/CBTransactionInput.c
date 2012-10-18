@@ -178,6 +178,7 @@ uint32_t CBTransactionInputSerialise(CBTransactionInput * self){
 	CBByteArrayCopyByteArray(bytes, 36 + scriptLen.size,CBGetByteArray(self->scriptObject));
 	CBByteArrayChangeReference(CBGetByteArray(self->scriptObject),bytes,36 + scriptLen.size);
 	CBByteArraySetInt32(bytes,36 + scriptLen.size + CBGetByteArray(self->scriptObject)->length,self->sequence);
+	CBGetMessage(self)->serialised = true;
 	return reqLen;
 }
 

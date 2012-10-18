@@ -146,9 +146,10 @@ bool CBTransactionIsCoinBase(CBTransaction * self);
 /**
  @brief Serialises a CBTransaction to the byte data.
  @param self The CBTransaction object.
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length read on success, 0 on failure.
  */
-uint32_t CBTransactionSerialise(CBTransaction * self);
+uint32_t CBTransactionSerialise(CBTransaction * self, bool force);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.

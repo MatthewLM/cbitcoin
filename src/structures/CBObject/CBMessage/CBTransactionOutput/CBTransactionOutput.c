@@ -150,5 +150,6 @@ uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
 	CBVarIntEncode(bytes, 8, scriptLen);
 	CBByteArrayCopyByteArray(bytes, 8 + scriptLen.size,CBGetByteArray(self->scriptObject));
 	CBByteArrayChangeReference(CBGetByteArray(self->scriptObject),bytes,8 + scriptLen.size);
+	CBGetMessage(self)->serialised = true;
 	return reqLen;
 }

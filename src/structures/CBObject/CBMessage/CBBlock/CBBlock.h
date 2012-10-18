@@ -124,7 +124,7 @@ uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions);
  @param transactions If true deserialise transactions. If false there do not deserialise for transactions.
  @returns The length read on success, 0 on failure.
  */
-uint32_t CBBlockDeserialise(CBBlock * self,bool transactions);
+uint32_t CBBlockDeserialise(CBBlock * self, bool transactions);
 /**
  @brief Retrieves or calculates the hash for a block. Hashes taken from this fuction are cached.
  @param self The CBBlock object. This should be serialised.
@@ -135,8 +135,9 @@ uint8_t * CBBlockGetHash(CBBlock * self);
  @brief Serialises a CBBlock to the byte data.
  @param self The CBBlock object
  @param transactions If true serialise transactions. If false there do not serialise for transactions.
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length read on success, 0 on failure.
  */
-uint32_t CBBlockSerialise(CBBlock * self,bool transactions);
+uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force);
 
 #endif

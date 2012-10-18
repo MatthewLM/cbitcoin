@@ -103,6 +103,7 @@ uint8_t CBPingPongSerialise(CBPingPong * self){
 		return 0;
 	}
 	CBByteArraySetInt64(bytes, 0, self->ID);
+	CBGetMessage(self)->serialised = true;
 	return 8;
 }
 

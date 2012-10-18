@@ -483,6 +483,7 @@ uint16_t CBAlertSerialiseSignature(CBAlert * self,uint16_t offset){
 	offset += sigLen.size;
 	CBByteArrayCopyByteArray(bytes, offset, self->signature);
 	CBByteArrayChangeReference(self->signature, bytes, offset);
+	CBGetMessage(self)->serialised = true;
 	return offset + sigLen.val;
 }
 bool CBAlertTakeUserAgent(CBAlert * self,CBByteArray * userAgent){

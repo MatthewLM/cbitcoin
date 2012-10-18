@@ -98,8 +98,9 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self);
 /**
  @brief Serialises a CBGetBlocks to the byte data.
  @param self The CBGetBlocks object
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length written on success, 0 on failure.
 */
-uint16_t CBGetBlocksSerialise(CBGetBlocks * self);
+uint16_t CBGetBlocksSerialise(CBGetBlocks * self, bool force);
 
 #endif

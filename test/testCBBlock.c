@@ -189,7 +189,7 @@ int main(){
 	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TRANSACTION_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF, onErrorReceived));
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(5000000000, genesisOutScript, onErrorReceived));
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBGetMessage(genesisBlock)->bytes->length, onErrorReceived);
-	CBBlockSerialise(block, true);
+	CBBlockSerialise(block, true, true);
 	if (CBByteArrayCompare(CBGetMessage(block)->bytes, CBGetMessage(genesisBlock)->bytes)) {
 		printf("SERIALISATION TO GENESIS BLOCK FAIL\n0x");
 		uint8_t * d = CBByteArrayGetData(CBGetMessage(block)->bytes);

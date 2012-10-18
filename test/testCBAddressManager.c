@@ -154,7 +154,7 @@ int main(){
 			bucket->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, onErrorReceived);
 		}
 	}
-	if(CBAddressManagerSerialise(addrMan) != 12012){
+	if (CBAddressManagerSerialise(addrMan, true) != 12012){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
 	}

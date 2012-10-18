@@ -146,6 +146,7 @@ uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 		CBByteArrayChangeReference(self->hashes[x], bytes, cursor);
 		cursor += 32;
 	}
+	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
 bool CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash){

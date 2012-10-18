@@ -104,8 +104,9 @@ uint32_t CBVersionCalculateLength(CBVersion * self);
 /**
  @brief Serialises a CBVersion to the byte data.
  @param self The CBVersion object
+ @param force Serialises everything, replacing any previous serialisation of children objects.
  @returns The length written on success, 0 on failure.
  */
-uint32_t CBVersionSerialise(CBVersion * self);
+uint32_t CBVersionSerialise(CBVersion * self, bool force);
 
 #endif
