@@ -100,7 +100,7 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 		a->length--;
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
-bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
+bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b){
 	if (NOT b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
@@ -110,62 +110,53 @@ bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans){
 	if (a->length == 1 && NOT a->data[0]) // "a" is zero
 		return true;
 	// Multiply b by each byte and then add to answer
-	for (uint8_t x = 0; x < a->length; x++) {
-		uint16_t mult = ans[x] + a->data[x] * b; // Allow for overflow onto next byte.
-		ans[x] = mult;
-		ans[x+1] = (mult >> 8);
+	uint16_t carry = 0;
+	uint8_t x = 0;
+	for (; x < a->length; x++) {
+		carry = carry + a->data[x] * b; // Allow for overflow onto next byte.
+		a->data[x] = carry;
+		carry >>= 8;
 	}
-	if (ans[a->length]) { // If last byte is not zero, adjust length.
-		a->length++;
-		if (NOT CBBigIntRealloc(a, a->length))
+	if (carry) { // If last byte is not zero, adjust length.
+		if (NOT CBBigIntRealloc(a, a->length+1))
 			return false;
+		a->length++;
+		a->data[x] = carry;
 	}
-	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 	return true;
 }
 void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a,CBBigInt * b){
-	// ??? Needs a test for this function.
-	for (uint8_t x = 0; x < b->length; x++) {
-		uint8_t sub = b->data[x];
-		for (uint8_t y = x; y < a->length; y++) {
-			if (a->data[y] >= sub) {
-				a->data[y] -= sub;
-				break;
-			}else{
-				a->data[y] = 255 - (sub - a->data[y] - 1);
-				sub = 1;
-			}
-		}
+	uint8_t x;
+	bool carry = 0;
+	// This can be made much nicer when using signed arithmetic,
+	// carry and tmp could be merged to be 0 or -1 between rounds.
+	for (x = 0; x < b->length; x++) {
+		uint16_t tmp = carry + b->data[x];
+		carry = a->data[x] < tmp;
+		a->data[x] -= tmp;
 	}
+	if (carry)
+		a->data[x]--;
 	CBBigIntNormalise(a);
 }
 void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
-	uint8_t sub = b;
-	for (uint8_t x = 0;x < a->length; x++) {
-		if (a->data[x] >= sub) {
-			a->data[x] -= sub;
-			break;
-		}else{
-			a->data[x] = 255 - (sub - a->data[x] - 1);
-			sub = 1;
-		}
+	uint8_t carry = b;
+	uint8_t x = 0;
+	for (; a->data[x] < carry; x++){
+		a->data[x] = 255 - carry + a->data[x] + 1;
+		carry = 1;
 	}
+	a->data[x] -= carry;
 	CBBigIntNormalise(a);
 }
 bool CBBigIntFromPowUInt8(CBBigInt * bi,uint8_t a,uint8_t b){
 	bi->length = 1;
 	bi->data[0] = 1;
-	uint8_t * temp = malloc(b);
-	if (NOT temp)
-		// ERROR
-		return false;
 	for (uint8_t x = 0; x < b; x++) {
-		memset(temp, 0, bi->length);
-		if (NOT CBBigIntEqualsMultiplicationByUInt8(bi, a, temp))
+		if (NOT CBBigIntEqualsMultiplicationByUInt8(bi, a))
 			// ERROR
 			return false;
 	}
-	free(temp);
 	return true;
 }
 uint8_t CBBigIntModuloWith58(CBBigInt * a){

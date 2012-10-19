@@ -80,10 +80,9 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans);
  @brief Calculates the result of a multiplication of a CBBigInt structure by an 8 bit integer and the CBBigInt becomes this new figure. Like "a *= b".
  @param a A pointer to the CBBigInt
  @param b An 8 bit integer
- @param ans A memory block the same size as the CBBigInt data memory block to store temporary data in calculations. Should be set with zeros.
  @returns true on success, false on failure
  */
-bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b,uint8_t * ans);
+bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b);
 /**
  @brief Calculates the result of a subtraction of a CBBigInt structure with another CBBigInt structure and the CBBigInt becomes this new figure. Like "a -= b".
  @param a A pointer to a CBBigInt

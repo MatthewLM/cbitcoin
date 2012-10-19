@@ -42,8 +42,7 @@ int main(){
 	bil.data[0] = 0xfa;
 	bil.data[1] = 0xce;
 	bil.data[2] = 0x04;
-	uint8_t templ[5] = {0,0,0,0,0};
-	CBBigIntEqualsMultiplicationByUInt8(&bil,180,templ);
+	CBBigIntEqualsMultiplicationByUInt8(&bil,180);
 	printf("(%.2x,%.2x,%.2x,%.2x)\n",bil.data[0],bil.data[1],bil.data[2],bil.data[3]);
 	// Exp
 	CBBigIntFromPowUInt8(&bil,185,16);
@@ -76,10 +75,9 @@ int main(){
 			return 1;
 		}
 		// Mult
-		memset(temp, 0, 33);
 		bi.length = 32;
 		memmove(bi.data, bytes[x], 32);
-		CBBigIntEqualsMultiplicationByUInt8(&bi, nums[x], temp);
+		CBBigIntEqualsMultiplicationByUInt8(&bi, nums[x]);
 		z = multiply_results[x][31] == 0;
 		for (int y = 0; y < 32 - z; y++) {
 			if (bi.data[y] != multiply_results[x][y]){
@@ -175,7 +173,7 @@ int main(){
 		printf("CBBigIntModuloWithUInt8 WITH ZERO FAILURE\n");
 		return 1;
 	}
-	CBBigIntEqualsMultiplicationByUInt8(&bi, 255, NULL);
+	CBBigIntEqualsMultiplicationByUInt8(&bi, 255);
 	if (bi.data[0] != 0 || bi.length != 1) {
 		printf("CBBigIntEqualsMultiplicationByUInt8 WITH ZERO FAILURE\n");
 		return 1;
@@ -185,6 +183,7 @@ int main(){
 		printf("CBBigIntEqualsDivisionByUInt8 WITH ZERO FAILURE\n");
 		return 1;
 	}
+	// Pow and addittiton
 	CBBigInt bi3;
 	CBBigIntAlloc(&bi3, 2);
 	CBBigIntFromPowUInt8(&bi3, 3, 9);
@@ -230,6 +229,77 @@ int main(){
 	CBBigIntEqualsAdditionByBigInt(&a, &b);
 	if (a.data[0] != 0 || a.data[1] != 0 || a.data[2] != 0 || a.data[3] != 1 || a.length != 4) {
 		printf("0xFF00FF + 0xFF01 FAIL\n");
+		return 1;
+	}
+	free(a.data);
+	free(b.data);
+	// Compare big int to 58 equal
+	CBBigIntAlloc(&a, 2);
+	a.data[0] = 58;
+	a.length = 1;
+	if (CBBigIntCompareTo58(&a)){
+		printf("CBBigIntCompareTo58 EQUAL FAIL\n");
+		return 1;
+	}
+	// Big Int To Big Int Compare
+	CBBigIntAlloc(&b, 2);
+	b.length = 2;
+	b.data[0] = 57;
+	if (CBBigIntCompareToBigInt(&a, &b) != CB_COMPARE_LESS_THAN){
+		printf("CBBigIntCompareToBigInt LEN LESS THAN FAIL\n");
+		return 1;
+	}
+	if (CBBigIntCompareToBigInt(&b, &a) != CB_COMPARE_MORE_THAN){
+		printf("CBBigIntCompareToBigInt LEN MORE THAN FAIL\n");
+		return 1;
+	}
+	a.data[1] = 10;
+	a.length = 2;
+	b.data[1] = 10;
+	if (CBBigIntCompareToBigInt(&a, &b) != CB_COMPARE_MORE_THAN){
+		printf("CBBigIntCompareToBigInt VAL MORE THAN FAIL\n");
+		return 1;
+	}
+	if (CBBigIntCompareToBigInt(&b, &a) != CB_COMPARE_LESS_THAN){
+		printf("CBBigIntCompareToBigInt VAL LESS THAN FAIL\n");
+		return 1;
+	}
+	b.data[0] = 58;
+	if (CBBigIntCompareToBigInt(&b, &a)){
+		printf("CBBigIntCompareToBigInt EQUAL FAIL\n");
+		return 1;
+	}
+	// Multiply by zero
+	CBBigIntEqualsMultiplicationByUInt8(&a, 0);
+	if (a.length != 1 || a.data[0]) {
+		printf("CBBigIntEqualsMultiplicationByUInt8 ZERO FAIL\n");
+		return 1;
+	}
+	// Subtraction tests
+	CBBigIntEqualsSubtractionByBigInt(&b, &a);
+	if (b.length != 2 || b.data[0] != 58 || b.data[1] != 10) {
+		printf("CBBigIntEqualsSubtractionByBigInt ZERO FAIL\n");
+		return 1;
+	}
+	a.data[0] = 8;
+	CBBigIntEqualsSubtractionByBigInt(&b, &a);
+	if (b.length != 2 || b.data[0] != 50 || b.data[1] != 10) {
+		printf("CBBigIntEqualsSubtractionByBigInt NO OVERFLOW FAIL\n");
+		return 1;
+	}
+	a.length = 2;
+	a.data[0] = 56;
+	a.data[1] = 3;
+	CBBigIntEqualsSubtractionByBigInt(&b, &a);
+	if (b.length != 2 || b.data[0] != 250 || b.data[1] != 6) {
+		printf("CBBigIntEqualsSubtractionByBigInt OVERFLOW FAIL\n");
+		return 1;
+	}
+	a.data[0] = 50;
+	a.data[1] = 6;
+	CBBigIntEqualsSubtractionByBigInt(&b, &a);
+	if (b.length != 1 || b.data[0] != 200) {
+		printf("CBBigIntEqualsSubtractionByBigInt OVERFLOW LESS BYTE FAIL\n");
 		return 1;
 	}
 	return 0;

@@ -31,7 +31,6 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 		return false;
 	bi->data[0] = 0;
 	bi->length = 1;
-	uint8_t temp[189];
 	for (uint8_t x = strlen(str) - 1;; x--){ // Working backwards
 		// Get index in alphabet array
 		uint8_t alphaIndex = str[x];
@@ -54,8 +53,7 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 				free(bi2.data);
 				return false;
 			}
-			memset(temp, 0, bi2.length + 1);
-			if (NOT CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex, temp)){
+			if (NOT CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex)){
 				// Error occured.
 				free(bi2.data);
 				return false;
