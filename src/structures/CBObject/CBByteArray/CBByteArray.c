@@ -146,7 +146,7 @@ bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,uint32_t o
 	self->onErrorReceived = ref->onErrorReceived;
 	self->sharedData = ref->sharedData;
 	self->sharedData->references++; // Since a new reference to the shared data is being made, an increase in the reference count must be made.
-	self->length = length ? length : ref->length; // If length is 0, set to the reference length.
+	self->length = length;
 	self->offset = ref->offset + offset;
 	return true;
 }

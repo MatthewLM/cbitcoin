@@ -122,7 +122,7 @@ bool CBInitByteArrayOfSize(CBByteArray * self,uint32_t size,void (*onErrorReceiv
  @param self The CBByteArray object to initialise.
  @param ref The CBByteArray object to reference.
  @param offset The offset to the start of the reference.
- @param length The length of the reference. If 0 the length is set to be the same as the reference CBByteArray.
+ @param length The length of the reference.
  @returns true on success, false on failure.
  */
 bool CBInitByteArraySubReference(CBByteArray * self,CBByteArray * ref,uint32_t offset,uint32_t length);
