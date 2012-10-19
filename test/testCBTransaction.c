@@ -263,7 +263,7 @@ int main(){
 		CBReleaseObject(scriptObj);
 	}
 	CBGetMessage(tx)->bytes = CBNewByteArrayOfSize(187, onErrorReceived);
-	CBTransactionSerialise(tx);
+	CBTransactionSerialise(tx, true);
 	if (CBByteArrayCompare(bytes, CBGetMessage(tx)->bytes)) {
 		printf("CBTransaction SERIALISATION FAILURE\n0x");
 		uint8_t * d = CBByteArrayGetData(CBGetMessage(tx)->bytes);
@@ -275,6 +275,10 @@ int main(){
 		for (int x = 0; x < 187; x++) {
 			printf("%.2x",d[x]);
 		}
+		return 1;
+	}
+	if (CBTransactionCalculateLength(tx) != 187) {
+		printf("TRANSACTION LENGTH CALC FAILURE\n");
 		return 1;
 	}
 	CBReleaseObject(tx);
@@ -353,7 +357,7 @@ int main(){
 		tx->inputs[x]->scriptObject = inputScript; // No need to release script.
 		free(signature);
 	}
-	CBScript * outputScript = CBNewScriptFromReference(subScriptByteArray, 0, 0);
+	CBScript * outputScript = CBNewScriptFromReference(subScriptByteArray, 0, subScriptByteArray->length);
 	// Test SIGHASH_ALL
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
