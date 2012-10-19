@@ -982,25 +982,25 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 			}else if (byte == CB_SCRIPT_OP_NEGATE){
 				if (NOT stack->length)
 					return CB_SCRIPT_INVALID; // Stack empty
-				CBScriptStackItem item = stack->elements[stack->length-1];
-				if (item.length > 4)
+				CBScriptStackItem * item = &stack->elements[stack->length-1];
+				if (item->length > 4)
 					return CB_SCRIPT_INVALID; // Protocol does not except integers more than 32 bits.
-				if (item.data == NULL) { // Zero
+				if (item->data == NULL) { // Zero
 					// Zero becomes 0x80 :-( Sorry, this madness comes from the C++ client which represents zero in a horrid way.
-					item.data = malloc(1);
-					if (NOT item.data){
+					item->data = malloc(1);
+					if (NOT item->data){
 						self->onErrorReceived(CB_ERROR_OUT_OF_MEMORY,"Run out of memory during OP_NEGATE\n");
 						return CB_SCRIPT_ERR;
 					}
-					item.length = 1;
-					item.data[0] = 0x80; // -0
-				}else if(item.data[0] != 0x80){
-					item.data[item.length-1] ^= 0x80; // Toggles most significant bit.
+					item->length = 1;
+					item->data[0] = 0x80; // -0
+				}else if(item->data[0] != 0x80){
+					item->data[item->length-1] ^= 0x80; // Toggles most significant bit.
 				}else{
 					// Negative zero becomes NULL. Positive zero is NULL to support weirdness with the C++ client. Arghh. ??? Needs checking over for inevitable inconsistencies with C++.
-					free(item.data);
-					item.data = NULL;
-					item.length = 0;
+					free(item->data);
+					item->data = NULL;
+					item->length = 0;
 				}
 			}else if (byte == CB_SCRIPT_OP_ABS){
 				if (NOT stack->length)
