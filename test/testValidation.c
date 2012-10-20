@@ -179,6 +179,27 @@ int main(){
 		printf("BASIC VALIDATION COINBASE FALSE FAIL\n");
 		return 1;
 	}
+	tx->inputs[0]->scriptObject->length = 1;
+	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+		printf("BASIC VALIDATION COINBASE SCRIPT LOW FAIL\n");
+		return 1;
+	}
+	tx->inputs[0]->scriptObject->length = 101;
+	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+		printf("BASIC VALIDATION COINBASE SCRIPT HIGH FAIL\n");
+		return 1;
+	}
+	tx->inputNum = 0;
+	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+		printf("BASIC VALIDATION NO INPUTS FAIL\n");
+		return 1;
+	}
+	tx->inputNum = 1;
+	tx->outputNum = 0;
+	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+		printf("BASIC VALIDATION NO OUTPUTS FAIL\n");
+		return 1;
+	}
 	CBReleaseObject(tx);
 	// Test merkle root calculation from block 100,004
 	uint8_t hashes[192] = {
@@ -348,5 +369,47 @@ int main(){
 		return 1;
 	}
 	free(work.data);
+	// Test transaction lock
+	tx = CBNewTransaction(0, 1, onErrorReceived);
+	CBScript * nullScript = CBNewScriptOfSize(0, onErrorReceived);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TRANSACTION_INPUT_FINAL, nullScript, 0, onErrorReceived));
+	if (NOT CBTransactionIsFinal(tx, 0, 0)) {
+		printf("TX FINAL INPUT FAIL\n");
+		return 1;
+	}
+	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TRANSACTION_INPUT_FINAL - 1, nullScript, 0, onErrorReceived));
+	if (NOT CBTransactionIsFinal(tx, 0, 0)) {
+		printf("TX NOT FINAL INPUT NO LOCKTIME FAIL\n");
+		return 1;
+	}
+	tx->lockTime = 1;
+	if (CBTransactionIsFinal(tx, 0, 0)) {
+		printf("TX NOT FINAL INPUT FAIL\n");
+		return 1;
+	}
+	tx->lockTime = 56;
+	if (NOT CBTransactionIsFinal(tx, 0, 57)) {
+		printf("TX FINAL BLOCK LOCKTIME FAIL\n");
+		return 1;
+	}
+	if (CBTransactionIsFinal(tx, 0, 56)) {
+		printf("TX NOT FINAL BLOCK LOCKTIME FAIL\n");
+		return 1;
+	}
+	tx->lockTime = 500000000;
+	if (NOT CBTransactionIsFinal(tx, 500000001, 0)) {
+		printf("TX FINAL TIME LOCKTIME FAIL\n");
+		return 1;
+	}
+	if (CBTransactionIsFinal(tx, 500000000, 0)) {
+		printf("TX NOT FINAL TIME LOCKTIME FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(tx->inputs[1]);
+	tx->inputNum--;
+	if (NOT CBTransactionIsFinal(tx, 500000000, 0)) {
+		printf("TX ALL FINAL SEQUENCES FAIL\n");
+		return 1;
+	}
 	return 0;
 }
