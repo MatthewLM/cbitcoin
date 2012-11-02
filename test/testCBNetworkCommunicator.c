@@ -27,8 +27,8 @@
 #include <time.h>
 #include "stdarg.h"
 
-void onErrorReceived(CBError a,char * format,...);
-void onErrorReceived(CBError a,char * format,...){
+void logError(CBError a,char * format,...);
+void logError(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -205,25 +205,25 @@ int main(){
 	pthread_mutex_init(&tester.testingMutex, NULL);
 	evthread_use_pthreads();
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
-	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,127,0,0,1}, 16, onErrorReceived);
+	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,127,0,0,1}, 16, logError);
 	CBByteArray * loopBack2 = CBByteArrayCopy(loopBack); // Do not use in more than one thread.
-	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0, onErrorReceived);
-	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0, onErrorReceived); // Use in connector thread.
+	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0, logError);
+	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0, logError); // Use in connector thread.
 	addrListenB->public = true; // Ensure addresses are relayed.
-	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, loopBack, 45563, 0, onErrorReceived);
-	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0, onErrorReceived); // Use in connector thread.
+	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, loopBack, 45563, 0, logError);
+	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0, logError); // Use in connector thread.
 	addrListen2B->public = true; // Ensure addresses are relayed.
-	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0, onErrorReceived); // Different port over loopback to seperate the CBNetworkCommunicators.
+	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0, logError); // Different port over loopback to seperate the CBNetworkCommunicators.
 	CBReleaseObject(loopBack);
 	CBReleaseObject(loopBack2);
-	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, onErrorReceived);
-	CBByteArray * userAgent2 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, onErrorReceived);
-	CBByteArray * userAgent3 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, onErrorReceived);
+	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, logError);
+	CBByteArray * userAgent2 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, logError);
+	CBByteArray * userAgent3 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false, logError);
 	// First listening CBNetworkCommunicator setup.
-	CBAddressManager * addrManListen = CBNewAddressManager(onErrorReceived,onBadTime);
+	CBAddressManager * addrManListen = CBNewAddressManager(logError,onBadTime);
 	addrManListen->maxAddressesInBucket = 2;
 	CBAddressManagerSetReachability(addrManListen, CB_IP_IPv4 | CB_IP_LOCAL, true);
-	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator(onErrorReceived);
+	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator(logError);
 	addrManListen->callbackHandler = commListen;
 	commListen->onMessageReceived = onMessageReceived;
 	commListen->onNetworkError = onNetworkError;
@@ -245,10 +245,10 @@ int main(){
 	CBNetworkCommunicatorSetOurIPv4(commListen, addrListen);
 	commListen->callbackHandler = &tester;
 	// Second listening CBNetworkCommunicator setup.
-	CBAddressManager * addrManListen2 = CBNewAddressManager(onErrorReceived,onBadTime);
+	CBAddressManager * addrManListen2 = CBNewAddressManager(logError,onBadTime);
 	addrManListen2->maxAddressesInBucket = 2;
 	CBAddressManagerSetReachability(addrManListen2, CB_IP_IPv4 | CB_IP_LOCAL, true);
-	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator(onErrorReceived);
+	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator(logError);
 	addrManListen2->callbackHandler = commListen2;
 	commListen2->onMessageReceived = onMessageReceived;
 	commListen2->onNetworkError = onNetworkError;
@@ -270,13 +270,13 @@ int main(){
 	CBNetworkCommunicatorSetOurIPv4(commListen2, addrListen2);
 	commListen2->callbackHandler = &tester;
 	// Connecting CBNetworkCommunicator setup.
-	CBAddressManager * addrManConnect = CBNewAddressManager(onErrorReceived,onBadTime);
+	CBAddressManager * addrManConnect = CBNewAddressManager(logError,onBadTime);
 	addrManConnect->maxAddressesInBucket = 2;
 	CBAddressManagerSetReachability(addrManConnect, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	// We are going to connect to both listing CBNetworkCommunicators.
 	CBAddressManagerAddAddress(addrManConnect, addrListenB);
 	CBAddressManagerAddAddress(addrManConnect, addrListen2B);
-	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(onErrorReceived);
+	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(logError);
 	addrManConnect->callbackHandler = commConnect;
 	commConnect->onMessageReceived = onMessageReceived;
 	commConnect->onNetworkError = onNetworkError;

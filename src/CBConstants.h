@@ -66,29 +66,18 @@
 #define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
 #define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
 #define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
+#define CB_DATA_DIRECTORY "/.cbitcoin_FullNode_Data/"
+#define CB_ADDRESS_DATA_FILE "addresses.dat"
+#define CB_VALIDATION_DATA_FILE "validation.dat"
+#define CB_MAX_ORPHAN_CACHE 20
+#define CB_MAX_BRANCH_CACHE 5
+#define CB_NO_VALIDATION 0xFFFFFFFF
+#define CBHashMiniKey(hash) (uint64_t)hash[0] << 56 | (uint64_t)hash[1] << 48 | (uint64_t)hash[2] << 40 | (uint64_t)hash[3] << 32 | (uint64_t)hash[4] << 24 | (uint64_t)hash[5] << 16 | (uint64_t)hash[6] << 8 | (uint64_t)hash[7]
+#define CB_MIN(a,b) ((a) < (b) ? a : b)
+#define CB_MAX(a,b) ((a) > (b) ? a : b)
+
 
 //  Enums
-
-typedef enum{
-	CB_ERROR_MESSAGE_CHECKSUM_BAD_SIZE,
-	CB_ERROR_MESSAGE_NO_SERIALISATION_IMPLEMENTATION,
-	CB_ERROR_MESSAGE_NO_DESERIALISATION_IMPLEMENTATION,
-	CB_ERROR_MESSAGE_DESERIALISATION_BAD_BYTES,
-	CB_ERROR_MESSAGE_DESERIALISATION_NULL_BYTES,
-	CB_ERROR_MESSAGE_SERIALISATION_BAD_BYTES,
-	CB_ERROR_MESSAGE_SERIALISATION_NULL_BYTES,
-	CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,
-	CB_ERROR_SHA_256_HASH_BAD_BYTE_ARRAY_LENGTH,
-	CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,
-	CB_ERROR_BASE58_DECODE_CHECK_INVALID,
-	CB_ERROR_TRANSACTION_FEW_INPUTS,
-	CB_ERROR_TRANSACTION_FEW_OUTPUTS,
-	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL,
-	CB_ERROR_NETWORK_COMMUNICATOR_LOOP_CREATE_FAIL,
-	CB_ERROR_NETWORK_COMMUNICATOR_CONNECT_FAILURE,
-	CB_ERROR_OUT_OF_MEMORY,
-	CB_ERROR_INIT_FAIL,
-}CBError;
 
 /*
  @brief The return values for CBScriptExecute. @see CBScript.h
@@ -328,5 +317,87 @@ typedef enum{
 	CB_COMPARE_EQUAL = 0,
 	CB_COMPARE_LESS_THAN = -1,
 }CBCompare;
+
+/**
+ @brief The return type for CBFullValidatorProcessBlock
+ */
+typedef enum{
+	CB_BLOCK_STATUS_MAIN, /**< The block has extended the main branch. */
+	CB_BLOCK_STATUS_SIDE, /**< The block has extended a branch which is not the main branch. */
+	CB_BLOCK_STATUS_ORPHAN, /**< The block is an orphan */
+	CB_BLOCK_STATUS_BAD, /**< The block is not ok. */
+	CB_BLOCK_STATUS_BAD_TIME, /**< The block has a bad time */
+	CB_BLOCK_STATUS_DUPLICATE, /**< The block has already been received. */
+	CB_BLOCK_STATUS_ERROR, /**< There was an error while processing a block */
+	CB_BLOCK_STATUS_ERROR_BAD_DATA, /**< There was an error while processing a block and it has left corrupted data on the filesystem. Recovery is required before continuing. */
+	CB_BLOCK_STATUS_ERROR_BAD_MEMORY, /**< There was an error while processing a block and the memory is corrupted. The branch for the added block needs to be reloaded. */
+	CB_BLOCK_STATUS_CONTINUE, /**< Continue with the validation */
+} CBBlockStatus;
+
+/**
+ @brief The return type for CBFullValidatorCompleteBlockValidation
+ */
+typedef enum{
+	CB_BLOCK_VALIDATION_OK, /**< The validation passed with no problems. */
+	CB_BLOCK_VALIDATION_BAD, /**< The block failed valdiation. */
+	CB_BLOCK_VALIDATION_ERR, /**< There was an error during the validation processing. */
+} CBBlockValidationResult;
+
+/**
+ @brief The return type for CBSafeOutputCommit.
+ */
+typedef enum{
+	CB_SAFE_OUTPUT_OK, /**< The write operations were all completed successfully */
+	CB_SAFE_OUTPUT_FAIL_PREVIOUS, /**< The write operations failed and the disk is in the previous state. */
+	CB_SAFE_OUTPUT_FAIL_BAD_STATE, /**< The write operations failed and the disk is in a bad state. Data recovery must be performed before reading from any files that should have ben changed. */
+}CBSafeOutputResult;
+
+/**
+ @brief The return type for CBFullValidatorAddBlockToBranch.
+ */
+typedef enum{
+	CB_ADD_BLOCK_OK, /**< The write operations were all completed successfully */
+	CB_ADD_BLOCK_FAIL_PREVIOUS, /**< The write operations failed and the disk is in the previous state. */
+	CB_ADD_BLOCK_FAIL_BAD_DATA, /**< The write operations failed and the disk is in a bad state. Data recovery must be performed before reading from any files that should have ben changed. */
+	CB_ADD_BLOCK_FAIL_BAD_MEMORY, /**< The write operations failed and the memory is in a bad state. The branch data needs to be reloaded */
+}CBFullValidatorAddBlockResult;
+
+/**
+ @brief The return type for CBFullValidatorLoadBranchValidator and CBFullValidatorLoadValidator.
+ */
+typedef enum{
+	CB_VALIDATOR_LOAD_OK, /**< Load was successful */
+	CB_VALIDATOR_LOAD_ERR, /**< Load failure */
+	CB_VALIDATOR_LOAD_ERR_DATA, /**< Load failure, ensure all related validation files are deleted before continuing. */
+} CBValidatorLoadResult;
+
+/**
+ @brief The type of output operations to apply to a file.
+ */
+typedef enum{
+	CB_SAFE_OUTPUT_OP_SAVE, /**< A save operation */
+	CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND, /**< Overwrite and append operations */
+	CB_SAFE_OUTPUT_OP_DELETE, /**< A delete operation. */
+	CB_SAFE_OUTPUT_OP_RENAME, /**< A rename operation. */
+	CB_SAFE_OUTPUT_OP_TRUNCATE, /**< A truncate operation. */
+} CBSafeOutputOperation;
+
+/**
+ @brief The file mode required for a file, passed to CBFileOpen
+ */
+typedef enum{
+	CB_FILE_MODE_READ, /**< Open to read binary data from the file (ie. rb). */
+	CB_FILE_MODE_OVERWRITE, /**< Open to overwrite (ie. update) binary contents of the file. (ie. rb+) */
+	CB_FILE_MODE_SAVE, /**< Open to save new binary contents to the file (ie. wb) */
+	CB_FILE_MODE_TRUNCATE, /**< Open to truncate a file (ie. wb and likely the same as CB_FILE_MODE_SAVE) */
+	CB_FILE_MODE_APPEND, /**< Open to append binary data to the file (ie. ab) */
+	CB_FILE_MODE_WRITE_AND_READ, /**< Open to write and read binary data to the file. When opened the file should be cleared. If it does not exist it should be created (ie. wb+). */
+	CB_FILE_MODE_NONE, /**< Open file or directory with no read/write mode specified but which can be used to synchronise to disk. */
+} CBFileMode;
+
+typedef enum{
+	CB_SEEK_SET,
+	CB_SEEK_CUR,
+} CBFileSeekOrigin;
 
 #endif

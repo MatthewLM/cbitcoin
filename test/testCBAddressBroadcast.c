@@ -25,8 +25,8 @@
 #include <time.h>
 #include "stdarg.h"
 
-void onErrorReceived(CBError a,char * format,...);
-void onErrorReceived(CBError a,char * format,...){
+void logError(CBError a,char * format,...);
+void logError(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -51,8 +51,8 @@ int main(){
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08, // IP ::ffff:36.96.162.8
 		0x5F,0x2E, // Port 24366
 	};
-	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 61, onErrorReceived);
-	CBAddressBroadcast * addBroadcast = CBNewAddressBroadcastFromData(bytes, true, onErrorReceived);
+	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 61, logError);
+	CBAddressBroadcast * addBroadcast = CBNewAddressBroadcastFromData(bytes, true, logError);
 	if(CBAddressBroadcastDeserialise(addBroadcast) != 61){
 		printf("DESERIALISATION LEN FAIL\n");
 		return 1;
@@ -114,9 +114,9 @@ int main(){
 	// Test serialisation with timestamps
 	memset(CBByteArrayGetData(bytes), 0, 61);
 	CBReleaseObject(addBroadcast->addresses[0]->ip);
-	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, onErrorReceived);
+	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, logError);
 	CBReleaseObject(addBroadcast->addresses[1]->ip);
-	addBroadcast->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, onErrorReceived);
+	addBroadcast->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, logError);
 	if (CBAddressBroadcastSerialise(addBroadcast, true) != 61){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
@@ -145,8 +145,8 @@ int main(){
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08, // IP ::ffff:36.96.162.8
 		0x5F,0x2E, // Port 24366
 	};
-	bytes = CBNewByteArrayWithDataCopy(data2, 53, onErrorReceived);
-	addBroadcast = CBNewAddressBroadcastFromData(bytes, false, onErrorReceived);
+	bytes = CBNewByteArrayWithDataCopy(data2, 53, logError);
+	addBroadcast = CBNewAddressBroadcastFromData(bytes, false, logError);
 	if(CBAddressBroadcastDeserialise(addBroadcast) != 53){
 		printf("DESERIALISATION NO TIME LEN FAIL\n");
 		return 1;
@@ -200,9 +200,9 @@ int main(){
 	// Test serialisation without timestamps
 	memset(CBByteArrayGetData(bytes), 0, 53);
 	CBReleaseObject(addBroadcast->addresses[0]->ip);
-	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, onErrorReceived);
+	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x0A,0x00,0x00,0x01}, 16, logError);
 	CBReleaseObject(addBroadcast->addresses[1]->ip);
-	addBroadcast->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, onErrorReceived);
+	addBroadcast->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0x24,0x60,0xA2,0x08}, 16, logError);
 	if(CBAddressBroadcastSerialise(addBroadcast, true) != 53){
 		printf("SERIALISATION NO TIME LEN FAIL\n");
 		return 1;

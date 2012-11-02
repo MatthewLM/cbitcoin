@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief File for weak linked functions for dependency injection. All these functions are unimplemented. The functions include the crytography functions which are key for the functioning of bitcoin. Sockets must be non-blocking and use an asynchronous onErrorReceived-type system. The use of the sockets is designed to be compatible with libevent. The random number functions should be cryptographically secure. See the dependecies folder for implementations.
+ @brief File for weak linked functions for dependency injection. All these functions are unimplemented. The functions include the crytography functions which are key for the functioning of bitcoin. Sockets must be non-blocking and use an asynchronous logError-type system. The use of the sockets is designed to be compatible with libevent. The random number functions should be cryptographically secure. See the dependecies folder for implementations.
  */
 
 #ifndef CBDEPENDENCIESH
@@ -70,6 +70,20 @@
 #pragma weak CBRandomSeed
 #pragma weak CBSecureRandomInteger
 #pragma weak CBFreeSecureRandomGenerator
+
+// Weak linking for file-IO functions
+
+#pragma weak CBFileOpen
+#pragma weak CBFileRead
+#pragma weak CBFileWrite
+#pragma weak CBFileSeek
+#pragma weak CBFileRename
+#pragma weak CBFileTruncate
+#pragma weak CBFileDelete
+#pragma weak CBFileGetSize
+#pragma weak CBGetMaxFileSize
+#pragma weak CBFileDiskSynchronise
+#pragma weak CBFileClose
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
@@ -146,17 +160,17 @@ bool CBSocketListen(uint64_t socketID,uint16_t maxConnections);
  */
 bool CBSocketAccept(uint64_t socketID,uint64_t * connectionSocketID);
 /**
- @brief Starts a event loop for socket onErrorReceived on a seperate thread. Access to the loop id should be thread safe.
+ @brief Starts a event loop for socket logError on a seperate thread. Access to the loop id should be thread safe.
  @param loopID A uint64_t storing an integer or pointer representation of the new event loop.
  @param onError If the event loop fails during execution of the thread, this function should be called.
- @param onDidTimeout The function to call for timeout onErrorReceived. The second argument is for the peer given by onErrorReceived. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
+ @param onDidTimeout The function to call for timeout logError. The second argument is for the peer given by logError. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
  @param communicator A CBNetworkCommunicator to pass to all event functions (first parameter), including "onError" and "onDidTimeout"
  @returns true on success, false on failure.
  */
 bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeout)(void *,void *,CBTimeOutType),void * communicator);
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
- @param loopID The loop id for socket onErrorReceived.
+ @param loopID The loop id for socket logError.
  @param socketID The socket id
  @param onCanAccept The function to call for the event. Accepts "onEventArg" and the socket ID.
  @returns true on success, false on failure.
@@ -164,7 +178,7 @@ bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeou
 bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanAccept)(void *,uint64_t));
 /**
  @brief Sets a function pointer for the event where a socket has connected. The event only needs to fire once on the successful connection or timeout.
- @param loopID The loop id for socket onErrorReceived.
+ @param loopID The loop id for socket logError.
  @param socketID The socket id
  @param onDidConnect The function to call for the event.
  @param peer The peer to send to the "onDidConnect" or "onDidTimeout" function.
@@ -173,7 +187,7 @@ bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID
 bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for sending data. This should be persistent.
- @param loopID The loop id for socket onErrorReceived.
+ @param loopID The loop id for socket logError.
  @param socketID The socket id
  @param onCanSend The function to call for the event.
  @param peer The peer to send to the "onCanSend" or "onDidTimeout" function.
@@ -182,7 +196,7 @@ bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketI
 bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for receiving data. This should be persistent.
- @param loopID The loop id for socket onErrorReceived.
+ @param loopID The loop id for socket logError.
  @param socketID The socket id
  @param onCanReceive The function to call for the event.
  @param peer The peer to send to the "onCanReceive" or "onDidTimeout" function.
@@ -197,7 +211,7 @@ bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketI
  */
 bool CBSocketAddEvent(uint64_t eventID,uint32_t timeout);
 /**
- @brief Removes an event so no more onErrorReceived are made.
+ @brief Removes an event so no more logError are made.
  @param eventID The event ID to remove
  @returns true if sucessful, false otherwise.
  */
@@ -225,7 +239,7 @@ int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len);
 int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len);
 /**
  @brief Calls a callback every "time" seconds, until the timer is ended.
- @param loopID The loop id for onErrorReceived.
+ @param loopID The loop id for logError.
  @param timer The timer sent by reference to be set.
  @param time The number of milliseconds between each call of the callback.
  @param callback The callback function.
@@ -278,5 +292,81 @@ uint64_t CBSecureRandomInteger(uint64_t gen);
  @param gen The generator.
  */
 void CBFreeSecureRandomGenerator(uint64_t gen);
+
+// FILE-IO DEPENENCIES
+
+/**
+ @brief Opens a file for use with the other IO functions, or opens a directory with CB_FILE_MODE_NONE.
+ @param filename The path of the file to open.
+ @param mode The mode required for this file.
+ @returns A void pointer as a reference for this file.
+ */
+void * CBFileOpen(char * filename, CBFileMode mode);
+/**
+ @brief Reads data from a file which has been opened with CB_FILE_MODE_READ.
+ @param file The file pointer.
+ @param buffer A buffer to read the data into.
+ @param size The size of the data to read in bytes.
+ @returns true if the read succeeded or false if the read failed.
+ */
+bool CBFileRead(void * file, void * buffer, size_t size);
+/**
+ @brief Writes to a file. If the file was opened with CB_FILE_MODE_APPEND, the data is written to the end of the file.
+ @param file The file pointer.
+ @param buffer The data to write.
+ @param size The size of the data to write in bytes.
+ @returns true if the write succeeded or false if the write failed.
+ */
+bool CBFileWrite(void * file, void * buffer, size_t size);
+/**
+ @brief Seeks the position of the file cursor. This moves the cursor an offset from the origin.
+ @param file The file pointer.
+ @param offset The offset to move the file cursor. 
+ @param orgin The orgin of the offset. If CB_SEEK_SET, the origin is 0. If CB_SEEK_CUR, the origin is the current cursor position.
+ @returns true if the seel succeeded or false if the seek failed.
+ */
+bool CBFileSeek(void * file, long int offset, CBFileSeekOrigin origin);
+/**
+ @brief Renames a file.
+ @param filename The path of the file to rename.
+ @param newname The new path.
+ @returns true if the rename succeeded or false if the rename failed.
+ */
+bool CBFileRename(void * filename, void * newname);
+/**
+ @brief Truncates a file opened with CB_FILE_MODE_TRUNCATE.
+ @param file The file pointer of the file to truncate.
+ @param size The new size of the file.
+ @returns true if the truncate succeeded or false if the truncate failed.
+ */
+bool CBFileTruncate(void * file, size_t size);
+/**
+ @brief Deletes a file.
+ @param filename The path of the file to delete.
+ @returns true if the delete succeeded or false if the delete failed.
+ */
+bool CBFileDelete(void * filename);
+/**
+ @brief Gets the size, in bytes, of a file.
+ @param filename The path of the file to obtain the size for.
+ @returns The size of the file or -1 on failure.
+ */
+size_t CBFileGetSize(void * filename);
+/**
+ @brief Gets the maximum allowed size of a file on the filesystem.
+ @returns The maximum allowed size of a file or -1 on failure.
+ */
+size_t CBGetMaxFileSize(void);
+/**
+ @brief Synchronises a file or directory to permenant storage as much as possibly can be guarenteed.
+ @param ptr The pointer of the file or directory opened with CBFileOpen.
+ @returns true if the synchronisation succeeded or false if the synchronisation failed.
+ */
+bool CBFileDiskSynchronise(void * ptr);
+/**
+ @brief Closes a file or directory opened with CBFileOpen and frees any relevant data.
+ @param ptr The pointer of the file or directory opened with CBFileOpen.
+ */
+void CBFileClose(void * file);
 
 #endif

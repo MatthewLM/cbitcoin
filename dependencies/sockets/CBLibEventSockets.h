@@ -27,7 +27,7 @@
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
 #include <pthread.h> // POSIX threads
-#include <event2/event.h> // libevent onErrorReceived
+#include <event2/event.h> // libevent logError
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -85,7 +85,7 @@ union CBOnEvent{
 };
 
 typedef struct{
-	CBEventLoop * loop; /**< For getting timeout onErrorReceived */
+	CBEventLoop * loop; /**< For getting timeout logError */
 	struct event * event; /**< libevent event. */
 	union CBOnEvent onEvent;
 	void * peer;

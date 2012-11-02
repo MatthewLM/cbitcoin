@@ -28,8 +28,8 @@
 #include "CBDependencies.h"
 #include "stdarg.h"
 
-void onErrorReceived(CBError a,char * format,...);
-void onErrorReceived(CBError a,char * format,...){
+void logError(CBError a,char * format,...);
+void logError(CBError a,char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -61,7 +61,7 @@ int main(){
 		line[strlen(line)-1] = '\0';
 		if (!(line[0] == '/' && line[1] == '/') && strlen(line)){
 			x++;
-			CBScript * script = CBNewScriptFromString(line, onErrorReceived);
+			CBScript * script = CBNewScriptFromString(line, logError);
 			if (!script) {
 				printf("%i: {%s} INVALID\n",x,line);
 				return 1;
@@ -86,14 +86,14 @@ int main(){
 	}
 	fclose(f);
 	// Test PUSHDATA
-	CBScript * script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x47,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x47,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x47,CB_SCRIPT_OP_EQUAL}, 16, onErrorReceived);
+	CBScript * script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x47,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x47,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x47,CB_SCRIPT_OP_EQUAL}, 16, logError);
 	CBScriptStack stack = CBNewEmptyScriptStack();
 	if(CBScriptExecute(script, &stack, NULL, NULL, 0, true) != CB_SCRIPT_VALID){
 		printf("PUSHDATA TEST 1 FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
-	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x00,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x00,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x00,CB_SCRIPT_OP_EQUAL}, 16, onErrorReceived);
+	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1,0x01,0x00,CB_SCRIPT_OP_DUP,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x00,CB_SCRIPT_OP_EQUALVERIFY,CB_SCRIPT_OP_PUSHDATA4,0x01,0x00,0x00,0x00,0x00,CB_SCRIPT_OP_EQUAL}, 16, logError);
 	stack = CBNewEmptyScriptStack();
 	if(CBScriptExecute(script, &stack, NULL, NULL, 0, true) != CB_SCRIPT_VALID){
 		printf("PUSHDATA TEST 2 FAIL\n");
@@ -101,7 +101,7 @@ int main(){
 	}
 	CBReleaseObject(script);
 	// Test stack length limit
-	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1, onErrorReceived);
+	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1, logError);
 	stack = CBNewEmptyScriptStack();
 	for (int x = 0; x < 1001; x++)
 		CBScriptStackPushItem(&stack, (CBScriptStackItem){NULL,0});
@@ -111,8 +111,8 @@ int main(){
 	}
 	CBReleaseObject(script);
 	// Test P2SH
-	CBScript * inputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_14,0x04,CB_SCRIPT_OP_5,CB_SCRIPT_OP_9,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_EQUAL}, 6, onErrorReceived);
-	CBScript * outputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_HASH160,0x14,0x87,0xF3,0xB6,0x21,0xF1,0x8C,0x50,0x06,0x8B,0x7D,0xAB,0xA1,0x60,0xBB,0x2C,0x51,0xFD,0xD6,0xA5,0xE2,CB_SCRIPT_OP_EQUAL}, 23, onErrorReceived);
+	CBScript * inputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_14,0x04,CB_SCRIPT_OP_5,CB_SCRIPT_OP_9,CB_SCRIPT_OP_ADD,CB_SCRIPT_OP_EQUAL}, 6, logError);
+	CBScript * outputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_HASH160,0x14,0x87,0xF3,0xB6,0x21,0xF1,0x8C,0x50,0x06,0x8B,0x7D,0xAB,0xA1,0x60,0xBB,0x2C,0x51,0xFD,0xD6,0xA5,0xE2,CB_SCRIPT_OP_EQUAL}, 23, logError);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(inputScript, &stack, NULL, NULL, 0, false);
 	if (CBScriptExecute(outputScript, &stack, NULL, NULL, 0, false) != CB_SCRIPT_VALID) {
@@ -142,19 +142,19 @@ int main(){
 	CBFreeScriptStack(stack);
 	CBReleaseObject(outputScript);
 	// Test CBScriptIsPushOnly
-	script = CBNewScriptWithDataCopy((uint8_t [20]){0x02,0x04,0x73,CB_SCRIPT_OP_PUSHDATA1,0x03,0xA2,0x70,0x73,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x5A,CB_SCRIPT_OP_PUSHDATA4,0x03,0x0,0x0,0x0,0x5F,0x70,0x74}, 20, &onErrorReceived);
+	script = CBNewScriptWithDataCopy((uint8_t [20]){0x02,0x04,0x73,CB_SCRIPT_OP_PUSHDATA1,0x03,0xA2,0x70,0x73,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x5A,CB_SCRIPT_OP_PUSHDATA4,0x03,0x0,0x0,0x0,0x5F,0x70,0x74}, 20, &logError);
 	if (NOT CBScriptIsPushOnly(script)) {
 		printf("IS PUSH PUSH FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
-	script = CBNewScriptWithDataCopy((uint8_t [13]){0x02,0x04,0x73,CB_SCRIPT_OP_PUSHDATA1,0x03,0xA2,0x70,0x73,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x5A,CB_SCRIPT_OP_0}, 13, &onErrorReceived);
+	script = CBNewScriptWithDataCopy((uint8_t [13]){0x02,0x04,0x73,CB_SCRIPT_OP_PUSHDATA1,0x03,0xA2,0x70,0x73,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x5A,CB_SCRIPT_OP_0}, 13, &logError);
 	if (CBScriptIsPushOnly(script)) {
 		printf("IS PUSH ZERO FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
-	script = CBNewScriptWithDataCopy((uint8_t [12]){0x02,0x04,0x73,CB_SCRIPT_OP_1,0x03,0xA2,0x70,0x73,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x5A}, 12, &onErrorReceived);
+	script = CBNewScriptWithDataCopy((uint8_t [12]){0x02,0x04,0x73,CB_SCRIPT_OP_1,0x03,0xA2,0x70,0x73,CB_SCRIPT_OP_PUSHDATA2,0x01,0x00,0x5A}, 12, &logError);
 	if (CBScriptIsPushOnly(script)) {
 		printf("IS PUSH ONE FAIL\n");
 		return 1;

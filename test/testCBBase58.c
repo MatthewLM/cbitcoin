@@ -24,8 +24,8 @@
 #include "CBBase58.h"
 #include <time.h>
 
-void onErrorReceived(CBError a,char * b,...);
-void onErrorReceived(CBError a,char * b,...){
+void logError(CBError a,char * b,...);
+void logError(CBError a,char * b,...){
 	printf("%s\n",b);
 }
 
@@ -36,9 +36,9 @@ int main(){
 	// Test checked decode
 	CBBigInt bi;
 	CBBigIntAlloc(&bi, 29);
-	CBDecodeBase58Checked(&bi, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", onErrorReceived); // Valid
+	CBDecodeBase58Checked(&bi, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", logError); // Valid
 	printf("END VALID\n");
-	CBDecodeBase58Checked(&bi, "1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", onErrorReceived); // Invalid
+	CBDecodeBase58Checked(&bi, "1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", logError); // Invalid
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
 	bi.data[0] = 0xc5;
