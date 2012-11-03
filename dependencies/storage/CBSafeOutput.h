@@ -129,7 +129,7 @@ void CBFreeSafeOutputProcess(CBSafeOutput * self);
  @param data The data to write.
  @param size The number of bytes to write.
  */
-void CBSafeOutputAddAppendOperation(CBSafeOutput * self, const void * data, uint32_t size);
+void CBSafeOutputAddAppendOperation(CBSafeOutput * self, void * data, uint32_t size);
 /**
  @brief Adds a delete operation for a file.
  @param self The CBSafeOutput object.
@@ -152,7 +152,7 @@ bool CBSafeOutputAddFile(CBSafeOutput * self, char * fileName, uint8_t overwrite
  @param data The data to write.
  @param size The number of bytes to write.
  */
-void CBSafeOutputAddOverwriteOperation(CBSafeOutput * self, long int offset, const void * data, uint32_t size);
+void CBSafeOutputAddOverwriteOperation(CBSafeOutput * self, long int offset, void * data, uint32_t size);
 /**
  @brief Adds a delete operation for a file.
  @param self The CBSafeOutput object.
@@ -167,13 +167,13 @@ void CBSafeOutputAddRenameFileOperation(CBSafeOutput * self, char * fileName, ch
  @param data The data to write.
  @param size The number of bytes to write.
  */
-void CBSafeOutputAddSaveFileOperation(CBSafeOutput * self, char * fileName, const void * data, uint32_t size);
+void CBSafeOutputAddSaveFileOperation(CBSafeOutput * self, char * fileName, void * data, uint32_t size);
 /**
  @brief Allocates data for adding files.
  @param numFiles Number of files to apply operations to. This includes rename and delete operations.
  @returns true on success and false on failure.
  */
-bool CBSafeOutputAlloc(CBSafeOutput * self,uint8_t numFiles);
+bool CBSafeOutputAlloc(CBSafeOutput * self, uint8_t numFiles);
 /**
  @brief Commits the write operations to disk. This function will attempt to recover to the previous state if any errors have occured. If it does not recover the files the backup data will be available for future recovery with CBSafeOutputRecover. The CBOutputOperation objects are cleared after this function is complete.
  @param self The CBSafeOutput object.

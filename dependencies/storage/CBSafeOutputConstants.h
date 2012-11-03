@@ -46,7 +46,6 @@ typedef enum{
 	CB_FILE_MODE_READ, /**< Open to read binary data from the file (ie. rb). */
 	CB_FILE_MODE_OVERWRITE, /**< Open to overwrite (ie. update) binary contents of the file. (ie. rb+) */
 	CB_FILE_MODE_SAVE, /**< Open to save new binary contents to the file (ie. wb) */
-	CB_FILE_MODE_TRUNCATE, /**< Open to truncate a file (ie. wb and likely the same as CB_FILE_MODE_SAVE) */
 	CB_FILE_MODE_APPEND, /**< Open to append binary data to the file (ie. ab) */
 	CB_FILE_MODE_WRITE_AND_READ, /**< Open to write and read binary data to the file. When opened the file should be cleared. If it does not exist it should be created (ie. wb+). */
 	CB_FILE_MODE_NONE, /**< Open file or directory with no read/write mode specified but which can be used to synchronise to disk. */

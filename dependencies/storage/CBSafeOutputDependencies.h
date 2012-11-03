@@ -44,6 +44,8 @@
 #pragma weak CBFileGetSize
 #pragma weak CBGetMaxFileSize
 #pragma weak CBFileDiskSynchronise
+#pragma weak CBFileExists
+#pragma weak CBEOF
 #pragma weak CBFileClose
 
 // FILE-IO DEPENENCIES
@@ -88,11 +90,11 @@ bool CBFileSeek(void * file, long int offset, CBFileSeekOrigin origin);
 bool CBFileRename(void * filename, void * newname);
 /**
  @brief Truncates a file opened with CB_FILE_MODE_TRUNCATE.
- @param file The file pointer of the file to truncate.
+ @param filename The file name of the file to truncate.
  @param size The new size of the file.
  @returns true if the truncate succeeded or false if the truncate failed.
  */
-bool CBFileTruncate(void * file, size_t size);
+bool CBFileTruncate(char * filename, size_t size);
 /**
  @brief Deletes a file.
  @param filename The path of the file to delete.
@@ -117,9 +119,22 @@ size_t CBGetMaxFileSize(void);
  */
 bool CBFileDiskSynchronise(void * ptr);
 /**
+ @brief Deteremines if a file exists
+ @param filename The path to the file.
+ @returns true if the file exists and false otherwise.
+ */
+bool CBFileExists(char * filename);
+/**
+ @brief Deteremines if the end of a file has been reached.
+ @param file The pointer of the file or directory opened with CBFileOpen.
+ @returns true if the end of the file has been reached, else false.
+ */
+bool CBEOF(void * file);
+/**
  @brief Closes a file or directory opened with CBFileOpen and frees any relevant data.
  @param ptr The pointer of the file or directory opened with CBFileOpen.
  */
 void CBFileClose(void * file);
+
 
 #endif
