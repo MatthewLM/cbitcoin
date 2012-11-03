@@ -145,86 +145,91 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 	uint8_t byte;
 	// Ensure backup is not active while making it
 	byte = 0;
-	if(fwrite(&byte, 1, 1, backup) != 1){
+	if(NOT CBFileWrite(backup, &byte, 1)){
 		CBFreeSafeOutputProcess(self);
 		return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 	}
-	// Go through operations adding backup information
-	for (uint8_t x = 0; x < self->numFiles; x++) {
+	// Go through operations adding transaction log information. The operations are logged in reverse for obvious reasons.
+	for (uint8_t x = self->numFiles; x--;) {
 		// Write file name size
 		byte = strlen(self->files[x].fileName);
-		if (fwrite(&byte, 1, 1, backup) != 1) {
+		if (NOT CBFileWrite(backup, &byte, 1)) {
 			free(readData);
 			CBFreeSafeOutputProcess(self);
 			return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 		}
 		// Write file name
-		if (fwrite(self->files[x].fileName, 1, byte, backup) != byte){
+		if (NOT CBFileWrite(backup, self->files[x].fileName, byte)){
 			free(readData);
 			CBFreeSafeOutputProcess(self);
 			return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 		}
 		// Write type of operation or operations
 		byte = self->files[x].type;
-		if (fwrite(&byte, 1, 1, backup) != 1) {
+		if (NOT CBFileWrite(backup, &byte, 1)) {
 			free(readData);
 			CBFreeSafeOutputProcess(self);
 			return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 		}
-		FILE * read;
-		struct stat stbuf;
+		void * read = NULL;
+		size_t size;
 		if (self->files[x].type == CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND
 			|| self->files[x].type == CB_SAFE_OUTPUT_OP_SAVE) {
 			// Open file for reading (the old data)
-			read = fopen(self->files[x].fileName, "rb");
+			read = CBFileOpen(self->files[x].fileName, CB_FILE_MODE_READ);
 			if (NOT read) {
 				free(readData);
 				CBFreeSafeOutputProcess(self);
 				return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 			}
 			// Write previous file size (Truncation removes appended data on recovery)
-			if (fstat(fileno(read), &stbuf)) {
+			size = CBFileGetSize(read);
+			if (size == -1) {
 				free(readData);
+				CBFileClose(read);
 				CBFreeSafeOutputProcess(self);
 				return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 			}
-			if (fwrite((uint8_t []){
-				stbuf.st_size,
-				stbuf.st_size >> 8,
-				stbuf.st_size >> 16,
-				stbuf.st_size >> 24,
-			}, 1, 4, backup) != 4) {
+			if(NOT CBFileWrite(backup, (uint8_t []){
+				size,
+				size >> 8,
+				size >> 16,
+				size >> 24,
+			}, 4)){
 				free(readData);
-				fclose(read);
+				CBFileClose(read);
 				CBFreeSafeOutputProcess(self);
 				return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 			}
 		}
-		CBAppendAndOverwrite * ops; // For if CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND
 		switch (self->files[x].type) {
 			case CB_SAFE_OUTPUT_OP_DELETE:
 				// Do nothing more at this stage
 				break;
+			case CB_SAFE_OUTPUT_OP_TRUNCATE:
+				// Write the data being deleted from the end of the file
+				IMPLEMENT
+				break;
 			case CB_SAFE_OUTPUT_OP_RENAME:
 				// Write new filename
-				byte = strlen(self->files[x].newName);
-				if (fwrite(&byte, 1, 1, backup) != 1) {
+				byte = strlen(self->files[x].opData.newName);
+				if (NOT CBFileWrite(backup, &byte, 1)) {
 					free(readData);
 					CBFreeSafeOutputProcess(self);
 					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 				}
-				if (fwrite(self->files[x].newName, 1, byte, backup) != byte){
+				if (NOT CBFileWrite(backup, self->files[x].opData.newName, byte)){
 					free(readData);
 					CBFreeSafeOutputProcess(self);
 					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 				}
 				break;
-			case CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND:
+			case CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND:{
 				// Overwrites and appendages
 				// Write number of overwrite operations for this file
-				ops = &self->files[x].appendAndOverwriteOps;
+				CBAppendAndOverwrite * ops = &self->files[x].opData.appendAndOverwriteOps;
 				byte = ops->numOverwriteOperations;
-				if (fwrite(&byte, 1, 1, backup) != 1) {
+				if (NOT CBFileWrite(backup, &byte, 1)) {
 					free(readData);
 					CBFreeSafeOutputProcess(self);
 					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
@@ -232,7 +237,7 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 				// Go through and make backups for all of the operations.
 				for (uint8_t y = 0; y < ops->numOverwriteOperations; y++) {
 					// Write file offset
-					if (fwrite((uint8_t []){
+					if(NOT CBFileWrite(backup, (uint8_t []){
 						ops->overwriteOperations[y].offset,
 						ops->overwriteOperations[y].offset >> 8,
 						ops->overwriteOperations[y].offset >> 16,
@@ -241,21 +246,21 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 						ops->overwriteOperations[y].offset >> 40,
 						ops->overwriteOperations[y].offset >> 48,
 						ops->overwriteOperations[y].offset >> 56,
-					}, 1, 8, backup) != 8) {
+					}, 8)) {
 						free(readData);
-						fclose(read);
+						CBFileClose(read);
 						CBFreeSafeOutputProcess(self);
 						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 					}
 					// Write data size
-					if (fwrite((uint8_t []){
+					if (NOT CBFileWrite(backup, (uint8_t []){
 						ops->overwriteOperations[y].size,
 						ops->overwriteOperations[y].size >> 8,
 						ops->overwriteOperations[y].size >> 16,
 						ops->overwriteOperations[y].size >> 24,
-					}, 1, 4, backup) != 4) {
+					}, 4)) {
 						free(readData);
-						fclose(read);
+						CBFileClose(read);
 						CBFreeSafeOutputProcess(self);
 						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 					}
@@ -264,166 +269,157 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 						uint8_t * temp = realloc(readData, ops->overwriteOperations[y].size);
 						if (NOT temp) {
 							free(readData);
-							fclose(read);
+							CBFileClose(read);
 							CBFreeSafeOutputProcess(self);
 							return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 						}
 						readData = temp;
 						readDataSize = ops->overwriteOperations[y].size;
 					}
-					fseek(read, ops->overwriteOperations[y].offset, SEEK_SET);
-					if (fread(readData, 1, ops->overwriteOperations[y].size, read) != ops->overwriteOperations[y].size) {
+					CBFileSeek(read, ops->overwriteOperations[y].offset, CB_SEEK_SET);
+					if (NOT CBFileRead(read, readData, ops->overwriteOperations[y].size)) {
 						free(readData);
-						fclose(read);
+						CBFileClose(read);
 						CBFreeSafeOutputProcess(self);
 						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 					}
-					if (fwrite(readData, 1, ops->overwriteOperations[y].size, backup) != ops->overwriteOperations[y].size) {
+					if (NOT CBFileRead(backup, readData, ops->overwriteOperations[y].size)) {
 						free(readData);
-						fclose(read);
+						CBFileClose(read);
 						CBFreeSafeOutputProcess(self);
 						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 					}
 				}
 				break;
+			}
 			case CB_SAFE_OUTPUT_OP_SAVE:
 				// Save operation
 				// Write entire previous file.
-				if (stbuf.st_size > readDataSize) {
-					uint8_t * temp = realloc(readData, stbuf.st_size);
+				if (size > readDataSize) {
+					uint8_t * temp = realloc(readData, size);
 					if (NOT temp) {
 						free(readData);
-						fclose(read);
+						CBFileClose(read);
 						CBFreeSafeOutputProcess(self);
 						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 					}
 					readData = temp;
-					readDataSize = (uint32_t)stbuf.st_size;
+					readDataSize = (uint32_t)size;
 				}
-				if (fread(readData, 1, stbuf.st_size, read) != stbuf.st_size) {
+				if (NOT CBFileRead(read, readData, size)) {
 					free(readData);
-					fclose(read);
+					CBFileClose(read);
 					CBFreeSafeOutputProcess(self);
 					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 				}
-				if (fwrite(readData, 1, stbuf.st_size, backup)) {
+				if (NOT CBFileWrite(backup, readData, size)) {
 					free(readData);
-					fclose(read);
+					CBFileClose(read);
 					CBFreeSafeOutputProcess(self);
 					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 				}
 				break;
 		}
-		// No longer need the file for reading.
-		fclose(read);
+		if (read) 
+			// No longer need the file for reading.
+			CBFileClose(read);
 	}
 	free(readData);
-	// Backup is complete and active. Signify this with the indicator at the begining of the file.
-	rewind(backup);
+	// Transaction log is complete and active. Signify this with the indicator at the begining of the file.
+	CBFileSeek(backup, 0, CB_SEEK_SET);
 	byte = 1;
-	if (fwrite(&byte, 1, 1, backup) != 1) {
+	if (NOT CBFileWrite(backup, &byte, 1)) {
 		CBFreeSafeOutputProcess(self);
 		return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 	}
 	// Syncronise to disk
-	if (NOT CBDiskSynchronise(backup)){
+	if (NOT CBFileDiskSynchronise(backup)){
 		CBFreeSafeOutputProcess(self);
 		return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 	}
-	// Now try the overwrite operations.
+	// Now implement the changes
 	bool err = false;
 	for (uint8_t x = 0; x < self->numFiles; x++) {
-		if (self->files[x].type != CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND)
-			// No overwrite operations
-			continue;
-		// Open file for update
-		FILE * file = fopen(self->files[x].fileName, "rb+");
-		if (NOT file){
-			err = true;
-			break;
-		}
-		CBAppendAndOverwrite * ops = &self->files[x].appendAndOverwriteOps;
-		for (uint8_t y = 0; y < ops->numOverwriteOperations; y++) {
-			fseek(file, ops->overwriteOperations[y].offset, SEEK_SET);
-			if (fwrite(ops->overwriteOperations[y].data, 1, ops->overwriteOperations[y].size, file) != ops->overwriteOperations[y].size) {
-				err = true;
-				break;
-			}
-		}
-		if (NOT err)
-			// Now try synchronising changes
-			if (NOT CBDiskSynchronise(file))
-				err = true;
-		// Finnished with this file.
-		fclose(file);
-		if (err)
-			break;
-	}
-	if (NOT err) {
-		// Now try append operations
-		for (uint8_t x = 0; x < self->numFiles; x++) {
-			if (self->files[x].type != CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND)
-				// No append operations
-				continue;
-			// Open file for appending
-			FILE * file = fopen(self->files[x].fileName, "ab");
-			if (NOT file) {
-				err = true;
-				break;
-			}
-			CBAppendAndOverwrite * ops = &self->files[x].appendAndOverwriteOps;
-			for (uint8_t y = 0; y < ops->numAppendOperations; y++) {
-				if (fwrite(ops->appendOperations[y].data, 1, ops->appendOperations[y].size, file) != ops->appendOperations[y].size) {
+		void * file;
+		switch (self->files[x].type) {
+			case CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND:
+				// First complete the overwrite operations
+				// Open file for update
+				file = CBFileOpen(self->files[x].fileName, CB_FILE_MODE_OVERWRITE);
+				if (NOT file){
 					err = true;
 					break;
 				}
-			}
-			if (NOT err)
-				// Now try synchronising changes
-				if (NOT CBDiskSynchronise(file))
+				CBAppendAndOverwrite * ops = &self->files[x].opData.appendAndOverwriteOps;
+				for (uint8_t y = 0; y < ops->numOverwriteOperations; y++) {
+					CBFileSeek(file, ops->overwriteOperations[y].offset, CB_SEEK_SET);
+					if (NOT CBFileWrite(file, ops->overwriteOperations[y].data, ops->overwriteOperations[y].size)) {
+						err = true;
+						break;
+					}
+				}
+				// Re-open for appendages
+				CBFileClose(file);
+				file = CBFileOpen(self->files[x].fileName, CB_FILE_MODE_APPEND);
+				if (NOT file){
 					err = true;
-			// Finnished with this file.
-			fclose(file);
-			if (err)
+					break;
+				}
+				for (uint8_t y = 0; y < ops->numAppendOperations; y++) {
+					if (NOT CBFileWrite(file, ops->appendOperations[y].data, ops->appendOperations[y].size)) {
+						err = true;
+						break;
+					}
+				}
 				break;
-		}
-	}
-	if (NOT err) {
-		// Now try save, delete and rename operations
-		for (uint8_t x = 0; x < self->numFiles; x++) {
-			if (self->files[x].type == CB_SAFE_OUTPUT_OP_SAVE){
+			case CB_SAFE_OUTPUT_OP_SAVE:
 				// Open file for writting
-				FILE * file = fopen(self->files[x].fileName, "wb");
+				file = CBFileOpen(self->files[x].fileName, CB_FILE_MODE_SAVE);
 				if (NOT file) {
 					err = true;
 					break;
 				}
-				// Write new data
-				if (fwrite(self->files[x].saveOp.data, 1, self->files[x].saveOp.size, file) != self->files[x].saveOp.size)
+				if (NOT CBFileWrite(file, self->files[x].opData.saveOp.data, self->files[x].opData.saveOp.size))
 					err = true;
-				if (NOT err)
-					// Now try synchronising changes
-					if (NOT CBDiskSynchronise(file))
-						err = true;
-				// Finnished with this file.
-				fclose(file);
-			}else if (self->files[x].type == CB_SAFE_OUTPUT_OP_DELETE){
+				break;
+			case CB_SAFE_OUTPUT_OP_DELETE:{
 				char backupFile[strlen(self->files[x].fileName) + 5];
 				memcpy(backupFile, self->files[x].fileName, strlen(self->files[x].fileName));
 				strcpy(backupFile, ".bak");
-				if (remove(backupFile)) // Force the rename
+				if (NOT CBFileDelete(backupFile)) // Force the rename
 					err = true;
-				else if (rename(self->files[x].fileName,backupFile))
+				else if (NOT CBFileRename(self->files[x].fileName, backupFile))
 					err = true;
-			}else{
-				if (remove(self->files[x].newName)) // Force the rename
-					err = true;
-				else if (rename(self->files[x].fileName, self->files[x].newName))
-					err = true;
+				// Synchronise the directory.
+				char * pos = strrchr(backupFile, '/');
+				pos[0] = '\0';
+				file = CBFileOpen(backupFile, CB_FILE_MODE_NONE);
+				break;
 			}
-			if (err)
+			case CB_SAFE_OUTPUT_OP_RENAME:
+				if (NOT CBFileDelete(self->files[x].opData.newName)) // Force the rename
+					err = true;
+				else if (NOT CBFileRename(self->files[x].fileName, self->files[x].opData.newName))
+					err = true;
+				// Synchronise the directory.
+				char * pos = strrchr(self->files[x].fileName, '/');
+				char temp = pos[0];
+				pos[0] = '\0';
+				file = CBFileOpen(self->files[x].fileName, CB_FILE_MODE_NONE);
+				pos[0] = temp;
+				break;
+			case CB_SAFE_OUTPUT_OP_TRUNCATE:
+				IMPLEMENT
 				break;
 		}
+		if (NOT err)
+			// Now try synchronising changes
+			if (NOT CBFileDiskSynchronise(file))
+				err = true;
+		// Finnished with this file.
+		CBFileClose(file);
+		if (err)
+			break;
 	}
 	// Check to see if an error has occured.
 	if (err) {
@@ -439,9 +435,9 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 		}
 	}
 	// Indicate that backup is not active. If this fails then it is not an issue for data integrity it just might lead to a transaction reversal.
-	rewind(backup);
+	CBFileSeek(backup, 0, CB_SEEK_SET);
 	byte = 0;
-	fwrite(&byte, 1, 1, backup);
+	CBFileWrite(backup, &byte, 1);
 	// Done this commit, free data
 	CBFreeSafeOutputProcess(self);
 	return CB_SAFE_OUTPUT_OK;

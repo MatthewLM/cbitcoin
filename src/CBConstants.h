@@ -371,33 +371,4 @@ typedef enum{
 	CB_VALIDATOR_LOAD_ERR_DATA, /**< Load failure, ensure all related validation files are deleted before continuing. */
 } CBValidatorLoadResult;
 
-/**
- @brief The type of output operations to apply to a file.
- */
-typedef enum{
-	CB_SAFE_OUTPUT_OP_SAVE, /**< A save operation */
-	CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND, /**< Overwrite and append operations */
-	CB_SAFE_OUTPUT_OP_DELETE, /**< A delete operation. */
-	CB_SAFE_OUTPUT_OP_RENAME, /**< A rename operation. */
-	CB_SAFE_OUTPUT_OP_TRUNCATE, /**< A truncate operation. */
-} CBSafeOutputOperation;
-
-/**
- @brief The file mode required for a file, passed to CBFileOpen
- */
-typedef enum{
-	CB_FILE_MODE_READ, /**< Open to read binary data from the file (ie. rb). */
-	CB_FILE_MODE_OVERWRITE, /**< Open to overwrite (ie. update) binary contents of the file. (ie. rb+) */
-	CB_FILE_MODE_SAVE, /**< Open to save new binary contents to the file (ie. wb) */
-	CB_FILE_MODE_TRUNCATE, /**< Open to truncate a file (ie. wb and likely the same as CB_FILE_MODE_SAVE) */
-	CB_FILE_MODE_APPEND, /**< Open to append binary data to the file (ie. ab) */
-	CB_FILE_MODE_WRITE_AND_READ, /**< Open to write and read binary data to the file. When opened the file should be cleared. If it does not exist it should be created (ie. wb+). */
-	CB_FILE_MODE_NONE, /**< Open file or directory with no read/write mode specified but which can be used to synchronise to disk. */
-} CBFileMode;
-
-typedef enum{
-	CB_SEEK_SET,
-	CB_SEEK_CUR,
-} CBFileSeekOrigin;
-
 #endif

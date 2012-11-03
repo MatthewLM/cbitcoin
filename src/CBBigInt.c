@@ -45,13 +45,11 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt * a,CBBigInt * b){
 		return CB_COMPARE_MORE_THAN;
 	else if (a->length < b->length)
 		return CB_COMPARE_LESS_THAN;
-	for (uint8_t x = a->length - 1;; x--) {
+	for (uint8_t x = a->length; x--;) {
 		if (a->data[x] < b->data[x])
 			return CB_COMPARE_LESS_THAN;
 		else if (a->data[x] > b->data[x])
 			return CB_COMPARE_MORE_THAN;
-		if (!x)
-			break;
 	}
 	return CB_COMPARE_EQUAL;
 }
@@ -88,13 +86,11 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 		return;
 	// base-256 long division.
 	uint16_t temp = 0;
-	for (uint8_t x = a->length-1;; x--) {
+	for (uint8_t x = a->length; x--;) {
 		temp <<= 8;
 		temp |= a->data[x];
 		ans[x] = temp / 58;
 		temp -= ans[x] * 58;
-		if (NOT x)
-			break;
 	}
 	if (NOT ans[a->length-1]) // If last byte is zero, adjust length.
 		a->length--;

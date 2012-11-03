@@ -70,6 +70,8 @@ If you wish to contribute code:
 Current Development Issues
 --------------------------
 
+* The block storage needs to be changed to use weak linked function prototypes such as CBSaveBlock and CBCommitTransaction. Currently cbitcoin tries to manage the block storage on it's own in only one way, and it would be better to allow for pluggable implementations of the storage system.
+* The dependencies should be built into their own libraries so that they can be linked to, providing immediate functionality.
 * The CBNetworkCommunicator code is buggy and is prone to crashing when running testCBNetworkCommunicator. This needs to be debugged.
 * The libev network dependency code does not work at all (In the experimental folder) and if it did work it could be a better alternative to libevent.
 * There is no makefile. A makefile would be helpful.

@@ -29,6 +29,7 @@
 #define CBSAFEOUTPUTH
 
 #include "CBConstants.h"
+#include "CBSafeOutputDependencies.h"
 #include "CBObject.h"
 #include <string.h>
 
@@ -37,7 +38,7 @@
  */
 typedef struct{
 	long int offset; /**< The position in the file to start the write operation. */
-	const void * data; /**< The data to write. */
+	void * data; /**< The data to write. */
 	uint32_t size; /**< The number of bytes to write. */
 } CBOverwriteOperation;
 
@@ -45,7 +46,7 @@ typedef struct{
  @brief Describes an append or save (Overwrite entire file) operation that should be completed on a commit.
  */
 typedef struct{
-	const void * data; /**< The data to write. */
+	void * data; /**< The data to write. */
 	uint32_t size; /**< The number of bytes to write. */
 } CBAppendOrSaveOperation;
 
