@@ -5,14 +5,15 @@ Date: Thursday 8th November, 2012
 	End Time: 15:25
 	
 	Start Time: 16:52
-	End Time:
+	End Time: 19:34
 
     -----------------------------------
-	Commit: 
+	Commit: e1c0babf055e50d72b3be4149c76de40ca996669
 	
 		Work Completed:
 		
-			* 
+			* Begun LevelDB storage implementation.
+			* Seperated header files from source files.
 	
 		Lines Added:
 		Lined Removed:
