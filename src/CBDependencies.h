@@ -279,4 +279,36 @@ uint64_t CBSecureRandomInteger(uint64_t gen);
  */
 void CBFreeSecureRandomGenerator(uint64_t gen);
 
+// STORAGE DEPENDENCES
+
+/**
+ @brief Returns the object used for block-chain storage.
+ @param dataDir The directory where the data files should be stored.
+ @param logError The error log function pointer.
+ @returns The block chain storage object or 0 on failure.
+ */
+uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...));
+/**
+ @brief Frees the block-chain storage object.
+ @param self The block-chain storage object.
+ */
+void CBFreeBlockChainStorage(uint64_t self);
+/**
+ @brief Queues a key-value write operation.
+ @param self The block-chain storage object.
+ @param key The key for this data.
+ @param keySize The size of the key.
+ @param data The data to store.
+ @param dataSize The data to store.
+ @returns true on success and false on failure.
+ */
+bool CBBlockChainStorageWriteValue(uint64_t self, uint64_t key, uint8_t keySize, uint8_t * data, uint32_t dataSize);
+/**
+ @brief Queues a key-value write operation.
+ @param self The block-chain storage object.
+ @param key The key for this data.
+ @param data The data to store.
+ */
+bool CBBlockChainStorageReadValue(uint64_t self, uint64_t key, uint8_t * data);
+
 #endif

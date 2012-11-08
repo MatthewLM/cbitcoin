@@ -31,6 +31,7 @@
 #include "CBSafeOutputConstants.h"
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // Weak linking for file-IO functions
 
@@ -45,7 +46,6 @@
 #pragma weak CBGetMaxFileSize
 #pragma weak CBFileDiskSynchronise
 #pragma weak CBFileExists
-#pragma weak CBEOF
 #pragma weak CBFileClose
 
 // FILE-IO DEPENENCIES
@@ -54,25 +54,25 @@
  @brief Opens a file for use with the other IO functions, or opens a directory with CB_FILE_MODE_NONE.
  @param filename The path of the file to open.
  @param mode The mode required for this file.
- @returns A void pointer as a reference for this file or NULL on failure.
+ @returns A 64-bit integer as a reference for this file or NULL on failure.
  */
-void * CBFileOpen(char * filename, CBFileMode mode);
+uint64_t CBFileOpen(char * filename, CBFileMode mode);
 /**
- @brief Reads data from a file which has been opened with CB_FILE_MODE_READ.
+ @brief Reads data from a file which has been opened with CB_FILE_MODE_READ. The file cursor should be moved along by the number of bytes read.
  @param file The file pointer.
  @param buffer A buffer to read the data into.
  @param size The size of the data to read in bytes.
  @returns true if the read succeeded or false if the read failed.
  */
-bool CBFileRead(void * file, void * buffer, size_t size);
+bool CBFileRead(uint64_t file, void * buffer, size_t size);
 /**
- @brief Writes to a file. If the file was opened with CB_FILE_MODE_APPEND, the data is written to the end of the file.
+ @brief Writes to a file. If the file was opened with CB_FILE_MODE_APPEND, the data is written to the end of the file. The file cursor should be moved along by the number of bytes written.
  @param file The file pointer.
  @param buffer The data to write.
  @param size The size of the data to write in bytes.
  @returns true if the write succeeded or false if the write failed.
  */
-bool CBFileWrite(void * file, void * buffer, size_t size);
+bool CBFileWrite(uint64_t file, void * buffer, size_t size);
 /**
  @brief Seeks the position of the file cursor. This moves the cursor an offset from the origin.
  @param file The file pointer.
@@ -80,7 +80,7 @@ bool CBFileWrite(void * file, void * buffer, size_t size);
  @param orgin The orgin of the offset. If CB_SEEK_SET, the origin is 0. If CB_SEEK_CUR, the origin is the current cursor position.
  @returns true if the seel succeeded or false if the seek failed.
  */
-bool CBFileSeek(void * file, long int offset, CBFileSeekOrigin origin);
+bool CBFileSeek(uint64_t file, long int offset, CBFileSeekOrigin origin);
 /**
  @brief Renames a file.
  @param filename The path of the file to rename.
@@ -114,10 +114,10 @@ size_t CBFileGetSize(void * filename);
 size_t CBGetMaxFileSize(void);
 /**
  @brief Synchronises a file or directory to permenant storage as much as possibly can be guarenteed. When synchronising a directory, changes to filenames and file deletions should be synchronised.
- @param ptr The pointer of the file or directory opened with CBFileOpen.
+ @param file The file or directory opened with CBFileOpen.
  @returns true if the synchronisation succeeded or false if the synchronisation failed.
  */
-bool CBFileDiskSynchronise(void * ptr);
+bool CBFileDiskSynchronise(uint64_t file);
 /**
  @brief Deteremines if a file exists
  @param filename The path to the file.
@@ -125,16 +125,10 @@ bool CBFileDiskSynchronise(void * ptr);
  */
 bool CBFileExists(char * filename);
 /**
- @brief Deteremines if the end of a file has been reached.
- @param file The pointer of the file or directory opened with CBFileOpen.
- @returns true if the end of the file has been reached, else false.
- */
-bool CBEOF(void * file);
-/**
  @brief Closes a file or directory opened with CBFileOpen and frees any relevant data.
  @param ptr The pointer of the file or directory opened with CBFileOpen.
  */
-void CBFileClose(void * file);
+void CBFileClose(uint64_t file);
 
 
 #endif

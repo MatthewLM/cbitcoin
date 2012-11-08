@@ -33,11 +33,7 @@
 #include "CBBlock.h"
 #include "CBBigInt.h"
 #include "CBValidationFunctions.h"
-#include "stdio.h"
 #include "string.h"
-#include <sys/resource.h>
-#include <sys/syslimits.h>
-#include <errno.h>
 
 /**
  @brief References a part of block storage.
@@ -104,11 +100,8 @@ typedef struct{
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
-	char * dataDir; /**< Data directory path */
 	void (*logError)(char *,...); /**< Pointer to error callback */
-	uint64_t fileSizeLimit; /**< The maximum allowed filesize */
-	CBSafeOutput * output; /**< For outputting data */
-	FILE * backup; /**< The backup file */
+	void * storage; /**< The storage component object */
 } CBFullValidator;
 
 /**

@@ -69,12 +69,12 @@
 #define CB_DATA_DIRECTORY "/.cbitcoin_FullNode_Data/"
 #define CB_ADDRESS_DATA_FILE "addresses.dat"
 #define CB_VALIDATION_DATA_FILE "validation.dat"
-#define CB_MAX_ORPHAN_CACHE 20
-#define CB_MAX_BRANCH_CACHE 5
 #define CB_NO_VALIDATION 0xFFFFFFFF
 #define CBHashMiniKey(hash) (uint64_t)hash[0] << 56 | (uint64_t)hash[1] << 48 | (uint64_t)hash[2] << 40 | (uint64_t)hash[3] << 32 | (uint64_t)hash[4] << 24 | (uint64_t)hash[5] << 16 | (uint64_t)hash[6] << 8 | (uint64_t)hash[7]
 #define CB_MIN(a,b) ((a) < (b) ? a : b)
 #define CB_MAX(a,b) ((a) > (b) ? a : b)
+#define CB_MAX_ORPHAN_CACHE 20
+#define CB_MAX_BRANCH_CACHE 5
 
 
 //  Enums

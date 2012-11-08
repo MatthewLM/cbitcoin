@@ -24,44 +24,6 @@
 
 #include "CBSafeOutput.h"
 
-//  Constructor
-
-CBSafeOutput * CBNewSafeOutput(void (*logError)(char *,...)){
-	CBSafeOutput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewSafeOutput\n",sizeof(*self));
-		return NULL;
-	}
-	CBGetObject(self)->free = CBFreeSafeOutput;
-	if (CBInitSafeOutput(self, logError))
-		return self;
-	free(self);
-	return NULL;
-}
-
-//  Object Getter
-
-CBSafeOutput * CBGetSafeOutput(void * self){
-	return self;
-}
-
-//  Initialiser
-
-bool CBInitSafeOutput(CBSafeOutput * self, void (*logError)(char *,...)){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
-	self->files = NULL;
-	self->numFiles = 0;
-	return true;
-}
-
-//  Destructor
-
-void CBFreeSafeOutput(void * vself){
-	CBFreeSafeOutputProcess(vself);
-	CBFreeObject(vself);
-}
-
 void CBFreeSafeOutputProcess(CBSafeOutput * self){
 	for (uint8_t x = 0; x < self->numFiles; x++)
 		if (self->files[x].type == CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND) {
@@ -72,8 +34,6 @@ void CBFreeSafeOutputProcess(CBSafeOutput * self){
 	self->files = NULL;
 	self->numFiles = 0;
 }
-
-//  Functions
 
 void CBSafeOutputAddAppendOperation(CBSafeOutput * self, void * data, uint32_t size){
 	CBAppendAndOverwrite * ops = &self->files[self->numFiles - 1].opData.appendAndOverwriteOps;
@@ -90,7 +50,7 @@ bool CBSafeOutputAddFile(CBSafeOutput * self, char * fileName, uint8_t overwrite
 	self->files[self->numFiles].fileName = fileName;
 	self->files[self->numFiles].type = CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND;
 	// Overwrite operations
-	CBAppendAndOverwrite * ops = &self->files[self->numFiles - 1].opData.appendAndOverwriteOps;
+	CBAppendAndOverwrite * ops = &self->files[self->numFiles].opData.appendAndOverwriteOps;
 	ops->overwriteOperations = malloc(sizeof(*ops->overwriteOperations) * overwriteOperations);
 	if (NOT ops->overwriteOperations){
 		CBFreeSafeOutputProcess(self);
@@ -127,6 +87,12 @@ void CBSafeOutputAddSaveFileOperation(CBSafeOutput * self, char * fileName, void
 	self->files[self->numFiles].opData.saveOp.size = size;
 	self->numFiles++;
 }
+void CBSafeOutputAddTruncateFileOperation(CBSafeOutput * self, char * fileName, uint32_t newsize){
+	self->files[self->numFiles].fileName = fileName;
+	self->files[self->numFiles].type = CB_SAFE_OUTPUT_OP_TRUNCATE;
+	self->files[self->numFiles].opData.newSize = newsize;
+	self->numFiles++;
+}
 bool CBSafeOutputAlloc(CBSafeOutput * self,uint8_t numFiles){
 	// Remove any previous data
 	CBFreeSafeOutputProcess(self);
@@ -134,7 +100,7 @@ bool CBSafeOutputAlloc(CBSafeOutput * self,uint8_t numFiles){
 	self->files = malloc(sizeof(*self->files) * numFiles);
 	return self->files;
 }
-CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
+CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, u_int64_t backup){
 	// Write backup information for the files
 	if (NOT CBFileSeek(backup, 0, CB_SEEK_SET)){
 		CBFreeSafeOutputProcess(self);
@@ -146,6 +112,11 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 	// Ensure backup is not active while making it
 	byte = 0;
 	if(NOT CBFileWrite(backup, &byte, 1)){
+		CBFreeSafeOutputProcess(self);
+		return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
+	}
+	// Write the number of files
+	if (NOT CBFileWrite(backup, &self->numFiles, 1)) {
 		CBFreeSafeOutputProcess(self);
 		return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 	}
@@ -171,10 +142,11 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 			CBFreeSafeOutputProcess(self);
 			return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 		}
-		void * read = NULL;
+		uint64_t read = 0;
 		size_t size;
 		if (self->files[x].type == CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND
-			|| self->files[x].type == CB_SAFE_OUTPUT_OP_SAVE) {
+			|| (self->files[x].type == CB_SAFE_OUTPUT_OP_SAVE
+				&& NOT CBFileExists(self->files[x].fileName))) {
 			read = CBFileOpen(self->files[x].fileName, CB_FILE_MODE_READ);
 			if (NOT read) {
 				free(readData);
@@ -344,29 +316,39 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 			}
 			case CB_SAFE_OUTPUT_OP_SAVE:
 				// Save operation
-				// Write entire previous file.
-				if (size > readDataSize) {
-					uint8_t * temp = realloc(readData, size);
-					if (NOT temp) {
+				if (read) {
+					// Write entire previous file.
+					if (size > readDataSize) {
+						uint8_t * temp = realloc(readData, size);
+						if (NOT temp) {
+							free(readData);
+							CBFileClose(read);
+							CBFreeSafeOutputProcess(self);
+							return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
+						}
+						readData = temp;
+						readDataSize = (uint32_t)size;
+					}
+					if (NOT CBFileRead(read, readData, size)) {
 						free(readData);
 						CBFileClose(read);
 						CBFreeSafeOutputProcess(self);
 						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
 					}
-					readData = temp;
-					readDataSize = (uint32_t)size;
-				}
-				if (NOT CBFileRead(read, readData, size)) {
-					free(readData);
-					CBFileClose(read);
-					CBFreeSafeOutputProcess(self);
-					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
-				}
-				if (NOT CBFileWrite(backup, readData, size)) {
-					free(readData);
-					CBFileClose(read);
-					CBFreeSafeOutputProcess(self);
-					return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
+					if (NOT CBFileWrite(backup, readData, size)) {
+						free(readData);
+						CBFileClose(read);
+						CBFreeSafeOutputProcess(self);
+						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
+					}
+				}else{
+					// Write 0 to signify no previous file
+					if (NOT CBFileWrite(backup, (uint8_t []){0,0,0,0,}, 4)){
+						free(readData);
+						CBFileClose(read);
+						CBFreeSafeOutputProcess(self);
+						return CB_SAFE_OUTPUT_FAIL_PREVIOUS;
+					}
 				}
 				break;
 		}
@@ -390,7 +372,7 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 	// Now implement the changes
 	bool err = false;
 	for (uint8_t x = 0; x < self->numFiles; x++) {
-		void * file;
+		uint64_t file;
 		switch (self->files[x].type) {
 			case CB_SAFE_OUTPUT_OP_OVERWRITE_APPEND:
 				// First complete the overwrite operations
@@ -510,7 +492,7 @@ CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup){
 	CBFreeSafeOutputProcess(self);
 	return CB_SAFE_OUTPUT_OK;
 }
-bool CBSafeOutputRecover(void * backup){
+bool CBSafeOutputRecover(uint64_t backup){
 	// Check backup is completed and active
 	uint8_t byte;
 	CBFileSeek(backup , 0, CB_SEEK_SET);
@@ -519,10 +501,16 @@ bool CBSafeOutputRecover(void * backup){
 	if (NOT byte)
 		// With no active backup, no recovery is needed.
 		return true;
+	// Get the number of files
+	uint8_t numFiles;
+	if (NOT CBFileRead(backup, &numFiles, 1))
+		return false;
 	// Go through each file and restore the backups.
 	uint8_t * readData = malloc(8);
+	if (NOT readData)
+		return false;
 	uint32_t readDataSize = 8;
-	while (NOT CBEOF(backup)) {
+	for (uint8_t x = 0; x < numFiles; x++) {
 		// Read filename length
 		if (NOT CBFileRead(backup, &byte, 1)){
 			free(readData);
@@ -553,43 +541,51 @@ bool CBSafeOutputRecover(void * backup){
 			| (uint32_t)readData[2] << 16
 			| (uint32_t)readData[3] << 24;
 		}
-		void * file;
+		uint64_t file;
 		switch (byte) {
 			case CB_SAFE_OUTPUT_OP_SAVE:{
 				// Save operation
-				// Read length of old file
-				if (NOT CBFileRead(backup, readData, 4)){
-					free(readData);
-					return false;
-				}
-				uint32_t size = readData[0]
-				| (uint32_t)readData[1] << 8
-				| (uint32_t)readData[2] << 16
-				| (uint32_t)readData[3] << 24;
-				// Read data
-				if (size > readDataSize) {
-					uint8_t * temp = realloc(readData, size);
-					if (NOT temp) {
+				if (filesize) {
+					// Read length of old file
+					if (NOT CBFileRead(backup, readData, 4)){
 						free(readData);
 						return false;
 					}
-					readData = temp;
-					readDataSize = size;
-				}
-				if (CBFileRead(backup, readData, size)) {
-					free(readData);
-					return false;
-				}
-				// Write data back into file.
-				file = CBFileOpen(fileName, CB_FILE_MODE_SAVE);
-				if (NOT file) {
-					free(readData);
-					return false;
-				}
-				if (NOT CBFileWrite(file, readData, size)) {
-					free(readData);
-					CBFileClose(file);
-					return false;
+					uint32_t size = readData[0]
+					| (uint32_t)readData[1] << 8
+					| (uint32_t)readData[2] << 16
+					| (uint32_t)readData[3] << 24;
+					// Read data
+					if (size > readDataSize) {
+						uint8_t * temp = realloc(readData, size);
+						if (NOT temp) {
+							free(readData);
+							return false;
+						}
+						readData = temp;
+						readDataSize = size;
+					}
+					if (CBFileRead(backup, readData, size)) {
+						free(readData);
+						return false;
+					}
+					// Write data back into file.
+					file = CBFileOpen(fileName, CB_FILE_MODE_SAVE);
+					if (NOT file) {
+						free(readData);
+						return false;
+					}
+					if (NOT CBFileWrite(file, readData, size)) {
+						free(readData);
+						CBFileClose(file);
+						return false;
+					}
+				}else{
+					// No previous file. Delete this file
+					if (NOT CBFileDelete(fileName)) {
+						free(readData);
+						return false;
+					}
 				}
 				break;
 			}

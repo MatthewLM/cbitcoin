@@ -83,45 +83,17 @@ typedef struct{
  @brief Structure for CBSafeOutput objects. @see CBSafeOutput.h
  */
 typedef struct{
-	CBObject base;
 	CBFileOutputOperations * files; /**< List of files with the operations */
 	uint8_t numFiles; /**< Number of files */
 } CBSafeOutput;
 
-/**
- @brief Creates a new CBSafeOutput object.
- @param directory The directory where the files exist.
- @returns A new CBSafeOutput object.
- */
-CBSafeOutput * CBNewSafeOutput(void (*logError)(char *,...));
-
-/**
- @brief Gets a CBSafeOutput from another object. Use this to avoid casts.
- @param self The object to obtain the CBSafeOutput from.
- @returns The CBSafeOutput object.
- */
-CBSafeOutput * CBGetSafeOutput(void * self);
-
-/**
- @brief Initialises a CBSafeOutput object
- @param self The CBSafeOutput object to initialise
- @returns true on success, false on failure.
- */
-bool CBInitSafeOutput(CBSafeOutput * self, void (*logError)(char *,...));
-
-/**
- @brief Frees a CBSafeOutput object.
- @param vself The CBSafeOutput object to free.
- */
-void CBFreeSafeOutput(void * vself);
+// Functions
 
 /**
  @brief Frees everything inside a CBSafeOutput object but not the object itself.
  @param vself The CBSafeOutput object.
  */
 void CBFreeSafeOutputProcess(CBSafeOutput * self);
-
-// Functions
 
 /**
  @brief Adds an output append operation for the last file added. This appends data within a file using "ab"
@@ -161,13 +133,20 @@ void CBSafeOutputAddOverwriteOperation(CBSafeOutput * self, long int offset, voi
  */
 void CBSafeOutputAddRenameFileOperation(CBSafeOutput * self, char * fileName, char * newName);
 /**
- @brief Adds an output save operation for a new file. This wipes previous data and replaces it with new data within a file using "wb". This should not be combined with overwrite or append operations.
+ @brief Adds an output save operation for a new file. This wipes previous data and replaces it with new data within a file using "wb".
  @param self The CBSafeOutput object.
  @param fileName The filename
  @param data The data to write.
  @param size The number of bytes to write.
  */
 void CBSafeOutputAddSaveFileOperation(CBSafeOutput * self, char * fileName, void * data, uint32_t size);
+/**
+ @brief Adds a truncate operation for a new file.
+ @param self The CBSafeOutput object.
+ @param fileName The filename
+ @param newsize The new size of the file
+ */
+void CBSafeOutputAddTruncateFileOperation(CBSafeOutput * self, char * fileName, uint32_t newsize);
 /**
  @brief Allocates data for adding files.
  @param numFiles Number of files to apply operations to. This includes rename and delete operations.
@@ -180,12 +159,12 @@ bool CBSafeOutputAlloc(CBSafeOutput * self, uint8_t numFiles);
  @param backup The backup.bak file object which should be opened with CB_FILE_MODE_WRITE_AND_READ.
  @returns @see CBSafeOutputResult
  */
-CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, void * backup);
+CBSafeOutputResult CBSafeOutputCommit(CBSafeOutput * self, uint64_t backup);
 /**
  @brief Recovers files if a data backup can be found. This should be called before using any files from a previous program execution.
  @param backup The backup.bak file object which should be opened with CB_FILE_MODE_READ or CB_FILE_MODE_WRITE_AND_READ. 
  @returns true if the files are in an OK state or false if recovery failed.
  */
-bool CBSafeOutputRecover(void * backup);
+bool CBSafeOutputRecover(uint64_t backup);
 
 #endif

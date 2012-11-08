@@ -49,6 +49,7 @@ typedef enum{
 	CB_FILE_MODE_APPEND, /**< Open to append binary data to the file (ie. ab) */
 	CB_FILE_MODE_WRITE_AND_READ, /**< Open to write and read binary data to the file. When opened the file should be cleared. If it does not exist it should be created (ie. wb+). */
 	CB_FILE_MODE_NONE, /**< Open file or directory with no read/write mode specified but which can be used to synchronise to disk. */
+	CB_FILE_MODE_READ_AND_UPDATE, /** Open in read and write mode without changing contents. */
 } CBFileMode;
 
 typedef enum{

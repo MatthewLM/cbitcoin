@@ -51,50 +51,10 @@ bool CBInitFullValidator(CBFullValidator * self, char * dataDir, void (*logError
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->logError = logError;
-	// Get maximum file size
-	struct rlimit fileLim;
-	if(getrlimit(RLIMIT_FSIZE,&fileLim)){
-		self->logError("Could not get RLIMIT_FSIZE limits.");
-		return false;
-	}
-	self->fileSizeLimit = fileLim.rlim_cur;
-	self->dataDir = malloc(strlen(dataDir) + 1);
-	if (NOT self->dataDir) {
-		logError("Could not allocate %u bytes of memory for the data directory in CBInitFullValidator.",strlen(dataDir) + 1);
-		return false;
-	}
-	strcpy(self->dataDir, dataDir);
-	self->output = CBNewSafeOutput(self->logError);
-	if (NOT self->output) {
-		free(self->dataDir);
-		logError("Could not initialise the CBSafeOutput object in CBInitFullValidator.");
-		return false;
-	}
-	// Open backup file for reading
-	char backupFile[strlen(self->dataDir) + 11];
-	sprintf(backupFile, "%sbackup.bak", self->dataDir);
-	// Check to see if the backup file exists already
-	if (NOT access(backupFile, F_OK)) {
-		// Exists. Open file and check recover if needed.
-		FILE * file = fopen(backupFile, "rb+");
-		if (NOT file) {
-			free(self->dataDir);
-			logError("Could not open backup file under rb+ in CBInitFullValidator.");
-			return false;
-		}
-		if (NOT CBSafeOutputRecover(file)) {
-			free(self->dataDir);
-			fclose(file);
-			logError("Data recovery failure in CBInitFullValidator.");
-			return false;
-		}
-		fclose(file);
-	}
-	// Now open backup file in wb+ mode.
-	self->backup = fopen(backupFile, "wb+");
-	if (NOT self->backup) {
-		free(self->dataDir);
-		logError("Could not open backup file under wb+ in CBInitFullValidator.");
+	// Create block-chain storage object
+	self->storage = CBNewBlockChainStorageObject(dataDir, logError);
+	if (NOT self->storage){
+		logError("Could not create the block chain storage object");
 		return false;
 	}
 	return true;
@@ -104,30 +64,13 @@ bool CBInitFullValidator(CBFullValidator * self, char * dataDir, void (*logError
 
 void CBFreeFullValidator(void * vself){
 	CBFullValidator * self = vself;
-	free(self->dataDir);
-	fclose(self->backup);
-	CBReleaseObject(self->output);
+	CBFreeBLockChainStorageObject(self->storage);
 	CBFreeObject(self);
 }
 
 //  Functions
 
 CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * self, uint8_t branch, CBBlock * block, CBBigInt work){
-	// Save block. First find first block file with space.
-	uint16_t fileIndex = 0;
-	char blockFile[strlen(self->dataDir) + 22];
-	// Use stat.h for fast information
-	sprintf(blockFile, "%sblocks%u-%u.dat",self->dataDir, branch, self->branches[branch].numBlockFiles - 1);
-	struct stat st;
-	if(stat(blockFile, &st))
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
-	uint64_t size = st.st_size;
-	bool newFile = false;
-	if (CBGetMessage(block)->bytes->length + 4 > self->fileSizeLimit - size){
-		// Not enough room in this file, so use a new file
-		sprintf(blockFile, "%sblocks%u-%u.dat",self->dataDir, branch, self->branches[branch].numBlockFiles);
-		newFile = true;
-	}
 	// Reallocate memory
 	// Reallocate memory for the references
 	CBBlockReference * temp = realloc(self->branches[branch].references, sizeof(*self->branches[branch].references) * (self->branches[branch].numRefs + 1));
@@ -158,11 +101,6 @@ CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * 
 	if (NOT temp4)
 		return CB_ADD_BLOCK_FAIL_PREVIOUS;
 	self->branches[branch].unspentOutputs = temp4;
-	// Prepare IO
-	if (NOT CBSafeOutputAlloc(self->output, 2))
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
-	if (NOT CBSafeOutputAddFile(self->output, blockFile, 0, 2))
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
 	// Prepare serialisation byte array
 	CBByteArray * data = CBNewByteArrayOfSize(self->branches[branch].numRefs*54 + 54 + temp3*52 + 26 + work.length, self->logError);
 	if (NOT data)

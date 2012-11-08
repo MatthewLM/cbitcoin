@@ -28,6 +28,27 @@
 #ifndef CBSAFESTORAGEH
 #define CBSAFESTORAGEH
 
+#include "CBSafeOutput.h"
+#include "CBDependencies.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <sys/resource.h>
+#include <sys/syslimits.h>
 
+/**
+ @brief Structure for CBSafeStorage objects. @see CBSafeStorage.h
+ */
+typedef struct{
+	uint64_t fileSizeLimit; /**< The maximum allowed filesize */
+	CBSafeOutput output; /**< For outputting data */
+	uint64_t backup; /**< The backup file */
+	char * dataDir; /**< The data directory */
+	uint8_t numOrphans; /**< The number of orhpans */
+	CBBlock * orphans[CB_MAX_ORPHAN_CACHE]; /**< The ophan block references */
+	uint8_t mainBranch; /**< The index for the main branch */
+	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
+	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
+} CBSafeStorage;
 
 #endif
