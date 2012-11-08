@@ -290,25 +290,34 @@ void CBFreeSecureRandomGenerator(uint64_t gen);
 uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...));
 /**
  @brief Frees the block-chain storage object.
- @param self The block-chain storage object.
+ @param iself The block-chain storage object.
  */
-void CBFreeBlockChainStorage(uint64_t self);
+void CBFreeBlockChainStorage(uint64_t iself);
 /**
  @brief Queues a key-value write operation.
- @param self The block-chain storage object.
+ @param iself The block-chain storage object.
  @param key The key for this data.
  @param keySize The size of the key.
  @param data The data to store.
- @param dataSize The data to store.
+ @param dataSize The size of the data to store.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageWriteValue(uint64_t self, uint64_t key, uint8_t keySize, uint8_t * data, uint32_t dataSize);
+bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint8_t * data, uint32_t dataSize);
 /**
  @brief Queues a key-value write operation.
- @param self The block-chain storage object.
+ @param iself The block-chain storage object.
  @param key The key for this data.
+ @param keySize The size of the key.
  @param data The data to store.
+ @param dataSize A pointer for an integer which will be set to the size of the data.
+ @returns true on success and false on failure.
  */
-bool CBBlockChainStorageReadValue(uint64_t self, uint64_t key, uint8_t * data);
+bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint8_t * data, uint32_t * dataSize);
+/** 
+ @brief The data should be written to the disk atomically.
+ @param iself The block-chain storage object.
+ @returns true on success and false on failure.
+ */
+bool CBBlockChainStorageCommitData(uint64_t iself);
 
 #endif
