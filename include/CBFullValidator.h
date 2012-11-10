@@ -36,30 +36,21 @@
 #include "string.h"
 
 /**
- @brief References a part of block storage.
- */
-typedef struct{
-	uint16_t fileID; /**< The file being referenced. */
-	uint64_t filePos; /**< The position in the file which is being referenced. */
-} CBFileReference;
-
-/**
  @brief References an output in the block storage.
  */
 typedef struct{
 	uint8_t outputHash[32]; /** The transaction hash for the output */
-	CBFileReference ref; /**< The file reference for the output */
 	uint32_t outputIndex; /** The index for the output */
-	uint32_t height; /**< Block height of the output */
+	uint32_t blockIndex; /**< The index of the block containing this output */
 	bool coinbase; /**< True if a coinbase output */
 	uint8_t branch; /**< The branch this output belongs to. */
+	uint32_t position; /**< The positon of the output in the block */
 }CBOutputReference;
 
 /**
- @brief References a block in the block storage.
+ @brief Keeps the target and time for a block in a cache.
  */
 typedef struct{
-	CBFileReference ref; /**< The file reference for the block */
 	uint32_t target; /** The target for this block */
 	uint32_t time; /**< The block's timestamp */
 }CBBlockReference;
@@ -97,6 +88,7 @@ typedef struct{
 	CBObject base;
 	uint8_t numOrphans; /**< The number of orhpans */
 	CBBlock * orphans[CB_MAX_ORPHAN_CACHE]; /**< The ophan block references */
+	uint8_t firstOrphan; /**< The orphan added first or rather the front of the orhpan queue (for overwriting) */
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
@@ -139,9 +131,9 @@ void CBFreeFullValidator(void * vself);
  @param branch The index of the branch to add the block to.
  @param block The block to add.
  @param work The new branch work. This is not the block work but the total work upto this block. This is taken by the function and the old work is freed.
- @returns @see CBSafeOutputResult
+ @returns true on success and false on failure.
  */
-CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * self, uint8_t branch, CBBlock * block, CBBigInt work);
+bool CBFullValidatorAddBlockToBranch(CBFullValidator * self, uint8_t branch, CBBlock * block, CBBigInt work);
 /**
  @brief Adds a block to the orphans.
  @param self The CBFullValidator object.

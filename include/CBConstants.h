@@ -75,6 +75,16 @@
 #define CB_MAX(a,b) ((a) > (b) ? a : b)
 #define CB_MAX_ORPHAN_CACHE 20
 #define CB_MAX_BRANCH_CACHE 5
+#define CBInt16ToArray(arr,offset,i) arr[offset] = i; \
+									 arr[offset + 1] = i >> 8;
+#define CBInt32ToArray(arr,offset,i) CBInt16ToArray(arr,offset,i) \
+									 arr[offset + 2] = i >> 16; \
+							         arr[offset + 3] = i >> 24;
+#define CBInt64ToArray(arr,offset,i) CBInt32ToArray(arr,offset,i) \
+									 arr[offset + 4] = i >> 32; \
+									 arr[offset + 5] = i >> 40; \
+									 arr[offset + 6] = i >> 48; \
+									 arr[offset + 7] = i >> 56; \
 
 
 //  Enums
@@ -344,25 +354,6 @@ typedef enum{
 } CBBlockValidationResult;
 
 /**
- @brief The return type for CBSafeOutputCommit.
- */
-typedef enum{
-	CB_SAFE_OUTPUT_OK, /**< The write operations were all completed successfully */
-	CB_SAFE_OUTPUT_FAIL_PREVIOUS, /**< The write operations failed and the disk is in the previous state. */
-	CB_SAFE_OUTPUT_FAIL_BAD_STATE, /**< The write operations failed and the disk is in a bad state. Data recovery must be performed before reading from any files that should have ben changed. */
-}CBSafeOutputResult;
-
-/**
- @brief The return type for CBFullValidatorAddBlockToBranch.
- */
-typedef enum{
-	CB_ADD_BLOCK_OK, /**< The write operations were all completed successfully */
-	CB_ADD_BLOCK_FAIL_PREVIOUS, /**< The write operations failed and the disk is in the previous state. */
-	CB_ADD_BLOCK_FAIL_BAD_DATA, /**< The write operations failed and the disk is in a bad state. Data recovery must be performed before reading from any files that should have ben changed. */
-	CB_ADD_BLOCK_FAIL_BAD_MEMORY, /**< The write operations failed and the memory is in a bad state. The branch data needs to be reloaded */
-}CBFullValidatorAddBlockResult;
-
-/**
  @brief The return type for CBFullValidatorLoadBranchValidator and CBFullValidatorLoadValidator.
  */
 typedef enum{
@@ -370,5 +361,41 @@ typedef enum{
 	CB_VALIDATOR_LOAD_ERR, /**< Load failure */
 	CB_VALIDATOR_LOAD_ERR_DATA, /**< Load failure, ensure all related validation files are deleted before continuing. */
 } CBValidatorLoadResult;
+
+/**
+ @brief The data storage components.
+ */
+typedef enum{
+	CB_STORAGE_BRANCHES,
+	CB_STORAGE_ORPHANS,
+	CB_STORAGE_NUM_BRANCHES,
+	CB_STORAGE_NUM_ORPHANS,
+	CB_STORAGE_MAIN_BRANCH,
+	CB_STORAGE_FIRST_ORPHAN
+} CBStorageParts;
+
+/**
+ @brief The branch validator parts for a storage key.
+ */
+typedef enum{
+	CB_BRANCH_BLOCK_HEADER,
+	CB_BRANCH_BLOCK_TRANSACTIONS,
+	CB_BRANCH_NUM_REFS,
+	CB_BRANCH_TABLE_HASH,
+	CB_BRANCH_TABLE_INDEX,
+	CB_BRANCH_LAST_RETARGET,
+	CB_BRANCH_PARENT_BRANCH,
+	CB_BRANCH_PARENT_INDEX,
+	CB_BRANCH_START_HEIGHT,
+	CB_BRANCH_LAST_VALIDATION,
+	CB_BRANCH_NUM_UNSPENT_OUTPUTS,
+	CB_BRANCH_WORK,
+	CB_BRANCH_UNSPENT_OUTPUT_BRANCH,
+	CB_BRANCH_UNSPENT_OUTPUT_COINBASE,
+	CB_BRANCH_UNSPENT_OUTPUT_HASH,
+	CB_BRANCH_UNSPENT_OUTPUT_INDEX,
+	CB_BRANCH_UNSPENT_OUTPUT_POS,
+	CB_BRANCH_UNSPENT_OUTPUT_BLOCK_INDEX,
+} CBBranchStorageParts;
 
 #endif

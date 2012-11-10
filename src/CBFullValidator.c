@@ -70,17 +70,22 @@ void CBFreeFullValidator(void * vself){
 
 //  Functions
 
-CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * self, uint8_t branch, CBBlock * block, CBBigInt work){
+bool CBFullValidatorAddBlockToBranch(CBFullValidator * self, uint8_t branch, CBBlock * block, CBBigInt work){
+	// The keys for storage
+	uint8_t key[7];
+	uint8_t data[4];
+	key[0] = CB_STORAGE_BRANCHES;
+	key[1] = branch;
 	// Reallocate memory
 	// Reallocate memory for the references
 	CBBlockReference * temp = realloc(self->branches[branch].references, sizeof(*self->branches[branch].references) * (self->branches[branch].numRefs + 1));
 	if (NOT temp)
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
+		return false;
 	self->branches[branch].references = temp;
 	// Reallocate memory for the lookup table
 	CBBlockReferenceHashIndex * temp2 = realloc(self->branches[branch].referenceTable, sizeof(*self->branches[branch].referenceTable) * (self->branches[branch].numRefs + 1));
 	if (NOT temp2)
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
+		return false;
 	self->branches[branch].referenceTable = temp2;
 	bool found;
 	// Get the index position for the lookup table.
@@ -96,15 +101,21 @@ CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * 
 	}
 	// Get the index of the block reference and increase the number of references.
 	uint32_t refIndex = self->branches[branch].numRefs++;
+	key[2] = CB_BRANCH_NUM_REFS;
+	CBInt32ToArray(data, 0, self->branches[branch].numRefs);
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 3, data, 4)){
+		self->logError("There was an error updating the number of references for branch %u.", branch);
+		return false;
+	}
 	// Reallocate for new size
 	CBOutputReference * temp4 = realloc(self->branches[branch].unspentOutputs, temp3 * sizeof(*self->branches[branch].unspentOutputs));
 	if (NOT temp4)
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
+		return false;
 	self->branches[branch].unspentOutputs = temp4;
 	// Prepare serialisation byte array
 	CBByteArray * data = CBNewByteArrayOfSize(self->branches[branch].numRefs*54 + 54 + temp3*52 + 26 + work.length, self->logError);
 	if (NOT data)
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
+		return false;
 	// Modify memory
 	// Modify validator information. Insert new reference. This involves adding the reference to the end of the refence data and inserting an index into a lookup table.
 	// Insert reference index into lookup table
@@ -113,14 +124,37 @@ CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * 
 		memmove(self->branches[branch].referenceTable + indexPos + 1, self->branches[branch].referenceTable + indexPos, sizeof(*self->branches[branch].referenceTable) * (self->branches[branch].numRefs - indexPos - 1));
 	self->branches[branch].referenceTable[indexPos].index = refIndex;
 	memcpy(self->branches[branch].referenceTable[indexPos].blockHash,CBBlockGetHash(block), 32);
+	// Reference index to storage
+	key[2] = CB_BRANCH_TABLE_HASH;
+	CBInt32ToArray(key, 3, indexPos);
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, self->branches[branch].referenceTable[indexPos].blockHash, 32)){
+		self->logError("There was an error updating the block hash number %i in the lookup table for branch %u.", indexPos, branch);
+		return false;
+	}
+	key[2] = CB_BRANCH_TABLE_INDEX;
+	CBInt32ToArray(data, 0, self->branches[branch].referenceTable[indexPos].index);
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, data, 4)){
+		self->logError("There was an error updating the block index number %i in the lookup table for branch %u.", indexPos, branch);
+		return false;
+	}
 	// Update branch data
-	if (NOT (self->branches[branch].startHeight + self->branches[branch].numRefs) % 2016)
+	if (NOT (self->branches[branch].startHeight + self->branches[branch].numRefs) % 2016){
 		self->branches[branch].lastRetargetTime = block->time;
+		key[2] = CB_BRANCH_LAST_RETARGET;
+		CBInt32ToArray(data, 0, block->time);
+		if (NOT CBBlockChainStorageWriteValue(self->storage, key, 3, data, 4)){
+			self->logError("There was an error updating the last retarget time for branch %u.", branch);
+			return false;
+		}
+	}
 	free(self->branches[branch].work.data);
 	self->branches[branch].work = work;
+	key[2] = CB_BRANCH_WORK;
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 3, work.data, work.length)){
+		self->logError("There was an error updating the total work for branch %u.", branch);
+		return false;
+	}
 	// Insert block data
-	self->branches[branch].references[refIndex].ref.fileID = fileIndex;
-	self->branches[branch].references[refIndex].ref.filePos = size;
 	self->branches[branch].references[refIndex].target = block->target;
 	self->branches[branch].references[refIndex].time = block->time;
 	// Update unspent outputs... Go through transactions, removing the prevOut references and adding the outputs for one transaction at a time.
@@ -161,166 +195,109 @@ CBFullValidatorAddBlockResult CBFullValidatorAddBlockToBranch(CBFullValidator * 
 				// Move other references up to make room
 				memmove(self->branches[branch].unspentOutputs + ref + 1, self->branches[branch].unspentOutputs + ref, (self->branches[branch].numUnspentOutputs - ref) * sizeof(*self->branches[branch].unspentOutputs));
 			self->branches[branch].numUnspentOutputs++;
+			CBInt32ToArray(key, 3, y);
+			key[2] = CB_BRANCH_UNSPENT_OUTPUT_BRANCH;
 			self->branches[branch].unspentOutputs[ref].branch = branch;
-			self->branches[branch].unspentOutputs[ref].coinbase = NOT x;
+			CBInt32ToArray(data, 0, branch);
+			if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, data, 4)){
+				self->logError("There was an error updating the branch for unspent output %u for branch %u.", ref, branch);
+				return false;
+			}
+			data[0] = NOT x;
+			self->branches[branch].unspentOutputs[ref].coinbase = data[0];
+			key[2] = CB_BRANCH_UNSPENT_OUTPUT_COINBASE;
+			if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, data, 1)){
+				self->logError("There was an error updating the coinbase bool for unspent output %u for branch %u.", ref, branch);
+				return false;
+			}
 			memcpy(self->branches[branch].unspentOutputs[ref].outputHash,CBTransactionGetHash(block->transactions[x]),32);
+			key[2] = CB_BRANCH_UNSPENT_OUTPUT_HASH;
+			if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, CBTransactionGetHash(block->transactions[x]), 32)){
+				self->logError("There was an error updating the hash for unspent output %u for branch %u.", ref, branch);
+				return false;
+			}
 			self->branches[branch].unspentOutputs[ref].outputIndex = y;
-			self->branches[branch].unspentOutputs[ref].ref.fileID = fileIndex;
-			self->branches[branch].unspentOutputs[ref].ref.filePos = cursor + size + 4; // Block cursor plus 4 for the length and the file size
+			key[2] = CB_BRANCH_UNSPENT_OUTPUT_INDEX;
+			CBInt32ToArray(data, 0, y);
+			if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, data, 4)){
+				self->logError("There was an error updating the index for unspent output %u for branch %u.", ref, branch);
+				return false;
+			}
+			self->branches[branch].unspentOutputs[ref].position = cursor - 80; // Block cursor minus header
+			key[2] = CB_BRANCH_UNSPENT_OUTPUT_POS;
+			CBInt32ToArray(data, 0, cursor);
+			if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, data, 4)){
+				self->logError("There was an error updating the position for unspent output %u for branch %u.", ref, branch);
+				return false;
+			}
+			self->branches[branch].unspentOutputs[ref].blockIndex = refIndex;
+			key[2] = CB_BRANCH_UNSPENT_OUTPUT_BLOCK_INDEX;
+			CBInt32ToArray(data, 0, refIndex);
+			if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, data, 4)){
+				self->logError("There was an error updating the block index for the unspent output %u for branch %u.", ref, branch);
+				return false;
+			}
 			// Move cursor past the output
 			uint8_t byte = CBByteArrayGetByte(CBGetMessage(block)->bytes, cursor);
 			cursor += byte < 253 ? 1 : (byte == 253 ? 2 : (byte == 254 ? 4 : 8));
 			cursor += 8;
 		}
-		// Update size
-		size += 4 + cursor;
 	}
-	// Do Safe IO.
-	// Write length
-	uint8_t len[4];
-	len[0] = CBGetMessage(block)->bytes->length;
-	len[1] = CBGetMessage(block)->bytes->length >> 8;
-	len[2] = CBGetMessage(block)->bytes->length >> 16;
-	len[3] = CBGetMessage(block)->bytes->length >> 24;
-	CBSafeOutputAddAppendOperation(self->output, len, 4);
-	CBSafeOutputAddAppendOperation(self->output, CBByteArrayGetData(CBGetMessage(block)->bytes), CBGetMessage(block)->bytes->length);
-	// Update validation file.
-	// Serailise into byte array and then write the byte array to the file.
-	CBByteArraySetInt32(data, 0, self->branches[branch].numRefs);
-	cursor = 4;
-	for (uint32_t x = 0; x < self->branches[branch].numRefs; x++) {
-		// Data for block reference
-		CBByteArraySetInt16(data, cursor, self->branches[branch].references[x].ref.fileID);
-		cursor += 2;
-		CBByteArraySetInt64(data, cursor, self->branches[branch].references[x].ref.filePos);
-		cursor += 8;
-		CBByteArraySetInt32(data, cursor, self->branches[branch].references[x].target);
-		cursor += 4;
-		CBByteArraySetInt32(data, cursor, self->branches[branch].references[x].time);
-		cursor += 4;
-		// Data for block reference index
-		CBByteArraySetBytes(data, cursor, self->branches[branch].referenceTable[x].blockHash, 32);
-		cursor += 32;
-		CBByteArraySetInt32(data, cursor, self->branches[branch].referenceTable[x].index);
-		cursor += 4;
+	// Update number of unspent outputs.
+	key[2] = CB_BRANCH_NUM_UNSPENT_OUTPUTS;
+	CBInt32ToArray(data, 0, self->branches[branch].numUnspentOutputs);
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 3, data, 4)){
+		self->logError("There was an error updating the number of unspent outputs for branch %u.", branch);
+		return false;
 	}
-	CBByteArraySetInt32(data, cursor, self->branches[branch].lastRetargetTime);
-	cursor += 4;
-	CBByteArraySetByte(data, cursor, self->branches[branch].parentBranch);
-	cursor++;
-	CBByteArraySetInt32(data, cursor, self->branches[branch].parentBlockIndex);
-	cursor+= 4;
-	CBByteArraySetInt32(data, cursor, self->branches[branch].startHeight);
-	cursor+= 4;
-	CBByteArraySetInt32(data, cursor, self->branches[branch].lastValidation);
-	cursor+= 4;
-	CBByteArraySetInt32(data, cursor, self->branches[branch].numUnspentOutputs);
-	cursor += 4;
-	for (uint32_t x = 0; x < self->branches[branch].numUnspentOutputs; x++) {
-		CBByteArraySetBytes(data, cursor, self->branches[branch].unspentOutputs[x].outputHash, 32);
-		cursor += 32;
-		CBByteArraySetInt32(data, cursor, self->branches[branch].unspentOutputs[x].outputIndex);
-		cursor += 4;
-		CBByteArraySetInt16(data, cursor, self->branches[branch].unspentOutputs[x].ref.fileID);
-		cursor += 2;
-		CBByteArraySetInt64(data, cursor, self->branches[branch].unspentOutputs[x].ref.filePos);
-		cursor += 8;
-		CBByteArraySetInt32(data, cursor, self->branches[branch].unspentOutputs[x].height);
-		cursor += 4;
-		CBByteArraySetByte(data, cursor, self->branches[branch].unspentOutputs[x].coinbase);
-		cursor += 1;
-		CBByteArraySetInt32(data, cursor, self->branches[branch].unspentOutputs[x].branch);
-		cursor += 1;
+	// Store the block
+	key[2] = CB_BRANCH_BLOCK_HEADER;
+	CBInt32ToArray(key, 3, refIndex);
+	// Write block data
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, CBByteArrayGetData(CBGetMessage(block)->bytes), 80)){
+		self->logError("There was an error writing the header for block%u-%u.", branch, refIndex);
+		return false;
 	}
-	CBByteArraySetByte(data, cursor, self->branches[branch].work.length);
-	cursor++;
-	CBByteArraySetBytes(data, cursor, self->branches[branch].work.data, self->branches[branch].work.length);
-	// Get branch file name
-	char branchFile[strlen(self->dataDir) + 14];
-	sprintf(branchFile, "%sbranch%u.dat",self->dataDir, branch);
-	// Add save operation for branch data
-	CBSafeOutputAddSaveFileOperation(self->output, branchFile, CBByteArrayGetData(data), data->length);
-	// Try commiting the data
-	CBSafeOutputResult res = CBSafeOutputCommit(self->output, self->backup);
-	CBReleaseObject(data);
-	if (res == CB_SAFE_OUTPUT_FAIL_PREVIOUS) {
-		// Reload validator information in memory
-		if (NOT CBFullValidatorLoadBranchValidator(self, branch))
-			return CB_ADD_BLOCK_FAIL_BAD_MEMORY;
-	}
-	switch (res) {
-		case CB_SAFE_OUTPUT_FAIL_BAD_STATE:
-			return CB_ADD_BLOCK_FAIL_BAD_DATA;
-		case CB_SAFE_OUTPUT_FAIL_PREVIOUS:
-			return CB_ADD_BLOCK_FAIL_PREVIOUS;
-		case CB_SAFE_OUTPUT_OK:
-			if (newFile)
-				// Using a new block file.
-				self->branches[branch].numBlockFiles++;
-			return CB_ADD_BLOCK_OK;
+	key[2] = CB_BRANCH_BLOCK_TRANSACTIONS;
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 7, CBByteArrayGetData(CBGetMessage(block)->bytes) + 80, CBGetMessage(block)->bytes->length - 80)){
+		self->logError("There was an error writing the transactions for block%u-%u.", branch, refIndex);
+		return false;
 	}
 }
-CBFullValidatorAddBlockResult CBFullValidatorAddBlockToOrphans(CBFullValidator * self, CBBlock * block){
+bool CBFullValidatorAddBlockToOrphans(CBFullValidator * self, CBBlock * block){
 	// Save orphan.
-	// Prepare output
-	if (NOT CBSafeOutputAlloc(self->output, 1))
-		return CB_ADD_BLOCK_FAIL_PREVIOUS;
-	// Make filename
-	char validatorFile[strlen(self->dataDir) + strlen(CB_VALIDATION_DATA_FILE) + 1];
-	memcpy(validatorFile, self->dataDir, strlen(self->dataDir));
-	strcpy(validatorFile + strlen(self->dataDir), CB_VALIDATION_DATA_FILE);
+	uint8_t pos;
+	uint8_t key[2];
 	if (self->numOrphans == CB_MAX_ORPHAN_CACHE) {
-		// Maximum orphan cache reached, delete orphan added first.
-		// Open validator file for reading
-		FILE * file = fopen(validatorFile, "rb");
-		// Now get the length of the other block orphans we want to keep.
-		uint32_t len = 0;
-		for (uint8_t x = 1; x < self->numOrphans; x++)
-			len += CBGetMessage(self->orphans[x])->bytes->length;
-		// Create new data
-		uint8_t * data = malloc(len + 3 + CBGetMessage(block)->bytes->length);
-		data[0] = self->mainBranch;
-		data[1] = self->numBranches;
-		data[2] = self->numOrphans;
-		// Move to second orphan to read all the orphans we want to replace the first orphan with.
-		fseek(file, 3 + CBGetMessage(self->orphans[0])->bytes->length, SEEK_SET);
-		if (fread(data + 3, 1, len, file) != len)
-			return CB_ADD_BLOCK_FAIL_PREVIOUS;
-		// Copy new orphan block data
-		memcpy(data + 3 + len, CBByteArrayGetData(CBGetMessage(block)->bytes), CBGetMessage(block)->bytes->length);
-		// Save data
-		CBSafeOutputAddSaveFileOperation(self->output, validatorFile, data, len + 3 + CBGetMessage(block)->bytes->length);
-		CBSafeOutputResult res = CBSafeOutputCommit(self->output, self->backup);
-		free(data);
-		if (res == CB_SAFE_OUTPUT_FAIL_BAD_STATE)
-			return CB_ADD_BLOCK_FAIL_BAD_DATA;
-		else if (res == CB_SAFE_OUTPUT_FAIL_PREVIOUS)
-			return CB_ADD_BLOCK_FAIL_PREVIOUS;
 		// Release old orphan
-		CBReleaseObject(self->orphans[0]);
-		// Move memory down.
-		memmove(self->orphans, self->orphans + 1, sizeof(*self->orphans) * (CB_MAX_ORPHAN_CACHE - 1));
+		CBReleaseObject(self->orphans[self->firstOrphan]);
+		pos = self->firstOrphan;
+		self->firstOrphan++;
+		key[0] = CB_STORAGE_FIRST_ORPHAN;
+		if (NOT CBBlockChainStorageWriteValue(self->storage, key, 1, &self->firstOrphan, 1)){
+			self->logError("There was an error writing the index of the first orphan.");
+			return false;
+		}
 	}else{
 		// Adding an orphan.
-		// Add file to output
-		if (NOT CBSafeOutputAddFile(self->output, validatorFile, 1, 1))
-			return CB_ADD_BLOCK_FAIL_PREVIOUS;
-		// Overwrite orphan number
-		CBSafeOutputAddOverwriteOperation(self->output, 2, (uint8_t []){self->numOrphans + 1}, 1);
-		// Append orphan
-		CBSafeOutputAddAppendOperation(self->output, CBByteArrayGetData(CBGetMessage(block)->bytes), CBGetMessage(block)->bytes->length);
-		// Commit
-		CBSafeOutputResult res = CBSafeOutputCommit(self->output, self->backup);
-		if (res == CB_SAFE_OUTPUT_FAIL_BAD_STATE)
-			return CB_ADD_BLOCK_FAIL_BAD_DATA;
-		else if (res == CB_SAFE_OUTPUT_FAIL_PREVIOUS)
-			return CB_ADD_BLOCK_FAIL_PREVIOUS;
-		self->numOrphans++;
+		pos = self->numOrphans++;
+		key[0] = CB_STORAGE_NUM_ORPHANS;
+		if (NOT CBBlockChainStorageWriteValue(self->storage, key, 1, &self->numOrphans, 1)){
+			self->logError("There was an error writing the number of orphans.");
+			return false;
+		}
 	}
 	// Add to memory
-	self->orphans[self->numOrphans - 1] = block;
+	self->orphans[pos] = block;
 	CBRetainObject(block);
-	return CB_ADD_BLOCK_OK;
+	// Add to storage
+	key[0] = CB_STORAGE_ORPHANS;
+	key[1] = pos;
+	if (NOT CBBlockChainStorageWriteValue(self->storage, key, 2, CBByteArrayGetData(CBGetMessage(block)->bytes), CBGetMessage(block)->bytes->length)){
+		self->logError("There was an error writing an orphan at position %u.", pos);
+		return false;
+	}
+	return true;
 }
 CBBlockStatus CBFullValidatorBasicBlockValidation(CBFullValidator * self, CBBlock * block, uint8_t * txHashes, uint64_t networkTime){
 	// Get the block hash
@@ -472,51 +449,19 @@ CBBlockValidationResult CBFullValidatorInputValidation(CBFullValidator * self, u
 		// Check coinbase maturity
 		if (outRef->coinbase && blockHeight - outRef->height < CB_COINBASE_MATURITY) 
 			return CB_BLOCK_VALIDATION_BAD;
-		// Get the output
-		char blockFile[strlen(self->dataDir) + 22];
-		sprintf(blockFile, "%sblocks%u-%u.dat",self->dataDir, outRef->branch, outRef->ref.fileID);
-		FILE * fd = fopen(blockFile, "rb");
-		if (NOT fd)
-			return CB_BLOCK_VALIDATION_ERR;
-		// Now load the output. Do deserilisation here as we do not know the number of bytes required.
-		uint8_t bytes[9];
-		fseek(fd, outRef->ref.filePos, SEEK_SET);
-		if (fread(bytes, 1, 9, fd) != 9){
-			fclose(fd);
-			return CB_BLOCK_VALIDATION_ERR;
-		}
-		uint32_t scriptSize;
-		if (bytes[8] < 253)
-			scriptSize = bytes[8];
-		else{
-			uint8_t varIntSize;
-			if (bytes[8] == 253)
-				varIntSize = 2;
-			else if (bytes[8] == 254)
-				varIntSize = 4;
-			else
-				varIntSize = 8;
-			// Read the script size
-			uint8_t scriptSizeBytes[varIntSize];
-			if (fread(scriptSizeBytes, 1, varIntSize, fd) != varIntSize){
-				fclose(fd);
-				return CB_BLOCK_VALIDATION_ERR;
-			}
-			// Seek to script
-			fseek(fd, 9, SEEK_CUR);
-			for (uint8_t y = 0; y < varIntSize; y++)
-				scriptSize = scriptSizeBytes[y] << 8*y;
-		}
-		// Get script
-		CBScript * script = CBNewScriptOfSize(scriptSize, self->logError);
-		if (fread(CBByteArrayGetData(script), 1, scriptSize, fd) != scriptSize){
-			fclose(fd);
+		// Get the output from storage
+		uint8_t key[6];
+		key[0] = CB_STORAGE_BRANCHES;
+		key[1] = outRef->branch;
+		key[2] = CB_BRANCH_BLOCK_TRANSACTIONS;
+		CBInt32ToArray(key, 3, outRef->blockIndex);
+		uint32_t size;
+		uint8_t * data = CBBlockChainStorageReadValue(self->storage, key, 7, &size);
+		if (NOT data) {
+			self->logError("Could not read block transaction data for branch %u and index %u.",outRef->branch, outRef->blockIndex);
 			return CB_BLOCK_VALIDATION_ERR;
 		}
-		fclose(fd);
-		// Make output
-		prevOut = CBNewTransactionOutput(bytes[0] | (uint64_t)bytes[1] << 8 | (uint64_t)bytes[2] << 16 | (uint64_t)bytes[3] << 24 | (uint64_t)bytes[4] << 32 | (uint64_t)bytes[5] << 40 | (uint64_t)bytes[6] << 48 | (uint64_t)bytes[7] << 56, script, self->logError);
-		CBReleaseObject(script);
+		
 	}
 	// We have sucessfully received an output for this input. Verify the input script for the output script.
 	CBScriptStack stack = CBNewEmptyScriptStack();

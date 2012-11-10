@@ -251,24 +251,13 @@ void CBByteArraySetBytes(CBByteArray * self,uint32_t index,uint8_t * bytes,uint3
 	memmove(self->sharedData->data + self->offset + index, bytes, length);
 }
 void CBByteArraySetInt16(CBByteArray * self,uint32_t offset,uint16_t integer){
-	self->sharedData->data[self->offset+offset] = integer;
-	self->sharedData->data[self->offset+offset + 1] = integer >> 8;
+	CBInt16ToArray(self->sharedData->data, self->offset+offset, integer);
 }
 void CBByteArraySetInt32(CBByteArray * self,uint32_t offset,uint32_t integer){
-	self->sharedData->data[self->offset+offset] = integer;
-	self->sharedData->data[self->offset+offset + 1] = integer >> 8;
-	self->sharedData->data[self->offset+offset + 2] = integer >> 16;
-	self->sharedData->data[self->offset+offset + 3] = integer >> 24;
+	CBInt32ToArray(self->sharedData->data, self->offset+offset, integer);
 }
 void CBByteArraySetInt64(CBByteArray * self,uint32_t offset,uint64_t integer){
-	self->sharedData->data[self->offset+offset] = integer;
-	self->sharedData->data[self->offset+offset + 1] = integer >> 8;
-	self->sharedData->data[self->offset+offset + 2] = integer >> 16;
-	self->sharedData->data[self->offset+offset + 3] = integer >> 24;
-	self->sharedData->data[self->offset+offset + 4] = integer >> 32;
-	self->sharedData->data[self->offset+offset + 5] = integer >> 40;
-	self->sharedData->data[self->offset+offset + 6] = integer >> 48;
-	self->sharedData->data[self->offset+offset + 7] = integer >> 56;
+	CBInt64ToArray(self->sharedData->data, self->offset+offset, integer);
 }
 void CBByteArraySetPort(CBByteArray * self,uint32_t offset,uint16_t integer){
 	self->sharedData->data[self->offset+offset + 1] = integer;

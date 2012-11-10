@@ -64,15 +64,17 @@ bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t keySiz
 	leveldb_writebatch_put(self->batch, (const char *)key, keySize, (const char *)data, dataSize);
 	return true;
 }
-bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint8_t * data, uint32_t * dataSize){
+uint8_t * CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint32_t * dataSize){
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
 	char * err;
-	data = (uint8_t *)leveldb_get(self->db, self->readOptions, (char *)key, keySize, (size_t *)dataSize, &err);
+	size_t size;
+	uint8_t * data = (uint8_t *)leveldb_get(self->db, self->readOptions, (char *)key, keySize, &size, &err);
+	*dataSize = (uint32_t)size;
 	if (err) {
 		self->logError("LevelDB Read Error: %s", err);
-		return false;
+		return NULL;
 	}
-	return true;
+	return data;
 }
 bool CBBlockChainStorageCommitData(uint64_t iself){
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;

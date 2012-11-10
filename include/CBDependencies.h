@@ -304,15 +304,22 @@ void CBFreeBlockChainStorage(uint64_t iself);
  */
 bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint8_t * data, uint32_t dataSize);
 /**
- @brief Queues a key-value write operation.
+ @brief Queues a key-value read operation.
  @param iself The block-chain storage object.
  @param key The key for this data.
  @param keySize The size of the key.
- @param data The data to store.
  @param dataSize A pointer for an integer which will be set to the size of the data.
+ @returns A pointer to the data on success and NULL on failure.
+ */
+uint8_t * CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint32_t * dataSize);
+/**
+ @brief Queues a key-value delete operation.
+ @param iself The block-chain storage object.
+ @param key The key for this data.
+ @param keySize The size of the key.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint8_t * data, uint32_t * dataSize);
+bool CBBlockChainStorageRemoveValue(uint64_t iself, uint8_t * key, uint8_t keySize);
 /** 
  @brief The data should be written to the disk atomically.
  @param iself The block-chain storage object.
