@@ -15,8 +15,21 @@ Date: Thursday 8th November, 2012
 			* Begun LevelDB storage implementation.
 			* Seperated header files from source files.
 	
-		Lines Added:
-		Lined Removed:
+		Lines Added:  113
+		Lined Removed: 1,343
+		Total Time: 2.7833333333 hours
 	-----------------------------------
 
 ---------------------------------------
+Date: Friday 9th November 2012
+---------------------------------------
+	Start Time: 19:27
+	End Time: 21:05
+	
+	Start Time: 21:11
+	End Time: 22:47
+	
+	NOTE: Find alternative to LevelDB that allows for reading subsections of records.
+	NOTE: Implement own simple key/value database
+	
+	
