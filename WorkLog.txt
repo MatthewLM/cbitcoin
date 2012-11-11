@@ -1,6 +1,7 @@
 ---------------------------------------
 Date: Thursday 8th November, 2012
 ---------------------------------------
+
 	Start Time: 15:20
 	End Time: 15:25
 	
@@ -23,6 +24,7 @@ Date: Thursday 8th November, 2012
 ---------------------------------------
 Date: Friday 9th November 2012
 ---------------------------------------
+
 	Start Time: 19:27
 	End Time: 21:05
 	
@@ -31,5 +33,25 @@ Date: Friday 9th November 2012
 	
 	NOTE: Find alternative to LevelDB that allows for reading subsections of records.
 	NOTE: Implement own simple key/value database
+
+---------------------------------------
+Date: Saturday 10th November
+---------------------------------------
 	
+	-----------------------------------
+	Commit: 7ff4abcff40221ac0eee7a32b12b4509ee4a9f56
 	
+		Work Completed:
+		
+			* Worked on levelDB implementation.
+	
+		Lines Added:  203
+		Lined Removed: 325
+		Total Time: 3.2333333333 hours
+	-----------------------------------
+	
+	Start Time: 17:08
+	End Time: 21:40
+	
+	Start Time: 13:19
+	End Time: 
