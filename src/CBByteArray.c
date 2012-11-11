@@ -264,27 +264,13 @@ void CBByteArraySetPort(CBByteArray * self,uint32_t offset,uint16_t integer){
 	self->sharedData->data[self->offset+offset] = integer >> 8;
 }
 uint16_t CBByteArrayReadInt16(CBByteArray * self,uint32_t offset){
-	uint16_t result = self->sharedData->data[self->offset+offset];
-	result |= (uint16_t)self->sharedData->data[self->offset+offset + 1] << 8;
-	return result;
+	return CBArrayToInt16(self->sharedData->data, self->offset + offset);
 }
 uint32_t CBByteArrayReadInt32(CBByteArray * self,uint32_t offset){
-	uint32_t result = self->sharedData->data[self->offset+offset];
-	result |= (uint32_t)self->sharedData->data[self->offset+offset + 1] << 8;
-	result |= (uint32_t)self->sharedData->data[self->offset+offset + 2] << 16;
-	result |= (uint32_t)self->sharedData->data[self->offset+offset + 3] << 24;
-	return result;
+	return CBArrayToInt32(self->sharedData->data, self->offset + offset);
 }
 uint64_t CBByteArrayReadInt64(CBByteArray * self,uint32_t offset){
-	uint64_t result = self->sharedData->data[self->offset+offset];
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 1] << 8;
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 2] << 16;
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 3] << 24;
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 4] << 32;
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 5] << 40;
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 6] << 48;
-	result |= (uint64_t)self->sharedData->data[self->offset+offset + 7] << 56;
-	return result;
+	return CBArrayToInt64(self->sharedData->data, self->offset + offset);
 }
 uint16_t CBByteArrayReadPort(CBByteArray * self,uint32_t offset){
 	uint16_t result = self->sharedData->data[self->offset+offset + 1];

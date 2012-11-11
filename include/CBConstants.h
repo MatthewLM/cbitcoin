@@ -23,6 +23,8 @@
 #ifndef CBCONSTANTSH
 #define CBCONSTANTSH
 
+#include <stdint.h>
+
 //  Macros
 
 #define CB_MESSAGE_MAX_SIZE 0x02000000 // 32 MB
@@ -84,7 +86,18 @@
 									 arr[offset + 4] = i >> 32; \
 									 arr[offset + 5] = i >> 40; \
 									 arr[offset + 6] = i >> 48; \
-									 arr[offset + 7] = i >> 56; \
+									 arr[offset + 7] = i >> 56; 
+#define CBArrayToInt16(arr,offset) arr[offset] \
+                                     | (uint16_t)arr[offset + 1] << 8
+#define CBArrayToInt32(arr,offset) CBArrayToInt16(arr,offset) \
+                                     | (uint32_t)arr[offset + 2] << 16 \
+									 | (uint32_t)arr[offset + 3] << 24
+#define CBArrayToInt48(arr,offset) CBArrayToInt32(arr,offset) \
+                                     | (uint64_t)arr[offset + 4] << 32 \
+                                     | (uint64_t)arr[offset + 5] << 40 
+#define CBArrayToInt64(arr,offset) CBArrayToInt48(arr,offset) \
+                                     | (uint64_t)arr[offset + 6] << 48 \
+                                     | (uint64_t)arr[offset + 7] << 56 
 
 
 //  Enums

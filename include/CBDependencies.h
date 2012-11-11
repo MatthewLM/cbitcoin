@@ -297,21 +297,22 @@ void CBFreeBlockChainStorage(uint64_t iself);
  @brief Queues a key-value write operation.
  @param iself The block-chain storage object.
  @param key The key for this data.
- @param keySize The size of the key.
  @param data The data to store.
  @param dataSize The size of the data to store.
+ @param offset The offset to start writting.
+ @param totalSize The total size the key is supposed to be for when creating it.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint8_t * data, uint32_t dataSize);
+bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t key[6], uint8_t * data, uint32_t dataSize, uint32_t offset, uint32_t totalSize);
 /**
  @brief Queues a key-value read operation.
  @param iself The block-chain storage object.
  @param key The key for this data.
- @param keySize The size of the key.
- @param dataSize A pointer for an integer which will be set to the size of the data.
+ @param dataSize The size to read.
+ @param offset The offset to begin reading.
  @returns A pointer to the data on success and NULL on failure.
  */
-uint8_t * CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t keySize, uint32_t * dataSize);
+uint8_t * CBBlockChainStorageReadValue(uint64_t iself, uint8_t key[6], uint32_t dataSize, uint32_t offset);
 /**
  @brief Queues a key-value delete operation.
  @param iself The block-chain storage object.
@@ -319,12 +320,18 @@ uint8_t * CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t ke
  @param keySize The size of the key.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageRemoveValue(uint64_t iself, uint8_t * key, uint8_t keySize);
-/** 
+bool CBBlockChainStorageRemoveValue(uint64_t iself, uint8_t key[6]);
+/**
  @brief The data should be written to the disk atomically.
  @param iself The block-chain storage object.
  @returns true on success and false on failure.
  */
 bool CBBlockChainStorageCommitData(uint64_t iself);
+/**
+ @brief Ensure the database is consistent and recover the database if it is not.
+ @param iself The block-chain storage object.
+ @returns true if the database is consistent and false on failure.
+ */
+bool CBBlockChainStorageEnsureConsistent(uint64_t iself);
 
 #endif
