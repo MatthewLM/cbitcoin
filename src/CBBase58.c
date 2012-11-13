@@ -89,7 +89,7 @@ bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*logError)(char *,..
 		return false;
 	}
 	if (bi->length < 4){
-		logError(CB_ERROR_BASE58_DECODE_CHECK_TOO_SHORT,"The string passed into CBDecodeBase58Checked decoded into data that was too short.");
+		logError("The string passed into CBDecodeBase58Checked decoded into data that was too short.");
 		return false;
 	}
 	// Reverse bytes for checksum generation
@@ -111,7 +111,7 @@ bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*logError)(char *,..
 		if (checksum2[x] != bi->data[3-x])
 			ok = false;
 	if (NOT ok){
-		logError(CB_ERROR_BASE58_DECODE_CHECK_INVALID,"The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
+		logError("The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		return false;
 	}
 	return true;

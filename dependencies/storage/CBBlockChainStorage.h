@@ -34,33 +34,7 @@
 #include <fcntl.h>
 #include "CBDependencies.h"
 
-/**
- @brief Describes a file overwrite operation that should be completed on a commit.
- */
-typedef struct{
-	uint64_t offset; /**< The position in the file to start the write operation. */
-	uint8_t * data; /**< The data to write. */
-	uint32_t size; /**< The number of bytes to write. */
-} CBOverwriteOperation;
-
-/**
- @brief Describes an append operation that should be completed on a commit.
- */
-typedef struct{
-	uint8_t * data; /**< The data to write. */
-	uint32_t size; /**< The number of bytes to write. */
-} CBAppendOperation;
-
-/**
- @brief Append and overwrite operations to be completed on a file
- */
-typedef struct{
-	uint16_t fileID; /**< The file ID */
-	CBOverwriteOperation * overwriteOperations; /**< A list of overwrite operations to be completed by the next commit */
-	uint8_t numOverwriteOperations; /**< Number of overwrite operations */
-	CBAppendOperation * appendOperations; /**< A list of append operations to be completed by the next commit */
-	uint8_t numAppendOperations; /**< Number of append operations */
-} CBFileOperations;
+#define CB_MAX_VALUE_WRITES 3
 
 /**
  @brief A key/value pair which references the value's data position
@@ -83,27 +57,42 @@ typedef struct{
 } CBDeletedSection;
 
 /**
+ @brief Describes a write operation.
+ */
+typedef struct{
+	uint8_t key[6]; /**< The key for the value */
+	uint32_t offset; /**< Offset to begin writting */
+	uint8_t * data; /**< The data to write */
+	uint32_t dataLen; /**< The length of the data to write */
+	uint32_t allocLen; /**< The length allocated for this value */
+	uint32_t totalLen; /**< The length of the total value entry */
+} CBWriteValue;
+
+/**
  @brief Structure for CBBlockChainStorage objects. @see CBBlockChainStorage.h
  */
 typedef struct{
 	char * dataDir; /**< The data directory. */
-	uint8_t numFiles; /**< Number of files to apply operations on */
-	CBFileOperations * files; /** < The files with the operations */
 	CBKeyValuePair * index; /**< Index of all key/value pairs */
 	uint32_t numValues; /**< The number of key/value pairs */
-	CBKeyValuePair ** sortedIndex; /**< The sorted index */
-	uint16_t numAvailableFiles; /**< The number of data files there are on disk. */
-	uint32_t pendingAppends; /**< Bytes to be appended */
+	uint16_t lastFile; /**< The last file ID. */
 	uint32_t lastSize; /**< Size of last file */
 	CBDeletedSection * deletionIndex; /**< Index of all deleted sections */
 	uint32_t numDeletions; /**< Number of deletion entries */
+	CBWriteValue valueWrites[CB_MAX_VALUE_WRITES]; /**< Values to write */
+	uint8_t numValueWrites; /**< The number of values to write */
 	void (*logError)(char *,...);
 } CBBlockChainStorage;
 
 // Additional functions
 
 /**
- @brief Add an append operation to complete on commit.
+ @brief Removes all of the value write operations.
+ @param self The storage object.
+ */
+void CBResetBlockChainStorage(CBBlockChainStorage * self);
+/**
+ @brief Add an append operation.
  @param self The storage object.
  @param fileID The file ID
  @param data The data to write.
@@ -112,7 +101,16 @@ typedef struct{
  */
 bool CBBlockChainStorageAddAppend(CBBlockChainStorage * self, uint16_t fileID, uint8_t * data, uint32_t dataLen);
 /**
- @brief Add an overwrite operation to complete on commit.
+ @brief Add a deletion entry.
+ @param self The storage object.
+ @param fileID The file ID
+ @param pos The position of the deleted section.
+ @param len The length of the deleted section.
+ @retruns true on success and false on failure
+ */
+bool CBBlockChainStorageAddDeletionEntry(CBBlockChainStorage * self, uint16_t fileID, uint32_t pos, uint32_t len);
+/**
+ @brief Add an overwrite operation.
  @param self The storage object.
  @param fileID The file ID
  @param data The data to write.
@@ -129,11 +127,5 @@ bool CBBlockChainStorageAddOverwrite(CBBlockChainStorage * self, uint16_t fileID
  @retruns The position of the key.
  */
 uint32_t CBBlockChainStorageFindKey(CBBlockChainStorage * self, uint8_t key[6], bool * found);
-/**
- @brief Does a quicksort on the block chain database index.
- @param self The storage object.
- @retruns true on success and false on failure.
- */
-bool CBBlockChainStorageQuickSortIndex(CBBlockChainStorage * self);
 
 #endif

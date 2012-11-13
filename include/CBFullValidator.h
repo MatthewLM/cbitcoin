@@ -29,7 +29,7 @@
 #define CBFULLVALIDATORH
 
 #include "CBConstants.h"
-#include "CBSafeOutput.h"
+#include "CBBlockChainStorage.h"
 #include "CBBlock.h"
 #include "CBBigInt.h"
 #include "CBValidationFunctions.h"
@@ -140,7 +140,7 @@ bool CBFullValidatorAddBlockToBranch(CBFullValidator * self, uint8_t branch, CBB
  @param block The block to add.
  @returns true on success and false on error.
  */
-CBFullValidatorAddBlockResult CBFullValidatorAddBlockToOrphans(CBFullValidator * self, CBBlock * block);
+bool CBFullValidatorAddBlockToOrphans(CBFullValidator * self, CBBlock * block);
 /**
  @brief Does basic validation on a block 
  @param self The CBFullValidator object.

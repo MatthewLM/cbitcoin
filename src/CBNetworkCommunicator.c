@@ -967,7 +967,7 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer *
 }
 void CBNetworkCommunicatorOnLoopError(void * vself){
 	CBNetworkCommunicator * self = vself;
-	CBGetMessage(self)->logError(CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL,"The socket event loop failed. Stoping the CBNetworkCommunicator...");
+	CBGetMessage(self)->logError("The socket event loop failed. Stoping the CBNetworkCommunicator...");
 	self->eventLoop = 0;
 	CBNetworkCommunicatorStop(self);
 }
@@ -1325,7 +1325,7 @@ bool CBNetworkCommunicatorStart(CBNetworkCommunicator * self){
 	// Create the socket event loop
 	if (NOT CBNewEventLoop(&self->eventLoop,CBNetworkCommunicatorOnLoopError, CBNetworkCommunicatorOnTimeOut, self)){
 		// Cannot create event loop
-		CBGetMessage(self)->logError(CB_ERROR_NETWORK_COMMUNICATOR_LOOP_CREATE_FAIL,"The CBNetworkCommunicator event loop could not be created.");
+		CBGetMessage(self)->logError("The CBNetworkCommunicator event loop could not be created.");
 		return false;
 	}
 	self->isStarted = true;

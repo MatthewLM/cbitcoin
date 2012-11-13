@@ -36,14 +36,13 @@
  */
 typedef struct{
 	CBNetworkCommunicator base;
-	FILE * addressFile;
 } CBFullNode;
 
 /**
  @brief Creates a new CBFullNode object.
  @returns A new CBFullNode object.
  */
-CBFullNode * CBNewFullNode(void (*logError)(CCBrror error,char *,...));
+CBFullNode * CBNewFullNode(void (*logError)(char *,...));
 
 /**
  @brief Gets a CBFullNode from another object. Use this to avoid casts.
@@ -57,7 +56,7 @@ CBFullNode * CBGetFullNode(void * self);
  @param self The CBFullNode object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitFullNode(CBFullNode * self, void (*logError)(CCBrror error,char *,...));
+bool CBInitFullNode(CBFullNode * self, void (*logError)(char *,...));
 
 /**
  @brief Frees a CBFullNode object.

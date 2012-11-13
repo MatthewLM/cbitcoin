@@ -157,11 +157,11 @@ uint32_t CBTransactionInputSerialise(CBTransactionInput * self){
 		return 0;
 	}
 	if (NOT self->prevOut.hash){
-		CBGetMessage(self)->logError(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionInput without prevOut.hash.");
+		CBGetMessage(self)->logError("Attempting to serialise a CBTransactionInput without prevOut.hash.");
 		return 0;
 	}
 	if (NOT self->scriptObject){
-		CBGetMessage(self)->logError(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionInput without scriptObject.");
+		CBGetMessage(self)->logError("Attempting to serialise a CBTransactionInput without scriptObject.");
 		return 0;
 	}
 	CBVarInt scriptLen = CBVarIntFromUInt64(CBGetByteArray(self->scriptObject)->length);

@@ -231,7 +231,7 @@ uint8_t * CBTransactionGetHash(CBTransaction * self){
 CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){
 	CBTransaction * self= vself;
 	if (self->inputNum < input + 1) {
-		CBGetMessage(self)->logError(CB_ERROR_TRANSACTION_FEW_INPUTS,"Receiving transaction hash to sign cannot be done for because the input index goes past the number of inputs.");
+		CBGetMessage(self)->logError("Receiving transaction hash to sign cannot be done for because the input index goes past the number of inputs.");
 		return CB_TX_HASH_BAD;
 	}
 	uint8_t last5Bits = (signType & 0x1f); // For some reason this is what the C++ client does.
@@ -245,7 +245,7 @@ CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray 
 		sizeOfData++; // Just for the CBVarInt and no outputs.
 	}else if ((signType & 0x1f) == CB_SIGHASH_SINGLE){
 		if (self->outputNum < input + 1) {
-			CBGetMessage(self)->logError(CB_ERROR_TRANSACTION_FEW_OUTPUTS,"Receiving transaction hash to sign cannot be done for CB_SIGHASH_SINGLE because there are not enough outputs.");
+			CBGetMessage(self)->logError("Receiving transaction hash to sign cannot be done for CB_SIGHASH_SINGLE because there are not enough outputs.");
 			return CB_TX_HASH_BAD;
 		}
 		sizeOfData += CBVarIntSizeOf(input + 1) + input * 9; // For outputs up to the input index

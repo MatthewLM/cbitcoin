@@ -136,7 +136,7 @@ uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
 		return 0;
 	}
 	if (NOT self->scriptObject){
-		CBGetMessage(self)->logError(CB_ERROR_MESSAGE_SERIALISATION_BAD_DATA,"Attempting to serialise a CBTransactionOutput without scriptObject.");
+		CBGetMessage(self)->logError("Attempting to serialise a CBTransactionOutput without scriptObject.");
 		return 0;
 	}
 	CBVarInt scriptLen = CBVarIntFromUInt64(CBGetByteArray(self->scriptObject)->length);

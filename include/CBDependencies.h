@@ -308,11 +308,12 @@ bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t key[6], uint8_t * dat
  @brief Queues a key-value read operation.
  @param iself The block-chain storage object.
  @param key The key for this data.
+ @param data A pointer to memory with enough space to hold the data. The data will be set to this.
  @param dataSize The size to read.
  @param offset The offset to begin reading.
- @returns A pointer to the data on success and NULL on failure.
+ @returns true on success and false on failure.
  */
-uint8_t * CBBlockChainStorageReadValue(uint64_t iself, uint8_t key[6], uint32_t dataSize, uint32_t offset);
+bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t key[6], uint8_t * data, uint32_t dataSize, uint32_t offset);
 /**
  @brief Queues a key-value delete operation.
  @param iself The block-chain storage object.

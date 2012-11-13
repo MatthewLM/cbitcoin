@@ -98,6 +98,8 @@
 #define CBArrayToInt64(arr,offset) CBArrayToInt48(arr,offset) \
                                      | (uint64_t)arr[offset + 6] << 48 \
                                      | (uint64_t)arr[offset + 7] << 56 
+#define CB_BTREE_ORDER 32 // Algorithm only works with even values. Best with powers of 2.
+#define CB_BTREE_HALF_ORDER CB_BTREE_ORDER/2
 
 
 //  Enums
