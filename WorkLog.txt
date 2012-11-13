@@ -53,5 +53,62 @@ Date: Saturday 10th November
 	Start Time: 17:08
 	End Time: 21:40
 	
+---------------------------------------
+Date: Sunday 11th November
+---------------------------------------	
+	
 	Start Time: 13:19
-	End Time: 
+	End Time: 14:08
+	
+	-----------------------------------
+	Commit: 417b5829b857d0378baa29f4afffc168cc3ceb9c
+	
+		Work Completed:
+		
+			* Worked on new database implementation. Saved quicksort.
+	
+		Lines Added:  514
+		Lined Removed: 68
+		Total Time: 5.4 hours
+	-----------------------------------
+	
+	Start Time: 14:12
+	End Time: 16:29
+	
+	Start Time: 18:19
+	End Time: 20:20
+	
+---------------------------------------
+Date: Monday 12th November
+---------------------------------------
+
+	Start Time: 14:27
+	End Time: 16:00
+	
+	Start Time: 16:59
+	End Time: 20:11
+	
+	Start Time: 20:15
+	End Time: 21:34
+	
+---------------------------------------
+Date: Tuesday 13th November
+---------------------------------------
+
+	Start Time: 14:41
+	End Time: 15:20
+	
+	Start Time: 16:48
+	End Time: 17:35
+	
+	Start Time: 18:11
+	End Time: 19:36
+	
+	Start Time: 20:12
+	End time: 21:15
+	
+	Start Time: 21:34
+	End Time: 22:00
+	
+	
+
