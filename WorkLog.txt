@@ -110,5 +110,24 @@ Date: Tuesday 13th November
 	Start Time: 21:34
 	End Time: 22:00
 	
+	-----------------------------------
+	Commit: 3b1fbb48fb1795a9f76981c2e20e13c051b679ea
 	
+		Work Completed:
+		
+			* Continued work on database implementation. 
+			* Worked upon B-Tree algorithm for indexing.
+	
+		Lines Added:  942
+		Lined Removed: 213
+		Total Time: 11.5 hours
+	-----------------------------------
+	
+---------------------------------------
+Date: Wednesday 14th November
+---------------------------------------
+
+	Start Time: 12:14
+	End Time: 13:57
+
 
