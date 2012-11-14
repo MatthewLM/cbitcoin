@@ -154,7 +154,7 @@ bool CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 			IMPLEMENT THIS! ???
 		}
 	}else{
-		// Not leaf data, insert successor than delete successor from/in the right child. This is the easiest bit of all!
+		// Not leaf data, insert successor then delete successor from/in the right child. This is the easiest bit of all!
 		CBBTreeNode * rightChild = pos.node->children[pos.pos + 1];
 		uint8_t * rightChildKeys = (uint8_t *)(rightChild + 1);
 		memcpy(keys + pos.pos * self->keySize, rightChildKeys, self->keySize);

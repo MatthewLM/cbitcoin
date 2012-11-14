@@ -139,7 +139,7 @@ Date: Wednesday 14th November
 			* B-Tree search and insert working with unit tests. Should have
 			  more in-depth tests.
 	
-		Lines Added:  178
+		Lines Added: 178
 		Lined Removed: 18
 		Total Time: 1.7166666667 hours
 	--------------------------------------------------------------------------
@@ -149,3 +149,18 @@ Date: Wednesday 14th November
 	
 	Start Time: 16:55
 	End Time: 20:01
+	
+	NOTE: Good URL http://www.scribd.com/doc/18210/B-TREE-TUTORIAL-PPT
+	
+	--------------------------------------------------------------------------
+	Commit: 718154c280d6d28db4c523af29f1e03c47df0519
+	
+		Work Completed:
+		
+			* Worked on the database implementation.
+			* Begun B-Tree delete algorithm.
+	
+		Lines Added: 258
+		Lined Removed: 136
+		Total Time: 3.95 hours
+	--------------------------------------------------------------------------
