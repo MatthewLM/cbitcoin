@@ -48,7 +48,127 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
 		}
 	}
 }
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, uint8_t * data, CBFindResult pos, CBBTreeNode * right){
+bool CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
+	uint8_t * keys = (uint8_t *)(pos.node + 1);
+	uint8_t * data = keys + self->keySize * CB_BTREE_ORDER;
+	if (NOT pos.node->children[0]) {
+		// Leaf
+		CBBTreeNode * parent = pos.node->parent;
+		if (pos.node->numElements > CB_BTREE_HALF_ORDER || NOT parent) {
+			// Can simply remove this element. Nice and easy.
+			if (--pos.node->numElements > pos.pos){
+				// Move everything down to overwrite the removed element.
+				memmove(pos.node->children + pos.pos, pos.node->children + pos.pos + 1, (pos.node->numElements - pos.pos + 1) * sizeof(pos.node->children));
+				memmove(keys + pos.pos * self->keySize, keys + (pos.pos + 1) * self->keySize, (pos.node->numElements - pos.pos) * self->keySize);
+				memmove(data + pos.pos * self->dataSize, data + (pos.pos + 1) * self->dataSize, (pos.node->numElements - pos.pos) * self->dataSize);
+			}
+			return true;
+		}else{
+			// Underflow... Where things get complicated
+			// We have a parent so we can check siblings.
+			// First find the position of this node in the parent. ??? Worth additional pointers?
+			CBFindResult res = CBBTreeNodeBinarySearch(parent, keys, self->keySize);
+			uint8_t * parentKeys = (uint8_t *)(parent + 1);
+			uint8_t * parentData = parentKeys + CB_BTREE_ORDER * self->keySize;
+			CBBTreeNode * left = parent->children[res.pos-1];
+			uint8_t * leftKeys = (uint8_t *)(left + 1);
+			uint8_t * leftData = leftKeys + CB_BTREE_ORDER * self->keySize;
+			CBBTreeNode * right = parent->children[res.pos+1];
+			uint8_t * rightKeys = (uint8_t *)(right + 1);
+			uint8_t * rightData = rightKeys + CB_BTREE_ORDER * self->keySize;
+			if (res.pos) {
+				// Can check left sibling
+				if (left->numElements > CB_BTREE_HALF_ORDER) {
+					// Can take from left
+					// Move elements up to overwrite the element we are deleting
+					if (pos.pos) {
+						memmove(keys + self->keySize, keys, pos.pos * self->keySize);
+						memmove(data + self->dataSize, data, pos.pos * self->dataSize);
+					}
+					// Lower left parent element to this node
+					memcpy(keys, parentKeys + res.pos * self->keySize, self->keySize);
+					memcpy(data, parentData + res.pos * self->dataSize, self->dataSize);
+					// Now move left sibling's far right element to parent
+					memcpy(parentKeys + res.pos * self->keySize, leftKeys + (left->numElements - 1) * self->keySize, self->keySize);
+					memcpy(parentData + res.pos * self->dataSize, leftData + (left->numElements - 1) * self->dataSize, self->dataSize);
+					// Now remove left sibling's far right element
+					pos.node = left;
+					pos.pos = left->numElements - 1;
+					return CBAssociativeArrayDelete(self, pos);
+				}
+			}
+			if (res.pos < parent->numElements) {
+				// Can check right sibling
+				if (right->numElements > CB_BTREE_HALF_ORDER) {
+					// Can take from right
+					// Move elements down to overwrite the element we are deleting
+					if (pos.node->numElements > pos.pos + 1) {
+						memmove(keys + pos.pos * self->keySize, keys + (pos.pos + 1) * self->keySize, (pos.node->numElements - pos.pos - 1) * self->keySize);
+						memmove(data + pos.pos * self->dataSize, data + (pos.pos + 1) * self->dataSize, (pos.node->numElements - pos.pos - 1) * self->dataSize);
+					}
+					// Lower right parent element to this node
+					memcpy(keys + (pos.node->numElements - 1) * self->keySize, parentKeys + (res.pos + 1) * self->keySize, self->keySize);
+					memcpy(data + (pos.node->numElements - 1) * self->dataSize, parentData + (res.pos + 1) * self->dataSize, self->dataSize);
+					// Now move right sibling's far left element to parent
+					memcpy(parentKeys + (res.pos + 1) * self->keySize, rightKeys, self->keySize);
+					memcpy(parentData + (res.pos + 1) * self->dataSize, rightData, self->dataSize);
+					// Now remove right sibling's far left element
+					pos.node = right;
+					pos.pos = 0;
+					return CBAssociativeArrayDelete(self, pos);
+				}
+			}
+			// Could not take from siblings... now for the merging. :-(
+			if (NOT res.pos) {
+				// We are merging right sibling into the node, Make modifications so that this node is known as the left and the right is thought as the node.
+				leftKeys = keys;
+				leftData = data;
+				left = pos.node;
+				keys = rightKeys;
+				data = rightData;
+				pos.node = right;
+			}else{
+				// We are merging the node into the left sibling. Change parent position for node to now be used for the parent element that is copied into the merged node...
+				res.pos--;
+			}
+			// Merge
+			// Move over parent middle element
+			memcpy(leftKeys + left->numElements * self->keySize, parentKeys + res.pos * self->keySize, self->keySize);
+			memcpy(leftData + left->numElements * self->dataSize, parentData + res.pos * self->dataSize, self->dataSize);
+			// Move over this node up to before the deleted element to the left node
+			left->numElements++;
+			if (pos.pos) {
+				memcpy(leftKeys + left->numElements * self->keySize, keys, pos.pos * self->keySize);
+				memcpy(leftData + left->numElements * self->dataSize, data, pos.pos * self->dataSize);
+			}
+			left->numElements += pos.pos;
+			// Move over this node after the deleted element to the left node
+			if (pos.node->numElements > pos.pos + 1) {
+				memcpy(leftKeys + left->numElements * self->keySize, keys + (pos.pos + 1) * self->keySize, (pos.node->numElements - pos.pos - 1) * self->keySize);
+				memcpy(leftData + left->numElements * self->dataSize, data + (pos.pos + 1) * self->dataSize, (pos.node->numElements - pos.pos - 1) * self->dataSize);
+			}
+			left->numElements += pos.node->numElements - pos.pos - 1;
+			// Free right node
+			free(pos.node);
+			// Now delete the parent element and continue merge upto root if neccesary...
+			IMPLEMENT THIS! ???
+		}
+	}else{
+		// Not leaf data, insert successor than delete successor from/in the right child. This is the easiest bit of all!
+		CBBTreeNode * rightChild = pos.node->children[pos.pos + 1];
+		uint8_t * rightChildKeys = (uint8_t *)(rightChild + 1);
+		memcpy(keys + pos.pos * self->keySize, rightChildKeys, self->keySize);
+		memcpy(data + pos.pos * self->dataSize, rightChildKeys + CB_BTREE_ORDER * self->keySize, self->dataSize);
+		// Now delete the successive element.
+		pos.node = rightChild;
+		pos.pos = 0;
+		return CBAssociativeArrayDelete(self, pos);
+	}
+}
+void * CBAssociativeArrayGetData(CBAssociativeArray * self, CBFindResult res){
+	return (uint8_t *)(res.node + 1) + self->keySize * CB_BTREE_ORDER + res.pos * self->dataSize;
+}
+bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, void * data, CBFindResult pos, CBBTreeNode * right){
 	// See if we can insert data in this node
 	uint8_t * keys = (uint8_t *)(pos.node + 1);
 	uint8_t * dataElements = keys + self->keySize * CB_BTREE_ORDER;
@@ -165,8 +285,8 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, uint8_t 
 			memmove(keys + (pos.pos + 1) * self->keySize, keys + pos.pos * self->keySize, (CB_BTREE_HALF_ORDER - pos.pos) * self->keySize);
 			memmove(dataElements + (pos.pos + 1) * self->dataSize, dataElements + pos.pos * self->dataSize, (CB_BTREE_HALF_ORDER - pos.pos) * self->dataSize);
 			memmove(pos.node->children + pos.pos + 2, pos.node->children + pos.pos + 1, (CB_BTREE_HALF_ORDER - pos.pos) * self->dataSize);
-			memmove(keys + pos.pos * self->keySize, key, self->keySize);
-			memmove(dataElements + pos.pos * self->dataSize, data, self->dataSize);
+			memcpy(keys + pos.pos * self->keySize, key, self->keySize);
+			memcpy(dataElements + pos.pos * self->dataSize, data, self->dataSize);
 			// Insert right to inserted area
 			pos.node->children[pos.pos + 1] = right;
 			// Middle value

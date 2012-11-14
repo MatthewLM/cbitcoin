@@ -33,10 +33,16 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 	}
 	// Check data consistency
 	if (NOT CBBlockChainStorageEnsureConsistent((uint64_t) self)){
+		free(self);
 		logError("The database is inconsistent and could not be recovered in CBNewBlockChainStorage");
 		return 0;
 	}
 	// Load index
+	if (NOT CBInitAssociativeArray(self->index, 6, sizeof(CBIndexValue))){
+		free(self);
+		logError("Could not initialise the database index.");
+		return 0;
+	}
 	char filemame[strlen(dataDir) + 6];
 	memcpy(filemame, dataDir, strlen(dataDir));
 	strcpy(filemame + strlen(dataDir), "0.dat");
@@ -74,19 +80,8 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 			return 0;
 		}
 		self->lastSize = CBArrayToInt32(data, 0);
-		// First allocate index data
-		if (self->numValues) {
-			self->index = malloc(sizeof(*self->index) * numValues);
-			if (NOT self->index) {
-				close(indexRead);
-				free(self);
-				logError("Could not allocate data for the database index.");
-				return 0;
-			}
-		}else
-			self->index = NULL;
 		// Now read index
-		for (uint32_t x = 0; x < self->numValues; x++) {
+		for (uint32_t x = 0; x < numValues; x++) {
 			if (read(indexRead, data, 16) != 16) {
 				close(indexRead);
 				free(self);
@@ -95,22 +90,22 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 				return 0;
 			}
 			// Add data to index
-			bool found;
-			uint32_t x = CBBlockChainStorageFindKey(self, data + 6, &found);
-			if (self->numValues > x)
-				memmove(self->index + x + 1, self->index + x, self->numValues - x);
-			memcpy(self->index[x].key, data, 6);
-			self->index[x].fileID = CBArrayToInt16(data, 6);
-			self->index[x].pos = CBArrayToInt32(data, 8);
-			self->index[x].length = CBArrayToInt32(data, 12);
-			self->numValues++;
+			CBIndexValue val;
+			val.fileID = CBArrayToInt16(data, 6);
+			val.pos = CBArrayToInt32(data, 8);
+			val.length = CBArrayToInt32(data, 12);
+			val.indexPos = x;
+			if (NOT CBAssociativeArrayInsert(self->index, data, &val, CBAssociativeArrayFind(self->index, data), NULL)){
+				close(indexRead);
+				free(self);
+				logError("Could not insert data into the database index.");
+				return 0;
+			}
 		}
 		// Close file
 		close(indexRead);
 	}else{
 		// Else empty index
-		self->numValues = 0;
-		self->index = NULL;
 		self->lastFile = 1;
 		int indexAppend = open(filemame, O_WRONLY | O_CREAT);
 		if (NOT indexAppend) {
@@ -136,7 +131,13 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 		}
 		close(indexAppend);
 	}
-	// Open deletion index
+	// Load deletion index
+	if (NOT CBInitAssociativeArray(self->deletionIndex, 5, sizeof(CBDeletedSection))){
+		free(self);
+		free(self->index);
+		logError("Could not initialise the database deletion index.");
+		return 0;
+	}
 	filemame[strlen(dataDir)] = '1';
 	// First check that the index exists
 	if (NOT access(filemame, F_OK)) {
@@ -158,21 +159,9 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 			logError("Could not read the number of entries from the database deletion index.");
 			return 0;
 		}
-		self->numDeletions = CBArrayToInt32(data, 0);
-		// Make deletion index
-		if (self->numDeletions) {
-			self->deletionIndex = malloc(sizeof(*self->deletionIndex) * self->numDeletions);
-			if (NOT self->deletionIndex) {
-				close(indexRead);
-				free(self);
-				free(self->index);
-				logError("Could not allocate data for the database deletion index.");
-				return 0;
-			}
-		}else
-			self->deletionIndex = NULL;
+		uint32_t numDeletions = CBArrayToInt32(data, 0);
 		// Now read index
-		for (uint32_t x = 0; x < self->numDeletions; x++) {
+		for (uint32_t x = 0; x < numDeletions; x++) {
 			if (read(indexRead, data, 11) != 11) {
 				close(indexRead);
 				free(self);
@@ -182,15 +171,20 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 				return 0;
 			}
 			// Add data to index
-			self->deletionIndex[x].active = data[0];
-			self->deletionIndex[x].fileID = CBArrayToInt16(data, 1);
-			self->deletionIndex[x].pos = CBArrayToInt32(data, 3);
-			self->deletionIndex[x].length = CBArrayToInt32(data, 7);
+			CBDeletedSection section;
+			section.fileID = CBArrayToInt16(data, 0);
+			section.pos = CBArrayToInt32(data, 2);
+			if (NOT CBAssociativeArrayInsert(self->deletionIndex, data + 6, &section, CBAssociativeArrayFind(self->deletionIndex, data + 7), NULL)) {
+				close(indexRead);
+				free(self);
+				free(self->index);
+				free(self->deletionIndex);
+				logError("Could not insert entry to the database deletion index.");
+				return 0;
+			}
 		}
 	}else{
 		// Else empty deletion index
-		self->deletionIndex = NULL;
-		self->numDeletions = 0;
 		int indexAppend = open(filemame, O_WRONLY | O_CREAT);
 		if (NOT indexAppend) {
 			free(self);
@@ -319,83 +313,86 @@ bool CBBlockChainStorageCommitData(uint64_t iself){
 	// Go through each key
 	for (uint8_t x = 0; x < self->numValueWrites; x++) {
 		// Check for key in index
-		bool found;
-		uint32_t pos = CBBlockChainStorageFindKey(self, self->valueWrites[x].key, &found);
-		if (found) {
+		CBFindResult res = CBAssociativeArrayFind(self->index, self->valueWrites[x].key);
+		if (res.found) {
 			// Exists in index so we are overwriting data.
 			// See if the data can be overwritten.
-			if (self->index[pos].length >= self->valueWrites[x].totalLen){
+			CBIndexValue * indexValue = CBAssociativeArrayGetData(self->index, res);
+			if (indexValue->length >= self->valueWrites[x].totalLen){
 				// We are going to overwrite the previous data.
-				if (NOT CBBlockChainStorageAddOverwrite(self, self->index[pos].fileID, self->valueWrites[x].data, self->index[pos].pos + self->valueWrites[x].offset, self->valueWrites[x].dataLen)){
+				if (NOT CBBlockChainStorageAddOverwrite(self, indexValue->fileID, self->valueWrites[x].data, indexValue->pos + self->valueWrites[x].offset, self->valueWrites[x].dataLen)){
 					self->logError("Failed to add an overwrite operation to overwrite a previous value.");
 					return false;
 				}
-				if (self->index[pos].length > self->valueWrites[x].totalLen) {
+				if (indexValue->length > self->valueWrites[x].totalLen) {
 					// Change indexed length and mark the remaining length as deleted
-					if (NOT CBBlockChainStorageAddDeletionEntry(self, self->index[pos].fileID, self->index[pos].pos + self->index[pos].length, self->index[pos].length - self->valueWrites[x].totalLen)){
+					if (NOT CBBlockChainStorageAddDeletionEntry(self, indexValue->fileID, indexValue->pos + indexValue->length, indexValue->length - self->valueWrites[x].totalLen)){
 						self->logError("Failed to add a deletion entry when overwriting a previous value with a smaller one.");
 						return false;
 					}
-					self->index[pos].length = self->valueWrites[x].totalLen;
+					indexValue->length = self->valueWrites[x].totalLen;
 					uint8_t newLength[4];
-					CBInt32ToArray(newLength, 0, self->index[pos].length);
-					if (NOT CBBlockChainStorageAddOverwrite(self, 0, newLength, 22 + 16 * pos, 4)) {
+					CBInt32ToArray(newLength, 0, indexValue->length);
+					if (NOT CBBlockChainStorageAddOverwrite(self, 0, newLength, 28 + 16 * indexValue->indexPos, 4)) {
 						self->logError("Failed to add an overwrite operation to write the new length of a value to the database index.");
 						return false;
 					}
 				}
 			}else{
 				// We will mark the previous data as deleted and store data elsewhere
-				if (NOT CBBlockChainStorageAddDeletionEntry(self, self->index[pos].fileID, self->index[pos].pos, self->index[pos].length)){
+				if (NOT CBBlockChainStorageAddDeletionEntry(self, indexValue->fileID, indexValue->pos, indexValue->length)){
 					self->logError("Failed to add a deletion entry for an old value when replacing it with a larger one.");
 					return false;
 				}
-				if (self->valueWrites[x].totalLen > UINT32_MAX - self->lastSize){
-					self->lastFile++;
-					self->lastSize = self->valueWrites[x].totalLen;
-				}else
-					self->lastSize += self->valueWrites[x].totalLen;
-				if (self->valueWrites[x].offset) {
-					// Append upto offset
-					if (NOT CBBlockChainStorageAddAppend(self, self->lastFile, NULL, self->valueWrites[x].dataLen)) {
-						self->logError("Failed to add an append operation for the offset to a value replacing an older one.");
+				// Look for a deleted section to use
+				CBFindResult res = CBBlockChainStorageGetDeletedSection(self, self->valueWrites[x].totalLen);
+				if (res.found) {
+					// Found a deleted section we can use for the data
+					HERE
+				}else{
+					// No suitable deleted section, therefore append the data
+					if (self->valueWrites[x].totalLen > UINT32_MAX - self->lastSize){
+						self->lastFile++;
+						self->lastSize = self->valueWrites[x].totalLen;
+					}else
+						self->lastSize += self->valueWrites[x].totalLen;
+					if (self->valueWrites[x].offset) {
+						// Append upto offset
+						if (NOT CBBlockChainStorageAddAppend(self, self->lastFile, NULL, self->valueWrites[x].dataLen)) {
+							self->logError("Failed to add an append operation for the offset to a value replacing an older one.");
+							return false;
+						}
+					}
+					if (NOT CBBlockChainStorageAddAppend(self, self->lastFile, self->valueWrites[x].data, self->valueWrites[x].dataLen)) {
+						self->logError("Failed to add an append operation for the value replacing an older one.");
 						return false;
 					}
-				}
-				if (NOT CBBlockChainStorageAddAppend(self, self->lastFile, self->valueWrites[x].data, self->valueWrites[x].dataLen)) {
-					self->logError("Failed to add an append operation for the value replacing an older one.");
-					return false;
-				}
-				if (self->valueWrites[x].offset + self->valueWrites[x].dataLen < self->valueWrites[x].totalLen) {
-					// Append upto the total length, the previous data
-					if (NOT CBBlockChainStorageAddAppend(self, self->lastFile, NULL, self->valueWrites[x].totalLen - self->valueWrites[x].dataLen - self->valueWrites[x].offset)) {
-						self->logError("Failed to add an append operation for the remaining length to a value replacing an older one.");
-						return false;
+					if (self->valueWrites[x].offset + self->valueWrites[x].dataLen < self->valueWrites[x].totalLen) {
+						// Append the previous data upto the total length.
+						if (NOT CBBlockChainStorageAddAppend(self, self->lastFile, NULL, self->valueWrites[x].totalLen - self->valueWrites[x].dataLen - self->valueWrites[x].offset)) {
+							self->logError("Failed to add an append operation for the remaining length to a value replacing an older one.");
+							return false;
+						}
 					}
+
 				}
 				// Update index
-				self->index[pos].fileID = self->lastFile;
-				self->index[pos].pos = self->lastSize - self->valueWrites[x].totalLen;
-				self->index[pos].length = self->valueWrites[x].totalLen;
+				indexValue->fileID = self->lastFile;
+				indexValue->pos = self->lastSize - self->valueWrites[x].totalLen;
+				indexValue->length = self->valueWrites[x].totalLen;
 				uint8_t data[10];
-				CBInt16ToArray(data, 0, self->index[pos].fileID);
-				if (NOT CBBlockChainStorageAddOverwrite(self, 0, data, 16 + 16 * pos, 10)) {
+				CBInt16ToArray(data, 0, indexValue->fileID);
+				CBInt32ToArray(data, 2, indexValue->pos);
+				CBInt32ToArray(data, 6, indexValue->length);
+				if (NOT CBBlockChainStorageAddOverwrite(self, 0, data, 22 + 16 * indexValue->indexPos, 10)) {
 					self->logError("Failed to add an overwrite operation for updating the index for moving a value.");
 					return false;
 				}
 			}
 		}else{
 			// Does not exist in index, so we are creating new data
-			CBKeyValuePair * temp = 
-			if (self->numValues > x)
-				memmove(self->index + x + 1, self->index + x, self->numValues - x);
-			self->numValues++;
-			// Look for deleted data
-			uint32_t x = 0;
-			for (; x < self->numDeletions; x++)
-				if (self->deletionIndex[x].active && self->deletionIndex[x].length >= self->valueWrites[x].totalLen)
-					break;
-			if (x == self->numDeletions) {
+			// Look for deleted data large enough
+			
 				// No deleted regions to use
 				if (self->valueWrites[x].totalLen > UINT32_MAX - self->lastSize){
 					self->lastFile++;
@@ -520,30 +517,15 @@ bool CBBlockChainStorageAddOverwrite(CBBlockChainStorage * self, uint16_t fileID
 	self->files[x].overwriteOperations[self->files[x].numOverwriteOperations - 1].size = dataLen;
 	return true;
 }
-uint32_t CBBlockChainStorageFindKey(CBBlockChainStorage * self, uint8_t key[6], bool * found){
-	// Binary search for key
-	if (NOT self->numValues){
-		// No keys yet so add at index 0
-		*found = false;
-		return 0;
-	}
-	uint32_t left = 0;
-	uint32_t right = self->numValues - 1;
-	uint32_t mid;
-	while (left <= right) {
-		mid = (right+left)/2;
-		int res = memcmp(key, self->index[mid].key, 6);
-		if (res == 0) {
-			*found = true;
-			return mid;
-		}else if (res < 0){
-			if (NOT mid)
-				break;
-			right = mid - 1;
-		}else{
-			left = mid + 1;
-		}
-	}
-	*found = false;
-	return mid;
+CBFindResult CBBlockChainStorageGetDeletedSection(CBBlockChainStorage * self, uint32_t length){
+	CBFindResult res;
+	res.node = self->deletionIndex->root;
+	for (; res.node->children[res.node->numElements]; res.node = res.node->children[res.node->numElements]);
+	uint8_t * key = (uint8_t *)(res.node + 1);
+	uint8_t data[5];
+	data[0] = 1;
+	CBInt32ToArrayBigEndian(data, 1, length);
+	res.pos = res.node->numElements - 1;
+	res.found = res.node->numElements && memcmp(key, data, 5) > 0;
+	return res;
 }

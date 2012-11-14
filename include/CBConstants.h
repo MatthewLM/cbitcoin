@@ -97,8 +97,16 @@
                                      | (uint64_t)arr[offset + 5] << 40 
 #define CBArrayToInt64(arr,offset) CBArrayToInt48(arr,offset) \
                                      | (uint64_t)arr[offset + 6] << 48 \
-                                     | (uint64_t)arr[offset + 7] << 56 
-#define CB_BTREE_ORDER 32 // Algorithm only works with even values. Best with powers of 2.
+                                     | (uint64_t)arr[offset + 7] << 56
+#define CBInt32ToArrayBigEndian(arr,offset,i) arr[offset] = i >> 24; \
+										      arr[offset + 1] = i >> 16;\
+                                              arr[offset + 2] = i >> 8; \
+                                              arr[offset + 3] = i;
+#define CBArrayToInt32BigEndian(arr,offset) arr[offset] << 24 \
+                                              | (uint16_t)arr[offset + 1] << 16 \
+                                              | (uint32_t)arr[offset + 2] << 8 \
+                                              | (uint32_t)arr[offset + 3]
+#define CB_BTREE_ORDER 32 // Algorithm only works with even values. Best with powers of 2. This refers to the number of elements and not children.
 #define CB_BTREE_HALF_ORDER CB_BTREE_ORDER/2
 
 

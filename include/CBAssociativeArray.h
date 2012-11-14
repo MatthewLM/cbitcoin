@@ -63,6 +63,13 @@ typedef struct{
 } CBAssociativeArray;
 
 /**
+ @brief Deletes an element from an array.
+ @param self The array object
+ @param pos The result from CBAssociativeArrayFind which determines the position to delete data.
+ @returns true on success and false on failure.
+ */
+bool CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos);
+/**
  @brief Finds data for a key in the array
  @param self The array object
  @param key The key to search for.
@@ -70,14 +77,22 @@ typedef struct{
  */
 CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key);
 /**
- @brief Finds data for a key in the array
+ @brief Gets the data for a CBFindResult
+ @param self The array
+ @param res The return value to CBAssociativeArrayFind.
+ @returns A pointer to the data.
+ */
+void * CBAssociativeArrayGetData(CBAssociativeArray * self, CBFindResult res);
+/**
+ @brief Inserts an element into an array.
  @param self The array object
- @param key The key to search for.
+ @param key The key to insert
+ @param data The data to insert
  @param pos The result from CBAssociativeArrayFind which determines the position to insert data.
  @oaram right The child to the right of the value we are inserting, which will be a new child from a split or NULL for a new value.
  @returns true on success and false on failure.
  */
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, uint8_t * data, CBFindResult pos, CBBTreeNode * right);
+bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, void * data, CBFindResult pos, CBBTreeNode * right);
 /**
  @brief Does a binary search on a B-tree node.
  @param self The node

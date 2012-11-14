@@ -35,6 +35,7 @@ void onErrorReceived(char * format,...){
 }
 
 int main(){
+	// ??? Add more in-depth tests.
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %u\n",s);
 	srand(s);

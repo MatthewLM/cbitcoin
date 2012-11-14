@@ -33,27 +33,26 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "CBDependencies.h"
+#include "CBAssociativeArray.h"
 
 #define CB_MAX_VALUE_WRITES 3
 
 /**
- @brief A key/value pair which references the value's data position
+ @brief An index value which references the value's data position
  */
 typedef struct{
-	uint8_t key[6];
+	uint32_t indexPos; /**< The position in the index file where this value exists */
 	uint16_t fileID; /**< The file ID for the data or 0 if deleted */
 	uint32_t pos; /**< The position of the data in the file. */
 	uint32_t length; /**< The length of the data */
-} CBKeyValuePair;
+} CBIndexValue;
 
 /**
  @brief Describes a deleted section of the database.
  */
 typedef struct{
-	bool active; /**< If true this describes a deleted section of the database, if false this no longer applies. */
 	uint16_t fileID; /**< The ID of the file with the deleted section. */
 	uint32_t pos; /**< The position in the file with the deleted section. */
-	uint32_t length; /**< The length of the deleted section. */
 } CBDeletedSection;
 
 /**
@@ -73,12 +72,10 @@ typedef struct{
  */
 typedef struct{
 	char * dataDir; /**< The data directory. */
-	CBKeyValuePair * index; /**< Index of all key/value pairs */
-	uint32_t numValues; /**< The number of key/value pairs */
+	CBAssociativeArray * index; /**< Index of all key/value pairs */
 	uint16_t lastFile; /**< The last file ID. */
 	uint32_t lastSize; /**< Size of last file */
-	CBDeletedSection * deletionIndex; /**< Index of all deleted sections */
-	uint32_t numDeletions; /**< Number of deletion entries */
+	CBAssociativeArray * deletionIndex; /**< Index of all deleted sections. The key begins with 0x01 if the deleted section is active or 0x00 if it is no longer active, the key is then followed by the length in big endian. */
 	CBWriteValue valueWrites[CB_MAX_VALUE_WRITES]; /**< Values to write */
 	uint8_t numValueWrites; /**< The number of values to write */
 	void (*logError)(char *,...);
@@ -120,12 +117,11 @@ bool CBBlockChainStorageAddDeletionEntry(CBBlockChainStorage * self, uint16_t fi
  */
 bool CBBlockChainStorageAddOverwrite(CBBlockChainStorage * self, uint16_t fileID, uint8_t * data, uint64_t offset, uint32_t dataLen);
 /**
- @brief Find key position.
+ @brief Returns a CBFindResult for largest active deleted section and "found" will be true if the largest active deleted section is above a length.
  @param self The storage object.
- @param key The key to find.
- @param found Will be set to true if found or false if not.
- @retruns The position of the key.
+ @param length The minimum length required.
+ @returns The largest active deleted section as a CBFindResult.
  */
-uint32_t CBBlockChainStorageFindKey(CBBlockChainStorage * self, uint8_t key[6], bool * found);
+CBFindResult CBBlockChainStorageGetDeletedSection(CBBlockChainStorage * self, uint32_t length);
 
 #endif
