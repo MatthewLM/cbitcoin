@@ -104,19 +104,19 @@ int main(){
 	res = CBAssociativeArrayFind(&array, key);
 	if (res.node != array.root) {
 		printf("INSERT MIDDLE SPLIT NODE FAIL\n");
-		return 0;
+		return 1;
 	}
 	if (NOT res.found) {
 		printf("INSERT MIDDLE SPLIT FOUND FAIL\n");
-		return 0;
+		return 1;
 	}
 	if (res.pos) {
 		printf("INSERT MIDDLE SPLIT POS FAIL\n");
-		return 0;
+		return 1;
 	}
 	if (memcmp((uint8_t *)(res.node + 1), (uint8_t *)(res.node + 1) + CB_BTREE_ORDER*3, 3)) {
 		printf("INSERT MIDDLE SPLIT DATA FAIL\n");
-		return 0;
+		return 1;
 	}
 	// Check the split sides
 	// Left side
@@ -127,19 +127,19 @@ int main(){
 		res = CBAssociativeArrayFind(&array, key);
 		if (res.node != array.root->children[0]) {
 			printf("LEFT CHILD NODE FAIL\n");
-			return 0;
+			return 1;
 		}
 		if (NOT res.found) {
 			printf("LEFT CHILD FOUND FAIL\n");
-			return 0;
+			return 1;
 		}
 		if (res.pos != x) {
 			printf("LEFT CHILD POS FAIL\n");
-			return 0;
+			return 1;
 		}
 		if (memcmp((uint8_t *)(res.node + 1) + x*3, (uint8_t *)(res.node + 1) + (CB_BTREE_ORDER + x)*3, 3)) {
 			printf("LEFT CHILD DATA FAIL\n");
-			return 0;
+			return 1;
 		}
 	}
 	// Right side
@@ -150,22 +150,178 @@ int main(){
 		res = CBAssociativeArrayFind(&array, key);
 		if (res.node != array.root->children[1]) {
 			printf("RIGHT CHILD NODE FAIL\n");
-			return 0;
+			return 1;
 		}
 		if (NOT res.found) {
 			printf("RIGHT CHILD FOUND FAIL\n");
-			return 0;
+			return 1;
 		}
 		if (res.pos != x - CB_BTREE_HALF_ORDER) {
 			printf("RIGHT CHILD POS FAIL\n");
-			return 0;
+			return 1;
 		}
 		if (memcmp((uint8_t *)(res.node + 1) + x*3, (uint8_t *)(res.node + 1) + (CB_BTREE_ORDER + x)*3, 3)) {
 			printf("RIGHT CHILD DATA FAIL\n");
-			return 0;
+			return 1;
 		}
 	}
 	// Insert 16 values to left child
-	
+	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
+		key[0] = CB_BTREE_HALF_ORDER - 1;
+		key[1] = 128 + x;
+		key[2] = 0;
+		CBAssociativeArrayInsert(&array, key, key, CBAssociativeArrayFind(&array, key), NULL);
+	}
+	// Add value to the right of the left child
+	key[0] = CB_BTREE_HALF_ORDER - 1;
+	key[1] = 128 + CB_BTREE_HALF_ORDER/2;
+	key[2] = 127;
+	CBAssociativeArrayInsert(&array, key, key, CBAssociativeArrayFind(&array, key), NULL);
+	// Now check root
+	key[0] = CB_BTREE_HALF_ORDER - 1;
+	key[1] = 128;
+	key[2] = 0;
+	res = CBAssociativeArrayFind(&array, key);
+	if (res.node != array.root) {
+		printf("INSERT RIGHT SPLIT NODE FAIL\n");
+		return 1;
+	}
+	if (NOT res.found) {
+		printf("INSERT RIGHT SPLIT FOUND FAIL\n");
+		return 1;
+	}
+	if (res.pos) {
+		printf("INSERT RIGHT SPLIT POS FAIL\n");
+		return 1;
+	}
+	if (memcmp((uint8_t *)(res.node + 1), (uint8_t *)(res.node + 1) + CB_BTREE_ORDER*3, 3)) {
+		printf("INSERT RIGHT SPLIT DATA FAIL\n");
+		return 1;
+	}
+	// Check left child
+	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
+		key[0] = x;
+		key[1] = 126;
+		key[2] = 0;
+		res = CBAssociativeArrayFind(&array, key);
+		if (res.node != array.root->children[0]) {
+			printf("RIGHT SPLIT LEFT CHILD NODE FAIL\n");
+			return 1;
+		}
+		if (NOT res.found) {
+			printf("RIGHT SPLIT LEFT CHILD FOUND FAIL\n");
+			return 1;
+		}
+		if (res.pos != x) {
+			printf("RIGHT SPLIT LEFT CHILD POS FAIL\n");
+			return 1;
+		}
+		if (memcmp((uint8_t *)(res.node + 1) + x*3, (uint8_t *)(res.node + 1) + (CB_BTREE_ORDER + x)*3, 3)) {
+			printf("RIGHT SPLIT LEFT CHILD DATA FAIL\n");
+			return 1;
+		}
+	}
+	// Check middle child
+	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
+		key[0] = CB_BTREE_HALF_ORDER - 1;
+		key[1] = 128 + x + 1 - ((x >= CB_BTREE_HALF_ORDER/2) ? 1 : 0);
+		key[2] = (x == CB_BTREE_HALF_ORDER/2) ? 127 : 0;
+		res = CBAssociativeArrayFind(&array, key);
+		if (res.node != array.root->children[1]) {
+			printf("RIGHT SPLIT MID CHILD NODE FAIL\n");
+			return 1;
+		}
+		if (NOT res.found) {
+			printf("RIGHT SPLIT MID CHILD FOUND FAIL\n");
+			return 1;
+		}
+		if (res.pos != x) {
+			printf("RIGHT SPLIT MID CHILD POS FAIL\n");
+			return 1;
+		}
+		if (memcmp((uint8_t *)(res.node + 1) + x*3, (uint8_t *)(res.node + 1) + (CB_BTREE_ORDER + x)*3, 3)) {
+			printf("RIGHT SPLIT MID CHILD DATA FAIL\n");
+			return 1;
+		}
+	}
+	// Insert 16 values to right child
+	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
+		key[0] = CB_BTREE_ORDER;
+		key[1] = x;
+		key[2] = 0;
+		CBAssociativeArrayInsert(&array, key, key, CBAssociativeArrayFind(&array, key), NULL);
+	}
+	// Add value to left side of right child
+	key[0] = (CB_BTREE_ORDER*3)/4;
+	key[1] = 125;
+	key[2] = 0;
+	CBAssociativeArrayInsert(&array, key, key, CBAssociativeArrayFind(&array, key), NULL);
+	// Check root
+	key[0] = CB_BTREE_ORDER - 1;
+	key[1] = 126;
+	key[2] = 0;
+	res = CBAssociativeArrayFind(&array, key);
+	if (res.node != array.root) {
+		printf("INSERT LEFT SPLIT NODE FAIL\n");
+		return 1;
+	}
+	if (NOT res.found) {
+		printf("INSERT LEFT SPLIT FOUND FAIL\n");
+		return 1;
+	}
+	if (res.pos != 2) {
+		printf("INSERT LEFT SPLIT POS FAIL\n");
+		return 1;
+	}
+	if (memcmp((uint8_t *)(res.node + 1) + 6, (uint8_t *)(res.node + 1) + CB_BTREE_ORDER*3 + 6, 3)) {
+		printf("INSERT LEFT SPLIT DATA FAIL\n");
+		return 1;
+	}
+	// Check 3rd child
+	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
+		key[0] = CB_BTREE_HALF_ORDER + x - ((x > CB_BTREE_HALF_ORDER/2) ? 1 : 0);
+		key[1] = 126 - ((x == CB_BTREE_HALF_ORDER/2) ? 1 : 0);
+		key[2] = 0;
+		res = CBAssociativeArrayFind(&array, key);
+		if (res.node != array.root->children[2]) {
+			printf("LEFT SPLIT 3RD CHILD NODE FAIL\n");
+			return 1;
+		}
+		if (NOT res.found) {
+			printf("LEFT SPLIT 3RD CHILD FOUND FAIL\n");
+			return 1;
+		}
+		if (res.pos != x) {
+			printf("LEFT SPLIT 3RD CHILD POS FAIL\n");
+			return 1;
+		}
+		if (memcmp((uint8_t *)(res.node + 1) + x*3, (uint8_t *)(res.node + 1) + (CB_BTREE_ORDER + x)*3, 3)) {
+			printf("LEFT SPLIT 3RD CHILD DATA FAIL\n");
+			return 1;
+		}
+	}
+	// Check 4th child
+	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
+		key[0] = CB_BTREE_ORDER;
+		key[1] = x;
+		key[2] = 0;
+		res = CBAssociativeArrayFind(&array, key);
+		if (res.node != array.root->children[3]) {
+			printf("LEFT SPLIT 4TH CHILD NODE FAIL\n");
+			return 1;
+		}
+		if (NOT res.found) {
+			printf("LEFT SPLIT 4TH CHILD FOUND FAIL\n");
+			return 1;
+		}
+		if (res.pos != x) {
+			printf("LEFT SPLIT 4TH CHILD POS FAIL\n");
+			return 1;
+		}
+		if (memcmp((uint8_t *)(res.node + 1) + x*3, (uint8_t *)(res.node + 1) + (CB_BTREE_ORDER + x)*3, 3)) {
+			printf("LEFT SPLIT 4TH CHILD DATA FAIL\n");
+			return 1;
+		}
+	}
 	return 0;
 }

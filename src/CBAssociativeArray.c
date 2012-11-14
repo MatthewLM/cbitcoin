@@ -36,12 +36,12 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
 			result.node = node;
 			return result;
 		}else{
-			// We have not found the data on this node, check to see if the child exists
-			if (self->root->children[result.pos])
+			// We have not found the data on this node, if there is a child go to the child.
+			if (node->children[result.pos])
 				// Child exists, move to it
-				node = self->root->children[result.pos];
+				node = node->children[result.pos];
 			else{
-				// Child does not exist. Return as not found with position for insertion.
+				// The child doesn't exist. Return as not found with position for insertion.
 				result.node = node;
 				return result;
 			}
@@ -74,7 +74,6 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, uint8_t 
 		CBBTreeNode * new = malloc(self->nodeSize);
 		if (NOT new)
 			return false;
-		new->numElements = CB_BTREE_HALF_ORDER;
 		uint8_t * newKeys = (uint8_t *)(new + 1);
 		uint8_t * newData = newKeys + self->keySize * CB_BTREE_ORDER;
 		// Make both sides have half the order.
@@ -166,6 +165,8 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, uint8_t 
 			memmove(keys + (pos.pos + 1) * self->keySize, keys + pos.pos * self->keySize, (CB_BTREE_HALF_ORDER - pos.pos) * self->keySize);
 			memmove(dataElements + (pos.pos + 1) * self->dataSize, dataElements + pos.pos * self->dataSize, (CB_BTREE_HALF_ORDER - pos.pos) * self->dataSize);
 			memmove(pos.node->children + pos.pos + 2, pos.node->children + pos.pos + 1, (CB_BTREE_HALF_ORDER - pos.pos) * self->dataSize);
+			memmove(keys + pos.pos * self->keySize, key, self->keySize);
+			memmove(dataElements + pos.pos * self->dataSize, data, self->dataSize);
 			// Insert right to inserted area
 			pos.node->children[pos.pos + 1] = right;
 			// Middle value
@@ -183,6 +184,8 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, uint8_t 
 			pos.node->parent = self->root;
 			self->root->children[0] = pos.node; // Make left the left split node.
 		}
+		// New node requires that the parent be set
+		new->parent = pos.node->parent;
 		// Find position of value in parent and then insert.
 		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKey, self->keySize);
 		res.node = pos.node->parent;

@@ -56,6 +56,7 @@ void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum){
 	uint8_t hash[32];
 	for (uint32_t x = 0; hashNum != 1;) {
 		if (x == hashNum - 1) {
+			// Duplicate final hash
 			uint8_t dup[64];
 			memcpy(dup, hashes + x * 32, 32);
 			memcpy(dup + 32, hashes + x * 32, 32);
