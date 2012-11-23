@@ -21,7 +21,7 @@
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
-#include "CBBlockChainStorage.h"
+//#include "CBBlockChainStorage.h"
 #include "CBDependencies.h"
 #include <time.h>
 #include "stdarg.h"
@@ -36,7 +36,7 @@ void logError(char * format,...){
 }
 
 int main(){
-	unsigned int s = (unsigned int)time(NULL);
+	/*unsigned int s = (unsigned int)time(NULL);
 	s = 1337544566;
 	printf("Session = %ui\n",s);
 	srand(s);
@@ -97,6 +97,6 @@ int main(){
 		printf("INITIAL NUM VALUE WRITES FAIL\n");
 		return 0;
 	}
-	CBFreeBlockChainStorage((uint64_t)storageObj);
+	CBFreeBlockChainStorage((uint64_t)storageObj);*/
 	return 0;
 }

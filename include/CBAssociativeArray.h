@@ -41,6 +41,7 @@ typedef struct{
 	void * parent; /**< The parent node */
 	void * children[CB_BTREE_ORDER + 1]; /**< Children nodes */
 	uint8_t numElements; /**< The number of elements */
+	uint8_t * elements[CB_BTREE_ORDER]; /**< The elements cointaining key-value pairs and can be dereferenced to uint8_t for access to the keys */
 } CBBTreeNode;
 
 /**
@@ -57,8 +58,6 @@ typedef struct{
  */
 typedef struct{
 	uint8_t keySize; /**< The size of the keys */
-	uint8_t dataSize; /**< The size of the data */
-	uint16_t nodeSize; /**< The size of a B-tree node */
 	CBBTreeNode * root; /**< The root of the B-tree */
 } CBAssociativeArray;
 
@@ -77,22 +76,14 @@ bool CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos);
  */
 CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key);
 /**
- @brief Gets the data for a CBFindResult
- @param self The array
- @param res The return value to CBAssociativeArrayFind.
- @returns A pointer to the data.
- */
-void * CBAssociativeArrayGetData(CBAssociativeArray * self, CBFindResult res);
-/**
  @brief Inserts an element into an array.
- @param self The array object
- @param key The key to insert
- @param data The data to insert
+ @param self The array object.
+ @param key The key-value pair to insert.
  @param pos The result from CBAssociativeArrayFind which determines the position to insert data.
  @oaram right The child to the right of the value we are inserting, which will be a new child from a split or NULL for a new value.
  @returns true on success and false on failure.
  */
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * key, void * data, CBFindResult pos, CBBTreeNode * right);
+bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBFindResult pos, CBBTreeNode * right);
 /**
  @brief Does a binary search on a B-tree node.
  @param self The node
@@ -115,9 +106,8 @@ void CBFreeBTreeNode(CBBTreeNode * self);
  @brief Initialises an empty associative array.
  @param self The array object
  @param keySize The size of the keys for the array in bytes.
- @param dataSize The size of the data elements for the array in bytes.
  @returns true on success and false on failure.
  */
-bool CBInitAssociativeArray(CBAssociativeArray * self, uint8_t keySize, uint8_t dataSize);
+bool CBInitAssociativeArray(CBAssociativeArray * self, uint8_t keySize);
 
 #endif

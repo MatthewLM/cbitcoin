@@ -22,6 +22,7 @@
 
 #include "CBFullValidator.h"
 #include <stdarg.h>
+#include <stdio.h>
 
 static struct {
     uint8_t extranonce;
@@ -54,8 +55,8 @@ static struct {
     {2, 0x03e8779a}, {1, 0x98f34d8f}, {1, 0xc07b2b07}, {1, 0xdfe29668},
 };
 
-void onErrorReceived(CCBrror a,char * format,...);
-void onErrorReceived(CCBrror a,char * format,...){
+void onErrorReceived(char * format,...);
+void onErrorReceived(char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -64,7 +65,7 @@ void onErrorReceived(CCBrror a,char * format,...){
 }
 
 int main(){
-	remove("./validation.dat");
+	/*remove("./validation.dat");
 	remove("./branch0.dat");
 	remove("./blocks0-0.dat");
 	remove("./blocks1-0.dat");
@@ -584,6 +585,6 @@ int main(){
 	// Free data
 	CBReleaseObject(block1);
 	CBReleaseObject(validator);
-	CBReleaseObject(nullHash);
+	CBReleaseObject(nullHash);*/
 	return 0;
 }

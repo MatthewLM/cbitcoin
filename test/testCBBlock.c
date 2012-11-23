@@ -28,8 +28,8 @@
 #include "openssl/rand.h"
 #include "stdarg.h"
 
-void logError(CBError a,char * format,...);
-void logError(CBError a,char * format,...){
+void logError(char * format,...);
+void logError(char * format,...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);

@@ -216,7 +216,7 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vpeer){
 	}else
 		CBReleaseObject(peer);
 }
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,uint16_t penalty,bool stopping){
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,uint32_t penalty,bool stopping){
 	// Apply the penalty given
 	CBGetNetworkAddress(peer)->score -= penalty;
 	// Free logError if they exist
@@ -1153,9 +1153,9 @@ void CBNetworkCommunicatorOnTimeOut(void * vself,void * vpeer,CBTimeOutType type
 	}
 	if (CBGetNetworkAddress(peer)->public && CBGetNetworkAddress(peer)->ip){ // Cannot take peer as address in the case where the IP is NULL
 		CBRetainObject(peer); // Retain peer for returning to addresses list
-		CBNetworkCommunicatorDisconnect(self,peer, CB_24_HOURS, false); // Remove CBNetworkAddress. 1 day penalty.
+		CBNetworkCommunicatorDisconnect(self, peer, CB_24_HOURS, false); // Remove CBNetworkAddress. 1 day penalty.
 	}else
-		CBNetworkCommunicatorDisconnect(self,peer, CB_24_HOURS, false); // Remove CBNetworkAddress. 1 day penalty.
+		CBNetworkCommunicatorDisconnect(self, peer, CB_24_HOURS, false); // Remove CBNetworkAddress. 1 day penalty.
 	// Send event for network timeout. The peer will be NULL if it wasn't retained elsewhere.
 	self->onTimeOut(self->callbackHandler,self,peer, type);
 }

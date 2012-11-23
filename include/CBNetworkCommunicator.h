@@ -145,7 +145,7 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vpeer);
  @param penalty Penalty to the score of the address.
  @param stopping If true, do not call "onNetworkError" because the CBNetworkCommunicator is stopping.
  */
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,uint16_t penalty,bool stopping);
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,uint32_t penalty,bool stopping);
 /**
  @brief Gets a new version message for this.
  @param self The CBNetworkCommunicator object.

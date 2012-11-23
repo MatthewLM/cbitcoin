@@ -39,18 +39,20 @@ Christian von Roques
 Installation
 ------------
 
-Note: Installation may not work on the snapshots of cbitcoin. If you want to contribute a makefile, that would be very helpful.
+Note: Installation may not work or work completely on the snapshots of cbitcoin.
 
-cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13. To use you should have python installed. Run the BUILD.py file with a python 2 (tested 2.5 to 2.7) interpreter. The library will be built into a ./build/bin directory. The BUILD.py script takes the following parameters:
+cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13, and out of those it only works on OSX Mountain Lion. To install type into your terminal:
 
-**--all** Compile all the source files, even for source files which are older than any existing object files.  
-**--test** Build and run the test programs.  
-**--universal** Attempt to build a universal library when building for OSX.  
-**--debug** Compile with the "-g" flag and do not use optimisations.  
+    ./configure
+    make
 
-The top of the BUILD.py file contains a configuration section. This section allows you to add your own linker and compilation flags and also provide the locations of libraries for building the tests if you have passed "--test". By default the script will use settings depending on whether you are on OSX or Linux but you can modify the configuration for your own platform. Ensure AUTO_CONFIG is False if you are doing this.
+If you wish to test the library then type:
 
-The script has only been tested on OSX Mountain Lion 10.8.1 and Linux Mint 13 Maya. Contributions for successful builds on other systems are welcome.
+    make test
+
+The library will be built into a ./bin directory; there is no install target yet.
+
+If you are able to get it to work for other systems then please submit the changes. If you think you have found a debug, then you may wish to submit an issue on the gitbub repository page (https://github.com/MatthewLM/cbitcoin/). Otherwise you may wish to try to fix the problem yourself, in which case please submit fixes. You should check to see that the issue is not being worked upon already.
 
 Making a Contribution
 ---------------------
@@ -60,27 +62,15 @@ If you wish to contibute feedback please email Matthew Mitchell at cbitcoin@thel
 If you wish to contribute code:
 
 1. Fork the project on github: https://github.com/MatthewLM/cbitcoin
-2. Decide how you'd wish to contribute. You can search for occurances of "???". Each time you see comment with "???" it will describe any issues or potential improvements that can be made to the code. Please email Matthew Mitchell (cbitcoin@thelibertyportal.com) if you have any queries. Also look at the "Current Development Issues" below.
-3. Implement your changes.
-4. Document the changes if possible (See "Documenting" below)
-5. Make a pull request.
-6. Send an email to cbitcoin@thelibertyportal.com notifying that a request has been made.
-7. The changes will be pulled once approved.
+2. Decide how you'd wish to contribute. You can search for occurances of "???" in the sourcecode. Each time you see comment with "???" it will describe any issues or potential improvements that can be made to the code. Look at the issues on the github repository page and you may find something that you can do from there.
+3. Submit what you intend to do on the github repository page as an issue.
+4. Implement your changes.
+5. Document the changes if possible (See "Documenting" below)
+6. Make a pull request.
+7. Send an email to cbitcoin@thelibertyportal.com notifying that a request has been made.
+8. The changes will be pulled once approved.
 
-Current Development Issues
---------------------------
-
-* The CBAssociativeArray needs to be completed and tested.
-* The CBBlockChainStorage key/value database is incomplete.
-* The CBNetworkCommunicator code is buggy and is prone to crashing when running testCBNetworkCommunicator. This needs to be debugged.
-* The libev network dependency code does not work at all (In the experimental folder) and if it did work it could be a better alternative to libevent.
-* There is no makefile. A makefile would be helpful.
-* The CBSafeOutput code is through partial development and needs completing. The File-IO dependences need to be implemented in the dependencies folder.
-* The full block-chain validator needs to be thouroughly tested. Ideally test blocks need to be generated: https://bitcointalk.org/index.php?topic=119158.0
-* All the previous IO code in CBFullValidator needs to be adjusted to use the weak-linked functions.
-* In CBFullValidatorProcessBlock there is incomplete code which should merge branches (Complicated).
-* Everything needs to be reviewed and scrutinised for bugs and especially security issues or non-comformance with the bitcoin protocol.
-* The unit tests needs to be improved in all ways possible.
+Easy! Please email Matthew Mitchell (cbitcoin@thelibertyportal.com) if you have any queries.
 
 Coding Guidelines
 -----------------

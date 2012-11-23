@@ -24,8 +24,8 @@
 #include "CBAddress.h"
 #include <time.h>
 
-void logError(CBError a,char * b,...);
-void logError(CBError a,char * b,...){
+void logError(char * b,...);
+void logError(char * b,...){
 	printf("%s\n",b);
 	exit(EXIT_FAILURE);
 }

@@ -1,0 +1,137 @@
+# Flags
+
+INCDIR = $(CURDIR)/include
+BINDIR = $(CURDIR)/bin
+CFLAGS = -Wall -Wno-overflow -Wno-uninitialized -pedantic -std=c99 -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include -O3 @COMPILE_CONFIG_FLAGS@
+LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
+ifndef OSTYPE
+  OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
+  #export OSTYPE
+endif
+ifeq ($(OSTYPE),darwin)
+	LFLAGS += -flat_namespace -dynamiclib -undefined dynamic_lookup
+	LIBRARY_EXTENSION=.2.0.dylib
+else # Assuming Linux for now
+	LFLAGS += -shared
+	LIBRARY_EXTENSION=.so.2.0
+	ADDITIONAL_OPENSSL_FLAGS = -ldl -L/lib/x86_64-linux-gnu/
+endif
+LIBCFLAGS = @LIB_COMPILE_CONFIG_FLAGS@
+
+# Directory names
+
+# Set vpath search paths
+
+vpath %.h include
+vpath %.c src
+vpath %.o build
+vpath %.d build
+
+# Default goal
+
+all: core crypto random network #storage
+
+# Get files for the core library
+
+CORE_FILES = $(wildcard src/*.c)
+CORE_OBJS = $(patsubst src/%.c, build/%.o, $(CORE_FILES))
+
+# Core library target linking
+
+core : $(CORE_OBJS) | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin$(LIBRARY_EXTENSION) $(CORE_OBJS)
+
+# Include header prerequisites
+
+-include build/*.d
+
+# Objects depend on directory
+
+$(CORE_OBS) : | build
+
+# Create build directory
+
+build:
+	mkdir build
+
+# Create bin directory
+
+bin:
+	mkdir bin
+
+# Core Compilation
+
+$(CORE_OBJS): build/%.o: src/%.c
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -I$(INCDIR) -MM $< > build/$*.d
+	@cp build/$*.d build/$*.P
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+            -e '/^$$/ d' -e 's/$$/ :/' < build/$*.P >> build/$*.d;
+	@rm build/$*.P
+
+# Dependencies require include/CBDependencies.h as a prerequisite
+
+build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o BLibEventSockets.o: include/CBDependencies.h
+
+# Crypto library target linking
+
+crypto : build/CBOpenSSLCrypto.o | bin
+	$(CC) $(LFLAGS) $(ADDITIONAL_OPENSSL_FLAGS) -o bin/libcbitcoin-crypto$(LIBRARY_EXTENSION) build/CBOpenSSLCrypto.o -lcrypto -lssl
+
+# Crypto library compile
+
+build/CBOpenSSLCrypto.o: dependencies/crypto/CBOpenSSLCrypto.c
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+
+# Random library target linking
+
+random : build/CBRand.o | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin-rand$(LIBRARY_EXTENSION) build/CBRand.o
+
+# Random library compile
+
+build/CBRand.o: dependencies/random/CBRand.c
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+
+# Network library target linking
+
+network : build/CBLibEventSockets.o | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin-network$(LIBRARY_EXTENSION) build/CBLibEventSockets.o -levent_core
+
+# Network library compile
+
+build/CBLibEventSockets.o: dependencies/sockets/CBLibEventSockets.c dependencies/sockets/CBLibEventSockets.h
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+
+# Storage library target linking
+
+storage : build/CBBlockChainStorage.o | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o
+
+# Storage library compile
+
+build/CBBlockChainStorage.o: dependencies/storage/CBBlockChainStorage.c dependencies/storage/CBBlockChainStorage.h
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+
+# Clean
+
+clean:
+	rm -f build/*.o build/*.d build/CBOpenSSLCrypto.o
+
+# Tests
+
+TEST_FILES = $(wildcard test/*.c)
+TEST_BINARIES = $(patsubst test/%.c, bin/%, $(TEST_FILES))
+TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
+
+test : $(TEST_BINARIES)
+
+$(TEST_BINARIES): core crypto random network #storage
+
+$(TEST_BINARIES): bin/%: build/%.o
+	$(CC) -lcbitcoin.2.0 -lcbitcoin-crypto.2.0 -lcbitcoin-network.2.0 -lcbitcoin-rand.2.0 -L/opt/local/lib -levent_core -levent_pthreads -L$(BINDIR) $< -o $@
+	$@
+
+$(TEST_OBJS): build/%.o: test/%.c
+	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ $< -o $@
+

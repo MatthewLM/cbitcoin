@@ -29,11 +29,10 @@
 #define CBFULLVALIDATORH
 
 #include "CBConstants.h"
-#include "CBBlockChainStorage.h"
 #include "CBBlock.h"
 #include "CBBigInt.h"
 #include "CBValidationFunctions.h"
-#include "string.h"
+#include <string.h>
 
 /**
  @brief References an output in the block storage.

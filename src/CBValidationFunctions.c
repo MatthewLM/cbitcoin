@@ -25,7 +25,7 @@
 uint64_t CBCalculateBlockReward(uint64_t blockHeight){
 	return (50 * CB_ONE_BITCOIN) >> (blockHeight / 210000);
 }
-bool CBCalculateBlockWork(CBBigInt * work,uint32_t target){
+bool CBCalculateBlockWork(CBBigInt * work, uint32_t target){
 	// Get the base-256 exponent and the mantissa.
 	uint8_t zeroBytes = target >> 24;
 	target &= 0x00FFFFFF;
@@ -123,7 +123,7 @@ uint32_t CBTransactionGetSigOps(CBTransaction * tx){
 		sigOps += CBScriptGetSigOpCount(tx->outputs[x]->scriptObject, false);
 	return sigOps;
 }
-bool CBTransactionIsFinal(CBTransaction * tx,uint64_t time,uint64_t height){
+bool CBTransactionIsFinal(CBTransaction * tx, uint64_t time, uint64_t height){
 	if (tx->lockTime) {
 		if (tx->lockTime < (tx->lockTime < CB_LOCKTIME_THRESHOLD ? (int64_t)height : (int64_t)time))
 			return true;
@@ -144,7 +144,7 @@ CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64
 		// Calculate length. Worthwhile having a cache? ???
 		length = CBTransactionCalculateLength(tx);
 	}
-	if(length > CB_BLOCK_MAX_SIZE){
+	if (length > CB_BLOCK_MAX_SIZE){
 		return NULL;
 	}
 	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the C++ client on this where an attacker could overflow very large outputs to equal small inputs.

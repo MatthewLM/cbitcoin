@@ -26,7 +26,7 @@
 
 //  Constructor
 
-CBFullNode * CBNewFullNode(void (*logError)(char *,...)){
+/*CBFullNode * CBNewFullNode(void (*logError)(char *,...)){
 	CBFullNode * self = malloc(sizeof(*self));
 	if (NOT self) {
 		logError("Cannot allocate %i bytes of memory in CBNewFullNode\n",sizeof(*self));
@@ -48,7 +48,7 @@ CBFullNode * CBGetFullNode(void * self){
 //  Initialiser
 
 bool CBInitFullNode(CBFullNode * self,void (*logError)(char *,...)){
-	/*if (NOT CBInitNetworkCommunicator(CBGetNetworkCommunicator(self), logError))
+	if (NOT CBInitNetworkCommunicator(CBGetNetworkCommunicator(self), logError))
 		return false;
 	// Set network communicator fields.
 	CBGetNetworkCommunicator(self)->blockHeight = 0;
@@ -112,19 +112,19 @@ bool CBInitFullNode(CBFullNode * self,void (*logError)(char *,...)){
 	}
 	// Create block validator
 	
-	return true;*/
+	return true;
 }
 
 //  Destructor
 
 void CBFreeFullNode(void * self){
-	/*fclose(CBGetFullNode(self)->addressFile);
+	fclose(CBGetFullNode(self)->addressFile);
 	CBReleaseObject(CBGetNetworkCommunicator(self)->addresses);
-	CBFreeNetworkCommunicator(self);*/
+	CBFreeNetworkCommunicator(self);
 }
 
 //  Functions
 
 void CBFullNodeOnBadTime(void * self){
 	
-}
+}*/

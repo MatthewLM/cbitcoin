@@ -3,3 +3,8 @@ cbitcoin.xcodeproj
 cbitcoin.1
 documentation/
 build/
+Makefile
+autom4te.cache
+bin
+config.log
+config.status

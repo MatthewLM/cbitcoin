@@ -26,7 +26,7 @@
 
 //  Constructor
 
-CBFullValidator * CBNewFullValidator(char * homeDir, void (*logError)(char *,...)){
+/*CBFullValidator * CBNewFullValidator(char * homeDir, void (*logError)(char *,...)){
 	CBFullValidator * self = malloc(sizeof(*self));
 	if (NOT self) {
 		logError("Cannot allocate %i bytes of memory in CBNewFullNode\n", sizeof(*self));
@@ -1316,4 +1316,4 @@ CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock *
 					return CB_BLOCK_STATUS_MAIN;
 			}
 	}
-}
+}*/
