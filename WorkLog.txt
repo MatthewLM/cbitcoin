@@ -164,3 +164,62 @@ Date: Wednesday 14th November
 		Lined Removed: 136
 		Total Time: 3.95 hours
 	--------------------------------------------------------------------------
+	
+------------------------------------------------------------------------------
+Date: Thursday 15th November
+------------------------------------------------------------------------------
+
+	Start Time: 14:00
+	End Time: 14:50
+	
+	Start Time: 18:52 
+	End Time: 21:40
+	
+	Start Time: 23:00
+	End Time: 23:06
+	
+	Start Time: 13:16
+	End Time: 15:00
+	
+	Start Time: 17:08
+	End Time: 22:00
+
+	Start Time: 12:00
+	End Time: 15:53
+	
+	Start Time: 19:49
+	End Time: 20:00
+	
+------------------------------------------------------------------------------
+Date: Tuesday 20th November
+------------------------------------------------------------------------------
+
+	Start Time: 17:00
+	End Time: 20:43
+	
+------------------------------------------------------------------------------
+Date: Wednesday 21th November
+------------------------------------------------------------------------------
+
+	Start Time: 19:00
+	End Time: 19:55
+	
+	Start Time: 20:02
+	End Time: 20:17
+	
+	Start Time: 20:27
+	End Time: 21:05
+	
+	Start Time: 19:18
+	End Time: 20:19
+	
+	Start Time: 20:30
+	End Time: 21:54
+	
+	Start Time: 12:38
+	End Time: 15:30
+	
+	Start Time: 16:50
+	End Time: 
+
+	
