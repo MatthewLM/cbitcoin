@@ -86,7 +86,7 @@ int main(){
 			}
 		}
 	}
-	CBFreeAssociativeArray(&array);
+	CBFreeAssociativeArray(&array,false);
 	// Create array again and test for insertion overflow situations
 	CBInitAssociativeArray(&array, 3);
 	// Insert CB_BTREE_ORDER elements
@@ -565,7 +565,7 @@ int main(){
 		printf("TAKE FROM RIGHT CHILD 1 DATA FAIL\n");
 		return 1;
 	}
-	CBFreeAssociativeArray(&array);
+	CBFreeAssociativeArray(&array, false);
 	// Test lots of random keys
 	CBInitAssociativeArray(&array, 10);
 	// Generate keys

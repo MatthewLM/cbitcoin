@@ -71,6 +71,17 @@
 #pragma weak CBSecureRandomInteger
 #pragma weak CBFreeSecureRandomGenerator
 
+// Weak linking for storage functions
+
+#pragma weak CBNewBlockChainStorage
+#pragma weak CBFreeBlockChainStorage
+#pragma weak CBBlockChainStorageChangeKey
+#pragma weak CBBlockChainStorageWriteValue
+#pragma weak CBBlockChainStorageReadValue
+#pragma weak CBBlockChainStorageRemoveValue
+#pragma weak CBBlockChainStorageCommitData
+#pragma weak CBBlockChainStorageEnsureConsistent
+
 // CRYPTOGRAPHIC DEPENDENCIES
 
 /**
@@ -294,13 +305,21 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...));
  */
 void CBFreeBlockChainStorage(uint64_t iself);
 /**
+ @brief Replaces a key for a value.
+ @param iself The block-chain storage object.
+ @param previousKey The current key to be replaced.
+ @param newKey The new key for this value.
+ @returns true on success and false on failure.
+ */
+bool CBBlockChainStorageChangeKey(uint64_t iself, uint8_t previousKey[6], uint8_t newKey[6]);
+/**
  @brief Queues a key-value write operation.
  @param iself The block-chain storage object.
  @param key The key for this data.
  @param data The data to store.
  @param dataSize The size of the data to store.
  @param offset The offset to start writting.
- @param totalSize The total size the key is supposed to be for when creating it.
+ @param totalSize The total size the key is supposed to be for when creating it. If the totalSize is larger than the previous total size, when replacing a value, then the previous data is forgotten and the new value is inserted alone.
  @returns true on success and false on failure.
  */
 bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t key[6], uint8_t * data, uint32_t dataSize, uint32_t offset, uint32_t totalSize);

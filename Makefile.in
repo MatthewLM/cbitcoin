@@ -29,7 +29,7 @@ vpath %.d build
 
 # Default goal
 
-all: core crypto random network #storage
+all: core crypto random network storage
 
 # Get files for the core library
 
@@ -126,12 +126,12 @@ TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
 
 test : $(TEST_BINARIES)
 
-$(TEST_BINARIES): core crypto random network #storage
+$(TEST_BINARIES): core crypto random network storage
 
 $(TEST_BINARIES): bin/%: build/%.o
-	$(CC) -lcbitcoin.2.0 -lcbitcoin-crypto.2.0 -lcbitcoin-network.2.0 -lcbitcoin-rand.2.0 -L/opt/local/lib -levent_core -levent_pthreads -L$(BINDIR) $< -o $@
+	$(CC) -lcbitcoin.2.0 -lcbitcoin-crypto.2.0 -lcbitcoin-network.2.0 -lcbitcoin-storage.2.0 -lcbitcoin-rand.2.0 -L/opt/local/lib -levent_core -levent_pthreads -L$(BINDIR) $< -o $@
 	$@
 
 $(TEST_OBJS): build/%.o: test/%.c
-	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ $< -o $@
+	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ -I$(CURDIR)/dependencies/storage $< -o $@
 

@@ -65,9 +65,8 @@ typedef struct{
  @brief Deletes an element from an array.
  @param self The array object
  @param pos The result from CBAssociativeArrayFind which determines the position to delete data.
- @returns true on success and false on failure.
  */
-bool CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos);
+void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos);
 /**
  @brief Finds data for a key in the array
  @param self The array object
@@ -95,13 +94,15 @@ CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key, uint8_t 
 /**
  @brief Frees an associative array.
  @param self The array object.
+ @param elDel If true, delete elements.
  */
-void CBFreeAssociativeArray(CBAssociativeArray * self);
+void CBFreeAssociativeArray(CBAssociativeArray * self, bool elDel);
 /**
  @brief Frees a B-tree node.
  @param self The node
+ @param elDel If true, delete elements.
  */
-void CBFreeBTreeNode(CBBTreeNode * self);
+void CBFreeBTreeNode(CBBTreeNode * self, bool elDel);
 /**
  @brief Initialises an empty associative array.
  @param self The array object

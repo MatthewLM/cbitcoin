@@ -8,3 +8,7 @@ autom4te.cache
 bin
 config.log
 config.status
+0.dat
+1.dat
+2.dat
+log.dat
