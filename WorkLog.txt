@@ -220,6 +220,39 @@ Date: Wednesday 21th November
 	End Time: 15:30
 	
 	Start Time: 16:50
-	End Time: 
+	End Time: 18:59
+	
+	--------------------------------------------------------------------------
+	Commit: 922b30c573620d920bfe7633f54b6d82b7e96662
+	
+		Work Completed:
+		
+			* The Associative Array is working.
+			* The Makefile works except up to the networking tests on OSX.
+	
+		Lines Added: 807
+		Lined Removed: 530
+		Total Time: 27.35 hours
+	--------------------------------------------------------------------------
+	
+------------------------------------------------------------------------------
+Date: Tuesday 27th November
+------------------------------------------------------------------------------
+	
+	Start Time: 17:57
+	End Time: 22:18
+	
+	Start Time: 20:01
+	End Time: 21:42
+	
+	Start Time: 23:05
+	End Time: 00:46
+	
+	Start Time: 13:12
+	End Time: 15:00
 
+	Start Time: 16:30
+	End Time: 00:10
+	
+	
 	
