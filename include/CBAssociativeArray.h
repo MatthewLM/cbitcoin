@@ -57,9 +57,9 @@ typedef struct{
  @brief @see CBAssociativeArray.h
  */
 typedef struct{
-	uint8_t keySize; /**< The size of the keys */
 	CBBTreeNode * root; /**< The root of the B-tree */
 } CBAssociativeArray;
+
 
 /**
  @brief Deletes an element from an array.
@@ -87,10 +87,9 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
  @brief Does a binary search on a B-tree node.
  @param self The node
  @param key Key to search for.
- @param keySize The size of keys.
  @returns The position and wether or not the key exists at this position.
  */
-CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key, uint8_t keySize);
+CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key);
 /**
  @brief Frees an associative array.
  @param self The array object.
@@ -106,9 +105,8 @@ void CBFreeBTreeNode(CBBTreeNode * self, bool elDel);
 /**
  @brief Initialises an empty associative array.
  @param self The array object
- @param keySize The size of the keys for the array in bytes.
  @returns true on success and false on failure.
  */
-bool CBInitAssociativeArray(CBAssociativeArray * self, uint8_t keySize);
+bool CBInitAssociativeArray(CBAssociativeArray * self);
 
 #endif

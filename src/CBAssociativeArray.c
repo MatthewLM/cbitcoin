@@ -30,7 +30,7 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
 	CBBTreeNode * node = self->root;
 	for (;;) {
 		// Do binary search on node
-		result = CBBTreeNodeBinarySearch(node, key, self->keySize);
+		result = CBBTreeNodeBinarySearch(node, key);
 		if (result.found){
 			// Found the data on this node.
 			result.node = node;
@@ -65,7 +65,7 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 				// We have a parent so we can check siblings.
 				// First find the position of this node in the parent. ??? Worth additional pointers?
 				// Search for second key in case the first has been taken by the parent.
-				CBFindResult res = CBBTreeNodeBinarySearch(parent, *(pos.node->elements + 1), self->keySize);
+				CBFindResult res = CBBTreeNodeBinarySearch(parent, pos.node->elements[1]);
 				CBBTreeNode * left;
 				CBBTreeNode * right;
 				if (res.pos) {
@@ -332,7 +332,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 		if (NOT pos.node->parent) {
 			// Create new root
 			self->root = malloc(sizeof(*self->root));
-			if (NOT self->root)
+			if (NOT self)
 				return false;
 			self->root->numElements = 0;
 			self->root->parent = NULL;
@@ -342,15 +342,15 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 		// New node requires that the parent be set
 		new->parent = pos.node->parent;
 		// Find position of value in parent and then insert.
-		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKeyValue, self->keySize);
+		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKeyValue);
 		res.node = pos.node->parent;
 		return CBAssociativeArrayInsert(self, midKeyValue, res, new);
 	}
 }
-CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key, uint8_t keySize){
+CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key){
 	CBFindResult res;
 	res.found = false;
-	if (NOT self->numElements) {
+	if (NOT self->numElements){
 		res.pos = 0;
 		return res;
 	}
@@ -359,7 +359,13 @@ CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key, uint8_t 
 	int cmp;
 	while (left <= right) {
 		res.pos = (right+left)/2;
-		cmp = memcmp(key, self->elements[res.pos], keySize);
+		uint8_t keySize = *self->elements[res.pos];
+		if (*key > keySize)
+			cmp = 1;
+		else if (*key < keySize)
+			cmp = -1;
+		else
+			cmp = memcmp(key + 1, self->elements[res.pos] + 1, *key);
 		if (cmp == 0) {
 			res.found = true;
 			break;
@@ -386,10 +392,9 @@ void CBFreeBTreeNode(CBBTreeNode * self, bool elDel){
 			free(self->elements[x]);
 	free(self);
 }
-bool CBInitAssociativeArray(CBAssociativeArray * self, uint8_t keySize){
-	self->keySize = keySize;
+bool CBInitAssociativeArray(CBAssociativeArray * self){
 	self->root = malloc(sizeof(*self->root));
-	if (NOT self->root)
+	if (NOT self)
 		return false;
 	self->root->parent = NULL;
 	self->root->numElements = 0;

@@ -73,14 +73,16 @@
 
 // Weak linking for storage functions
 
+#pragma weak CBResetBlockChainStorage
 #pragma weak CBNewBlockChainStorage
 #pragma weak CBFreeBlockChainStorage
 #pragma weak CBBlockChainStorageChangeKey
+#pragma weak CBBlockChainStorageCommitData
+#pragma weak CBBlockChainStorageEnsureConsistent
+#pragma weak CBBlockChainStorageGetLength
 #pragma weak CBBlockChainStorageWriteValue
 #pragma weak CBBlockChainStorageReadValue
 #pragma weak CBBlockChainStorageRemoveValue
-#pragma weak CBBlockChainStorageCommitData
-#pragma weak CBBlockChainStorageEnsureConsistent
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
@@ -293,6 +295,11 @@ void CBFreeSecureRandomGenerator(uint64_t gen);
 // STORAGE DEPENDENCES
 
 /**
+ @brief Removes all of the value write operations.
+ @param iself The storage object.
+ */
+void CBResetBlockChainStorage(uint64_t iself);
+/**
  @brief Returns the object used for block-chain storage.
  @param dataDir The directory where the data files should be stored.
  @param logError The error log function pointer.
@@ -305,42 +312,41 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...));
  */
 void CBFreeBlockChainStorage(uint64_t iself);
 /**
- @brief Replaces a key for a value.
+ @brief Replaces a key for a value with a key of the same length.
  @param iself The block-chain storage object.
- @param previousKey The current key to be replaced.
- @param newKey The new key for this value.
+ @param previousKey The current key to be replaced. The first byte is the length.
+ @param newKey The new key for this value. The first byte is the length and should be the same as the first key.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageChangeKey(uint64_t iself, uint8_t previousKey[6], uint8_t newKey[6]);
+bool CBBlockChainStorageChangeKey(uint64_t iself, uint8_t * previousKey, uint8_t * newKey);
 /**
  @brief Queues a key-value write operation.
  @param iself The block-chain storage object.
- @param key The key for this data.
+ @param key The key for this data. The first byte is the length.
  @param data The data to store.
  @param dataSize The size of the data to store.
  @param offset The offset to start writting.
  @param totalSize The total size the key is supposed to be for when creating it. If the totalSize is larger than the previous total size, when replacing a value, then the previous data is forgotten and the new value is inserted alone.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t key[6], uint8_t * data, uint32_t dataSize, uint32_t offset, uint32_t totalSize);
+bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, uint32_t totalSize);
 /**
  @brief Queues a key-value read operation.
  @param iself The block-chain storage object.
- @param key The key for this data.
+ @param key The key for this data. The first byte is the length.
  @param data A pointer to memory with enough space to hold the data. The data will be set to this.
  @param dataSize The size to read.
  @param offset The offset to begin reading.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t key[6], uint8_t * data, uint32_t dataSize, uint32_t offset);
+bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset);
 /**
  @brief Queues a key-value delete operation.
  @param iself The block-chain storage object.
- @param key The key for this data.
- @param keySize The size of the key.
+ @param key The key for this data. The first byte is the length.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageRemoveValue(uint64_t iself, uint8_t key[6]);
+bool CBBlockChainStorageRemoveValue(uint64_t iself, uint8_t * key);
 /**
  @brief The data should be written to the disk atomically.
  @param iself The block-chain storage object.
@@ -353,5 +359,12 @@ bool CBBlockChainStorageCommitData(uint64_t iself);
  @returns true if the database is consistent and false on failure.
  */
 bool CBBlockChainStorageEnsureConsistent(uint64_t iself);
+/**
+ @brief Gets the length of a value in the database or zero if it does not exist.
+ @param iself The block-chain storage object.
+ @param key The key. The first byte is the length.
+ @returns The total length of the value or 0 if the value does not exist in the database.
+ */
+uint32_t CBBlockChainStorageGetLength(uint64_t iself, uint8_t * key);
 
 #endif

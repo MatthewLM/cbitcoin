@@ -32,52 +32,54 @@
 #include "CBBlock.h"
 #include "CBBigInt.h"
 #include "CBValidationFunctions.h"
+#include "CBAssociativeArray.h"
 #include <string.h>
 
 /**
- @brief References an output in the block storage.
+ @brief References a transaction.
  */
 typedef struct{
-	uint8_t outputHash[32]; /** The transaction hash for the output */
-	uint32_t outputIndex; /** The index for the output */
-	uint32_t blockIndex; /**< The index of the block containing this output */
-	bool coinbase; /**< True if a coinbase output */
-	uint8_t branch; /**< The branch this output belongs to. */
-	uint32_t position; /**< The positon of the output in the block */
-}CBOutputReference;
+	uint8_t transactionHash[32]; /**< The transaction hash */
+	uint32_t ID; /**< ID of this transaction reference. */
+	uint32_t blockIndex; /**< The index of the block containing this transaction */
+	uint8_t branch; /**< The branch this transaction belongs to. */
+	bool coinbase; /**< True if a coinbase transaction */
+	uint32_t position; /**< The positon of the transaction in the block */
+} CBTransactionReference;
 
 /**
- @brief Keeps the target and time for a block in a cache.
+ @brief References an output.
  */
 typedef struct{
+	uint8_t transactionHash[32]; /**< The transaction hash for the output */
+	uint32_t ID; /**< ID of this output reference. */
+	uint32_t position; /**< The offset positon of the output in the transaction data */
+} CBOutputReference;
+
+/**
+ @brief Keeps the target and time for a block in an index with the last 20 bytes of a hash as a key.
+ */
+typedef struct{
+	uint8_t hash[20]; /**< The hash key */
+	uint8_t branch; /**< The branch for this block */
+	uint32_t index; /**< The index of the block */
 	uint32_t target; /** The target for this block */
 	uint32_t time; /**< The block's timestamp */
-}CBBlockReference;
-
-/**
- @brief Indexes the block references to the block hashes. When stored as a sorted lookup table, an interpolation search can be used to find the index at which a block reference is stored.
- */
-typedef struct{
-	uint8_t blockHash[32]; /**< The block hash. */
-	uint32_t index; /**< The index for the block reference for this hash */
-} CBBlockReferenceHashIndex;
+} CBBlockReference;
 
 /**
  @brief Represents a block branch.
  */
 typedef struct{
-	uint32_t numRefs; /**< The number of block references in the branch */
-	CBBlockReference * references; /**< The block references */
-	CBBlockReferenceHashIndex * referenceTable; /**< The lookup table for block references */
+	uint32_t numBlocks; /**< The number of blocks in the branch */
 	uint32_t lastRetargetTime; /**< The block timestamp at the last retarget. */
 	uint8_t parentBranch; /**< The branch this branch is connected to. */
 	uint32_t parentBlockIndex; /**< The block index in the parent branch which this branch is connected to */
 	uint32_t startHeight; /**< The starting height where this branch begins */
 	uint32_t lastValidation; /**< The index of the last block in this branch that has been fully validated. */
-	uint32_t numUnspentOutputs; /**< The number of unspent outputs for this branch upto the last validated block. */
-	CBOutputReference * unspentOutputs; /**< A list of unspent outputs for this branch upto the last validated block. */
 	CBBigInt work; /**< The total work for this branch. The branch with the highest work is the winner! */
-	uint16_t numBlockFiles; /**< Number of open block files for this branch. */
+	CBBlockReference ** chronoBlockRefs; /**< Pointers to block references in-order for the branch (chronological) with oldest first. */
+	bool working; /**< True if we this branch is being worked upon */
 } CBBlockBranch;
 
 /**
@@ -91,16 +93,21 @@ typedef struct{
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
+	uint32_t numUnspentOutputs; /**< The number of unspent outputs for the main branch upto the last validated block. */
+	CBAssociativeArray outputIndex; /**< Ordered unspent outputs by the transaction hash. */
+	CBAssociativeArray blockIndex; /**< The index for block references with the last 20 bytes of the block hash as the key. */
 	void (*logError)(char *,...); /**< Pointer to error callback */
-	void * storage; /**< The storage component object */
+	uint64_t storage; /**< The storage component object */
 } CBFullValidator;
 
 /**
  @brief Creates a new CBFullValidator object.
+ @param storage The block-chain storage component.
+ @param badDataBase Will be set to true if the database needs recovery or false otherwise.
  @returns A new CBFullValidator object.
  */
 
-CBFullValidator * CBNewFullValidator(char * dataDir, void (*logError)(char *,...));
+CBFullValidator * CBNewFullValidator(uint64_t storage, bool * badDataBase, void (*logError)(char *,...));
 
 /**
  @brief Gets a CBFullValidator from another object. Use this to avoid casts.
@@ -112,9 +119,11 @@ CBFullValidator * CBGetFullValidator(void * self);
 /**
  @brief Initialises a CBFullValidator object.
  @param self The CBFullValidator object to initialise.
+ @param storage The block-chain storage component.
+ @param badDataBase Will be set to true if the database needs recovery or false otherwise.
  @returns true on success, false on failure.
  */
-bool CBInitFullValidator(CBFullValidator * self, char * homeDir, void (*logError)(char *,...));
+bool CBInitFullValidator(CBFullValidator * self, uint64_t storage, bool * badDataBase, void (*logError)(char *,...));
 
 /**
  @brief Frees a CBFullValidator object.
@@ -192,45 +201,13 @@ uint32_t CBFullValidatorGetMedianTime(CBFullValidator * self, uint8_t branch, ui
  */
 CBBlockValidationResult CBFullValidatorInputValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex,uint32_t inputIndex, CBPrevOut ** allSpentOutputs, uint8_t * txHashes, uint64_t * value, uint32_t * sigOps);
 /**
- @brief Finds a block reference ad returns the index or finds the insertion point if the reference was no found.
- @param lookupTable The table of references to search.
- @param refNum The number of references to search.
- @param hash The hash of the block to search for.
- @param found This is set to true if the reference was found or false otherwise.
- @returns The position of the matching reference in the lookup table or the index of where the reference index should go in the case the reference was not found.
- */
-uint32_t CBFullValidatorFindBlockReference(CBBlockReferenceHashIndex * lookupTable, uint32_t refNum, uint8_t * hash, bool * found);
-/**
- @brief Finds an output reference ad returns the index or finds the insertion point if the reference was no found.
- @param refs The output references to search.
- @param refNum The number of references to search.
- @param hash The transaction hash of the output to search for.
- @param index The index of the output.
- @param found This is set to true if the reference was found or false otherwise.
- @returns The index of the matching reference or the index of where the reference should go in the case the reference was not found.
- */
-uint32_t CBFullValidatorFindOutputReference(CBOutputReference * refs, uint32_t refNum, uint8_t * hash, uint32_t index, bool * found);
-/**
  @brief Loads a block from storage.
  @param self The CBFullValidator object.
- @param blockRef A reference to the block in storage.
+ @param blockID The index of the block int he branch.
  @param branch The branch the block belongs to.
  @returns A new CBBlockObject with serailised block data which has not been deserialised or NULL on failure.
  */
-CBBlock * CBFullValidatorLoadBlock(CBFullValidator * self, CBBlockReference blockRef, uint32_t branch);
-/**
- @brief Loads the validation data for a block-chain branch. This only loads data if the validator file for the branch has not been opened already.
- @param self The CBFullValidator object.
- @param branch The index of the branch to load the data for.
- @returns @see CBValidatorLoadResult
- */
-CBValidatorLoadResult CBFullValidatorLoadBranchValidator(CBFullValidator * self, uint8_t branch);
-/**
- @brief Loads the general validation data. This only loads data if the validator file has not been opened already.
- @param self The CBFullValidator object.
- @returns @see CBValidatorLoadResult
- */
-CBValidatorLoadResult CBFullValidatorLoadValidator(CBFullValidator * self);
+CBBlock * CBFullValidatorLoadBlock(CBFullValidator * self, uint32_t blockID, uint32_t branch);
 /**
  @brief Processes a block. Block headers are validated, ensuring the integrity of the transaction data is OK, checking the block's proof of work and calculating the total branch work to the genesis block. If the block extends the main branch complete validation is done. If the block extends a branch to become the new main branch because it has the most work, a re-organisation of the block-chain is done.
  @param self The CBFullValidator object.
@@ -251,5 +228,13 @@ CBBlockStatus CBFullValidatorProcessBlock(CBFullValidator * self, CBBlock * bloc
  @return The status of the block.
  */
 CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint8_t * txHashes);
+/**
+ @brief Updates the unspent outputs for a branch.
+ @param self The CBFullValidator object.
+ @param block The block with the transaction data to search for changing unspent outputs.
+ @param branch The branch the block is for.
+ @param blockIndex The block index in the branch.
+ */
+bool CBFullValidatorUpdateUnspentOutputs(CBFullValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
 
 #endif

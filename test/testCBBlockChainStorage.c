@@ -115,8 +115,9 @@ int main(){
 		return 1;
 	}
 	// Try inserting a value
-	uint8_t key[6];
-	for (int x = 0; x < 6; x++) {
+	uint8_t key[7];
+	key[0] = 6;
+	for (int x = 1; x < 7; x++) {
 		key[x] = rand();
 	}
 	CBBlockChainStorageWriteValue((uint64_t)storage, key, (uint8_t *)"Hi There Mate!", 15, 0, 15);
@@ -141,19 +142,19 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 26, index) != 26) {
+	if (fread(data, 1, 27, index) != 27) {
 		printf("INSERT SINGLE VAL INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [26]){
+	if (memcmp(data, (uint8_t [27]){
 		1,0,0,0, // One value
 		2,0, // File 2 is last
 		15,0,0,0, // Size of file is 15
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 26)) {
+	}, 27)) {
 		printf("INSERT SINGLE VAL INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -195,8 +196,9 @@ int main(){
 		return 1;
 	}
 	// Try adding a new value and replacing the previous value together.
-	uint8_t key2[6];
-	for (int x = 0; x < 6; x++) {
+	uint8_t key2[7];
+	key2[0] = 6;
+	for (int x = 1; x < 7; x++) {
 		key2[x] = rand();
 	}
 	CBBlockChainStorageWriteValue((uint64_t)storage, key2, (uint8_t *)"Another one", 12, 0, 12);
@@ -225,23 +227,23 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 42, index) != 42) {
+	if (fread(data, 1, 44, index) != 44) {
 		printf("INSERT 2ND VAL INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		15,0,0,0, // Position 15
 		12,0,0,0, // Data length is 12
-	}, 42)) {
+	}, 44)) {
 		printf("INSERT 2ND VAL INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -263,7 +265,7 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [68]){
 		0, // Inactive
-		26,0,0,0, // Index previously size 26
+		27,0,0,0, // Index previously size 27
 		4,0,0,0, // Deletion index previously size 4
 		2,0, // Previous last file 2
 		15,0,0,0, // Previous last file size 15
@@ -302,23 +304,23 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 42, index) != 42) {
+	if (fread(data, 1, 44, index) != 44) {
 		printf("DELETE 1ST VAL INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		0,0,0,0, // Data length is 0 ie. deleted
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		15,0,0,0, // Position 15
 		12,0,0,0, // Data length is 12
-	}, 42)) {
+	}, 44)) {
 		printf("DELETE 1ST VAL INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -346,12 +348,12 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [51]){
 		0, // Inactive
-		42,0,0,0, // Index previously size 42
+		44,0,0,0, // Index previously size 44
 		4,0,0,0, // Deletion index previously size 4
 		2,0, // Previous last file 2
 		27,0,0,0, // Previous last file size 27
 		0,0, // Overwrite the index
-		22,0,0,0,0,0,0,0, // Offset is 22
+		23,0,0,0,0,0,0,0, // Offset is 23
 		4,0,0,0, // Length of change is 4
 		15,0,0,0, // Previous data
 		1,0, // Overwrite the deletion index
@@ -377,23 +379,23 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 42, index) != 42) {
-		printf("DELETE 1ST VAL INDEX READ FAIL\n");
+	if (fread(data, 1, 44, index) != 44) {
+		printf("INCREASE 2ND VAL INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		0,0,0,0, // Data length is 0 ie. deleted
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 42)) {
+	}, 44)) {
 		printf("INCREASE 2ND VAL INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -425,7 +427,7 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [105]){
 		0, // Inactive
-		42,0,0,0, // Index previously size 42
+		44,0,0,0, // Index previously size 44
 		15,0,0,0, // Deletion index previously size 15
 		2,0, // Previous last file 2
 		27,0,0,0, // Previous last file size 27
@@ -441,7 +443,7 @@ int main(){
 		1,0,0,0,15, // Previous data
 		
 		0,0, // Overwrite index
-		32,0,0,0,0,0,0,0, // Offset is 32
+		34,0,0,0,0,0,0,0, // Offset is 34
 		10,0,0,0, // Length of change is 10
 		2,0,15,0,0,0,12,0,0,0, // Previous data
 		
@@ -468,23 +470,23 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 42, index) != 42) {
+	if (fread(data, 1, 44, index) != 44) {
 		printf("NEW 1ST VAL INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		47,0,0,0, // Size of file is 47
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		27,0,0,0, // Position at 27
 		20,0,0,0, // Data length is 20
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 42)) {
+	}, 44)) {
 		printf("NEW 1ST VAL INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -516,13 +518,13 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [63]){
 		0, // Inactive
-		42,0,0,0, // Index previously size 42
+		44,0,0,0, // Index previously size 44
 		26,0,0,0, // Deletion index previously size 26
 		2,0, // Previous last file 2
 		27,0,0,0, // Previous last file size 27
 		
 		0,0, // Overwrite the index file
-		16,0,0,0,0,0,0,0, // Offset is 16
+		17,0,0,0,0,0,0,0, // Offset is 17
 		10,0,0,0, // Length of change is 10
 		2,0,0,0,0,0,0,0,0,0, // Previous data
 		
@@ -554,19 +556,19 @@ int main(){
 		printf("SUBWRITE INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		47,0,0,0, // Size of file is 47
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		27,0,0,0, // Position at 27
 		20,0,0,0, // Data length is 20
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 42)) {
+	}, 44)) {
 		printf("SUBWRITE INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -598,7 +600,7 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [54]){
 		0, // Inactive
-		42,0,0,0, // Index previously size 42
+		44,0,0,0, // Index previously size 44
 		26,0,0,0, // Deletion index previously size 26
 		2,0, // Previous last file 2
 		47,0,0,0, // Previous last file size 47
@@ -647,8 +649,9 @@ int main(){
 		return 1;
 	}
 	// Add value and try database recovery.
-	uint8_t key3[6];
-	for (int x = 0; x < 6; x++) {
+	uint8_t key3[7];
+	key3[0] = 6;
+	for (int x = 1; x < 7; x++) {
 		key3[x] = rand();
 	}
 	CBBlockChainStorageWriteValue((uint64_t)storage, key3, (uint8_t *)"cbitcoin", 9, 0, 9);
@@ -701,19 +704,19 @@ int main(){
 		printf("RECOVERY INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		47,0,0,0, // Size of file is 47
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		27,0,0,0, // Position at 27
 		20,0,0,0, // Data length is 20
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 42)) {
+	}, 44)) {
 		printf("RECOVERY INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -762,23 +765,23 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 42, index) != 42) {
+	if (fread(data, 1, 44, index) != 44) {
 		printf("SMALLER INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		47,0,0,0, // Size of file is 47
-		key[0],key[1],key[2],key[3],key[4],key[5],
+		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
 		2,0, // File index 2
 		27,0,0,0, // Position at 27
 		7,0,0,0, // Data length is 7
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 42)) {
+	}, 44)) {
 		printf("SMALLER INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -810,7 +813,7 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [79]){
 		0, // Inactive
-		42,0,0,0, // Index previously size 42
+		44,0,0,0, // Index previously size 42
 		26,0,0,0, // Deletion index previously size 26
 		2,0, // Previous last file 2
 		47,0,0,0, // Previous last file size 47
@@ -826,7 +829,7 @@ int main(){
 		0,0,0,0,15,2,0,0,0,0,0, // Previous data
 		
 		0,0, // Overwrite the index
-		22,0,0,0,0,0,0,0, // Offset is 22
+		23,0,0,0,0,0,0,0, // Offset is 23
 		4,0,0,0, // Length of change is 4
 		20,0,0,0, // Previous data
 	}, 79)) {
@@ -835,8 +838,9 @@ int main(){
 	}
 	fclose(index);
 	// Change the first key
-	uint8_t key4[6];
-	for (int x = 0; x < 6; x++) {
+	uint8_t key4[7];
+	key4[0] = 6;
+	for (int x = 1; x < 7; x++) {
 		key4[x] = rand();
 	}
 	CBBlockChainStorageChangeKey((uint64_t)storage, key, key4);
@@ -852,23 +856,23 @@ int main(){
 		return 1;
 	}
 	index = fopen("./0.dat", "rb");
-	if (fread(data, 1, 42, index) != 42) {
+	if (fread(data, 1, 44, index) != 44) {
 		printf("CHANGE KEY INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [42]){
+	if (memcmp(data, (uint8_t [44]){
 		2,0,0,0, // Two values
 		2,0, // File 2 is last
 		47,0,0,0, // Size of file is 47
-		key4[0],key4[1],key4[2],key4[3],key4[4],key4[5],
+		key4[0],key4[1],key4[2],key4[3],key4[4],key4[5],key4[6],
 		2,0, // File index 2
 		27,0,0,0, // Position at 27
 		7,0,0,0, // Data length is 7
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],
+		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
 		2,0, // File index 2
 		0,0,0,0, // Position 0
 		15,0,0,0, // Data length is 15
-	}, 42)) {
+	}, 44)) {
 		printf("CHANGE KEY INDEX DATA FAIL\n");
 		return 1;
 	}
@@ -900,15 +904,15 @@ int main(){
 	}
 	if (memcmp(data, (uint8_t [35]){
 		0, // Inactive
-		42,0,0,0, // Index previously size 42
+		44,0,0,0, // Index previously size 44
 		26,0,0,0, // Deletion index previously size 26
 		2,0, // Previous last file 2
 		47,0,0,0, // Previous last file size 47
 		
 		0,0, // Overwrite the index
-		10,0,0,0,0,0,0,0, // Offset is 10
+		11,0,0,0,0,0,0,0, // Offset is 11
 		6,0,0,0, // Length of change is 6
-		key[0],key[1],key[2],key[3],key[4],key[5], // Previous data
+		key[1],key[2],key[3],key[4],key[5],key[6], // Previous data
 	}, 35)) {
 		printf("CHANGE KEY LOG FILE DATA FAIL\n");
 		return 1;

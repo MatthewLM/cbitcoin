@@ -37,13 +37,12 @@
 #include "CBDependencies.h"
 #include "CBAssociativeArray.h"
 
-#define CB_MAX_VALUE_WRITES 3
+#define CB_MAX_VALUE_WRITES 7
 
 /**
- @brief An index value which references the value's data position with a key.
+ @brief An index value which references the value's data position with a key. This should occur in memory after a key. A key is one byte for the length and then the key bytes.
  */
 typedef struct{
-	uint8_t key[6]; /**< The key for this value */
 	uint32_t indexPos; /**< The position in the index file where this value exists */
 	uint16_t fileID; /**< The file ID for the data */
 	uint32_t pos; /**< The position of the data in the file. */
@@ -51,10 +50,10 @@ typedef struct{
 } CBIndexValue;
 
 /**
- @brief Describes a deleted section of the database.
+ @brief Describes a deleted section of the database. The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active and ends with four bytes for the length of the deleted section in big-endian. The key becomes before this structure in memory.
  */
 typedef struct{
-	uint8_t key[5]; /**< The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active and ends with four bytes for the length of the deleted section in big-endian. */
+	uint8_t key[5];
 	uint32_t indexPos; /**< The position in the index file where this value exists */
 	uint16_t fileID; /**< The ID of the file with the deleted section. */
 	uint32_t pos; /**< The position in the file with the deleted section. */
@@ -64,7 +63,7 @@ typedef struct{
  @brief Describes a write operation.
  */
 typedef struct{
-	uint8_t key[6]; /**< The key for the value */
+	uint8_t * key; /**< The key with the length being the first byte */
 	uint32_t offset; /**< Offset to begin writting */
 	uint8_t * data; /**< The data to write */
 	uint32_t dataLen; /**< The length of the data to write */
@@ -85,20 +84,16 @@ typedef struct{
 	uint32_t numDeletionValues; /**< Number of values in the deletion index */
 	CBWriteValue valueWrites[CB_MAX_VALUE_WRITES]; /**< Values to write */
 	uint8_t numValueWrites; /**< The number of values to write */
-	uint8_t (* deleteKeys)[6]; /**< A list of keys to delete. */
-	uint32_t numDeleteKeys; /**< Number of keys to delete */
-	uint8_t (* changeKeys)[12]; /**< A list of keys to be changed with the last 6 bytes being the new key. */
+	uint8_t ** deleteKeys; /**< A list of keys to delete with the first byte being the length and the remaining bytes being the key data. */
+	uint32_t numDeleteKeys; /**< Number of keys to delete Similar structure to "deleteKeys" but with the old key followed by the new key.  */
+	uint8_t *(* changeKeys)[2]; /**< A list of keys to be changed with the last bytes being the new key. */
 	uint32_t numChangeKeys;
+	uint32_t nextIndexPos; /**< The next position for an index */
 	void (*logError)(char *,...);
 } CBBlockChainStorage;
 
 // Additional functions
 
-/**
- @brief Removes all of the value write operations.
- @param self The storage object.
- */
-void CBResetBlockChainStorage(CBBlockChainStorage * self);
 /**
  @brief Add a deletion entry.
  @param self The storage object.

@@ -68,9 +68,7 @@
 #define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
 #define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
 #define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
-#define CB_DATA_DIRECTORY "/.cbitcoin_FullNode_Data/"
-#define CB_ADDRESS_DATA_FILE "addresses.dat"
-#define CB_VALIDATION_DATA_FILE "validation.dat"
+#define CB_DATA_DIRECTORY "/.cbitcoin_full_node_data/"
 #define CB_NO_VALIDATION 0xFFFFFFFF
 #define CBHashMiniKey(hash) (uint64_t)hash[0] << 56 | (uint64_t)hash[1] << 48 | (uint64_t)hash[2] << 40 | (uint64_t)hash[3] << 32 | (uint64_t)hash[4] << 24 | (uint64_t)hash[5] << 16 | (uint64_t)hash[6] << 8 | (uint64_t)hash[7]
 #define CB_MIN(a,b) ((a) < (b) ? a : b)
@@ -362,9 +360,9 @@ typedef enum{
 	CB_BLOCK_STATUS_BAD_TIME, /**< The block has a bad time */
 	CB_BLOCK_STATUS_DUPLICATE, /**< The block has already been received. */
 	CB_BLOCK_STATUS_ERROR, /**< There was an error while processing a block */
-	CB_BLOCK_STATUS_ERROR_BAD_DATA, /**< There was an error while processing a block and it has left corrupted data on the filesystem. Recovery is required before continuing. */
-	CB_BLOCK_STATUS_ERROR_BAD_MEMORY, /**< There was an error while processing a block and the memory is corrupted. The branch for the added block needs to be reloaded. */
+	CB_BLOCK_STATUS_ERROR_BAD_DATA, /**< There was an error while processing a block and it has left corrupted data on the filesystem or memory. Recovery is required before continuing. */
 	CB_BLOCK_STATUS_CONTINUE, /**< Continue with the validation */
+	CB_BLOCK_STATUS_NO_NEW, /**< Cannot remove a branch for a new one. */
 } CBBlockStatus;
 
 /**
@@ -389,36 +387,55 @@ typedef enum{
  @brief The data storage components.
  */
 typedef enum{
-	CB_STORAGE_BRANCHES,
-	CB_STORAGE_ORPHANS,
-	CB_STORAGE_NUM_BRANCHES,
-	CB_STORAGE_NUM_ORPHANS,
-	CB_STORAGE_MAIN_BRANCH,
-	CB_STORAGE_FIRST_ORPHAN
+	CB_STORAGE_ORPHAN, /**< key = [CB_STORAGE_ORPHANS,orphanID,0,0,0,0] */
+	CB_STORAGE_VALIDATOR_INFO, /**< key = [CB_STORAGE_VALIDATOR_INFO,0,0,0,0,0] */
+	CB_STORAGE_BRANCH_INFO, /**< key = [CB_STORAGE_BRANCH_INFO,branchID,0,0,0,0] */
+	CB_STORAGE_BLOCK, /**< key = [CB_STORAGE_BLOCK,branchID,blockID * 4] */
+	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK,branchID,0,0,0,0] */
+	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS,outputID * 4,0] */
 } CBStorageParts;
 
 /**
- @brief The branch validator parts for a storage key.
+ @brief The offsets to parts of the main validation data
  */
 typedef enum{
-	CB_BRANCH_BLOCK_HEADER,
-	CB_BRANCH_BLOCK_TRANSACTIONS,
-	CB_BRANCH_NUM_REFS,
-	CB_BRANCH_TABLE_HASH,
-	CB_BRANCH_TABLE_INDEX,
-	CB_BRANCH_LAST_RETARGET,
-	CB_BRANCH_PARENT_BRANCH,
-	CB_BRANCH_PARENT_INDEX,
-	CB_BRANCH_START_HEIGHT,
-	CB_BRANCH_LAST_VALIDATION,
-	CB_BRANCH_NUM_UNSPENT_OUTPUTS,
-	CB_BRANCH_WORK,
-	CB_BRANCH_UNSPENT_OUTPUT_BRANCH,
-	CB_BRANCH_UNSPENT_OUTPUT_COINBASE,
-	CB_BRANCH_UNSPENT_OUTPUT_HASH,
-	CB_BRANCH_UNSPENT_OUTPUT_INDEX,
-	CB_BRANCH_UNSPENT_OUTPUT_POS,
-	CB_BRANCH_UNSPENT_OUTPUT_BLOCK_INDEX,
-} CBBranchStorageParts;
+	CB_VALIDATION_FIRST_ORPHAN = 0,
+	CB_VALIDATION_NUM_ORPHANS = 1,
+	CB_VALIDATION_MAIN_BRANCH = 2,
+	CB_VALIDATION_NUM_BRANCHES = 3,
+	CB_VALIDATION_NUM_UNSPENT_OUTPUTS = 4,
+} CBValidationOffsets;
+
+/**
+ @brief The offsets to parts of the branch data.
+ */
+typedef enum{
+	CB_BRANCH_LAST_RETARGET = 0,
+	CB_BRANCH_LAST_VALIDATION = 4,
+	CB_BRANCH_NUM_BLOCKS = 8,
+	CB_BRANCH_PARENT_BLOCK_INDEX = 12,
+	CB_BRANCH_PARENT_BRANCH = 16,
+	CB_BRANCH_START_HEIGHT = 17,
+} CBBranchOffsets;
+
+/**
+ @brief The offsets to parts of the block data
+ */
+typedef enum{
+	CB_BLOCK_HASH = 0, /**< The hash is written before the block data */
+	CB_BLOCK_TIME = 100,
+	CB_BLOCK_TARGET = 104,
+} CBBlockOffsets;
+
+/**
+ @brief The offsets to parts of the unspent output reference data
+ */
+typedef enum{
+	CB_UNSPENT_OUTPUT_BLOCK_INDEX = 0,
+	CB_UNSPENT_OUTPUT_BRANCH = 4,
+	CB_UNSPENT_OUTPUT_COINBASE = 5,
+	CB_UNSPENT_OUTPUT_OUTPUT_INDEX = 6,
+	CB_UNSPENT_OUTPUT_POSITION = 10,
+} CBUnspentOutputOffsets;
 
 #endif
