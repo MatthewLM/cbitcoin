@@ -387,12 +387,14 @@ typedef enum{
  @brief The data storage components.
  */
 typedef enum{
-	CB_STORAGE_ORPHAN, /**< key = [CB_STORAGE_ORPHANS,orphanID,0,0,0,0] */
-	CB_STORAGE_VALIDATOR_INFO, /**< key = [CB_STORAGE_VALIDATOR_INFO,0,0,0,0,0] */
-	CB_STORAGE_BRANCH_INFO, /**< key = [CB_STORAGE_BRANCH_INFO,branchID,0,0,0,0] */
-	CB_STORAGE_BLOCK, /**< key = [CB_STORAGE_BLOCK,branchID,blockID * 4] */
-	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK,branchID,0,0,0,0] */
-	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS,outputID * 4,0] */
+	CB_STORAGE_ORPHAN, /**< key = [CB_STORAGE_ORPHANS,orphanID] */
+	CB_STORAGE_VALIDATOR_INFO, /**< key = [CB_STORAGE_VALIDATOR_INFO] */
+	CB_STORAGE_BRANCH_INFO, /**< key = [CB_STORAGE_BRANCH_INFO,branchID] */
+	CB_STORAGE_BLOCK, /**< key = [CB_STORAGE_BLOCK,branchID, blockID * 4] */
+	CB_STORAGE_BLOCK_HASH_INDEX, /**< [CB_STORAGE_BLOCK_HASH_INDEX, hash * 20] Links to the block branch id and position. */
+	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK,branchID] */
+	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS, hash * 32, outputID * 4] */
+	CB_STORAGE_TRANSACTION_INDEX, /**< key = [CB_STORAGE_TRANSACTION_INDEX, hash * 32] */
 } CBStorageParts;
 
 /**
@@ -423,19 +425,35 @@ typedef enum{
  */
 typedef enum{
 	CB_BLOCK_HASH = 0, /**< The hash is written before the block data */
-	CB_BLOCK_TIME = 100,
-	CB_BLOCK_TARGET = 104,
+	CB_BLOCK_START = 20, /**< The start of the serialised block data */
+	CB_BLOCK_TIME = 88,
+	CB_BLOCK_TARGET = 92,
 } CBBlockOffsets;
 
 /**
  @brief The offsets to parts of the unspent output reference data
  */
 typedef enum{
-	CB_UNSPENT_OUTPUT_BLOCK_INDEX = 0,
-	CB_UNSPENT_OUTPUT_BRANCH = 4,
-	CB_UNSPENT_OUTPUT_COINBASE = 5,
-	CB_UNSPENT_OUTPUT_OUTPUT_INDEX = 6,
-	CB_UNSPENT_OUTPUT_POSITION = 10,
-} CBUnspentOutputOffsets;
+	CB_TRANSACTION_REF_BLOCK_INDEX = 0, /**< The block index in the branch where the transaction exists. */
+	CB_TRANSACTION_REF_BRANCH = 4, /**< The branch where the transaction exists. */
+	CB_TRANSACTION_REF_POSITION_OUPTUTS = 5, /**< The byte position in the block where the first transaction output exists. */
+	CB_TRANSACTION_REF_LENGTH_OUTPUTS = 9, /**< The length in bytes of the transaction outputs. */
+	CB_TRANSACTION_REF_IS_COINBASE = 13 /**< 1 if the transaction is a coinbase, else 0 */
+} CBTransactionReferenceOffsets;
+
+/**
+ @brief The offsets to parts of the unspent output reference data
+ */
+typedef enum{
+	CB_UNSPENT_OUTPUT_REF_POSITION = 0, /**< Byte position in the block where this output exists. */
+} CBUnspentOutputReferenceOffsets;
+
+/**
+ @brief The offsets to parts of the block reference data
+ */
+typedef enum{
+	CB_BLOCK_HASH_REF_BRANCH = 0,
+	CB_BLOCK_HASH_REF_INDEX = 1,
+} CBBlockHashRefOffsets;
 
 #endif

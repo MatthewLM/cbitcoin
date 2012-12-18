@@ -36,38 +36,6 @@
 #include <string.h>
 
 /**
- @brief References a transaction.
- */
-typedef struct{
-	uint8_t transactionHash[32]; /**< The transaction hash */
-	uint32_t ID; /**< ID of this transaction reference. */
-	uint32_t blockIndex; /**< The index of the block containing this transaction */
-	uint8_t branch; /**< The branch this transaction belongs to. */
-	bool coinbase; /**< True if a coinbase transaction */
-	uint32_t position; /**< The positon of the transaction in the block */
-} CBTransactionReference;
-
-/**
- @brief References an output.
- */
-typedef struct{
-	uint8_t transactionHash[32]; /**< The transaction hash for the output */
-	uint32_t ID; /**< ID of this output reference. */
-	uint32_t position; /**< The offset positon of the output in the transaction data */
-} CBOutputReference;
-
-/**
- @brief Keeps the target and time for a block in an index with the last 20 bytes of a hash as a key.
- */
-typedef struct{
-	uint8_t hash[20]; /**< The hash key */
-	uint8_t branch; /**< The branch for this block */
-	uint32_t index; /**< The index of the block */
-	uint32_t target; /** The target for this block */
-	uint32_t time; /**< The block's timestamp */
-} CBBlockReference;
-
-/**
  @brief Represents a block branch.
  */
 typedef struct{
@@ -78,7 +46,6 @@ typedef struct{
 	uint32_t startHeight; /**< The starting height where this branch begins */
 	uint32_t lastValidation; /**< The index of the last block in this branch that has been fully validated. */
 	CBBigInt work; /**< The total work for this branch. The branch with the highest work is the winner! */
-	CBBlockReference ** chronoBlockRefs; /**< Pointers to block references in-order for the branch (chronological) with oldest first. */
 	bool working; /**< True if we this branch is being worked upon */
 } CBBlockBranch;
 
@@ -94,8 +61,6 @@ typedef struct{
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
 	uint32_t numUnspentOutputs; /**< The number of unspent outputs for the main branch upto the last validated block. */
-	CBAssociativeArray outputIndex; /**< Ordered unspent outputs by the transaction hash. */
-	CBAssociativeArray blockIndex; /**< The index for block references with the last 20 bytes of the block hash as the key. */
 	void (*logError)(char *,...); /**< Pointer to error callback */
 	uint64_t storage; /**< The storage component object */
 } CBFullValidator;
@@ -182,7 +147,7 @@ void CBFullValidatorEnsureCanOpen(CBFullValidator * self);
  @brief Gets the mimimum time minus one allowed for a new block onto a branch.
  @param self The CBFullValidator object.
  @param branch The id of the branch.
- @param prevIndex The index of the last block to determine the minimum time minus one for when adding onto this block.
+ @param prevIndex The index of the last block to determine the minimum time minus one for when adding onto this block, or 0 on failure.
  */
 uint32_t CBFullValidatorGetMedianTime(CBFullValidator * self, uint8_t branch, uint32_t prevIndex);
 /**
@@ -224,17 +189,37 @@ CBBlockStatus CBFullValidatorProcessBlock(CBFullValidator * self, CBBlock * bloc
  @param branch The branch to add to.
  @param prevBranch The branch of the previous block.
  @param prevBlockIndex The index of the previous block.
+ @param prevBlockTarget The target of the previous block.
  @param txHashes The transaction hashes for the block.
  @return The status of the block.
  */
-CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint8_t * txHashes);
+CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget, uint8_t * txHashes);
 /**
- @brief Updates the unspent outputs for a branch.
+ @brief Saves the last validated blocks from startBranch to endBranch
+ @param self The CBFullValidator object.
+ @param startBranch The branch with the earliest starting block.
+ @param endBranch The endBranch that can go down to the startBranch.
+ @returns true if the function executed successfully or false on an error.
+ */
+bool CBFullValidatorSaveLastValidatedBlocks(CBFullValidator * self, uint8_t startBranch, uint8_t endBranch);
+/**
+ @brief Updates the unspent outputs and transaction index for a branch.
  @param self The CBFullValidator object.
  @param block The block with the transaction data to search for changing unspent outputs.
  @param branch The branch the block is for.
  @param blockIndex The block index in the branch.
+ @param forward If true the indices will be updated when adding blocks, else it will be updated removing blocks for re-organisation.
+ @returns true on successful execution or false on error.
  */
-bool CBFullValidatorUpdateUnspentOutputs(CBFullValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
+bool CBFullValidatorUpdateUnspentOutputs(CBFullValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, bool forward);
+/**
+ @brief Updates the unspent outputs and transaction index for a branch in reverse and loads a block to do this.
+ @param self The CBFullValidator object.
+ @param branch The branch the block is for.
+ @param blockIndex The block index in the branch.
+ @param forward If true the indices will be updated when adding blocks, else it will be updated removing blocks for re-organisation.
+ @returns true on successful execution or false on error.
+ */
+bool CBFullValidatorUpdateUnspentOutputsAndLoad(CBFullValidator * self, uint8_t branch, uint32_t blockIndex, bool forward);
 
 #endif

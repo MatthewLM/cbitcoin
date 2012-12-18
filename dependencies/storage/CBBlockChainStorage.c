@@ -36,6 +36,8 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 	self->numValueWrites = 0;
 	self->deleteKeys = NULL;
 	self->numDeleteKeys = 0;
+	CBInitAssociativeArray(&self->valueWrites);
+	self->numValueWrites = 0;
 	// Check data consistency
 	if (NOT CBBlockChainStorageEnsureConsistent((uint64_t) self)){
 		free(self);
@@ -246,6 +248,7 @@ void CBFreeBlockChainStorage(uint64_t iself){
 }
 void CBResetBlockChainStorage(uint64_t iself){
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
+	CBFreeAssociativeArray(&self->valueWrites, true);
 	self->numValueWrites = 0;
 	free(self->deleteKeys);
 	self->deleteKeys = NULL;
@@ -258,7 +261,7 @@ bool CBBlockChainStorageChangeKey(uint64_t iself, uint8_t * previousKey, uint8_t
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
 	self->changeKeys = realloc(self->changeKeys, sizeof(*self->changeKeys) * ++self->numChangeKeys);
 	if (NOT self->changeKeys) {
-		self->logError("Failed to reaalocate memory for the key change array");
+		self->logError("Failed to reallocate memory for the key change array");
 		CBResetBlockChainStorage(iself);
 		return false;
 	}
@@ -268,18 +271,81 @@ bool CBBlockChainStorageChangeKey(uint64_t iself, uint8_t * previousKey, uint8_t
 }
 bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, uint32_t totalSize){
 	CBBlockChainStorage * self = (CBBlockChainStorage *) iself;
-	if (self->numValueWrites == CB_MAX_VALUE_WRITES) {
-		self->logError("Too many writes to the database at once.");
-		CBResetBlockChainStorage(iself);
-		return false;
+	// See if the value exists already.
+	CBFindResult res = CBAssociativeArrayFind(&self->valueWrites, key);
+	if (res.found) {
+		// Update or replace value.
+		// Get pointer to start of element (ie. key)
+		uint8_t * start = res.node->elements[res.pos];
+		// Get information
+		CBWriteValue * info = (CBWriteValue *)(start + *start + 1);
+		// Determine if we are replacing the value or not
+		if (info->totalLen != totalSize) {
+			// Replace
+			
+		}else{
+			// Add data
+			// Determine if the data should be reallocated
+			uint32_t sizeAdd = 0;
+			uint32_t offsetMove;
+			if (offset < info->offset) {
+				offsetMove = info->offset - offset;
+				sizeAdd = offsetMove;
+			}
+			if (offsetMove > dataSize) {
+				// Gap, make new write
+			}
+			if (dataSize - offset > info->dataLen
+				&& dataSize - offset - info->dataLen > sizeAdd)
+				sizeAdd = dataSize - offset - info->dataLen;
+			uint32_t newAllocLen = *start + 1 + sizeof(CBWriteValue) + info->dataLen + sizeAdd;
+			if (newAllocLen > info->allocLen) {
+				// Reallocate data
+				start = realloc(start, newAllocLen);
+				if (NOT start) {
+					self->logError("Failed to reallocate memory for the data to write.");
+					CBResetBlockChainStorage(iself);
+					return false;
+				}
+				info = (CBWriteValue *)(start + *start + 1);
+			}
+			// Get data pointer
+			uint8_t * data = (uint8_t *)(info + 1);
+			// Move old data if new offset is smaller.
+			if (offset < info->offset) {
+				// Move data that will not be clipped to after the new data being added
+				if (info->dataLen > dataSize - offsetMove)
+					memmove(data + dataSize, data + (dataSize - offsetMove), info->dataLen - (dataSize - offsetMove));
+			}
+		}
+	}else{
+		// Add new value to write.
+		// Create element
+		uint8_t * val = malloc(*key + 1 + sizeof(CBWriteValue) + dataSize);
+		if (NOT val) {
+			self->logError("Failed to allocate memory for the data to write.");
+			CBResetBlockChainStorage(iself);
+			return false;
+		}
+		// Write key to element
+		memcpy(val, key, *key + 1);
+		// Write information
+		CBWriteValue * info = (CBWriteValue *)(val + *key + 1);
+		info->offset = offset;
+		info->totalLen = totalSize;
+		info->dataLen = dataSize;
+		info->allocLen = *key + 1 + sizeof(CBWriteValue) + dataSize;
+		// Write data
+		uint8_t * valData = (uint8_t *)(info + 1);
+		memcpy(valData, data, dataSize);
+		// Insert
+		if (NOT CBAssociativeArrayInsert(&self->valueWrites, val, CBAssociativeArrayFind(&self->valueWrites, val), NULL)) {
+			self->logError("Failed to insert a new write value to the valueWrites array.");
+			CBResetBlockChainStorage(iself);
+			return false;
+		}
+		self->numValueWrites++;
 	}
-	self->valueWrites[self->numValueWrites].data = data;
-	self->valueWrites[self->numValueWrites].key = key;
-	self->valueWrites[self->numValueWrites].offset = offset;
-	self->valueWrites[self->numValueWrites].totalLen = totalSize;
-	self->valueWrites[self->numValueWrites].dataLen = dataSize;
-	self->valueWrites[self->numValueWrites].allocLen = dataSize;
-	self->numValueWrites++;
 	return true;
 }
 bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset){
