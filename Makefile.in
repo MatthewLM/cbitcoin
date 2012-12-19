@@ -2,7 +2,7 @@
 
 INCDIR = $(CURDIR)/include
 BINDIR = $(CURDIR)/bin
-CFLAGS = -Wall -Wno-overflow -Wno-uninitialized -pedantic -std=c99 -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include -O3 @COMPILE_CONFIG_FLAGS@ -D _POSIX_SOURCE
+CFLAGS += -Wall -Wno-overflow -pedantic -D_POSIX_C_SOURCE=200809L -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include -O3 @COMPILE_CONFIG_FLAGS@
 LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
