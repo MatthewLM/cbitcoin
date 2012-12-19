@@ -65,30 +65,25 @@ void onErrorReceived(char * format,...){
 }
 
 int main(){
-	/*remove("./validation.dat");
-	remove("./branch0.dat");
-	remove("./blocks0-0.dat");
-	remove("./blocks1-0.dat");
+	remove("./log.dat");
+	remove("./0.dat");
+	remove("./1.dat");
+	remove("./2.dat");
 	// Create validator
-	CBFullValidator * validator = CBNewFullValidator("./", onErrorReceived);
-	// Create initial data
-	if (NOT CBFullValidatorLoadValidator(validator)){
-		printf("VALIDATOR LOAD INIT FAIL\n");
-		return 1;
-	}
-	if (NOT CBFullValidatorLoadBranchValidator(validator,0)){
-		printf("VALIDATOR LOAD BRANCH INIT FAIL\n");
+	uint64_t storage = CBNewBlockChainStorage("./", onErrorReceived);
+	bool bad;
+	CBFullValidator * validator = CBNewFullValidator(storage, &bad, onErrorReceived);
+	if (NOT validator || bad) {
+		printf("VALIDATOR INIT FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(validator);
+	CBFreeBlockChainStorage(storage);
 	// Now create it again. It should load the data.
-	validator = CBNewFullValidator("./", onErrorReceived);
-	if (NOT CBFullValidatorLoadValidator(validator)){
+	storage = CBNewBlockChainStorage("./", onErrorReceived);
+	validator = CBNewFullValidator(storage, &bad, onErrorReceived);
+	if (NOT validator || bad) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
-		return 1;
-	}
-	if (NOT CBFullValidatorLoadBranchValidator(validator,0)){
-		printf("VALIDATOR LOAD BRANCH FROM FILE FAIL\n");
 		return 1;
 	}
 	// Now verify that the data is correct.
@@ -100,7 +95,7 @@ int main(){
 		printf("BRANCH NUM FAIL\n");
 		return 1;
 	}
-	if(validator->mainBranch != 0){
+	if(validator->mainBranch){
 		printf("MAIN BRANCH FAIL\n");
 		return 1;
 	}
@@ -108,32 +103,12 @@ int main(){
 		printf("LAST RETARGET FAIL\n");
 		return 1;
 	}
-	if(validator->branches[0].numRefs != 1){
-		printf("NUM REFS FAIL\n");
+	if(validator->branches[0].numBlocks != 1){
+		printf("NUM BLOCKS FAIL\n");
 		return 1;
 	}
 	if(validator->branches[0].parentBranch){
 		printf("PARENT BRANCH FAIL\n");
-		return 1;
-	}
-	if(memcmp(validator->branches[0].referenceTable[0].blockHash,(uint8_t []){0x6F,0xE2,0x8C,0x0A,0xB6,0xF1,0xB3,0x72,0xC1,0xA6,0xA2,0x46,0xAE,0x63,0xF7,0x4F,0x93,0x1E,0x83,0x65,0xE1,0x5A,0x08,0x9C,0x68,0xD6,0x19,0x00,0x00,0x00,0x00,0x00},32)){
-		printf("GENESIS REF HASH FAIL\n");
-		return 1;
-	}
-	if(validator->branches[0].references[0].ref.fileID){
-		printf("FILE ID FAIL\n");
-		return 1;
-	}
-	if(validator->branches[0].references[0].ref.filePos){
-		printf("FILE POS FAIL\n");
-		return 1;
-	}
-	if(validator->branches[0].references[0].target != CB_MAX_TARGET){
-		printf("REF TARGET FAIL\n");
-		return 1;
-	}
-	if(validator->branches[0].references[0].time != 1231006505){
-		printf("REF TIME FAIL\n");
 		return 1;
 	}
 	if(validator->branches[0].startHeight){
@@ -148,69 +123,13 @@ int main(){
 		printf("WORK VAL FAIL\n");
 		return 1;
 	}
-	// Test unspent coinbase output
-	if (validator->branches->numUnspentOutputs != 1){
-		printf("NUM UNSPENT OUTPUTS FAIL\n");
-		return 1;
-	}
-	if (validator->branches->unspentOutputs[0].branch) {
-		printf("UNSPENT OUTPUT BRANCH FAIL\n");
-		return 1;
-	}
-	if (NOT validator->branches->unspentOutputs[0].coinbase) {
-		printf("UNSPENT OUTPUT COINBASE FAIL\n");
-		return 1;
-	}
-	if (validator->branches->unspentOutputs[0].height) {
-		printf("UNSPENT OUTPUT HEIGHT FAIL\n");
-		return 1;
-	}
-	if (memcmp(validator->branches->unspentOutputs[0].outputHash,(uint8_t []){0x3b,0xa3,0xed,0xfd,0x7a,0x7b,0x12,0xb2,0x7a,0xc7,0x2c,0x3e,0x67,0x76,0x8f,0x61,0x7f,0xc8,0x1b,0xc3,0x88,0x8a,0x51,0x32,0x3a,0x9f,0xb8,0xaa,0x4b,0x1e,0x5e,0x4a},32)) {
-		printf("UNSPENT OUTPUT HASH FAIL\n");
-		return 1;
-	}
-	if (validator->branches->unspentOutputs[0].ref.fileID) {
-		printf("UNSPENT OUTPUT FILE ID FAIL\n");
-		return 1;
-	}
-	if (validator->branches->unspentOutputs[0].ref.filePos != 209) {
-		printf("UNSPENT OUTPUT FILE POS FAIL\n");
-		return 1;
-	}
-	// Verify unspent output is correct
-	FILE * fd = CBFullValidatorGetBlockFile(validator, 0, 0);
-	fseek(fd, 209, SEEK_SET);
-	CBByteArray * outputBytes = CBNewByteArrayOfSize(76, onErrorReceived);
-	if (fread(CBByteArrayGetData(outputBytes), 1, 76, fd) != 76){
-		printf("UNSPENT OUTPUT READ FAIL\n");
-		return 1;
-	}
-	CBTransactionOutput * output = CBNewTransactionOutputFromData(outputBytes, onErrorReceived);
-	CBTransactionOutputDeserialise(output);
-	if (output->value != 50 * CB_ONE_BITCOIN) {
-		printf("UNSPENT OUTPUT VALUE FAIL\n");
-		return 1;
-	}
-	if (output->scriptObject->length != 67) {
-		printf("UNSPENT OUTPUT SCRIPT SIZE FAIL\n");
-		return 1;
-	}
-	if (memcmp(CBByteArrayGetData(output->scriptObject),(uint8_t []){0x41,0x04,0x67,0x8A,0xFD,0xB0,0xFE,0x55,0x48,0x27,0x19,
-		0x67,0xF1,0xA6,0x71,0x30,0xB7,0x10,0x5C,0xD6,0xA8,0x28,0xE0,0x39,0x09,0xA6,0x79,0x62,0xE0,0xEA,0x1F,0x61,0xDE,0xB6,0x49,0xF6,
-		0xBC,0x3F,0x4C,0xEF,0x38,0xC4,0xF3,0x55,0x04,0xE5,0x1E,0xC1,0x12,0xDE,0x5C,0x38,0x4D,0xF7,0xBA,0x0B,0x8D,0x57,0x8A,0x4C,0x70,
-		0x2B,0x6B,0xF1,0x1D,0x5F,0xAC},67)) {
-			printf("UNSPENT OUTPUT SCRIPT FAIL\n");
-			return 1;
-	}
-	CBReleaseObject(output);
-	CBReleaseObject(outputBytes);
 	// Try loading the genesis block
-	CBBlock * block = CBFullValidatorLoadBlock(validator, validator->branches[0].references[0], 0);
-	CBBlockDeserialise(block, true);
+	CBBlock * block = CBFullValidatorLoadBlock(validator, 0, 0);
 	if (NOT block) {
 		printf("GENESIS RETRIEVE FAIL\n");
 		return 1;
 	}
+	CBBlockDeserialise(block, true);
 	if (memcmp(CBBlockGetHash(block),(uint8_t []){0x6F,0xE2,0x8C,0x0A,0xB6,0xF1,0xB3,0x72,0xC1,0xA6,0xA2,0x46,0xAE,0x63,0xF7,0x4F,0x93,0x1E,0x83,0x65,0xE1,0x5A,0x08,0x9C,0x68,0xD6,0x19,0x00,0x00,0x00,0x00,0x00},32)) {
 		printf("GENESIS HASH FAIL\n");
 		return 1;
@@ -298,11 +217,11 @@ int main(){
 	CBReleaseObject(genesisInScript);
 	CBReleaseObject(genesisOutScript);
 	CBReleaseObject(block);
-	// Test validating a correct block onto the genesis block
+	// Test validating a correct block onto the genesis block (This one is taken off the main bitcoin production chain)
 	CBBlock * block1 = CBNewBlock(onErrorReceived);
 	block1->version = 1;
 	block1->prevBlockHash = CBNewByteArrayWithDataCopy((uint8_t []){0x6F,0xE2,0x8C,0x0A,0xB6,0xF1,0xB3,0x72,0xC1,0xA6,0xA2,0x46,0xAE,0x63,0xF7,0x4F,0x93,0x1E,0x83,0x65,0xE1,0x5A,0x08,0x9C,0x68,0xD6,0x19,0x00,0x00,0x00,0x00,0x00}, 32, onErrorReceived);
-	block1->merkleRoot = CBNewByteArrayWithDataCopy((uint8_t []){0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xCB,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E}, 32, onErrorReceived);
+	block1->merkleRoot = CBNewByteArrayWithDataCopy((uint8_t []){0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xBE,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E}, 32, onErrorReceived);
 	block1->time = 1231469665;
 	block1->target = CB_MAX_TARGET;
 	block1->nonce = 2573394689;
@@ -320,7 +239,6 @@ int main(){
 	CBGetMessage(block1)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block1, true), onErrorReceived);
 	CBBlockSerialise(block1, true, false);
 	// Made block now proceed with the test.
-	printf("%lli\n",CB_MAX_MONEY);
 	CBBlockStatus res = CBFullValidatorProcessBlock(validator, block1, 1349643202);
 	if (res != CB_BLOCK_STATUS_MAIN) {
 		printf("MAIN CHAIN ADD FAIL\n");
@@ -328,15 +246,13 @@ int main(){
 	}
 	// Check validator data is correct, after closing and loading data
 	CBReleaseObject(validator);
-	validator = CBNewFullValidator("./", onErrorReceived);
-	if (NOT CBFullValidatorLoadValidator(validator)){
+	CBFreeBlockChainStorage(storage);
+	storage = CBNewBlockChainStorage("./", onErrorReceived);
+	validator = CBNewFullValidator(storage, &bad, onErrorReceived);
+	if (NOT validator || bad){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
 		return 1;
 	}
-	if (NOT CBFullValidatorLoadBranchValidator(validator,0)){
-		printf("BLOCK ONE LOAD BRANCH FROM FILE FAIL\n");
-		return 1;
-	} 
 	if (validator->mainBranch) {
 		printf("BLOCK ONE MAIN BRANCH FAIL\n");
 		return 1;
@@ -357,28 +273,8 @@ int main(){
 		printf("BLOCK ONE LAST VALIDATION FAIL\n");
 		return 1;
 	}
-	if (validator->branches[0].numRefs != 2) {
+	if (validator->branches[0].numBlocks != 2) {
 		printf("BLOCK ONE NUM REFS FAIL\n");
-		return 1;
-	}
-	if (validator->branches[0].numUnspentOutputs != 2) {
-		printf("BLOCK ONE NUM UNSPENT OUTPUTS FAIL\n");
-		return 1;
-	}
-	if (validator->branches[0].references[1].target != CB_MAX_TARGET) {
-		printf("BLOCK ONE REF TARGET FAIL\n");
-		return 1;
-	}
-	if (validator->branches[0].references[1].time != 1231469665) {
-		printf("BLOCK ONE REF TIME FAIL\n");
-		return 1;
-	}
-	if (NOT validator->branches[0].referenceTable[0].index || validator->branches[0].referenceTable[1].index) {
-		printf("BLOCK ONE REF TABLE INDEXES FAIL\n");
-		return 1;
-	}
-	if (memcmp(validator->branches[0].referenceTable[0].blockHash,CBBlockGetHash(block1),32)) {
-		printf("BLOCK ONE REF TABLE FIRST HASH FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(block1);
@@ -395,13 +291,13 @@ int main(){
 		return 1;
 	}
 	// Try to load block
-	block1 = CBFullValidatorLoadBlock(validator, validator->branches[0].references[1], 0);
+	block1 = CBFullValidatorLoadBlock(validator, 1, 0);
 	CBBlockDeserialise(block1, true);
 	if (NOT block1) {
 		printf("BLOCK ONE LOAD FAIL\n");
 		return 1;
 	}
-	if (memcmp(CBByteArrayGetData(block1->merkleRoot),(uint8_t []){0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xCB,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E},32)) {
+	if (memcmp(CBByteArrayGetData(block1->merkleRoot),(uint8_t []){0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xBE,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E},32)) {
 		printf("BLOCK ONE MERKLE ROOT FAIL\n");
 		return 1;
 	}
@@ -478,39 +374,49 @@ int main(){
 		return 1;
 	}
 	// Check coinbase output reference data
-	if (validator->branches[0].unspentOutputs[1].branch != 0) {
+	uint8_t key[38];
+	uint8_t data[14];
+	key[0] = 37;
+	key[1] = CB_STORAGE_UNSPENT_OUTPUT;
+	uint8_t outputHash[32] = {0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xBE,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E};
+	memcpy(key + 2, outputHash, 32);
+	CBInt32ToArray(key, 34, 0);
+	CBBlockChainStorageReadValue(storage, key, data, 4, 0);
+	if (data[CB_UNSPENT_OUTPUT_REF_POSITION] != 155) {
+		printf("BLOCK ONE UNSPENT OUTPUT POSITION FAIL\n");
+		return 1;
+	}
+	key[0] = 33;
+	key[1] = CB_STORAGE_TRANSACTION_INDEX;
+	CBBlockChainStorageReadValue(storage, key, data, 14, 0);
+	if (data[CB_TRANSACTION_REF_BRANCH]) {
 		printf("BLOCK ONE UNSPENT OUTPUT BRANCH FAIL\n");
 		return 1;
 	}
-	if (NOT validator->branches[0].unspentOutputs[1].coinbase) {
+	if (NOT data[CB_TRANSACTION_REF_IS_COINBASE]) {
 		printf("BLOCK ONE UNSPENT OUTPUT COINBASE FAIL\n");
 		return 1;
 	}
-	if (NOT validator->branches[0].unspentOutputs[1].height != 1) {
-		printf("BLOCK ONE UNSPENT OUTPUT HEIGHT FAIL\n");
+	if (data[CB_TRANSACTION_REF_BLOCK_INDEX] != 1) {
+		printf("BLOCK ONE UNSPENT OUTPUT BLOCK INDEX FAIL\n");
 		return 1;
 	}
-	if (memcmp(validator->branches[0].unspentOutputs[1].outputHash,(uint8_t []){0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xCB,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E},32)) {
-		printf("BLOCK ONE UNSPENT OUTPUT HASH FAIL\n");
+	if (data[CB_TRANSACTION_REF_LENGTH_OUTPUTS] != CBGetMessage(block1->transactions[0]->outputs[0])->bytes->length) {
+		printf("BLOCK ONE UNSPENT OUTPUT LENGTH OUTPUTS FAIL\n");
 		return 1;
 	}
-	if (validator->branches[0].unspentOutputs[1].outputIndex) {
-		printf("BLOCK ONE UNSPENT OUTPUT INDEX FAIL\n");
+	if (data[CB_TRANSACTION_REF_POSITION_OUPTUTS] != 155) {
+		printf("BLOCK ONE UNSPENT OUTPUT POSITION OUTPUTS FAIL\n");
 		return 1;
 	}
-	if (validator->branches[0].unspentOutputs[1].ref.fileID) {
-		printf("BLOCK ONE UNSPENT OUTPUT FILE ID FAIL\n");
-		return 1;
-	}
-	fd = CBFullValidatorGetBlockFile(validator, 0, 0);
-	fseek(fd, validator->branches[0].unspentOutputs[1].ref.filePos, SEEK_SET);
-	outputBytes = CBNewByteArrayOfSize(CBGetMessage(block1->transactions[0]->outputs[0])->bytes->length, onErrorReceived);
-	if (fread(CBByteArrayGetData(outputBytes), 1, outputBytes->length, fd) != outputBytes->length){
-		printf("BLOCK ONE UNSPENT OUTPUT READ FAIL\n");
-		return 1;
-	}
+	key[0] = 6;
+	key[1] = CB_STORAGE_BLOCK;
+	key[2] = 0;
+	CBInt32ToArray(key, 3, 1);
+	uint8_t * outputBytes = malloc(data[CB_TRANSACTION_REF_LENGTH_OUTPUTS]);
+	CBBlockChainStorageReadValue(storage, key, outputBytes, data[CB_TRANSACTION_REF_LENGTH_OUTPUTS], data[CB_TRANSACTION_REF_POSITION_OUPTUTS]);
 	// Verify same data
-	if (CBByteArrayCompare(CBGetMessage(block1->transactions[0]->outputs[0])->bytes, outputBytes)) {
+	if (memcmp(CBByteArrayGetData(CBGetMessage(block1->transactions[0]->outputs[0])->bytes), outputBytes, data[CB_TRANSACTION_REF_LENGTH_OUTPUTS])) {
 		printf("BLOCK ONE UNSPENT OUTPUT DATA CONSISTENCY FAIL\n");
 		return 1;
 	}
@@ -585,6 +491,6 @@ int main(){
 	// Free data
 	CBReleaseObject(block1);
 	CBReleaseObject(validator);
-	CBReleaseObject(nullHash);*/
+	CBReleaseObject(nullHash);
 	return 0;
 }

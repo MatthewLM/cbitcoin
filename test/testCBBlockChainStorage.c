@@ -918,6 +918,15 @@ int main(){
 		return 1;
 	}
 	fclose(index);
+	// Finally try reading length of values
+	if (CBBlockChainStorageGetLength((uint64_t)storage, key4) != 7) {
+		printf("READ 1ST VAL LENGTH FAIL\n");
+		return 1;
+	}
+	if (CBBlockChainStorageGetLength((uint64_t)storage, key2) != 15) {
+		printf("READ 2ND VAL LENGTH FAIL\n");
+		return 1;
+	}
 	CBFreeBlockChainStorage((uint64_t)storage);
 	return 0;
 }

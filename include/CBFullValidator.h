@@ -60,7 +60,6 @@ typedef struct{
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
-	uint32_t numUnspentOutputs; /**< The number of unspent outputs for the main branch upto the last validated block. */
 	void (*logError)(char *,...); /**< Pointer to error callback */
 	uint64_t storage; /**< The storage component object */
 } CBFullValidator;

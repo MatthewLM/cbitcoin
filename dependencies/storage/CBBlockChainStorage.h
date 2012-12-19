@@ -58,12 +58,13 @@ typedef struct{
 } CBDeletedSection;
 
 /**
- @brief Describes a write operation. Before this should be the byte data. After this should be the data.
+ @brief Describes a write operation.
  */
 typedef struct{
+	uint8_t * key; /**< The key with the length being the first byte */
 	uint32_t offset; /**< Offset to begin writting */
+	uint8_t * data; /**< The data to write */
 	uint32_t dataLen; /**< The length of the data to write */
-	uint32_t allocLen; /**< The length allocated for this value */
 	uint32_t totalLen; /**< The length of the total value entry */
 } CBWriteValue;
 
@@ -78,7 +79,7 @@ typedef struct{
 	uint32_t lastSize; /**< Size of last file */
 	CBAssociativeArray deletionIndex; /**< Index of all deleted sections. The key begins with 0x01 if the deleted section is active or 0x00 if it is no longer active, the key is then followed by the length in big endian. */
 	uint32_t numDeletionValues; /**< Number of values in the deletion index */
-	CBAssociativeArray valueWrites; /**< Values to write */
+	CBWriteValue * valueWrites; /**< Values to write */
 	uint8_t numValueWrites; /**< The number of values to write */
 	uint8_t ** deleteKeys; /**< A list of keys to delete with the first byte being the length and the remaining bytes being the key data. */
 	uint32_t numDeleteKeys; /**< Number of keys to delete Similar structure to "deleteKeys" but with the old key followed by the new key.  */

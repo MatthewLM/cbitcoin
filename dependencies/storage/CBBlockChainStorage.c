@@ -36,7 +36,7 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 	self->numValueWrites = 0;
 	self->deleteKeys = NULL;
 	self->numDeleteKeys = 0;
-	CBInitAssociativeArray(&self->valueWrites);
+	self->valueWrites = NULL;
 	self->numValueWrites = 0;
 	// Check data consistency
 	if (NOT CBBlockChainStorageEnsureConsistent((uint64_t) self)){
@@ -135,7 +135,7 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 		self->nextIndexPos = 10; // First index starts after 10 bytes
 		self->lastFile = 2;
 		int indexAppend = open(filemame, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
-		if (NOT indexAppend) {
+		if (indexAppend == -1) {
 			free(self);
 			CBFreeBlockChainStorage((uint64_t)self);
 			logError("Could not create the database index.");
@@ -212,10 +212,11 @@ uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...)){
 				return 0;
 			}
 		}
+		close(indexRead);
 	}else{
 		// Else empty deletion index
 		int indexAppend = open(filemame, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
-		if (NOT indexAppend) {
+		if (indexAppend == -1) {
 			free(self);
 			CBFreeBlockChainStorage((uint64_t)self);
 			logError("Could not create the database deletion index.");
@@ -248,104 +249,80 @@ void CBFreeBlockChainStorage(uint64_t iself){
 }
 void CBResetBlockChainStorage(uint64_t iself){
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
-	CBFreeAssociativeArray(&self->valueWrites, true);
+	// Free write data
+	for (uint32_t x = 0; x < self->numValueWrites; x++) {
+		free(self->valueWrites[x].data);
+		free(self->valueWrites[x].key);
+	}
+	free(self->valueWrites);
+	self->valueWrites = NULL;
 	self->numValueWrites = 0;
+	// Free deletion data
+	for (uint32_t x = 0; x < self->numDeleteKeys; x++)
+		free(self->deleteKeys[x]);
 	free(self->deleteKeys);
 	self->deleteKeys = NULL;
 	self->numDeleteKeys = 0;
+	// Free key change data
+	for (uint32_t x = 0; x < self->numChangeKeys; x++) {
+		free(self->changeKeys[x][0]);
+		free(self->changeKeys[x][1]);
+	}
 	free(self->changeKeys);
 	self->changeKeys = NULL;
 	self->numChangeKeys = 0;
 }
 bool CBBlockChainStorageChangeKey(uint64_t iself, uint8_t * previousKey, uint8_t * newKey){
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
-	self->changeKeys = realloc(self->changeKeys, sizeof(*self->changeKeys) * ++self->numChangeKeys);
+	self->changeKeys = realloc(self->changeKeys, sizeof(*self->changeKeys) * (self->numChangeKeys + 1));
 	if (NOT self->changeKeys) {
-		self->logError("Failed to reallocate memory for the key change array");
+		self->logError("Failed to reallocate memory for the key change array.");
 		CBResetBlockChainStorage(iself);
 		return false;
 	}
-	self->changeKeys[self->numChangeKeys - 1][0] = previousKey;
-	self->changeKeys[self->numChangeKeys - 1][1] = newKey;
+	self->changeKeys[self->numChangeKeys][0] = malloc(*previousKey + 1);
+	if (NOT self->changeKeys[self->numChangeKeys][0]) {
+		self->logError("Failed to allocate memory for a previous key to change.");
+		CBResetBlockChainStorage(iself);
+		return false;
+	}
+	memcpy(self->changeKeys[self->numChangeKeys][0], previousKey, *previousKey + 1);
+	self->changeKeys[self->numChangeKeys][1] = malloc(*newKey + 1);
+	if (NOT self->changeKeys[self->numChangeKeys][1]) {
+		self->logError("Failed to allocate memory for a new key to replace an old one.");
+		CBResetBlockChainStorage(iself);
+		return false;
+	}
+	memcpy(self->changeKeys[self->numChangeKeys][1], newKey, *newKey + 1);
+	self->numChangeKeys++;
 	return true;
 }
 bool CBBlockChainStorageWriteValue(uint64_t iself, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, uint32_t totalSize){
 	CBBlockChainStorage * self = (CBBlockChainStorage *) iself;
-	// See if the value exists already.
-	CBFindResult res = CBAssociativeArrayFind(&self->valueWrites, key);
-	if (res.found) {
-		// Update or replace value.
-		// Get pointer to start of element (ie. key)
-		uint8_t * start = res.node->elements[res.pos];
-		// Get information
-		CBWriteValue * info = (CBWriteValue *)(start + *start + 1);
-		// Determine if we are replacing the value or not
-		if (info->totalLen != totalSize) {
-			// Replace
-			
-		}else{
-			// Add data
-			// Determine if the data should be reallocated
-			uint32_t sizeAdd = 0;
-			uint32_t offsetMove;
-			if (offset < info->offset) {
-				offsetMove = info->offset - offset;
-				sizeAdd = offsetMove;
-			}
-			if (offsetMove > dataSize) {
-				// Gap, make new write
-			}
-			if (dataSize - offset > info->dataLen
-				&& dataSize - offset - info->dataLen > sizeAdd)
-				sizeAdd = dataSize - offset - info->dataLen;
-			uint32_t newAllocLen = *start + 1 + sizeof(CBWriteValue) + info->dataLen + sizeAdd;
-			if (newAllocLen > info->allocLen) {
-				// Reallocate data
-				start = realloc(start, newAllocLen);
-				if (NOT start) {
-					self->logError("Failed to reallocate memory for the data to write.");
-					CBResetBlockChainStorage(iself);
-					return false;
-				}
-				info = (CBWriteValue *)(start + *start + 1);
-			}
-			// Get data pointer
-			uint8_t * data = (uint8_t *)(info + 1);
-			// Move old data if new offset is smaller.
-			if (offset < info->offset) {
-				// Move data that will not be clipped to after the new data being added
-				if (info->dataLen > dataSize - offsetMove)
-					memmove(data + dataSize, data + (dataSize - offsetMove), info->dataLen - (dataSize - offsetMove));
-			}
-		}
-	}else{
-		// Add new value to write.
-		// Create element
-		uint8_t * val = malloc(*key + 1 + sizeof(CBWriteValue) + dataSize);
-		if (NOT val) {
-			self->logError("Failed to allocate memory for the data to write.");
-			CBResetBlockChainStorage(iself);
-			return false;
-		}
-		// Write key to element
-		memcpy(val, key, *key + 1);
-		// Write information
-		CBWriteValue * info = (CBWriteValue *)(val + *key + 1);
-		info->offset = offset;
-		info->totalLen = totalSize;
-		info->dataLen = dataSize;
-		info->allocLen = *key + 1 + sizeof(CBWriteValue) + dataSize;
-		// Write data
-		uint8_t * valData = (uint8_t *)(info + 1);
-		memcpy(valData, data, dataSize);
-		// Insert
-		if (NOT CBAssociativeArrayInsert(&self->valueWrites, val, CBAssociativeArrayFind(&self->valueWrites, val), NULL)) {
-			self->logError("Failed to insert a new write value to the valueWrites array.");
-			CBResetBlockChainStorage(iself);
-			return false;
-		}
-		self->numValueWrites++;
+	self->valueWrites = realloc(self->valueWrites, sizeof(CBWriteValue) * (self->numValueWrites + 1));
+	if (NOT self->valueWrites) {
+		self->logError("Failed to reallocate memory for the valueWrites array");
+		CBResetBlockChainStorage(iself);
+		return false;
 	}
+	self->valueWrites[self->numValueWrites].data = malloc(dataSize);
+	if (NOT self->valueWrites[self->numValueWrites].data) {
+		self->logError("Failed to allocate memory for the data to write.");
+		CBResetBlockChainStorage(iself);
+		return false;
+	}
+	memcpy(self->valueWrites[self->numValueWrites].data, data, dataSize);
+	self->valueWrites[self->numValueWrites].key = malloc(*key + 1);
+	if (NOT self->valueWrites[self->numValueWrites].data) {
+		self->logError("Failed to allocate memory for the key to write.");
+		CBResetBlockChainStorage(iself);
+		return false;
+	}
+	memcpy(self->valueWrites[self->numValueWrites].key, key, *key + 1);
+	self->valueWrites[self->numValueWrites].offset = offset;
+	self->valueWrites[self->numValueWrites].totalLen = totalSize;
+	self->valueWrites[self->numValueWrites].dataLen = dataSize;
+	self->numValueWrites++;
 	return true;
 }
 bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset){
@@ -361,7 +338,7 @@ bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t * data,
 	char filename[strlen(self->dataDir) + 10];
 	sprintf(filename,"%s%i.dat",self->dataDir,val->fileID);
 	int file = open(filename, O_RDONLY);
-	if (NOT file) {
+	if (file == -1) {
 		self->logError("Could not open file for a value.");
 		return false;
 	}
@@ -373,6 +350,7 @@ bool CBBlockChainStorageReadValue(uint64_t iself, uint8_t * key, uint8_t * data,
 		self->logError("Could not read from file for value.");
 		return false; 
 	}
+	close(file);
 	return true;
 }
 bool CBBlockChainStorageCommitData(uint64_t iself){
@@ -382,7 +360,7 @@ bool CBBlockChainStorageCommitData(uint64_t iself){
 	// Open the log file
 	strcpy(filename + strlen(self->dataDir),"log.dat");
 	int logFile = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (NOT logFile) {
+	if (logFile == -1) {
 		self->logError("The log file for overwritting could not be opened.");
 		CBResetBlockChainStorage(iself);
 		return false;
@@ -424,6 +402,11 @@ bool CBBlockChainStorageCommitData(uint64_t iself){
 	// Sync directory for log file
 	filename[strlen(self->dataDir)] = '\0';
 	int dir = open(filename, 0);
+	if (dir == -1){
+		self->logError("Failed to open the directory during a commit for synchronisation.");
+		CBResetBlockChainStorage(iself);
+		return false;
+	}
 	if (fsync(dir)) {
 		self->logError("Failed to synchronise the directory during a commit.");
 		CBResetBlockChainStorage(iself);
@@ -555,6 +538,12 @@ bool CBBlockChainStorageCommitData(uint64_t iself){
 	for (uint32_t x = 0; x < self->numDeleteKeys; x++) {
 		// Find index entry
 		CBFindResult res = CBAssociativeArrayFind(&self->index, self->deleteKeys[x]);
+		if (NOT res.found) {
+			self->logError("Failed to find a key-value for deletion.");
+			close(logFile);
+			CBResetBlockChainStorage(iself);
+			return false;
+		}
 		uint8_t * indexKey = res.node->elements[res.pos];
 		CBIndexValue * indexVal = (CBIndexValue *)(indexKey + *indexKey + 1);
 		// Create deletion entry for the data
@@ -588,6 +577,12 @@ bool CBBlockChainStorageCommitData(uint64_t iself){
 	for (uint32_t x = 0; x < self->numChangeKeys; x++) {
 		// Find key
 		CBFindResult res = CBAssociativeArrayFind(&self->index, self->changeKeys[x][0]);
+		if (NOT res.found) {
+			self->logError("Failed to find a key-value for changing.");
+			close(logFile);
+			CBResetBlockChainStorage(iself);
+			return false;
+		}
 		// Obtain index entry
 		uint8_t * indexKey = res.node->elements[res.pos];
 		// Delete key
@@ -638,7 +633,7 @@ bool CBBlockChainStorageEnsureConsistent(uint64_t iself){
 		return true;
 	// Open the logfile for reading
 	int logFile = open(filename, O_RDWR);
-	if (NOT logFile) {
+	if (logFile == -1) {
 		self->logError("The log file for reading could not be opened.");
 		return false;
 	}
@@ -646,31 +641,38 @@ bool CBBlockChainStorageEnsureConsistent(uint64_t iself){
 	uint8_t data[14];
 	if (read(logFile, data, 1) != 1) {
 		self->logError("Failed reading the logfile.");
+		close(logFile);
 		return false;
 	}
-	if (NOT data[0])
+	if (NOT data[0]){
 		// Not active
+		close(logFile);
 		return true;
+	}
 	// Active, therefore we need to attempt rollback.
 	if (read(logFile, data, 14) != 14) {
 		self->logError("Failed reading the logfile.");
+		close(logFile);
 		return false;
 	}
 	// Truncate files
 	strcpy(filename + strlen(self->dataDir), "0.dat");
 	if (truncate(filename, CBArrayToInt32(data, 0))) {
 		self->logError("Failed to truncate the index file down to the previous size.");
+		close(logFile);
 		return false;
 	}
 	filename[strlen(self->dataDir)] = '1';
 	if (truncate(filename, CBArrayToInt32(data, 4))) {
 		self->logError("Failed to truncate the deletion index file down to the previous size.");
+		close(logFile);
 		return false;
 	}
 	uint16_t lastFile = CBArrayToInt16(data, 8);
 	sprintf(filename + strlen(self->dataDir), "%u.dat", lastFile);
 	if (truncate(filename, CBArrayToInt32(data, 10))) {
 		self->logError("Failed to truncate the last file down to the previous size.");
+		close(logFile);
 		return false;
 	}
 	// Check if a new file had been created. If it has, delete it.
@@ -688,6 +690,7 @@ bool CBBlockChainStorageEnsureConsistent(uint64_t iself){
 		uint8_t data[14];
 		if (read(logFile, data, 14) != 14) {
 			self->logError("Could not read from the log file.");
+			close(logFile);
 			return false;
 		}
 		uint32_t dataLen = CBArrayToInt32(data, 10);
@@ -695,33 +698,52 @@ bool CBBlockChainStorageEnsureConsistent(uint64_t iself){
 		uint8_t * prevData = malloc(dataLen);
 		if (NOT prevData) {
 			self->logError("Could not allocate memory for previous data from the log file.");
+			close(logFile);
 			return false;
 		}
 		if (read(logFile, prevData, dataLen) != dataLen) {
 			self->logError("Could not read previous data from the log file.");
+			close(logFile);
 			return false;
 		}
 		// Write the data to the file
 		sprintf(filename + strlen(self->dataDir), "%u.dat", CBArrayToInt16(data, 0));
 		int file = open(filename, O_WRONLY);
+		if (file == -1) {
+			self->logError("Could not open the file for writting the previous data.");
+			close(logFile);
+			return false;
+		}
 		if (lseek(file, CBArrayToInt64(data, 2), SEEK_SET) == -1){
 			self->logError("Could not seek the file for writting the previous data.");
+			close(logFile);
+			close(file);
 			return false;
 		}
 		if (write(file, prevData, dataLen) != dataLen) {
 			self->logError("Could not write previous data back into the file.");
+			close(logFile);
+			close(file);
 			return false;
 		}
+		close(file);
 		free(prevData);
 		c += 14 + dataLen;
 	}
 	// Sync directory
 	filename[strlen(self->dataDir)] = '\0';
 	int dir = open(filename, 0);
-	if (fsync(dir)) {
-		self->logError("Failed to synchronise the directory when recovering database.");
+	if (dir == -1) {
+		self->logError("Failed to open the directory when recovering database for synchronisation.");
+		close(logFile);
 		return false;
 	}
+	if (fsync(dir)) {
+		self->logError("Failed to synchronise the directory when recovering database.");
+		close(logFile);
+		return false;
+	}
+	close(dir);
 	// Now we are done, make the logfile inactive
 	data[0] = 0;
 	write(logFile, data, 1);
@@ -729,13 +751,13 @@ bool CBBlockChainStorageEnsureConsistent(uint64_t iself){
 	close(logFile);
 	return true;
 }
-uint32_t CBBlockChainStorageGetLength(uint64_t iself,uint8_t key[6]){
+uint32_t CBBlockChainStorageGetLength(uint64_t iself,uint8_t * key) {
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
 	// Look in index for value
 	CBFindResult res = CBAssociativeArrayFind(&self->index, key);
 	if (NOT res.found)
 		return 0;
-	return ((CBIndexValue *)res.node->elements[res.pos])->length;
+	return ((CBIndexValue *)(res.node->elements[res.pos] + *key + 1))->length;
 }
 bool CBBlockChainStorageAddDeletionEntry(CBBlockChainStorage * self, uint16_t fileID, uint32_t pos, uint32_t len, int logFile, int dir){
 	// First look for inactive deletion that can be used.
@@ -798,7 +820,7 @@ bool CBBlockChainStorageAddOverwrite(CBBlockChainStorage * self, uint16_t fileID
 	char filename[strlen(self->dataDir) + 10];
 	sprintf(filename, "%s%i.dat",self->dataDir,fileID);
 	int file = open(filename, O_RDWR);
-	if (NOT file) {
+	if (file == -1) {
 		self->logError("The data file for overwritting could not be opened.");
 		return false;
 	}
@@ -932,7 +954,7 @@ bool CBBlockChainStorageAppend(CBBlockChainStorage * self, uint16_t fileID, uint
 	char filename[strlen(self->dataDir) + 10];
 	sprintf(filename,"%s%i.dat",self->dataDir,fileID);
 	int file = open(filename, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);
-	if (NOT file) {
+	if (file == -1) {
 		self->logError("Could not open file %u for appending.",fileID);
 		close(file);
 		return false;
@@ -970,12 +992,19 @@ CBFindResult CBBlockChainStorageGetDeletedSection(CBBlockChainStorage * self, ui
 }
 bool CBBlockChainStorageRemoveValue(uint64_t iself, uint8_t * key){
 	CBBlockChainStorage * self = (CBBlockChainStorage *)iself;
-	self->deleteKeys = realloc(self->deleteKeys, sizeof(*self->deleteKeys) * ++self->numDeleteKeys);
+	self->deleteKeys = realloc(self->deleteKeys, sizeof(*self->deleteKeys) * (self->numDeleteKeys + 1));
 	if (NOT self->deleteKeys) {
-		self->logError("Failed to reaalocate memory for the deleted keys array");
+		self->logError("Failed to reaalocate memory for the deleted keys array.");
 		CBResetBlockChainStorage(iself);
 		return false;
 	}
-	self->deleteKeys[self->numDeleteKeys - 1] = key;
+	self->deleteKeys[self->numDeleteKeys] = malloc(*key + 1);
+	if (NOT self->deleteKeys[self->numDeleteKeys]) {
+		self->logError("Failed to aalocate memory for a key to delete from storage.");
+		CBResetBlockChainStorage(iself);
+		return false;
+	}
+	memcpy(self->deleteKeys[self->numDeleteKeys], key, *key + 1);
+	self->numDeleteKeys++;
 	return true;
 }
