@@ -360,7 +360,6 @@ typedef enum{
 	CB_BLOCK_STATUS_BAD_TIME, /**< The block has a bad time */
 	CB_BLOCK_STATUS_DUPLICATE, /**< The block has already been received. */
 	CB_BLOCK_STATUS_ERROR, /**< There was an error while processing a block */
-	CB_BLOCK_STATUS_ERROR_BAD_DATA, /**< There was an error while processing a block and it has left corrupted data on the filesystem or memory. Recovery is required before continuing. */
 	CB_BLOCK_STATUS_CONTINUE, /**< Continue with the validation */
 	CB_BLOCK_STATUS_NO_NEW, /**< Cannot remove a branch for a new one. */
 } CBBlockStatus;
@@ -382,77 +381,5 @@ typedef enum{
 	CB_VALIDATOR_LOAD_ERR, /**< Load failure */
 	CB_VALIDATOR_LOAD_ERR_DATA, /**< Load failure, ensure all related validation files are deleted before continuing. */
 } CBValidatorLoadResult;
-
-/**
- @brief The data storage components.
- */
-typedef enum{
-	CB_STORAGE_ORPHAN, /**< key = [CB_STORAGE_ORPHANS,orphanID] */
-	CB_STORAGE_VALIDATOR_INFO, /**< key = [CB_STORAGE_VALIDATOR_INFO] */
-	CB_STORAGE_BRANCH_INFO, /**< key = [CB_STORAGE_BRANCH_INFO,branchID] */
-	CB_STORAGE_BLOCK, /**< key = [CB_STORAGE_BLOCK,branchID, blockID * 4] */
-	CB_STORAGE_BLOCK_HASH_INDEX, /**< [CB_STORAGE_BLOCK_HASH_INDEX, hash * 20] Links to the block branch id and position. */
-	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK,branchID] */
-	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS, hash * 32, outputID * 4] */
-	CB_STORAGE_TRANSACTION_INDEX, /**< key = [CB_STORAGE_TRANSACTION_INDEX, hash * 32] */
-} CBStorageParts;
-
-/**
- @brief The offsets to parts of the main validation data
- */
-typedef enum{
-	CB_VALIDATION_FIRST_ORPHAN = 0,
-	CB_VALIDATION_NUM_ORPHANS = 1,
-	CB_VALIDATION_MAIN_BRANCH = 2,
-	CB_VALIDATION_NUM_BRANCHES = 3,
-} CBValidationOffsets;
-
-/**
- @brief The offsets to parts of the branch data.
- */
-typedef enum{
-	CB_BRANCH_LAST_RETARGET = 0,
-	CB_BRANCH_LAST_VALIDATION = 4,
-	CB_BRANCH_NUM_BLOCKS = 8,
-	CB_BRANCH_PARENT_BLOCK_INDEX = 12,
-	CB_BRANCH_PARENT_BRANCH = 16,
-	CB_BRANCH_START_HEIGHT = 17,
-} CBBranchOffsets;
-
-/**
- @brief The offsets to parts of the block data
- */
-typedef enum{
-	CB_BLOCK_HASH = 0, /**< The hash is written before the block data */
-	CB_BLOCK_START = 20, /**< The start of the serialised block data */
-	CB_BLOCK_TIME = 88,
-	CB_BLOCK_TARGET = 92,
-} CBBlockOffsets;
-
-/**
- @brief The offsets to parts of the unspent output reference data
- */
-typedef enum{
-	CB_TRANSACTION_REF_BLOCK_INDEX = 0, /**< The block index in the branch where the transaction exists. */
-	CB_TRANSACTION_REF_BRANCH = 4, /**< The branch where the transaction exists. */
-	CB_TRANSACTION_REF_POSITION_OUPTUTS = 5, /**< The byte position in the block where the first transaction output exists. */
-	CB_TRANSACTION_REF_LENGTH_OUTPUTS = 9, /**< The length in bytes of the transaction outputs. */
-	CB_TRANSACTION_REF_IS_COINBASE = 13 /**< 1 if the transaction is a coinbase, else 0 */
-} CBTransactionReferenceOffsets;
-
-/**
- @brief The offsets to parts of the unspent output reference data
- */
-typedef enum{
-	CB_UNSPENT_OUTPUT_REF_POSITION = 0, /**< Byte position in the block where this output exists. */
-} CBUnspentOutputReferenceOffsets;
-
-/**
- @brief The offsets to parts of the block reference data
- */
-typedef enum{
-	CB_BLOCK_HASH_REF_BRANCH = 0,
-	CB_BLOCK_HASH_REF_INDEX = 1,
-} CBBlockHashRefOffsets;
 
 #endif

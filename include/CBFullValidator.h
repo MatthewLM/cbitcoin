@@ -136,7 +136,7 @@ CBBlockStatus CBFullValidatorBasicBlockValidationCopy(CBFullValidator * self, CB
  @param height The height of the block.
  @returns CB_BLOCK_VALIDATION_OK if the block passed validation, CB_BLOCK_VALIDATION_BAD if the block failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
-CBBlockValidationResult CBFullValidatorCompleteBlockValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint8_t * txHashes,uint32_t height);
+CBBlockValidationResult CBFullValidatorCompleteBlockValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint8_t * txHashes, uint32_t height);
 /**
  @brief Ensures a file can be opened.
  @param self The CBFullValidator object.
@@ -146,7 +146,8 @@ void CBFullValidatorEnsureCanOpen(CBFullValidator * self);
  @brief Gets the mimimum time minus one allowed for a new block onto a branch.
  @param self The CBFullValidator object.
  @param branch The id of the branch.
- @param prevIndex The index of the last block to determine the minimum time minus one for when adding onto this block, or 0 on failure.
+ @param prevIndex The index of the last block to determine the minimum time minus one for when adding onto this block.
+ @returns The time on success, or 0 on failure.
  */
 uint32_t CBFullValidatorGetMedianTime(CBFullValidator * self, uint8_t branch, uint32_t prevIndex);
 /**
@@ -164,14 +165,6 @@ uint32_t CBFullValidatorGetMedianTime(CBFullValidator * self, uint8_t branch, ui
  @returns CB_BLOCK_VALIDATION_OK if the transaction passed validation, CB_BLOCK_VALIDATION_BAD if the transaction failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
 CBBlockValidationResult CBFullValidatorInputValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex,uint32_t inputIndex, CBPrevOut ** allSpentOutputs, uint8_t * txHashes, uint64_t * value, uint32_t * sigOps);
-/**
- @brief Loads a block from storage.
- @param self The CBFullValidator object.
- @param blockID The index of the block int he branch.
- @param branch The branch the block belongs to.
- @returns A new CBBlockObject with serailised block data which has not been deserialised or NULL on failure.
- */
-CBBlock * CBFullValidatorLoadBlock(CBFullValidator * self, uint32_t blockID, uint32_t branch);
 /**
  @brief Processes a block. Block headers are validated, ensuring the integrity of the transaction data is OK, checking the block's proof of work and calculating the total branch work to the genesis block. If the block extends the main branch complete validation is done. If the block extends a branch to become the new main branch because it has the most work, a re-organisation of the block-chain is done.
  @param self The CBFullValidator object.

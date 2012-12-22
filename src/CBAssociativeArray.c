@@ -25,29 +25,6 @@
 
 #include "CBAssociativeArray.h"
 
-CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
-	CBFindResult result;
-	CBBTreeNode * node = self->root;
-	for (;;) {
-		// Do binary search on node
-		result = CBBTreeNodeBinarySearch(node, key);
-		if (result.found){
-			// Found the data on this node.
-			result.node = node;
-			return result;
-		}else{
-			// We have not found the data on this node, if there is a child go to the child.
-			if (node->children[result.pos])
-				// Child exists, move to it
-				node = node->children[result.pos];
-			else{
-				// The child doesn't exist. Return as not found with position for insertion.
-				result.node = node;
-				return result;
-			}
-		}
-	}
-}
 void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 	if (NOT pos.node->children[0]) {
 		// Leaf
@@ -211,6 +188,38 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 		CBAssociativeArrayDelete(self, pos);
 	}
 }
+CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
+	CBFindResult result;
+	CBBTreeNode * node = self->root;
+	for (;;) {
+		// Do binary search on node
+		result = CBBTreeNodeBinarySearch(node, key);
+		if (result.found){
+			// Found the data on this node.
+			result.node = node;
+			return result;
+		}else{
+			// We have not found the data on this node, if there is a child go to the child.
+			if (node->children[result.pos])
+				// Child exists, move to it
+				node = node->children[result.pos];
+			else{
+				// The child doesn't exist. Return as not found with position for insertion.
+				result.node = node;
+				return result;
+			}
+		}
+	}
+}
+bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBIterator * it){
+	if (NOT self->root->numElements)
+		return false;
+	it->node = self->root;
+	it->pos = 0;
+	while (it->node->children[0])
+		it->node = it->node->children[0];
+	return true;
+}
 bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBFindResult pos, CBBTreeNode * right){
 	// See if we can insert data in this node
 	if (pos.node->numElements < CB_BTREE_ORDER) {
@@ -346,6 +355,39 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 		res.node = pos.node->parent;
 		return CBAssociativeArrayInsert(self, midKeyValue, res, new);
 	}
+}
+bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBIterator * it){
+	// Look for child
+	if (it->node->children[it->pos + 1]) {
+		// Go to left-most in child
+		it->node = it->node->children[it->pos + 1];
+		while (it->node->children[0])
+			it->node = it->node->children[0];
+		it->pos = 0;
+	}else{
+		if (it->pos == it->node->numElements - 1) {
+			// Get key to find next key for
+			uint8_t * key = it->node->elements[it->pos];
+			for(;;){
+				// If root then it is the end
+				if (NOT it->node->parent)
+					return true;
+				// Find position in parent
+				CBFindResult res;
+				res = CBBTreeNodeBinarySearch(it->node->parent, key);
+				// Move to parent
+				it->node = it->node->parent;
+				it->pos = res.pos;
+				if (it->pos < it->node->numElements)
+					// We can use this
+					break;
+				// Else continue onto next parent and so on in the loop
+			}
+		}else
+			// Move along one
+			it->pos++;
+	}
+	return false;
 }
 CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key){
 	CBFindResult res;

@@ -21,6 +21,7 @@
 //  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "CBFullValidator.h"
+#include "CBBlockChainStorage.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -124,7 +125,7 @@ int main(){
 		return 1;
 	}
 	// Try loading the genesis block
-	CBBlock * block = CBFullValidatorLoadBlock(validator, 0, 0);
+	CBBlock * block = CBBlockChainStorageLoadBlock(validator, 0, 0);
 	if (NOT block) {
 		printf("GENESIS RETRIEVE FAIL\n");
 		return 1;
@@ -291,7 +292,7 @@ int main(){
 		return 1;
 	}
 	// Try to load block
-	block1 = CBFullValidatorLoadBlock(validator, 1, 0);
+	block1 = CBBlockChainStorageLoadBlock(validator, 1, 0);
 	CBBlockDeserialise(block1, true);
 	if (NOT block1) {
 		printf("BLOCK ONE LOAD FAIL\n");
@@ -374,53 +375,28 @@ int main(){
 		return 1;
 	}
 	// Check coinbase output reference data
-	uint8_t key[38];
-	uint8_t data[14];
-	key[0] = 37;
-	key[1] = CB_STORAGE_UNSPENT_OUTPUT;
 	uint8_t outputHash[32] = {0x98,0x20,0x51,0xfD,0x1E,0x4B,0xA7,0x44,0xBB,0xBE,0x68,0x0E,0x1F,0xEE,0x14,0x67,0x7B,0xA1,0xA3,0xC3,0x54,0x0B,0xF7,0xB1,0xCD,0xB6,0x06,0xE8,0x57,0x23,0x3E,0x0E};
-	memcpy(key + 2, outputHash, 32);
-	CBInt32ToArray(key, 34, 0);
-	CBBlockChainStorageReadValue(storage, key, data, 4, 0);
-	if (data[CB_UNSPENT_OUTPUT_REF_POSITION] != 155) {
-		printf("BLOCK ONE UNSPENT OUTPUT POSITION FAIL\n");
+	bool coinbase;
+	uint32_t outputHeight;
+	CBTransactionOutput * output = CBBlockChainStorageLoadUnspentOutput(validator, outputHash, 0, &coinbase, &outputHeight);
+	if (outputHeight != 1) {
+		printf("BLOCK ONE UNSPENT OUTPUT HEIGHT FAIL\n");
 		return 1;
 	}
-	key[0] = 33;
-	key[1] = CB_STORAGE_TRANSACTION_INDEX;
-	CBBlockChainStorageReadValue(storage, key, data, 14, 0);
-	if (data[CB_TRANSACTION_REF_BRANCH]) {
-		printf("BLOCK ONE UNSPENT OUTPUT BRANCH FAIL\n");
-		return 1;
-	}
-	if (NOT data[CB_TRANSACTION_REF_IS_COINBASE]) {
+	if (NOT coinbase) {
 		printf("BLOCK ONE UNSPENT OUTPUT COINBASE FAIL\n");
 		return 1;
 	}
-	if (data[CB_TRANSACTION_REF_BLOCK_INDEX] != 1) {
-		printf("BLOCK ONE UNSPENT OUTPUT BLOCK INDEX FAIL\n");
-		return 1;
-	}
-	if (data[CB_TRANSACTION_REF_LENGTH_OUTPUTS] != CBGetMessage(block1->transactions[0]->outputs[0])->bytes->length) {
-		printf("BLOCK ONE UNSPENT OUTPUT LENGTH OUTPUTS FAIL\n");
-		return 1;
-	}
-	if (data[CB_TRANSACTION_REF_POSITION_OUPTUTS] != 155) {
-		printf("BLOCK ONE UNSPENT OUTPUT POSITION OUTPUTS FAIL\n");
-		return 1;
-	}
-	key[0] = 6;
-	key[1] = CB_STORAGE_BLOCK;
-	key[2] = 0;
-	CBInt32ToArray(key, 3, 1);
-	uint8_t * outputBytes = malloc(data[CB_TRANSACTION_REF_LENGTH_OUTPUTS]);
-	CBBlockChainStorageReadValue(storage, key, outputBytes, data[CB_TRANSACTION_REF_LENGTH_OUTPUTS], data[CB_TRANSACTION_REF_POSITION_OUPTUTS]);
 	// Verify same data
-	if (memcmp(CBByteArrayGetData(CBGetMessage(block1->transactions[0]->outputs[0])->bytes), outputBytes, data[CB_TRANSACTION_REF_LENGTH_OUTPUTS])) {
+	if (memcmp(CBByteArrayGetData(CBGetMessage(output)->bytes), (uint8_t [76]){
+		0x00,0xF2,0x05,0x2A,0x01,0x00,0x00,0x00,
+		0x43,
+		0x41,0x04,0x96,0xb5,0x38,0xe8,0x53,0x51,0x9c,0x72,0x6a,0x2c,0x91,0xe6,0x1e,0xc1,0x16,0x00,0xae,0x13,0x90,0x81,0x3a,0x62,0x7c,0x66,0xfb,0x8b,0xe7,0x94,0x7b,0xe6,0x3c,0x52,0xda,0x75,0x89,0x37,0x95,0x15,0xd4,0xe0,0xa6,0x04,0xf8,0x14,0x17,0x81,0xe6,0x22,0x94,0x72,0x11,0x66,0xbf,0x62,0x1e,0x73,0xa8,0x2c,0xbf,0x23,0x42,0xc8,0x58,0xee,0xAC
+	}, 76)) {
 		printf("BLOCK ONE UNSPENT OUTPUT DATA CONSISTENCY FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(outputBytes);
+	CBReleaseObject(output);
 	// Test duplicate add.
 	res = CBFullValidatorProcessBlock(validator, block1, 1349643202);
 	if (res != CB_BLOCK_STATUS_DUPLICATE) {

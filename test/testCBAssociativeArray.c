@@ -39,7 +39,7 @@ int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	s = 1353092048;
 	printf("Session = %u\n",s);
-	srand(s);
+	//srand(s);
 	CBAssociativeArray array;
 	CBInitAssociativeArray(&array);
 	uint8_t key[4];
@@ -594,6 +594,31 @@ int main(){
 				return 1;
 			}
 		}
+	}
+	// Test iteration
+	CBIterator it;
+	CBAssociativeArrayGetFirst(&array,&it);
+	uint8_t * lastKey;
+	bool end = false;
+	for (int x = 0; x < size; x += 10) {
+		if (end) {
+			printf("ITERATOR END FALSE FAIL\n");
+			return 1;
+		}
+		if (NOT CBAssociativeArrayFind(&array, it.node->elements[it.pos]).found) {
+			printf("ITERATE FIND FAIL %u\n", x);
+			return 1;
+		}
+		lastKey = it.node->elements[it.pos];
+		end = CBAssociativeArrayIterate(&array, &it);
+		if (NOT end && memcmp(it.node->elements[it.pos], lastKey, 10) <= 0) {
+			printf("ITERATE ORDER FAIL %u\n", x);
+			return 1;
+		}
+	}
+	if (NOT end) {
+		printf("ITERATOR END TRUE FAIL\n");
+		return 1;
 	}
 	// Try removing half of elements
 	for (int x = 0; x < size/2; x += 10) {

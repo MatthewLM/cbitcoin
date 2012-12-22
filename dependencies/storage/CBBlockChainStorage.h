@@ -2,7 +2,7 @@
 //  CBBlockChainStorage.h
 //  cbitcoin
 //
-//  Created by Matthew Mitchell on 03/11/2012.
+//  Created by Matthew Mitchell on 20/12/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
 //  This file is part of cbitcoin.
@@ -22,123 +22,86 @@
 
 /**
  @file
- @brief Implements the storage dependencies.
+ @brief Implements the block-chain storage dependency with use of the CBDatabase.
  */
 
-#ifndef CBSAFESTORAGEH
-#define CBSAFESTORAGEH
+#ifndef CBBLOCKCHAINSTORAGEH
+#define CBBLOCKCHAINSTORAGEH
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include "CBDependencies.h"
-#include "CBAssociativeArray.h"
+#include "CBDatabase.h"
+#include "CBFullValidator.h"
 
 /**
- @brief An index value which references the value's data position with a key. This should occur in memory after a key. A key is one byte for the length and then the key bytes.
+ @brief The data storage components.
  */
-typedef struct{
-	uint32_t indexPos; /**< The position in the index file where this value exists */
-	uint16_t fileID; /**< The file ID for the data */
-	uint32_t pos; /**< The position of the data in the file. */
-	uint32_t length; /**< The length of the data or 0 if deleted. */
-} CBIndexValue;
+typedef enum{
+	CB_STORAGE_ORPHAN, /**< key = [CB_STORAGE_ORPHANS,orphanID] */
+	CB_STORAGE_VALIDATOR_INFO, /**< key = [CB_STORAGE_VALIDATOR_INFO] */
+	CB_STORAGE_BRANCH_INFO, /**< key = [CB_STORAGE_BRANCH_INFO,branchID] */
+	CB_STORAGE_BLOCK, /**< key = [CB_STORAGE_BLOCK,branchID, blockID * 4] */
+	CB_STORAGE_BLOCK_HASH_INDEX, /**< [CB_STORAGE_BLOCK_HASH_INDEX, hash * 20] Links to the block branch id and position. */
+	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK,branchID] */
+	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS, hash * 32, outputID * 4] */
+	CB_STORAGE_TRANSACTION_INDEX, /**< key = [CB_STORAGE_TRANSACTION_INDEX, hash * 32] */
+} CBStorageParts;
 
 /**
- @brief Describes a deleted section of the database. The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active and ends with four bytes for the length of the deleted section in big-endian. The key becomes before this structure in memory.
+ @brief The offsets to parts of the main validation data
  */
-typedef struct{
-	uint8_t key[5];
-	uint32_t indexPos; /**< The position in the index file where this value exists */
-	uint16_t fileID; /**< The ID of the file with the deleted section. */
-	uint32_t pos; /**< The position in the file with the deleted section. */
-} CBDeletedSection;
+typedef enum{
+	CB_VALIDATION_FIRST_ORPHAN = 0,
+	CB_VALIDATION_NUM_ORPHANS = 1,
+	CB_VALIDATION_MAIN_BRANCH = 2,
+	CB_VALIDATION_NUM_BRANCHES = 3,
+} CBValidationOffsets;
 
 /**
- @brief Describes a write operation.
+ @brief The offsets to parts of the branch data.
  */
-typedef struct{
-	uint8_t * key; /**< The key with the length being the first byte */
-	uint32_t offset; /**< Offset to begin writting */
-	uint8_t * data; /**< The data to write */
-	uint32_t dataLen; /**< The length of the data to write */
-	uint32_t totalLen; /**< The length of the total value entry */
-} CBWriteValue;
+typedef enum{
+	CB_BRANCH_LAST_RETARGET = 0,
+	CB_BRANCH_LAST_VALIDATION = 4,
+	CB_BRANCH_NUM_BLOCKS = 8,
+	CB_BRANCH_PARENT_BLOCK_INDEX = 12,
+	CB_BRANCH_PARENT_BRANCH = 16,
+	CB_BRANCH_START_HEIGHT = 17,
+} CBBranchOffsets;
 
 /**
- @brief Structure for CBBlockChainStorage objects. @see CBBlockChainStorage.h
+ @brief The offsets to parts of the block data
  */
-typedef struct{
-	char * dataDir; /**< The data directory. */
-	CBAssociativeArray index; /**< Index of all key/value pairs */
-	uint32_t numValues; /**< Number of values in the index */
-	uint16_t lastFile; /**< The last file ID. */
-	uint32_t lastSize; /**< Size of last file */
-	CBAssociativeArray deletionIndex; /**< Index of all deleted sections. The key begins with 0x01 if the deleted section is active or 0x00 if it is no longer active, the key is then followed by the length in big endian. */
-	uint32_t numDeletionValues; /**< Number of values in the deletion index */
-	CBWriteValue * valueWrites; /**< Values to write */
-	uint8_t numValueWrites; /**< The number of values to write */
-	uint8_t ** deleteKeys; /**< A list of keys to delete with the first byte being the length and the remaining bytes being the key data. */
-	uint32_t numDeleteKeys; /**< Number of keys to delete Similar structure to "deleteKeys" but with the old key followed by the new key.  */
-	uint8_t *(* changeKeys)[2]; /**< A list of keys to be changed with the last bytes being the new key. */
-	uint32_t numChangeKeys;
-	uint32_t nextIndexPos; /**< The next position for an index */
-	void (*logError)(char *,...);
-} CBBlockChainStorage;
-
-// Additional functions
+typedef enum{
+	CB_BLOCK_HASH = 0, /**< The hash is written before the block data */
+	CB_BLOCK_START = 20, /**< The start of the serialised block data */
+	CB_BLOCK_TIME = 88,
+	CB_BLOCK_TARGET = 92,
+} CBBlockOffsets;
 
 /**
- @brief Add a deletion entry.
- @param self The storage object.
- @param fileID The file ID
- @param pos The position of the deleted section.
- @param len The length of the deleted section.
- @param logFile The file descriptor for the log file.
- @param dir The file descriptor for the data directory.
- @retruns true on success and false on failure
+ @brief The offsets to parts of the unspent output reference data
  */
-bool CBBlockChainStorageAddDeletionEntry(CBBlockChainStorage * self, uint16_t fileID, uint32_t pos, uint32_t len, int logFile, int dir);
+typedef enum{
+	CB_TRANSACTION_REF_BLOCK_INDEX = 0, /**< The block index in the branch where the transaction exists. */
+	CB_TRANSACTION_REF_BRANCH = 4, /**< The branch where the transaction exists. */
+	CB_TRANSACTION_REF_POSITION_OUPTUTS = 5, /**< The byte position in the block where the first transaction output exists. */
+	CB_TRANSACTION_REF_LENGTH_OUTPUTS = 9, /**< The length in bytes of the transaction outputs. */
+	CB_TRANSACTION_REF_IS_COINBASE = 13 /**< 1 if the transaction is a coinbase, else 0 */
+} CBTransactionReferenceOffsets;
+
 /**
- @brief Add an overwrite operation.
- @param self The storage object.
- @param fileID The file ID
- @param data The data to write.
- @param offset The offset to begin writting.
- @param dataLen The length of the data to write.
- @param logFile The file descriptor for the log file.
- @param dir The file descriptor for the data directory.
- @retruns true on success and false on failure
+ @brief The offsets to parts of the unspent output reference data
  */
-bool CBBlockChainStorageAddOverwrite(CBBlockChainStorage * self, uint16_t fileID, uint8_t * data, uint64_t offset, uint32_t dataLen, int logFile, int dir);
+typedef enum{
+	CB_UNSPENT_OUTPUT_REF_POSITION = 0, /**< Byte position in the block where this output exists. */
+	CB_UNSPENT_OUTPUT_REF_LENGTH = 4 /**< Length of the output in bytes. */
+} CBUnspentOutputReferenceOffsets;
+
 /**
- @brief Adds a value to the database without overwriting previous indexed data.
- @param self The storage object.
- @param writeValue Information for writting the value.
- @param indexValue The index data to write.
- @param logFile The file descriptor for the log file.
- @param dir The file descriptor for the data directory.
- @retruns true on success and false on failure
+ @brief The offsets to parts of the block reference data
  */
-bool CBBlockChainStorageAddValue(CBBlockChainStorage * self, CBWriteValue writeValue, CBIndexValue * indexValue, int logFile, int dir);
-/**
- @brief Add an append operation.
- @param self The storage object.
- @param fileID The file ID
- @param data The data to write.
- @param dataLen The length of the data to write.
- @retruns true on success and false on failure
- */
-bool CBBlockChainStorageAppend(CBBlockChainStorage * self, uint16_t fileID, uint8_t * data, uint32_t dataLen);
-/**
- @brief Returns a CBFindResult for largest active deleted section and "found" will be true if the largest active deleted section is above a length.
- @param self The storage object.
- @param length The minimum length required.
- @returns The largest active deleted section as a CBFindResult.
- */
-CBFindResult CBBlockChainStorageGetDeletedSection(CBBlockChainStorage * self, uint32_t length);
+typedef enum{
+	CB_BLOCK_HASH_REF_BRANCH = 0,
+	CB_BLOCK_HASH_REF_INDEX = 1,
+} CBBlockHashRefOffsets;
 
 #endif

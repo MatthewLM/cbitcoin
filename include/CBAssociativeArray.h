@@ -48,10 +48,18 @@ typedef struct{
  @brief Describes the result of a find operation
  */
 typedef struct{
-	bool found; /**< True if found, false otherwise. */
 	CBBTreeNode * node; /**< If found, this is the node with the data, otherwise it is the node where the data should be inserted. */
 	uint8_t pos; /**< If found, this is the element with the data, otherwise it is the position where the data should be inserted. */
+	bool found; /**< True if found, false otherwise. */
 } CBFindResult;
+
+/**
+ @brief References an element in an array which can be iterated.
+ */
+typedef struct{
+	CBBTreeNode * node; /**< The node for the element */
+	uint8_t pos; /**< The element position in the node */
+} CBIterator;
 
 /**
  @brief @see CBAssociativeArray.h
@@ -75,6 +83,12 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos);
  */
 CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key);
 /**
+ @brief Gets the first element (lowest key) in the array.
+ @param self The array object
+ @param it The CBIterator object to be set to the first element.
+ */
+bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBIterator * it);
+/**
  @brief Inserts an element into an array.
  @param self The array object.
  @param key The key-value pair to insert.
@@ -83,6 +97,13 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key);
  @returns true on success and false on failure.
  */
 bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBFindResult pos, CBBTreeNode * right);
+/**
+ @brief Iterates to the next element, in order.
+ @param self The array object.
+ @param it The CBFindResult to be iterated.
+ @returns true if the end of the array has been reached and no iteration could take place. false if the end has not been reached.
+ */
+bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBIterator * it);
 /**
  @brief Does a binary search on a B-tree node.
  @param self The node

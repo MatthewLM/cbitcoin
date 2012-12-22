@@ -105,12 +105,15 @@ build/CBLibEventSockets.o: dependencies/sockets/CBLibEventSockets.c dependencies
 
 # Storage library target linking
 
-storage : build/CBBlockChainStorage.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o
+storage : build/CBBlockChainStorage.o build/CBDatabase.o | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o build/CBDatabase.o
 
 # Storage library compile
 
-build/CBBlockChainStorage.o: dependencies/storage/CBBlockChainStorage.c dependencies/storage/CBBlockChainStorage.h
+build/CBBlockChainStorage.o: dependencies/storage/CBBlockChainStorage.c dependencies/storage/CBBlockChainStorage.h dependencies/storage/CBDatabase.h
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+
+build/CBDatabase.o: dependencies/storage/CBDatabase.c dependencies/storage/CBDatabase.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # Clean
