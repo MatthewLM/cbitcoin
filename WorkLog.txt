@@ -453,7 +453,7 @@ Date: Thursday 20th December
 	End Time: 18:57
 	
 	Start Time: 21:59
-	End Time: 13:01
+	End Time: 23:01
 	
 ------------------------------------------------------------------------------
 Date: Friday 21st December
@@ -477,3 +477,35 @@ Date: Saturday 22nd December
 	
 	Start Time: 21:57
 	End Time: 22:56
+	
+	--------------------------------------------------------------------------
+	Commit: f50ccd0dc3d34cbfeb178695812c940117df0cef
+	
+		Work Completed:
+		
+			* Re-organised storage code into CBBlockChainStorage.c and CBDatabase.c
+	
+		Lines Added: 2,249
+		Lined Removed: 2,001
+		Total Time: 14.65 hours
+	--------------------------------------------------------------------------
+	
+------------------------------------------------------------------------------
+Date: Monday 24th December
+------------------------------------------------------------------------------
+
+	Start Time: 17:00
+	End Time: 17:50
+	
+	Start Time: 19:12
+	End Time: 22:10
+	
+------------------------------------------------------------------------------
+Date: Friday 28th December
+------------------------------------------------------------------------------	
+	
+	Start Time: 11:10
+	End Time: 13:58
+	
+	
+
