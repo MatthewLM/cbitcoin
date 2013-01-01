@@ -28,14 +28,13 @@
 #ifndef CBDATABASEH
 #define CBDATABASEH
 
+#include "CBDependencies.h"
+#include "CBAssociativeArray.h"
+#include "CBFile.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include "CBDependencies.h"
-#include "CBAssociativeArray.h"
 
 /**
  @brief An index value which references the value's data position with a key. This should occur in memory after a key. A key is one byte for the length and then the key bytes.
@@ -74,6 +73,11 @@ typedef struct{
 	uint32_t numChangeKeys;
 	uint32_t nextIndexPos; /**< The next position for an index */
 	void (*logError)(char *,...);
+	// Files
+	CBFile indexFile;
+	CBFile deletionIndexFile;
+	CBFile fileObjectCache; /**< Stores last used file object for reuse until new file is needed */
+	uint16_t lastUsedFileObject; /**< The last used file number or 0 if none. */
 } CBDatabase;
 
 // Initialisation
@@ -85,6 +89,34 @@ typedef struct{
  @returns The database object or 0 on failure.
  */
 CBDatabase * CBNewDatabase(char * dataDir, void (*logError)(char *,...));
+/**
+ @brief Reads and opens the index during initialisation
+ @param self The storage object.
+ @param filename The index filename.
+ @returns true on success or false on failure.
+ */
+bool CBDatabaseReadAndOpenIndex(CBDatabase * self, char * filename);
+/**
+ @brief Creates an index during the first initialisation
+ @param self The storage object.
+ @param filename The index filename.
+ @returns true on success or false on failure.
+ */
+bool CBDatabaseCreateIndex(CBDatabase * self, char * filename);
+/**
+ @brief Reads and opens the deletion index during initialisation
+ @param self The storage object.
+ @param filename The index filename.
+ @returns true on success or false on failure.
+ */
+bool CBDatabaseReadAndOpenDeletionIndex(CBDatabase * self, char * filename);
+/**
+ @brief Creates a deletion index during the first initialisation
+ @param self The storage object.
+ @param filename The index filename.
+ @returns true on success or false on failure.
+ */
+bool CBDatabaseCreateDeletionIndex(CBDatabase * self, char * filename);
 
 // Destructor
 
@@ -106,7 +138,7 @@ void CBFreeDatabase(CBDatabase * self);
  @param dir The file descriptor for the data directory.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len, int logFile, int dir);
+bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len, CBFile * logFile);
 /**
  @brief Add an overwrite operation.
  @param self The storage object.
@@ -118,7 +150,7 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
  @param dir The file descriptor for the data directory.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, uint64_t offset, uint32_t dataLen, int logFile, int dir);
+bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, uint32_t offset, uint32_t dataLen, CBFile * logFile);
 /**
  @brief Adds a value to the database without overwriting previous indexed data.
  @param self The storage object.
@@ -129,7 +161,7 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, 
  @param dir The file descriptor for the data directory.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CBIndexValue * indexValue, int logFile, int dir);
+bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CBIndexValue * indexValue, CBFile * logFile);
 /**
  @brief Adds a write value to the valueWrites array.
  @param self The storage object.
@@ -178,6 +210,13 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self);
  @returns The largest active deleted section as a CBFindResult.
  */
 CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length);
+/**
+ @brief Gets a file object for a file number (eg. 0 for index, 1 for deleted index and 2 for first data file)
+ @param self The database object.
+ @param fileID The id of the file to get an object for.
+ @returns A pointer to the file object on success and NULL on failure.
+ */
+CBFile * CBDatabaseGetFile(CBDatabase * self, uint16_t fileID);
 /**
  @brief Gets the length of a value in the database or zero if it does not exist.
  @param self The database object.
