@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -42,7 +42,7 @@ typedef struct{
  @brief Creates a new CBFullNode object.
  @returns A new CBFullNode object.
  */
-CBFullNode * CBNewFullNode(void (*logError)(char *,...));
+CBFullNode * CBNewFullNode(void);
 
 /**
  @brief Gets a CBFullNode from another object. Use this to avoid casts.
@@ -56,7 +56,7 @@ CBFullNode * CBGetFullNode(void * self);
  @param self The CBFullNode object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitFullNode(CBFullNode * self, void (*logError)(char *,...));
+bool CBInitFullNode(CBFullNode * self);
 
 /**
  @brief Frees a CBFullNode object.

@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -30,7 +30,7 @@ CBMerkleNode * CBBuildMerkleTree(CBByteArray ** hashes, uint32_t numHashes){
 		return NULL;
 	// Create nodes from the CBByteArray hashes
 	for (uint32_t x = 0; x < numHashes; x++) {
-		memcpy(level[x].hash,CBByteArrayGetData(hashes[x]),32);
+		memcpy(level[x].hash, CBByteArrayGetData(hashes[x]), 32);
 		level[x].left = NULL;
 		level[x].right = NULL;
 	}

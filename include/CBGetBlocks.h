@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -46,13 +46,13 @@ typedef struct{
  @brief Creates a new CBGetBlocks object.
  @returns A new CBGetBlocks object.
 */
-CBGetBlocks * CBNewGetBlocks(uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,void (*logError)(char *,...));
+CBGetBlocks * CBNewGetBlocks(uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash);
 /**
 @brief Creates a new CBGetBlocks object from serialised data.
  @param data Serialised CBGetBlocks data.
  @returns A new CBGetBlocks object.
 */
-CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data,void (*logError)(char *,...));
+CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBGetBlocks from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBGetBlocks * CBGetGetBlocks(void * self);
  @param self The CBGetBlocks object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocks(CBGetBlocks * self,uint32_t version,CBChainDescriptor * chainDescriptor,CBByteArray * stopAtHash,void (*logError)(char *,...));
+bool CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash);
 /**
  @brief Initialises a CBGetBlocks object from serialised data
  @param self The CBGetBlocks object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocksFromData(CBGetBlocks * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data);
 
 /**
  @brief Frees a CBGetBlocks object.

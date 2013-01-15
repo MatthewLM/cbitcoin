@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBInventoryBroadcast object.
  @returns A new CBInventoryBroadcast object.
 */
-CBInventoryBroadcast * CBNewInventoryBroadcast(void (*logError)(char *,...));
+CBInventoryBroadcast * CBNewInventoryBroadcast(void);
 /**
 @brief Creates a new CBInventoryBroadcast object from serialised data.
  @param data Serialised CBInventoryBroadcast data.
  @returns A new CBInventoryBroadcast object.
 */
-CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data,void (*logError)(char *,...));
+CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBInventoryBroadcast from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBInventoryBroadcast * CBGetInventoryBroadcast(void * self);
  @param self The CBInventoryBroadcast object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitInventoryBroadcast(CBInventoryBroadcast * self,void (*logError)(char *,...));
+bool CBInitInventoryBroadcast(CBInventoryBroadcast * self);
 /**
  @brief Initialises a CBInventoryBroadcast object from serialised data
  @param self The CBInventoryBroadcast object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self, CBByteArray * data);
 
 /**
  @brief Frees a CBInventoryBroadcast object.

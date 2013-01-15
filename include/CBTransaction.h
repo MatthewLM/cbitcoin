@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -53,12 +53,12 @@ typedef struct{
  @brief Creates a new CBTransaction object with no inputs or outputs.
  @returns A new CBTransaction object.
  */
-CBTransaction * CBNewTransaction(uint32_t lockTime, uint32_t version, void (*logError)(char *,...));
+CBTransaction * CBNewTransaction(uint32_t lockTime, uint32_t version);
 /**
  @brief Creates a new CBTransaction object from byte data. Should be serialised for object data.
  @returns A new CBTransaction object.
  */
-CBTransaction * CBNewTransactionFromData(CBByteArray * bytes, void (*logError)(char *,...));
+CBTransaction * CBNewTransactionFromData(CBByteArray * bytes);
 
 /**
  @brief Gets a CBTransaction from another object. Use this to avoid casts.
@@ -72,14 +72,14 @@ CBTransaction * CBGetTransaction(void * self);
  @param self The CBTransaction object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version, void (*logError)(char *,...));
+bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version);
 /**
  @brief Initialises a new CBTransaction object from the byte data.
  @param self The CBTransaction object to initialise
  @param data The byte data.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data,void (*logError)(char *,...));
+bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data);
 
 /**
  @brief Frees a CBTransaction object.

@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -56,18 +56,18 @@ typedef struct{
  @brief Creates a new CBTransactionInput object.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInput(CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*logError)(char *,...));
+CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 /**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data,void (*logError)(char *,...));
+CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data);
 /**
  @brief Creates a new unsigned CBTransactionInput object and links it to a given output.
  @returns A new CBTransactionInput object.
  */
-CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*logError)(char *,...));
+CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 
 /**
  @brief Gets a CBTransactionInput from another object. Use this to avoid casts.
@@ -81,20 +81,20 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self,CBScript * script,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*logError)(char *,...));
+bool CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise
  @param data The byte data.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data,void (*logError)(char *,...));
+bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data);
 /**
  @brief Initialises an unsigned CBTransactionInput object.
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self,uint32_t sequence,CBByteArray * prevOutHash,uint32_t prevOutIndex,void (*logError)(char *,...));
+bool CBInitUnsignedTransactionInput(CBTransactionInput * self, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 
 /**
  @brief Frees a CBTransactionInput object.
@@ -104,6 +104,12 @@ void CBFreeTransactionInput(void * self);
  
 //  Functions
 
+/**
+ @brief Calculates the byte length of an input
+ @param self The CBTransactionInput object
+ @returns The calculated length.
+ */
+uint32_t CBTransactionInputCalculateLength(CBTransactionInput * self);
 /**
  @brief Deserialises a CBTransactionInput so that it can be used as an object.
  @param self The CBTransactionInput object

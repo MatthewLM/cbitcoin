@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,29 +26,29 @@
 
 //  Constructor
 
-CBScript * CBNewScriptFromReference(CBByteArray * program,uint32_t offset,uint32_t len){
+CBScript * CBNewScriptFromReference(CBByteArray * program, uint32_t offset, uint32_t len){
 	return CBNewByteArraySubReference(program, offset, len);
 }
-CBScript * CBNewScriptOfSize(uint32_t size,void (*logError)(char *,...)){
-	return CBNewByteArrayOfSize(size, logError);
+CBScript * CBNewScriptOfSize(uint32_t size){
+	return CBNewByteArrayOfSize(size);
 }
-CBScript * CBNewScriptFromString(char * string,void (*logError)(char *,...)){
+CBScript * CBNewScriptFromString(char * string){
 	CBScript * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewScriptFromString\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewScriptFromString\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if (CBInitScriptFromString(self,string,logError))
+	if (CBInitScriptFromString(self, string))
 		return self;
 	free(self);
 	return NULL;
 }
-CBScript * CBNewScriptWithData(uint8_t * data,uint32_t size,void (*logError)(char *,...)){
-	return CBNewByteArrayWithData(data, size, logError);
+CBScript * CBNewScriptWithData(uint8_t * data, uint32_t size){
+	return CBNewByteArrayWithData(data, size);
 }
-CBScript * CBNewScriptWithDataCopy(uint8_t * data,uint32_t size,void (*logError)(char *,...)){
-	return CBNewByteArrayWithDataCopy(data, size, logError);
+CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size){
+	return CBNewByteArrayWithDataCopy(data, size);
 }
 
 //  Object Getter
@@ -59,7 +59,7 @@ CBScript * CBGetScript(void * self){
 
 //  Initialiser
 
-bool CBInitScriptFromString(CBScript * self,char * string,void (*logError)(char *,...)){
+bool CBInitScriptFromString(CBScript * self, char * string){
 	uint8_t * data = NULL;
 	uint32_t dataLast = 0;
 	bool space = false;
@@ -79,334 +79,334 @@ bool CBInitScriptFromString(CBScript * self,char * string,void (*logError)(char 
 					return false;
 				}
 				data = temp;
-				if(NOT strncmp(cursor, "OP_FALSE",8)){
+				if(NOT strncmp(cursor, "OP_FALSE", 8)){
 					data[dataLast] = CB_SCRIPT_OP_0;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_1NEGATE",10)){
+				}else if(NOT strncmp(cursor, "OP_1NEGATE", 10)){
 					data[dataLast] = CB_SCRIPT_OP_1NEGATE;
 					cursor += 10;
-				}else if(NOT strncmp(cursor, "OP_VERNOTIF",11)){
+				}else if(NOT strncmp(cursor, "OP_VERNOTIF", 11)){
 					data[dataLast] = CB_SCRIPT_OP_VERNOTIF;
 					cursor += 11;
-				}else if(NOT strncmp(cursor, "OP_VERIFY",9)){ // OP_VERIFY before OP_VERIF and OP_VER
+				}else if(NOT strncmp(cursor, "OP_VERIFY", 9)){ // OP_VERIFY before OP_VERIF and OP_VER
 					data[dataLast] = CB_SCRIPT_OP_VERIFY;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_VERIF",8)){
+				}else if(NOT strncmp(cursor, "OP_VERIF", 8)){
 					data[dataLast] = CB_SCRIPT_OP_VERIF;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_VER",6)){
+				}else if(NOT strncmp(cursor, "OP_VER", 6)){
 					data[dataLast] = CB_SCRIPT_OP_VER;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_IFDUP",8)){ // OP_IFDUP before OP_IF
+				}else if(NOT strncmp(cursor, "OP_IFDUP", 8)){ // OP_IFDUP before OP_IF
 					data[dataLast] = CB_SCRIPT_OP_IFDUP;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_IF",5)){
+				}else if(NOT strncmp(cursor, "OP_IF", 5)){
 					data[dataLast] = CB_SCRIPT_OP_IF;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_NOTIF",8)){
+				}else if(NOT strncmp(cursor, "OP_NOTIF", 8)){
 					data[dataLast] = CB_SCRIPT_OP_NOTIF;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_ELSE",7)){
+				}else if(NOT strncmp(cursor, "OP_ELSE", 7)){
 					data[dataLast] = CB_SCRIPT_OP_ELSE;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_ENDIF",8)){
+				}else if(NOT strncmp(cursor, "OP_ENDIF", 8)){
 					data[dataLast] = CB_SCRIPT_OP_ENDIF;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_RETURN",9)){
+				}else if(NOT strncmp(cursor, "OP_RETURN", 9)){
 					data[dataLast] = CB_SCRIPT_OP_RETURN;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_TOALTSTACK",13)){
+				}else if(NOT strncmp(cursor, "OP_TOALTSTACK", 13)){
 					data[dataLast] = CB_SCRIPT_OP_TOALTSTACK;
 					cursor += 13;
-				}else if(NOT strncmp(cursor, "OP_FROMALTSTACK",15)){
+				}else if(NOT strncmp(cursor, "OP_FROMALTSTACK", 15)){
 					data[dataLast] = CB_SCRIPT_OP_FROMALTSTACK;
 					cursor += 15;
-				}else if(NOT strncmp(cursor, "OP_2DROP",8)){
+				}else if(NOT strncmp(cursor, "OP_2DROP", 8)){
 					data[dataLast] = CB_SCRIPT_OP_2DROP;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_2DUP",7)){
+				}else if(NOT strncmp(cursor, "OP_2DUP", 7)){
 					data[dataLast] = CB_SCRIPT_OP_2DUP;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_3DUP",7)){
+				}else if(NOT strncmp(cursor, "OP_3DUP", 7)){
 					data[dataLast] = CB_SCRIPT_OP_3DUP;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_2OVER",8)){
+				}else if(NOT strncmp(cursor, "OP_2OVER", 8)){
 					data[dataLast] = CB_SCRIPT_OP_2OVER;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_2ROT",7)){
+				}else if(NOT strncmp(cursor, "OP_2ROT", 7)){
 					data[dataLast] = CB_SCRIPT_OP_2ROT;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_2SWAP",8)){
+				}else if(NOT strncmp(cursor, "OP_2SWAP", 8)){
 					data[dataLast] = CB_SCRIPT_OP_2SWAP;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_DEPTH",8)){
+				}else if(NOT strncmp(cursor, "OP_DEPTH", 8)){
 					data[dataLast] = CB_SCRIPT_OP_DEPTH;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_DROP",7)){
+				}else if(NOT strncmp(cursor, "OP_DROP", 7)){
 					data[dataLast] = CB_SCRIPT_OP_DROP;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_DUP",6)){
+				}else if(NOT strncmp(cursor, "OP_DUP", 6)){
 					data[dataLast] = CB_SCRIPT_OP_DUP;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_NIP",6)){
+				}else if(NOT strncmp(cursor, "OP_NIP", 6)){
 					data[dataLast] = CB_SCRIPT_OP_NIP;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_OVER",7)){
+				}else if(NOT strncmp(cursor, "OP_OVER", 7)){
 					data[dataLast] = CB_SCRIPT_OP_OVER;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_PICK",7)){
+				}else if(NOT strncmp(cursor, "OP_PICK", 7)){
 					data[dataLast] = CB_SCRIPT_OP_PICK;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_ROLL",7)){
+				}else if(NOT strncmp(cursor, "OP_ROLL", 7)){
 					data[dataLast] = CB_SCRIPT_OP_ROLL;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_ROT",6)){
+				}else if(NOT strncmp(cursor, "OP_ROT", 6)){
 					data[dataLast] = CB_SCRIPT_OP_ROT;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_SWAP",7)){
+				}else if(NOT strncmp(cursor, "OP_SWAP", 7)){
 					data[dataLast] = CB_SCRIPT_OP_SWAP;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_TUCK",7)){
+				}else if(NOT strncmp(cursor, "OP_TUCK", 7)){
 					data[dataLast] = CB_SCRIPT_OP_TUCK;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_CAT",6)){
+				}else if(NOT strncmp(cursor, "OP_CAT", 6)){
 					data[dataLast] = CB_SCRIPT_OP_CAT;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_SUBSTR",9)){
+				}else if(NOT strncmp(cursor, "OP_SUBSTR", 9)){
 					data[dataLast] = CB_SCRIPT_OP_SUBSTR;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_LEFT",7)){
+				}else if(NOT strncmp(cursor, "OP_LEFT", 7)){
 					data[dataLast] = CB_SCRIPT_OP_LEFT;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_RIGHT",8)){
+				}else if(NOT strncmp(cursor, "OP_RIGHT", 8)){
 					data[dataLast] = CB_SCRIPT_OP_RIGHT;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_SIZE",7)){
+				}else if(NOT strncmp(cursor, "OP_SIZE", 7)){
 					data[dataLast] = CB_SCRIPT_OP_SIZE;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_INVERT",9)){
+				}else if(NOT strncmp(cursor, "OP_INVERT", 9)){
 					data[dataLast] = CB_SCRIPT_OP_INVERT;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_AND",6)){
+				}else if(NOT strncmp(cursor, "OP_AND", 6)){
 					data[dataLast] = CB_SCRIPT_OP_AND;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_OR",5)){
+				}else if(NOT strncmp(cursor, "OP_OR", 5)){
 					data[dataLast] = CB_SCRIPT_OP_OR;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_XOR",6)){
+				}else if(NOT strncmp(cursor, "OP_XOR", 6)){
 					data[dataLast] = CB_SCRIPT_OP_XOR;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_EQUALVERIFY",14)){
+				}else if(NOT strncmp(cursor, "OP_EQUALVERIFY", 14)){
 					data[dataLast] = CB_SCRIPT_OP_EQUALVERIFY;
 					cursor += 14;
-				}else if(NOT strncmp(cursor, "OP_EQUAL",8)){
+				}else if(NOT strncmp(cursor, "OP_EQUAL", 8)){
 					data[dataLast] = CB_SCRIPT_OP_EQUAL;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_RESERVED1",12)){
+				}else if(NOT strncmp(cursor, "OP_RESERVED1", 12)){
 					data[dataLast] = CB_SCRIPT_OP_RESERVED1;
 					cursor += 12;
-				}else if(NOT strncmp(cursor, "OP_RESERVED2",12)){
+				}else if(NOT strncmp(cursor, "OP_RESERVED2", 12)){
 					data[dataLast] = CB_SCRIPT_OP_RESERVED2;
 					cursor += 12;
-				}else if(NOT strncmp(cursor, "OP_RESERVED",11)){
+				}else if(NOT strncmp(cursor, "OP_RESERVED", 11)){
 					data[dataLast] = CB_SCRIPT_OP_RESERVED;
 					cursor += 11;
-				}else if(NOT strncmp(cursor, "OP_1ADD",7)){
+				}else if(NOT strncmp(cursor, "OP_1ADD", 7)){
 					data[dataLast] = CB_SCRIPT_OP_1ADD;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_1SUB",7)){
+				}else if(NOT strncmp(cursor, "OP_1SUB", 7)){
 					data[dataLast] = CB_SCRIPT_OP_1SUB;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_2MUL",7)){
+				}else if(NOT strncmp(cursor, "OP_2MUL", 7)){
 					data[dataLast] = CB_SCRIPT_OP_2MUL;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_2DIV",7)){
+				}else if(NOT strncmp(cursor, "OP_2DIV", 7)){
 					data[dataLast] = CB_SCRIPT_OP_2DIV;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NEGATE",9)){
+				}else if(NOT strncmp(cursor, "OP_NEGATE", 9)){
 					data[dataLast] = CB_SCRIPT_OP_NEGATE;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_ABS",6)){
+				}else if(NOT strncmp(cursor, "OP_ABS", 6)){
 					data[dataLast] = CB_SCRIPT_OP_ABS;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_NOT",6)){
+				}else if(NOT strncmp(cursor, "OP_NOT", 6)){
 					data[dataLast] = CB_SCRIPT_OP_NOT;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_0NOTEQUAL",12)){
+				}else if(NOT strncmp(cursor, "OP_0NOTEQUAL", 12)){
 					data[dataLast] = CB_SCRIPT_OP_0NOTEQUAL;
 					cursor += 12;
-				}else if(NOT strncmp(cursor, "OP_ADD",6)){
+				}else if(NOT strncmp(cursor, "OP_ADD", 6)){
 					data[dataLast] = CB_SCRIPT_OP_ADD;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_SUB",6)){
+				}else if(NOT strncmp(cursor, "OP_SUB", 6)){
 					data[dataLast] = CB_SCRIPT_OP_SUB;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_MUL",6)){
+				}else if(NOT strncmp(cursor, "OP_MUL", 6)){
 					data[dataLast] = CB_SCRIPT_OP_MUL;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_DIV",6)){
+				}else if(NOT strncmp(cursor, "OP_DIV", 6)){
 					data[dataLast] = CB_SCRIPT_OP_DIV;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_MOD",6)){
+				}else if(NOT strncmp(cursor, "OP_MOD", 6)){
 					data[dataLast] = CB_SCRIPT_OP_MOD;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_LSHIFT",9)){
+				}else if(NOT strncmp(cursor, "OP_LSHIFT", 9)){
 					data[dataLast] = CB_SCRIPT_OP_LSHIFT;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_RSHIFT",9)){
+				}else if(NOT strncmp(cursor, "OP_RSHIFT", 9)){
 					data[dataLast] = CB_SCRIPT_OP_RSHIFT;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_BOOLAND",10)){
+				}else if(NOT strncmp(cursor, "OP_BOOLAND", 10)){
 					data[dataLast] = CB_SCRIPT_OP_BOOLAND;
 					cursor += 10;
-				}else if(NOT strncmp(cursor, "OP_BOOLOR",9)){
+				}else if(NOT strncmp(cursor, "OP_BOOLOR", 9)){
 					data[dataLast] = CB_SCRIPT_OP_BOOLOR;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_NUMEQUALVERIFY",17)){
+				}else if(NOT strncmp(cursor, "OP_NUMEQUALVERIFY", 17)){
 					data[dataLast] = CB_SCRIPT_OP_NUMEQUALVERIFY;
 					cursor += 17;
-				}else if(NOT strncmp(cursor, "OP_NUMEQUAL",11)){
+				}else if(NOT strncmp(cursor, "OP_NUMEQUAL", 11)){
 					data[dataLast] = CB_SCRIPT_OP_NUMEQUAL;
 					cursor += 11;
-				}else if(NOT strncmp(cursor, "OP_NUMNOTEQUAL",14)){
+				}else if(NOT strncmp(cursor, "OP_NUMNOTEQUAL", 14)){
 					data[dataLast] = CB_SCRIPT_OP_NUMNOTEQUAL;
 					cursor += 14;
-				}else if(NOT strncmp(cursor, "OP_LESSTHANOREQUAL",18)){
+				}else if(NOT strncmp(cursor, "OP_LESSTHANOREQUAL", 18)){
 					data[dataLast] = CB_SCRIPT_OP_LESSTHANOREQUAL;
 					cursor += 18;
-				}else if(NOT strncmp(cursor, "OP_LESSTHAN",11)){
+				}else if(NOT strncmp(cursor, "OP_LESSTHAN", 11)){
 					data[dataLast] = CB_SCRIPT_OP_LESSTHAN;
 					cursor += 11;
-				}else if(NOT strncmp(cursor, "OP_GREATERTHANOREQUAL",21)){
+				}else if(NOT strncmp(cursor, "OP_GREATERTHANOREQUAL", 21)){
 					data[dataLast] = CB_SCRIPT_OP_GREATERTHANOREQUAL;
 					cursor += 21;
-				}else if(NOT strncmp(cursor, "OP_GREATERTHAN",14)){
+				}else if(NOT strncmp(cursor, "OP_GREATERTHAN", 14)){
 					data[dataLast] = CB_SCRIPT_OP_GREATERTHAN;
 					cursor += 14;
-				}else if(NOT strncmp(cursor, "OP_MIN",6)){
+				}else if(NOT strncmp(cursor, "OP_MIN", 6)){
 					data[dataLast] = CB_SCRIPT_OP_MIN;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_MAX",6)){
+				}else if(NOT strncmp(cursor, "OP_MAX", 6)){
 					data[dataLast] = CB_SCRIPT_OP_MAX;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_WITHIN",9)){
+				}else if(NOT strncmp(cursor, "OP_WITHIN", 9)){
 					data[dataLast] = CB_SCRIPT_OP_WITHIN;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_RIPEMD160",12)){
+				}else if(NOT strncmp(cursor, "OP_RIPEMD160", 12)){
 					data[dataLast] = CB_SCRIPT_OP_RIPEMD160;
 					cursor += 12;
-				}else if(NOT strncmp(cursor, "OP_SHA1",7)){
+				}else if(NOT strncmp(cursor, "OP_SHA1", 7)){
 					data[dataLast] = CB_SCRIPT_OP_SHA1;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_SHA256",9)){
+				}else if(NOT strncmp(cursor, "OP_SHA256", 9)){
 					data[dataLast] = CB_SCRIPT_OP_SHA256;
 					cursor += 9;
-				}else if(NOT strncmp(cursor, "OP_HASH160",10)){
+				}else if(NOT strncmp(cursor, "OP_HASH160", 10)){
 					data[dataLast] = CB_SCRIPT_OP_HASH160;
 					cursor += 10;
-				}else if(NOT strncmp(cursor, "OP_HASH256",10)){
+				}else if(NOT strncmp(cursor, "OP_HASH256", 10)){
 					data[dataLast] = CB_SCRIPT_OP_HASH256;
 					cursor += 10;
-				}else if(NOT strncmp(cursor, "OP_CODESEPARATOR",16)){
+				}else if(NOT strncmp(cursor, "OP_CODESEPARATOR", 16)){
 					data[dataLast] = CB_SCRIPT_OP_CODESEPARATOR;
 					cursor += 16;
-				}else if(NOT strncmp(cursor, "OP_CHECKSIGVERIFY",17)){
+				}else if(NOT strncmp(cursor, "OP_CHECKSIGVERIFY", 17)){
 					data[dataLast] = CB_SCRIPT_OP_CHECKSIGVERIFY;
 					cursor += 17;
-				}else if(NOT strncmp(cursor, "OP_CHECKSIG",11)){
+				}else if(NOT strncmp(cursor, "OP_CHECKSIG", 11)){
 					data[dataLast] = CB_SCRIPT_OP_CHECKSIG;
 					cursor += 11;
-				}else if(NOT strncmp(cursor, "OP_CHECKMULTISIGVERIFY",22)){
+				}else if(NOT strncmp(cursor, "OP_CHECKMULTISIGVERIFY", 22)){
 					data[dataLast] = CB_SCRIPT_OP_CHECKMULTISIGVERIFY;
 					cursor += 22;
-				}else if(NOT strncmp(cursor, "OP_CHECKMULTISIG",16)){
+				}else if(NOT strncmp(cursor, "OP_CHECKMULTISIG", 16)){
 					data[dataLast] = CB_SCRIPT_OP_CHECKMULTISIG;
 					cursor += 16;
-				}else if(NOT strncmp(cursor, "OP_NOP10",8)){
+				}else if(NOT strncmp(cursor, "OP_NOP10", 8)){
 					data[dataLast] = CB_SCRIPT_OP_NOP10;
 					cursor += 8;
-				}else if(NOT strncmp(cursor, "OP_NOP1",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP1", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP1;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP2",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP2", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP2;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP3",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP3", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP3;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP4",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP4", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP4;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP5",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP5", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP5;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP6",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP6", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP6;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP7",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP7", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP7;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP8",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP8", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP8;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP9",7)){
+				}else if(NOT strncmp(cursor, "OP_NOP9", 7)){
 					data[dataLast] = CB_SCRIPT_OP_NOP9;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_NOP",6)){
+				}else if(NOT strncmp(cursor, "OP_NOP", 6)){
 					data[dataLast] = CB_SCRIPT_OP_NOP;
 					cursor += 6;
-				}else if(NOT strncmp(cursor, "OP_0",4)){
+				}else if(NOT strncmp(cursor, "OP_0", 4)){
 					data[dataLast] = CB_SCRIPT_OP_0;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_10",5)){
+				}else if(NOT strncmp(cursor, "OP_10", 5)){
 					data[dataLast] = CB_SCRIPT_OP_10;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_11",5)){
+				}else if(NOT strncmp(cursor, "OP_11", 5)){
 					data[dataLast] = CB_SCRIPT_OP_11;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_12",5)){
+				}else if(NOT strncmp(cursor, "OP_12", 5)){
 					data[dataLast] = CB_SCRIPT_OP_12;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_13",5)){
+				}else if(NOT strncmp(cursor, "OP_13", 5)){
 					data[dataLast] = CB_SCRIPT_OP_13;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_14",5)){
+				}else if(NOT strncmp(cursor, "OP_14", 5)){
 					data[dataLast] = CB_SCRIPT_OP_14;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_15",5)){
+				}else if(NOT strncmp(cursor, "OP_15", 5)){
 					data[dataLast] = CB_SCRIPT_OP_15;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_16",5)){
+				}else if(NOT strncmp(cursor, "OP_16", 5)){
 					data[dataLast] = CB_SCRIPT_OP_16;
 					cursor += 5;
-				}else if(NOT strncmp(cursor, "OP_1",4)){
+				}else if(NOT strncmp(cursor, "OP_1", 4)){
 					data[dataLast] = CB_SCRIPT_OP_1;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_TRUE",7)){
+				}else if(NOT strncmp(cursor, "OP_TRUE", 7)){
 					data[dataLast] = CB_SCRIPT_OP_1;
 					cursor += 7;
-				}else if(NOT strncmp(cursor, "OP_2",4)){
+				}else if(NOT strncmp(cursor, "OP_2", 4)){
 					data[dataLast] = CB_SCRIPT_OP_2;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_3",4)){
+				}else if(NOT strncmp(cursor, "OP_3", 4)){
 					data[dataLast] = CB_SCRIPT_OP_3;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_4",4)){
+				}else if(NOT strncmp(cursor, "OP_4", 4)){
 					data[dataLast] = CB_SCRIPT_OP_4;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_5",4)){
+				}else if(NOT strncmp(cursor, "OP_5", 4)){
 					data[dataLast] = CB_SCRIPT_OP_5;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_6",4)){
+				}else if(NOT strncmp(cursor, "OP_6", 4)){
 					data[dataLast] = CB_SCRIPT_OP_6;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_7",4)){
+				}else if(NOT strncmp(cursor, "OP_7", 4)){
 					data[dataLast] = CB_SCRIPT_OP_7;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_8",4)){
+				}else if(NOT strncmp(cursor, "OP_8", 4)){
 					data[dataLast] = CB_SCRIPT_OP_8;
 					cursor += 4;
-				}else if(NOT strncmp(cursor, "OP_9",4)){
+				}else if(NOT strncmp(cursor, "OP_9", 4)){
 					data[dataLast] = CB_SCRIPT_OP_9;
 					cursor += 4;
 				}else{
@@ -557,7 +557,7 @@ bool CBInitScriptFromString(CBScript * self,char * string,void (*logError)(char 
 		}
 	}
 	// Got data. Now create script byte array for data
-	if (NOT CBInitByteArrayWithData(self, data, dataLast, logError))
+	if (NOT CBInitByteArrayWithData(self, data, dataLast))
 		return false;
 	return true;
 }
@@ -575,7 +575,7 @@ CBScriptStack CBNewEmptyScriptStack(){
 	stack.length = 0;
 	return stack;
 }
-CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *),void * transaction,uint32_t inputIndex,bool p2sh){
+CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh){
 	// ??? Adding syntax parsing to the begining of the interpreter is maybe a good idea.
 	// This looks confusing but isn't too bad, trust me.
 	CBScriptStack altStack = CBNewEmptyScriptStack();
@@ -634,7 +634,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 		}else{ // Execution for no skipping
 			if (NOT byte) {
 				// Push 0 onto stack. This is NULL due to counter intuitive rubbish in the C++ client.
-				CBScriptStackItem item = {NULL,0};
+				CBScriptStackItem item = {NULL, 0};
 				if (NOT CBScriptStackPushItem(stack, item))
 					return CB_SCRIPT_ERR;
 			}else if (byte < 76){
@@ -645,7 +645,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				CBScriptStackItem item;
 				item.data = malloc(byte);
 				if (NOT item.data){
-					self->logError("Run out of memory during a script push operation. Attempted to push %i bytes\n",byte);
+					CBLogError("Run out of memory during a script push operation. Attempted to push %i bytes\n", byte);
 					return CB_SCRIPT_ERR;
 				}
 				item.length = byte;
@@ -682,7 +682,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				if (amount){
 					item.data = malloc(amount);
 					if (NOT item.data){
-						self->logError("Run out of memory during a script push operation. Attempted to push %i bytes\n",amount);
+						CBLogError("Run out of memory during a script push operation. Attempted to push %i bytes\n", amount);
 						return CB_SCRIPT_ERR;
 					}
 					memmove(item.data, CBByteArrayGetData(self) + cursor, amount);
@@ -698,7 +698,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				CBScriptStackItem item;
 				item.data = malloc(1);
 				if (NOT item.data){
-					self->logError("Run out of memory during OP_1NEGATE\n");
+					CBLogError("Run out of memory during OP_1NEGATE\n");
 					return CB_SCRIPT_ERR;
 				}
 				item.length = 1;
@@ -712,7 +712,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				CBScriptStackItem item;
 				item.data = malloc(1);
 				if (NOT item.data){
-					self->logError("Run out of memory during OP_%i\n",byte - CB_SCRIPT_OP_1 + 1);
+					CBLogError("Run out of memory during OP_%i\n", byte - CB_SCRIPT_OP_1 + 1);
 					return CB_SCRIPT_ERR;
 				}
 				item.length = 1;
@@ -768,14 +768,14 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					return CB_SCRIPT_INVALID; // Stack empty
 				if (CBScriptStackEvalBool(stack)){
 					//Duplicate top stack item
-					CBScriptStackItem item = CBScriptStackCopyItem(stack,0);
+					CBScriptStackItem item = CBScriptStackCopyItem(stack, 0);
 					if (NOT item.data && item.length)
 						return CB_SCRIPT_ERR;
 					if (NOT CBScriptStackPushItem(stack, item))
 						return CB_SCRIPT_ERR;
 				}
 			}else if (byte == CB_SCRIPT_OP_DEPTH){
-				CBScriptStackItem temp = CBInt64ToScriptStackItem((CBScriptStackItem){NULL,0}, stack->length);
+				CBScriptStackItem temp = CBInt64ToScriptStackItem((CBScriptStackItem){NULL, 0}, stack->length);
 				if (NOT temp.data && temp.length)
 					return CB_SCRIPT_ERR;
 				if (NOT CBScriptStackPushItem(stack, temp))
@@ -788,7 +788,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				if (NOT stack->length)
 					return CB_SCRIPT_INVALID; // Stack empty
 				//Duplicate top stack item
-				CBScriptStackItem item = CBScriptStackCopyItem(stack,0);
+				CBScriptStackItem item = CBScriptStackCopyItem(stack, 0);
 				if (NOT item.data && item.length)
 					return CB_SCRIPT_ERR;
 				if (NOT CBScriptStackPushItem(stack, item))
@@ -808,7 +808,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 			}else if (byte == CB_SCRIPT_OP_OVER){
 				if (stack->length < 2)
 					return CB_SCRIPT_INVALID; // Stack needs 2 or more elements.
-				CBScriptStackItem item = CBScriptStackCopyItem(stack,1);
+				CBScriptStackItem item = CBScriptStackCopyItem(stack, 1);
 				if (NOT item.data && item.length)
 					return CB_SCRIPT_ERR;
 				if (NOT CBScriptStackPushItem(stack, item)) // Copies second from top and pushes it on the top.
@@ -826,7 +826,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					return CB_SCRIPT_INVALID; // Must be smaller than the stack size
 				if (byte == CB_SCRIPT_OP_PICK) {
 					// Copy element
-					CBScriptStackItem item = CBScriptStackCopyItem(stack,i);
+					CBScriptStackItem item = CBScriptStackCopyItem(stack, i);
 					if (NOT item.data && item.length)
 						return CB_SCRIPT_ERR;
 					if (NOT CBScriptStackPushItem(stack, item))
@@ -878,7 +878,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				if (stack->length < byte - CB_SCRIPT_OP_2DUP + 2)
 					return CB_SCRIPT_INVALID; // Stack needs more elements.
 				for (uint8_t x = 0; x < byte - CB_SCRIPT_OP_2DUP + 2; x++) {
-					CBScriptStackItem i = CBScriptStackCopyItem(stack,byte - CB_SCRIPT_OP_2DUP + 1); 
+					CBScriptStackItem i = CBScriptStackCopyItem(stack, byte - CB_SCRIPT_OP_2DUP + 1); 
 					if (NOT i.data && i.length)
 						return CB_SCRIPT_ERR;
 					if (NOT CBScriptStackPushItem(stack, i))
@@ -887,12 +887,12 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 			}else if (byte == CB_SCRIPT_OP_2OVER){
 				if (stack->length < 4)
 					return CB_SCRIPT_INVALID; // Stack needs 4 or more elements.
-				CBScriptStackItem i = CBScriptStackCopyItem(stack,3);
+				CBScriptStackItem i = CBScriptStackCopyItem(stack, 3);
 				if (NOT i.data && i.length)
 					return CB_SCRIPT_ERR;
 				if (NOT CBScriptStackPushItem(stack, i))
 					return CB_SCRIPT_ERR;
-				i = CBScriptStackCopyItem(stack,3);
+				i = CBScriptStackCopyItem(stack, 3);
 				if (NOT i.data && i.length)
 					return CB_SCRIPT_ERR;
 				if (NOT CBScriptStackPushItem(stack, i))
@@ -921,7 +921,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 			}else if (byte == CB_SCRIPT_OP_SIZE){
 				if (NOT stack->length)
 					return CB_SCRIPT_INVALID; // Stack empty
-				CBScriptStackItem temp = CBInt64ToScriptStackItem((CBScriptStackItem){NULL,0}, stack->elements[stack->length-1].length);
+				CBScriptStackItem temp = CBInt64ToScriptStackItem((CBScriptStackItem){NULL, 0}, stack->elements[stack->length-1].length);
 				if (NOT temp.data && temp.length)
 					return CB_SCRIPT_ERR;
 				if (NOT CBScriptStackPushItem(stack, temp))
@@ -949,7 +949,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					if (ok) {
 						item.data = malloc(1);
 						if (NOT item.data){
-							self->logError("Run out of memory during OP_EQUAL\n");
+							CBLogError("Run out of memory during OP_EQUAL\n");
 							return CB_SCRIPT_ERR;
 						}
 						item.length = 1;
@@ -989,7 +989,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					// Zero becomes 0x80 :-( Sorry, this madness comes from the C++ client which represents zero in a horrid way.
 					item->data = malloc(1);
 					if (NOT item->data){
-						self->logError("Run out of memory during OP_NEGATE\n");
+						CBLogError("Run out of memory during OP_NEGATE\n");
 						return CB_SCRIPT_ERR;
 					}
 					item->length = 1;
@@ -1131,44 +1131,44 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					case CB_SCRIPT_OP_RIPEMD160:
 						data = malloc(20);
 						if (NOT data){
-							self->logError("Run out of memory during OP_RIPEMD160\n");
+							CBLogError("Run out of memory during OP_RIPEMD160\n");
 							return CB_SCRIPT_ERR;
 						}
-						CBRipemd160(item.data,item.length,data);
+						CBRipemd160(item.data, item.length, data);
 						break;
 					case CB_SCRIPT_OP_SHA1:
 						data = malloc(20);
 						if (NOT data){
-							self->logError("Run out of memory during OP_SHA1\n");
+							CBLogError("Run out of memory during OP_SHA1\n");
 							return CB_SCRIPT_ERR;
 						}
-						CBSha160(item.data,item.length,data);
+						CBSha160(item.data, item.length, data);
 						break;
 					case CB_SCRIPT_OP_HASH160:
-						CBSha256(item.data,item.length,dataTemp);
+						CBSha256(item.data, item.length, dataTemp);
 						data = malloc(20);
 						if (NOT data){
-							self->logError("Run out of memory during OP_HASH160\n");
+							CBLogError("Run out of memory during OP_HASH160\n");
 							return CB_SCRIPT_ERR;
 						}
-						CBRipemd160(dataTemp,32,data);
+						CBRipemd160(dataTemp, 32, data);
 						break;
 					case CB_SCRIPT_OP_SHA256:
 						data = malloc(32);
 						if (NOT data){
-							self->logError("Run out of memory during OP_SHA256\n");
+							CBLogError("Run out of memory during OP_SHA256\n");
 							return CB_SCRIPT_ERR;
 						}
-						CBSha256(item.data,item.length,data);
+						CBSha256(item.data, item.length, data);
 						break;
 					default:
-						CBSha256(item.data,item.length,dataTemp);
+						CBSha256(item.data, item.length, dataTemp);
 						data = malloc(32);
 						if (NOT data){
-							self->logError("Run out of memory during OP_HASH256\n");
+							CBLogError("Run out of memory during OP_HASH256\n");
 							return CB_SCRIPT_ERR;
 						}
-						CBSha256(dataTemp,32,data);
+						CBSha256(dataTemp, 32, data);
 						break;
 				}
 				free(item.data);
@@ -1185,7 +1185,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 				uint32_t subScriptLen = self->length - beginSubScript;
 				uint8_t * subScript = malloc(subScriptLen);
 				if (NOT subScript){
-					self->logError("Run out of memory during CHECKSIG operation\n");
+					CBLogError("Run out of memory during CHECKSIG operation\n");
 					return CB_SCRIPT_ERR;
 				}
 				uint8_t * sourceScript = CBByteArrayGetData(self);
@@ -1266,9 +1266,9 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					}else{ // Can check signature
 						CBSignType signType = signature.data[signature.length-1];
 						// Delete any instances of the signature
-						CBSubScriptRemoveSignature(subScript,&subScriptLen,signature);
+						CBSubScriptRemoveSignature(subScript, &subScriptLen, signature);
 						// Complete verification
-						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->logError);
+						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen);
 						if (NOT subScriptByteArray) {
 							free(publicKey.data);
 							free(signature.data);
@@ -1282,7 +1282,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 							return CB_SCRIPT_ERR;
 						}else if (hashRes == CB_TX_HASH_OK){
 							// Use minus one on the signature length because the hash type
-							res = CBEcdsaVerify(signature.data,signature.length-1,hash,publicKey.data,publicKey.length);
+							res = CBEcdsaVerify(signature.data, signature.length-1, hash, publicKey.data, publicKey.length);
 						}else res = false;
 						CBReleaseObject(subScriptByteArray);
 					}
@@ -1323,7 +1323,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 						CBScriptStackItem sigItem = stack->elements[stack->length-sig-x];
 						CBSubScriptRemoveSignature(subScript, &subScriptLen, sigItem);
 					}
-					CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen, self->logError);
+					CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen);
 					if (NOT subScriptByteArray)
 						return CB_SCRIPT_ERR;
 					res = true;
@@ -1346,7 +1346,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 								return CB_SCRIPT_ERR;
 							}else if (hashRes == CB_TX_HASH_OK){
 								// Use minus one on the signature length because the hash type
-								if (CBEcdsaVerify(signature->data,signature->length-1,hash,publicKey.data,publicKey.length)){
+								if (CBEcdsaVerify(signature->data, signature->length-1, hash, publicKey.data, publicKey.length)){
 									sig++;
 									numSigs--;
 								}
@@ -1368,7 +1368,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 					if (res) {
 						item.data = malloc(1);
 						if (NOT item.data){
-							self->logError("Run out of memory during CHECKSIG operation push.\n");
+							CBLogError("Run out of memory during CHECKSIG operation push.\n");
 							return CB_SCRIPT_ERR;
 						}
 						item.length = 1;
@@ -1394,10 +1394,10 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 	if (ifElseSize)
 		return CB_SCRIPT_INVALID; // If/Else Block(s) not terminated.
 	if (NOT stack->length)
-		return CB_SCRIPT_INVALID; // Stack empty.
+		return CB_SCRIPT_FALSE; // Stack empty.
 	if (CBScriptStackEvalBool(stack)) {
 		if (isP2SH){
-			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length, self->logError);
+			CBScript * p2shScriptObj = CBNewScriptWithData(p2shScript.data, p2shScript.length);
 			if (NOT p2shScriptObj)
 				return CB_SCRIPT_ERR;
 			CBScriptStackRemoveItem(stack); // Remove OP_TRUE
@@ -1405,8 +1405,8 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self,CBScriptStack * stack,CBGe
 			CBReleaseObject(p2shScriptObj);
 			return res;
 		}
-		return CB_SCRIPT_VALID;
-	}else return CB_SCRIPT_INVALID;
+		return CB_SCRIPT_TRUE;
+	}else return CB_SCRIPT_FALSE;
 }
 uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH){
 	uint32_t sigOps = 0;
@@ -1446,19 +1446,24 @@ uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH){
 }
 bool CBScriptIsP2SH(CBScript * self){
 	return (self->length == 23
-			&& CBByteArrayGetByte(self,0) == CB_SCRIPT_OP_HASH160
-			&& CBByteArrayGetByte(self,1) == 0x14
-			&& CBByteArrayGetByte(self,22) == CB_SCRIPT_OP_EQUAL);
+			&& CBByteArrayGetByte(self, 0) == CB_SCRIPT_OP_HASH160
+			&& CBByteArrayGetByte(self, 1) == 0x14
+			&& CBByteArrayGetByte(self, 22) == CB_SCRIPT_OP_EQUAL);
 }
 bool CBScriptIsPushOnly(CBScript * self){
 	uint32_t x = 0;
 	for (; x < self->length;) { 
 		CBScriptOp op = CBByteArrayGetByte(self, x);
-		if (op && op < 79) {
+		if (op <= CB_SCRIPT_OP_16) {
 			// Is a push operation
 			x++;
 			uint32_t a;
-			if (op < 76){
+			if (NOT op
+				|| op == CB_SCRIPT_OP_1NEGATE
+				|| op >= CB_SCRIPT_OP_1) {
+				// Single opcodes
+				a = 0;
+			}else if (op < 76){
 				x += op;
 				a = 0;
 			}else if (op == CB_SCRIPT_OP_PUSHDATA1){
@@ -1478,7 +1483,7 @@ bool CBScriptIsPushOnly(CBScript * self){
 	}
 	return x == self->length;
 }
-void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBScriptStackItem signature){
+void CBSubScriptRemoveSignature(uint8_t * subScript, uint32_t * subScriptLen, CBScriptStackItem signature){
 	if (signature.data == NULL) return; // Signature zero
 	uint8_t * ptr = subScript;
 	uint8_t * end = subScript + *subScriptLen;
@@ -1520,7 +1525,7 @@ void CBSubScriptRemoveSignature(uint8_t * subScript,uint32_t * subScriptLen,CBSc
 		}
 	}
 }
-CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack,uint8_t fromTop){
+CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack, uint8_t fromTop){
 	CBScriptStackItem oldItem = stack->elements[stack->length - fromTop - 1];
 	CBScriptStackItem newItem;
 	if (oldItem.data == NULL) { // Zero
@@ -1573,7 +1578,7 @@ CBScriptStackItem CBScriptStackPopItem(CBScriptStack * stack){
 	// Do not bother reallocing. Data will be freed at the end.
 	return item;
 }
-bool CBScriptStackPushItem(CBScriptStack * stack,CBScriptStackItem item){
+bool CBScriptStackPushItem(CBScriptStack * stack, CBScriptStackItem item){
 	stack->length++;
 	CBScriptStackItem * temp = realloc(stack->elements, sizeof(*stack->elements)*stack->length);
 	if (NOT temp)
@@ -1587,7 +1592,7 @@ void CBScriptStackRemoveItem(CBScriptStack * stack){
 	free(stack->elements[stack->length].data);
 	// Do not bother reallocing. Data will be freed at the end.
 }
-CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item,int64_t i){
+CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item, int64_t i){
 	if (i == 0) {
 		// Represented as NULL unfortunately. No other solution I'm afraid. Blame Satoshi I guess.
 		free(item.data);

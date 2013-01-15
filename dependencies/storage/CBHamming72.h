@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief Contains an encoder and decoder for hamming (72,64) SECDED codes.
+ @brief Contains an encoder and decoder for hamming (72, 64) SECDED codes.
  */
 
 #ifndef CBHAMMING72H
@@ -43,7 +43,7 @@
  */
 uint8_t CBHamming72Check(uint8_t * data, uint32_t dataLen);
 /**
- @brief Encodes parity bits for hamming (72,64) SECDED codes.
+ @brief Encodes parity bits for hamming (72, 64) SECDED codes.
  @param data A pointer to the data bytes. Should be no more than eight bytes of data followed by another byte to set the parity bits.
  @param dataLen The length of the data to encode, not including the parity byte.
  @param parityByte A pointer to the byte holding parity bits, to be set.

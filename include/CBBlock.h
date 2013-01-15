@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -32,6 +32,7 @@
 
 #include "CBTransaction.h"
 #include "CBBigInt.h"
+#include "CBValidationFunctions.h"
 
 /**
  @brief Structure for CBBlock objects. @see CBBlock.h
@@ -54,19 +55,19 @@ typedef struct{
  @brief Creates a new CBBlock object. Set the members after creating the block object.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlock(void (*logError)(char *,...));
+CBBlock * CBNewBlock(void);
 /**
  @brief Creates a new CBBlock object.
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlockFromData(CBByteArray * data,void (*logError)(char *,...));
+CBBlock * CBNewBlockFromData(CBByteArray * data);
 /**
  @brief Creates a new CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
-CBBlock * CBNewBlockGenesis(void (*logError)(char *,...));
+CBBlock * CBNewBlockGenesis(void);
 
 /**
  @brief Gets a CBBlock from another object. Use this to avoid casts.
@@ -80,14 +81,14 @@ CBBlock * CBGetBlock(void * self);
  @param self The CBBlock object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitBlock(CBBlock * self,void (*logError)(char *,...));
+bool CBInitBlock(CBBlock * self);
 /**
  @brief Initialises a CBBlock object from serialised data
  @param self The CBBlock object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
  */
-bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitBlockFromData(CBBlock * self, CBByteArray * data);
 
 /**
  @brief Initialises a CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
@@ -95,7 +96,7 @@ bool CBInitBlockFromData(CBBlock * self,CBByteArray * data,void (*logError)(char
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
-bool CBInitBlockGenesis(CBBlock * self,void (*logError)(char *,...));
+bool CBInitBlockGenesis(CBBlock * self);
 
 /**
  @brief Frees a CBBlock object.
@@ -105,6 +106,12 @@ void CBFreeBlock(void * vself);
  
 //  Functions
 
+/**
+ @brief Calculates the merkle root from the transactions and sets the merkle root of this block to the result. The transactions should be serialised.
+ @param self The CBBlock object.
+ @returns true on success, false on failure.
+ */
+bool CBBlockCalculateAndSetMerkleRoot(CBBlock * self);
 /**
  @brief Calculates the hash for a block.
  @param self The CBBlock object. This should be serialised.
@@ -118,6 +125,12 @@ void CBBlockCalculateHash(CBBlock * self, uint8_t * hash);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions);
+/**
+ @brief Calculates the merkle root from the transactions. The transactions should be serailised.
+ @param self The CBBlock object.
+ @returns The merkle root on success, NULL on failure. Ensure to free the returned data.
+ */
+uint8_t * CBBlockCalculateMerkleRoot(CBBlock * self);
 /**
  @brief Deserialises a CBBlock so that it can be used as an object.
  @param self The CBBlock object

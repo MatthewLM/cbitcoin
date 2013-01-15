@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -24,21 +24,21 @@
 #include "CBBase58.h"
 #include <time.h>
 
-void logError(char * b,...);
-void logError(char * b,...){
-	printf("%s\n",b);
+void CBLogError(char * b, ...);
+void CBLogError(char * b, ...){
+	printf("%s\n", b);
 }
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
-	printf("Session = %ui\n",s);
+	printf("Session = %ui\n", s);
 	srand(s);
 	// Test checked decode
 	CBBigInt bi;
 	CBBigIntAlloc(&bi, 29);
-	CBDecodeBase58Checked(&bi, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", logError); // Valid
+	CBDecodeBase58Checked(&bi, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9"); // Valid
 	printf("END VALID\n");
-	CBDecodeBase58Checked(&bi, "1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX", logError); // Invalid
+	CBDecodeBase58Checked(&bi, "1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX"); // Invalid
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
 	bi.data[0] = 0xc5;
@@ -72,7 +72,7 @@ int main(){
 	bi.data[28] = 0x89;
 	bi.length = 29;
 	char * str = CBEncodeBase58(&bi);
-	printf("%s\n",str);
+	printf("%s\n", str);
 	if (strcmp(str, "7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU")) {
 		printf("7EyVQVmCjB3siBN8DdtuG3ws5jW9xsnT25vbt5eU FAIL\n");
 		return 1;
@@ -87,15 +87,15 @@ int main(){
 		bi.length = 29;
 		printf("0x");
 		for (int y = 0; y < 29; y++) {
-			printf("%.2x",verify[y]);
+			printf("%.2x", verify[y]);
 		}
 		str = CBEncodeBase58(&bi);
-		printf(" -> %s -> \n",str);
-		CBDecodeBase58(&bi,str);
+		printf(" -> %s -> \n", str);
+		CBDecodeBase58(&bi, str);
 		free(str);
 		printf("0x");
 		for (int y = 0; y < 29; y++) {
-			printf("%.2x",bi.data[y]);
+			printf("%.2x", bi.data[y]);
 			if (bi.data[y] != verify[y]) {
 				printf(" = FAIL\n");
 				return 1;

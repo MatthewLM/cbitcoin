@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -44,13 +44,13 @@ uint64_t CBCalculateBlockReward(uint64_t blockHeight);
  @param target The target to calculate the work for.
  @returns true on success, false on failure.
  */
-bool CBCalculateBlockWork(CBBigInt * work,uint32_t target);
+bool CBCalculateBlockWork(CBBigInt * work, uint32_t target);
 /**
  @brief Calculates the merkle root from a list of hashes.
  @param hashes The hashes stored as continuous byte data with each 32 byte hash after each other. The data pointed to by "hashes" will be modified and will result in the merkle root as the first 32 bytes.
  @param hashNum The number of hashes in the memory block
  */
-void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum);
+void CBCalculateMerkleRoot(uint8_t * hashes, uint32_t hashNum);
 /**
  @brief Recalcultes the target for every 2016 blocks.
  @param oldTarget The old target in compact form.
@@ -65,14 +65,13 @@ uint32_t CBCalculateTarget(uint32_t oldTarget, uint32_t time);
  */
 uint32_t CBTransactionGetSigOps(CBTransaction * tx);
 /**
- @brief Validates a transaction has outputs and inputs, is below the maximum block size, has outputs that do not overflow and that there are no duplicate spent transaction outputs. This function also checks coinbase transactions have input scripts between 2 and 100 bytes and non-coinbase transactions do not have a NULL previous output. Further validation can be done by checking the transaction against input transactions. With simplified payment verification instead the validation is done through trusting miners but the basic validation can still be done for these basic checks.
+ @brief Validates a transaction has outputs and inputs, is below the maximum block size, has outputs that do not overflow and that there are no duplicate spent transaction outputs. This function also checks coinbase transactions have input scripts between 2 and 100 bytes and non-coinbase transactions do not have a NULL previous output. Further validation can be done by checking the transaction against input transactions. With simplified payment verification instead the validation is done through trusting miners but the basic validation can still be done with these basic checks.
  @param tx The transaction to validate. This should be deserialised.
  @param coinbase true to validate for a coinbase transaction, false to validate for a non-coinbase transaction.
  @param outputValue Pointer to the integer to hold the output value calculated by this function.
- @param err Pointer to error which is set true when a memory failure occurs.
- @returns A memory block of previous transaction ouputs spent by this transaction if validation passed or NULL. The outputs can be used for further validation that the transaction is not a double-spend or spends non-existant outputs. The block of CBPrevOuts needs to be freed. The hashes are not retained, so the data is good until the transaction is freed. Do not try to release the hashes, thinking they have been retained in this function.
+ @returns true if transaction passes basic validation or false.
  */
-CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * outputValue, bool * err);
+bool CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * outputValue);
 /**
  @brief Determines if a transaction is final and therefore can exist in a block. A transaction is final if the lockTime has been reached or if all inputs are final.
  @param tx The transaction.
@@ -80,12 +79,12 @@ CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64
  @param height The block height for determining if the transaction is final.
  @returns true if final and false if not final.
  */
-bool CBTransactionIsFinal(CBTransaction * tx,uint64_t time,uint64_t height);
+bool CBTransactionIsFinal(CBTransaction * tx, uint64_t time, uint64_t height);
 /**
  @brief Validates proof of work.
  @brief hash Block hash.
  @returns true if the validation passed, false otherwise.
  */
-bool CBValidateProofOfWork(uint8_t * hash,uint32_t target);
+bool CBValidateProofOfWork(uint8_t * hash, uint32_t target);
 
 #endif

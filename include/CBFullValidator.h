@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -34,6 +34,18 @@
 #include "CBValidationFunctions.h"
 #include "CBAssociativeArray.h"
 #include <string.h>
+
+typedef enum{
+	CB_FULL_VALIDATOR_DISABLE_POW_CHECK = 1, /**< Does not verify the proof of work during validation. Used for testing. */
+}CBFullValidatorFlags;
+
+/**
+ @brief Gives the last block in a branch used in a chain.
+ */
+typedef struct{
+	uint8_t branch; /**< The branch in the chain */
+	uint32_t lastBlock; /**< The last block in the branch the chain uses before the next branch */
+} CBChainPath;
 
 /**
  @brief Represents a block branch.
@@ -60,18 +72,19 @@ typedef struct{
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
-	void (*logError)(char *,...); /**< Pointer to error callback */
 	uint64_t storage; /**< The storage component object */
+	CBFullValidatorFlags flags; /**< Flags for validation options */
 } CBFullValidator;
 
 /**
  @brief Creates a new CBFullValidator object.
  @param storage The block-chain storage component.
  @param badDataBase Will be set to true if the database needs recovery or false otherwise.
+ @param flags The flags used for validating this block.
  @returns A new CBFullValidator object.
  */
 
-CBFullValidator * CBNewFullValidator(uint64_t storage, bool * badDataBase, void (*logError)(char *,...));
+CBFullValidator * CBNewFullValidator(uint64_t storage, bool * badDataBase, CBFullValidatorFlags flags);
 
 /**
  @brief Gets a CBFullValidator from another object. Use this to avoid casts.
@@ -85,9 +98,10 @@ CBFullValidator * CBGetFullValidator(void * self);
  @param self The CBFullValidator object to initialise.
  @param storage The block-chain storage component.
  @param badDataBase Will be set to true if the database needs recovery or false otherwise.
+ @param flags The flags used for validating this block.
  @returns true on success, false on failure.
  */
-bool CBInitFullValidator(CBFullValidator * self, uint64_t storage, bool * badDataBase, void (*logError)(char *,...));
+bool CBInitFullValidator(CBFullValidator * self, uint64_t storage, bool * badDataBase, CBFullValidatorFlags flags);
 
 /**
  @brief Frees a CBFullValidator object.
@@ -117,26 +131,19 @@ bool CBFullValidatorAddBlockToOrphans(CBFullValidator * self, CBBlock * block);
  @brief Does basic validation on a block 
  @param self The CBFullValidator object.
  @param block The block to valdiate.
- @param txHashes 32 byte double Sha-256 hashes for the transactions in the block, one after the other. These will be modified by this function.
  @param networkTime The network time.
  @returns The block status.
  */
-CBBlockStatus CBFullValidatorBasicBlockValidation(CBFullValidator * self, CBBlock * block, uint8_t * txHashes, uint64_t networkTime);
-/**
- @brief Same as CBFullValidatorBasicBlockValidation but copies the "txHashes" so that the original data is not modified.
- @see CBFullValidatorBasicBlockValidation
- */
-CBBlockStatus CBFullValidatorBasicBlockValidationCopy(CBFullValidator * self, CBBlock * block, uint8_t * txHashes, uint64_t networkTime);
+CBBlockStatus CBFullValidatorBasicBlockValidation(CBFullValidator * self, CBBlock * block, uint64_t networkTime);
 /**
  @brief Completes the validation for a block during main branch extention or reorganisation.
  @param self The CBFullValidator object.
  @param branch The branch being validated
  @param block The block to complete validation for.
- @param txHashes 32 byte double Sha-256 hashes for the transactions in the block, one after the other.
  @param height The height of the block.
  @returns CB_BLOCK_VALIDATION_OK if the block passed validation, CB_BLOCK_VALIDATION_BAD if the block failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
-CBBlockValidationResult CBFullValidatorCompleteBlockValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint8_t * txHashes, uint32_t height);
+CBBlockValidationResult CBFullValidatorCompleteBlockValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint32_t height);
 /**
  @brief Ensures a file can be opened.
  @param self The CBFullValidator object.
@@ -158,13 +165,11 @@ uint32_t CBFullValidatorGetMedianTime(CBFullValidator * self, uint8_t branch, ui
  @param blockHeight The height of the block being validated
  @param transactionIndex The index of the transaction to validate.
  @param inputIndex The index of the input to validate.
- @param allSpentOutputs The previous outputs returned from CBTransactionValidateBasic
- @param txHashes 32 byte double Sha-256 hashes for the transactions in the block, one after the other.
  @param value Pointer to the total value of the transaction. This will be incremented by this function with the input value.
  @param sigOps Pointer to the total number of signature operations. This is increased by the signature operations for the input and verified to be less that the maximum allowed signature operations.
  @returns CB_BLOCK_VALIDATION_OK if the transaction passed validation, CB_BLOCK_VALIDATION_BAD if the transaction failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
-CBBlockValidationResult CBFullValidatorInputValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex,uint32_t inputIndex, CBPrevOut ** allSpentOutputs, uint8_t * txHashes, uint64_t * value, uint32_t * sigOps);
+CBBlockValidationResult CBFullValidatorInputValidation(CBFullValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex, uint32_t inputIndex, uint64_t * value, uint32_t * sigOps);
 /**
  @brief Processes a block. Block headers are validated, ensuring the integrity of the transaction data is OK, checking the block's proof of work and calculating the total branch work to the genesis block. If the block extends the main branch complete validation is done. If the block extends a branch to become the new main branch because it has the most work, a re-organisation of the block-chain is done.
  @param self The CBFullValidator object.
@@ -185,7 +190,7 @@ CBBlockStatus CBFullValidatorProcessBlock(CBFullValidator * self, CBBlock * bloc
  @param txHashes The transaction hashes for the block.
  @return The status of the block.
  */
-CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget, uint8_t * txHashes);
+CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget);
 /**
  @brief Saves the last validated blocks from startBranch to endBranch
  @param self The CBFullValidator object.
@@ -193,17 +198,25 @@ CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock *
  @param endBranch The endBranch that can go down to the startBranch.
  @returns true if the function executed successfully or false on an error.
  */
-bool CBFullValidatorSaveLastValidatedBlocks(CBFullValidator * self, uint8_t startBranch, uint8_t endBranch);
+bool CBFullValidatorSaveLastValidatedBlocks(CBFullValidator * self, uint8_t branches);
 /**
- @brief Updates the unspent outputs and transaction index for a branch.
+ @brief Updates the unspent outputs and transaction index for a branch, for removing a block's transaction information.
  @param self The CBFullValidator object.
  @param block The block with the transaction data to search for changing unspent outputs.
  @param branch The branch the block is for.
  @param blockIndex The block index in the branch.
- @param forward If true the indices will be updated when adding blocks, else it will be updated removing blocks for re-organisation.
  @returns true on successful execution or false on error.
  */
-bool CBFullValidatorUpdateUnspentOutputs(CBFullValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, bool forward);
+bool CBFullValidatorUpdateUnspentOutputsBackward(CBFullValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
+/**
+ @brief Updates the unspent outputs and transaction index for a branch, for adding a block's transaction information.
+ @param self The CBFullValidator object.
+ @param block The block with the transaction data to search for changing unspent outputs.
+ @param branch The branch the block is for.
+ @param blockIndex The block index in the branch.
+ @returns true on successful execution or false on error.
+ */
+bool CBFullValidatorUpdateUnspentOutputsForward(CBFullValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
 /**
  @brief Updates the unspent outputs and transaction index for a branch in reverse and loads a block to do this.
  @param self The CBFullValidator object.

@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -43,14 +43,14 @@ typedef struct{
  @param offset Offset to start decoding from.
  @returns The CBVarInt information
  */
-CBVarInt CBVarIntDecode(CBByteArray * bytes,uint32_t offset);
+CBVarInt CBVarIntDecode(CBByteArray * bytes, uint32_t offset);
 /**
  @brief Encodes variable size integer into bytes.
  @param bytes The byte array to encode a variable size integer into.
  @param offset Offset to start decoding from.
  @param varInt Variable integer structure.
  */
-void CBVarIntEncode(CBByteArray * bytes,uint32_t offset,CBVarInt varInt);
+void CBVarIntEncode(CBByteArray * bytes, uint32_t offset, CBVarInt varInt);
 /**
  @brief Returns a variable integer from a 64 bit integer.
  @param integer The 64 bit integer

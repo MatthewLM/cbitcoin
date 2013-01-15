@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,14 +26,14 @@
 
 //  Constructor
 
-/*CBFullNode * CBNewFullNode(void (*logError)(char *,...)){
+/*CBFullNode * CBNewFullNode(){
 	CBFullNode * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewFullNode\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewFullNode\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeFullNode;
-	if (CBInitFullNode(self,logError))
+	if (CBInitFullNode(self))
 		return self;
 	free(self);
 	return NULL;
@@ -47,8 +47,8 @@ CBFullNode * CBGetFullNode(void * self){
 
 //  Initialiser
 
-bool CBInitFullNode(CBFullNode * self,void (*logError)(char *,...)){
-	if (NOT CBInitNetworkCommunicator(CBGetNetworkCommunicator(self), logError))
+bool CBInitFullNode(CBFullNode * self){
+	if (NOT CBInitNetworkCommunicator(CBGetNetworkCommunicator(self)))
 		return false;
 	// Set network communicator fields.
 	CBGetNetworkCommunicator(self)->blockHeight = 0;
@@ -78,7 +78,7 @@ bool CBInitFullNode(CBFullNode * self,void (*logError)(char *,...)){
 		unsigned long fileLen = ftell(self->addressFile);
 		fseek(self->addressFile, 0, SEEK_SET);
 		// Read file into a CBByteArray
-		CBByteArray * buffer = CBNewByteArrayOfSize((uint32_t)fileLen, logError);
+		CBByteArray * buffer = CBNewByteArrayOfSize((uint32_t)fileLen);
 		if (NOT buffer) {
 			fclose(self->addressFile);
 			return false;
@@ -89,17 +89,17 @@ bool CBInitFullNode(CBFullNode * self,void (*logError)(char *,...)){
 			return false;
 		}
 		// Create the CBAddressManager
-		CBGetNetworkCommunicator(self)->addresses = CBNewAddressManagerFromData(buffer, logError, CBFullNodeOnBadTime);
+		CBGetNetworkCommunicator(self)->addresses = CBNewAddressManagerFromData(buffer, CBFullNodeOnBadTime);
 		CBReleaseObject(buffer);
 		if (NOT CBAddressManagerDeserialise(CBGetNetworkCommunicator(self)->addresses)){
 			fclose(self->addressFile);
 			CBReleaseObject(CBGetNetworkCommunicator(self)->addresses);
-			logError("There was an error when deserialising the CBAddressManager for the CBFullNode.");
+			CBLogError("There was an error when deserialising the CBAddressManager for the CBFullNode.");
 			return false;
 		}
 	}else{
 		// The address store does not exist
-		CBGetNetworkCommunicator(self)->addresses = CBNewAddressManager(logError, CBFullNodeOnBadTime);
+		CBGetNetworkCommunicator(self)->addresses = CBNewAddressManager(CBLogError, CBFullNodeOnBadTime);
 		if (NOT CBGetNetworkCommunicator(self)->addresses)
 			return false;
 		// Create the file

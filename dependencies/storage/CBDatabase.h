@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -30,7 +30,7 @@
 
 #include "CBDependencies.h"
 #include "CBAssociativeArray.h"
-#include "CBFile.h"
+#include "CBFileDependencies.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -47,13 +47,11 @@ typedef struct{
 } CBIndexValue;
 
 /**
- @brief Describes a deleted section of the database. The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active and ends with four bytes for the length of the deleted section in big-endian. The key becomes before this structure in memory.
+ @brief Describes a deleted section of the database.
  */
 typedef struct{
-	uint8_t key[5];
+	uint8_t key[12]; /**< The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active, then has four bytes for the length of the deleted section in big-endian, then the file ID in little-endian and finally the offset of the deleted section in little-endian. */
 	uint32_t indexPos; /**< The position in the index file where this value exists */
-	uint16_t fileID; /**< The ID of the file with the deleted section. */
-	uint32_t pos; /**< The position in the file with the deleted section. */
 } CBDeletedSection;
 
 /**
@@ -72,11 +70,10 @@ typedef struct{
 	uint8_t *(* changeKeys)[2]; /**< A list of keys to be changed with the last bytes being the new key. */
 	uint32_t numChangeKeys;
 	uint32_t nextIndexPos; /**< The next position for an index */
-	void (*logError)(char *,...);
 	// Files
-	CBFile indexFile;
-	CBFile deletionIndexFile;
-	CBFile fileObjectCache; /**< Stores last used file object for reuse until new file is needed */
+	uint64_t indexFile;
+	uint64_t deletionIndexFile;
+	uint64_t fileObjectCache; /**< Stores last used file object for reuse until new file is needed */
 	uint16_t lastUsedFileObject; /**< The last used file number or 0 if none. */
 } CBDatabase;
 
@@ -85,10 +82,10 @@ typedef struct{
 /**
  @brief Returns a new database object.
  @param dataDir The directory where the data files should be stored.
- @param logError The error log function pointer.
+ @param CBLogError The error log function pointer.
  @returns The database object or 0 on failure.
  */
-CBDatabase * CBNewDatabase(char * dataDir, void (*logError)(char *,...));
+CBDatabase * CBNewDatabase(char * dataDir);
 /**
  @brief Reads and opens the index during initialisation
  @param self The storage object.
@@ -138,7 +135,7 @@ void CBFreeDatabase(CBDatabase * self);
  @param dir The file descriptor for the data directory.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len, CBFile * logFile);
+bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len, uint64_t logFile);
 /**
  @brief Add an overwrite operation.
  @param self The storage object.
@@ -150,7 +147,7 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
  @param dir The file descriptor for the data directory.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, uint32_t offset, uint32_t dataLen, CBFile * logFile);
+bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, uint32_t offset, uint32_t dataLen, uint64_t logFile);
 /**
  @brief Adds a value to the database without overwriting previous indexed data.
  @param self The storage object.
@@ -161,7 +158,7 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, 
  @param dir The file descriptor for the data directory.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CBIndexValue * indexValue, CBFile * logFile);
+bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CBIndexValue * indexValue, uint64_t logFile);
 /**
  @brief Adds a write value to the valueWrites array.
  @param self The storage object.
@@ -216,7 +213,7 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length);
  @param fileID The id of the file to get an object for.
  @returns A pointer to the file object on success and NULL on failure.
  */
-CBFile * CBDatabaseGetFile(CBDatabase * self, uint16_t fileID);
+uint64_t CBDatabaseGetFile(CBDatabase * self, uint16_t fileID);
 /**
  @brief Gets the length of a value in the database or zero if it does not exist.
  @param self The database object.

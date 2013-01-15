@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -25,8 +25,8 @@
 #include <stdio.h>
 #include <time.h>
 
-void onErrorReceived(char * format,...);
-void onErrorReceived(char * format,...){
+void onErrorReceived(char * format, ...);
+void onErrorReceived(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -38,7 +38,7 @@ int main(){
 	// ??? Add more in-depth tests.
 	unsigned int s = (unsigned int)time(NULL);
 	s = 1353092048;
-	printf("Session = %u\n",s);
+	printf("Session = %u\n", s);
 	//srand(s);
 	CBAssociativeArray array;
 	CBInitAssociativeArray(&array);
@@ -305,11 +305,11 @@ int main(){
 	//
 	// Root = [15, 128, 0] , [16, 0, 0] , [31, 126, 0]
 	//
-	// Root child 0 = [0, 126, 0] , [1, 126, 0] , [2, 126, 0] , [3, 126, 0] , [4, 126, 0] , [5, 126, 0] , [6, 126, 0] , [7, 126, 0] , [8, 126, 0] , [9, 126, 0] , [10, 126, 0] , [11, 126, 0] , [12, 126, 0] , [13, 126, 0] , [14, 126, 0] , [15, 126, 0] ,
+	// Root child 0 = [0, 126, 0] , [1, 126, 0] , [2, 126, 0] , [3, 126, 0] , [4, 126, 0] , [5, 126, 0] , [6, 126, 0] , [7, 126, 0] , [8, 126, 0] , [9, 126, 0] , [10, 126, 0] , [11, 126, 0] , [12, 126, 0] , [13, 126, 0] , [14, 126, 0] , [15, 126, 0] , 
 	//
 	// Root child 1 = [15, 129, 0] , [15, 130, 0] , [15, 131, 0] , [15, 132, 0] , [15, 133, 0] , [15, 134, 0] , [15, 135, 0] , [15, 136, 0] , [15, 136, 127] , [15, 137, 0] , [15, 138, 0] , [15, 139, 0] , [15, 140, 0] , [15, 141, 0] , [15, 142, 0] , [15, 143, 0]
 	//
-	// Root child 2 = [16, 126, 0] , [17, 126, 0] , [18, 126, 0] , [19, 126, 0] , [20, 126, 0] , [21, 126, 0] , [22, 126, 0] , [23, 126, 0] , [24, 125, 0] , [24, 126, 0] , [25, 126, 0] , [26, 126, 0] , [27, 126, 0] , [28, 126, 0] , [29, 126, 0] , [30, 126, 0] ,
+	// Root child 2 = [16, 126, 0] , [17, 126, 0] , [18, 126, 0] , [19, 126, 0] , [20, 126, 0] , [21, 126, 0] , [22, 126, 0] , [23, 126, 0] , [24, 125, 0] , [24, 126, 0] , [25, 126, 0] , [26, 126, 0] , [27, 126, 0] , [28, 126, 0] , [29, 126, 0] , [30, 126, 0] , 
 	//
 	// Root child 3 = [32, 0, 0] , [32, 1, 0] , [32, 2, 0] , [32, 3, 0] , [32, 4, 0] , [32, 5, 0] , [32, 6, 0] , [32, 7, 0] , [32, 8, 0] , [32, 9, 0] , [32, 10, 0] , [32, 11, 0] , [32, 12, 0] , [32, 13, 0] , [32, 14, 0] , [32, 15, 0]
 	//
@@ -323,8 +323,8 @@ int main(){
 		printf("REMOVE [1, 126, 0] ROOT NUM ELEMENTS FAIL\n");
 		return 1;
 	}
-	if (memcmp(array.root->elements[0], (uint8_t [4]){3, 16,0,0}, 4)
-		&& memcmp(array.root->elements[1], (uint8_t [4]){3, 31,126,0}, 4)) {
+	if (memcmp(array.root->elements[0], (uint8_t [4]){3, 16, 0, 0}, 4)
+		&& memcmp(array.root->elements[1], (uint8_t [4]){3, 31, 126, 0}, 4)) {
 		printf("REMOVE [1, 126, 0] ROOT DATA FAIL\n");
 		return 1;
 	}
@@ -379,7 +379,7 @@ int main(){
 		printf("REMOVE [32, 15, 0] ROOT NUM ELEMENTS FAIL\n");
 		return 1;
 	}
-	if (memcmp(array.root->elements[0], (uint8_t [4]){3, 16,0,0}, 4)) {
+	if (memcmp(array.root->elements[0], (uint8_t [4]){3, 16, 0, 0}, 4)) {
 		printf("REMOVE [32, 15, 0] ROOT DATA FAIL\n");
 		return 1;
 	}
@@ -597,7 +597,7 @@ int main(){
 	}
 	// Test iteration
 	CBIterator it;
-	CBAssociativeArrayGetFirst(&array,&it);
+	CBAssociativeArrayGetFirst(&array, &it);
 	uint8_t * lastKey;
 	bool end = false;
 	for (int x = 0; x < size; x += 10) {

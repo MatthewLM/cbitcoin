@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,8 +26,8 @@
 #include "stdarg.h"
 #include "string.h"
 
-void logError(char * format,...);
-void logError(char * format,...){
+void CBLogError(char * format, ...);
+void CBLogError(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -37,11 +37,11 @@ void logError(char * format,...){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
-	printf("Session = %ui\n",s);
+	printf("Session = %ui\n", s);
 	srand(s);
 	// Test string
 	char * string = "Hello World!";
-	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string), logError);
+	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string));
 	if (strcmp(string, (char *)CBByteArrayGetData(ba))) {
 		printf("STRING COPY FAIL\n");
 		return 1;

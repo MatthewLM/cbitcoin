@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -39,6 +39,15 @@
 #include "CBBlockHeaders.h"
 #include "CBPingPong.h"
 #include "CBAlert.h"
+
+/*
+ @brief Used for CBNetworkCommunicator objects. These flags alter the behaviour of a CBNetworkCommunicator.
+ */
+typedef enum{
+	CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE = 1, /**< Automatically share version and verack messages with new connections. */
+	CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY = 2, /**< Automatically discover peers and connect upto the maximum allowed connections using the supplied CBVersion. This involves the exchange of version messages and addresses. */
+	CB_NETWORK_COMMUNICATOR_AUTO_PING = 4, /**< Send ping messages every "heartBeat" automatically. If the protocol version in the CBVersion message is 60000 or over, cbitcoin will use the new ping/pong specification. @see PingPong.h */
+}CBNetworkCommunicatorFlags;
 
 /**
  @brief Structure for CBNetworkCommunicator objects. @see CBNetworkCommunicator.h
@@ -78,17 +87,16 @@ typedef struct {
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
 	void * callbackHandler; /**< Sent to event callbacks */
 	bool stoppedListening; /**< True if listening was stopped because there are too many connections */
-	void (*onTimeOut)(void *,void *,void *,CBTimeOutType); /**< Timeout event callback with a void pointer argument for the callback handler followed by a CBNetworkCommunicator and CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The second argument is the CBNetworkCommunicator responsible for the timeout. The third argument is the peer with the timeout. Lastly there is the CBTimeOutType */
-	CBOnMessageReceivedAction (*onMessageReceived)(void *,void *,void *); /**< The callback for when a message has been received from a peer. The first argument in the void pointer for the callback handler. The second argument is the CBNetworkCommunicator responsible for receiving the message. The third argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
-	void (*onNetworkError)(void *,void *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the callback handler and then the CBNetworkCommunicator. */
-	void (*logError)(char *,...); /**< Pointer to error callback */
+	void (*onTimeOut)(void *, void *, void *, CBTimeOutType); /**< Timeout event callback with a void pointer argument for the callback handler followed by a CBNetworkCommunicator and CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The second argument is the CBNetworkCommunicator responsible for the timeout. The third argument is the peer with the timeout. Lastly there is the CBTimeOutType */
+	CBOnMessageReceivedAction (*onMessageReceived)(void *, void *, void *); /**< The callback for when a message has been received from a peer. The first argument in the void pointer for the callback handler. The second argument is the CBNetworkCommunicator responsible for receiving the message. The third argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
+	void (*onNetworkError)(void *, void *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the callback handler and then the CBNetworkCommunicator. */
 } CBNetworkCommunicator;
 
 /**
  @brief Creates a new CBNetworkCommunicator object.
  @returns A new CBNetworkCommunicator object.
  */
-CBNetworkCommunicator * CBNewNetworkCommunicator(void (*logError)(char *,...));
+CBNetworkCommunicator * CBNewNetworkCommunicator(void);
 
 /**
  @brief Gets a CBNetworkCommunicator from another object. Use this to avoid casts.
@@ -102,7 +110,7 @@ CBNetworkCommunicator * CBGetNetworkCommunicator(void * self);
  @param self The CBNetworkCommunicator object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkCommunicator(CBNetworkCommunicator * self,void (*logError)(char *,...));
+bool CBInitNetworkCommunicator(CBNetworkCommunicator * self);
 
 /**
  @brief Frees a CBNetworkCommunicator object.
@@ -117,27 +125,27 @@ void CBFreeNetworkCommunicator(void * self);
  @param vself The CBNetworkCommunicator object.
  @param socket The listening socket for accepting a connection.
  */
-void CBNetworkCommunicatorAcceptConnection(void * vself,uint64_t socket);
+void CBNetworkCommunicatorAcceptConnection(void * vself, uint64_t socket);
 /**
  @brief Returns true if it is beleived the network address can be connected to, otherwise false.
  @param self The CBNetworkCommunicator object.
  @param addr The CBNetworkAddress.
  @returns true if it is beleived the peer can be connected to, otherwise false.
  */
-bool CBNetworkCommunicatorCanConnect(CBNetworkCommunicator * self,CBNetworkAddress * addr);
+bool CBNetworkCommunicatorCanConnect(CBNetworkCommunicator * self, CBNetworkAddress * addr);
 /**
  @brief Connects to a peer. This peer will be added to the peer list if it connects correctly.
  @param self The CBNetworkCommunicator object.
  @param peer The peer to connect to.
  @returns CB_CONNECT_OK if successful. CB_CONNECT_NO_SUPPORT if the IP version is not supported. CB_CONNECT_BAD if the connection failed and the address will be penalised. CB_CONNECT_FAIL if the connection failed but the address will not be penalised.
  */
-CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self,CBPeer * peer);
+CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPeer * peer);
 /**
  @brief Callback for the connection to a peer.
  @param vself The CBNetworkCommunicator object.
  @param vpeer The CBPeer that connected.
  */
-void CBNetworkCommunicatorDidConnect(void * vself,void * vpeer);
+void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer);
 /**
  @brief Disconnects a peer.
  @param self The CBNetworkCommunicator object.
@@ -145,52 +153,52 @@ void CBNetworkCommunicatorDidConnect(void * vself,void * vpeer);
  @param penalty Penalty to the score of the address.
  @param stopping If true, do not call "onNetworkError" because the CBNetworkCommunicator is stopping.
  */
-void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self,CBPeer * peer,uint32_t penalty,bool stopping);
+void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer, uint32_t penalty, bool stopping);
 /**
  @brief Gets a new version message for this.
  @param self The CBNetworkCommunicator object.
  @param addRecv The CBNetworkAddress of the receipient.
  */
-CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBNetworkAddress * addRecv);
+CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv);
 /**
  @brief Processes a new received message for auto discovery.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  @returns true if peer should be disconnected, false otherwise.
  */
-CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self,CBPeer * peer);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self, CBPeer * peer);
 /**
  @brief Processes a new received message for auto handshaking.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  @returns true if peer should be disconnected, false otherwise.
  */
-CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self,CBPeer * peer);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNetworkCommunicator * self, CBPeer * peer);
 /**
  @brief Processes a new received message for auto ping pongs.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  @returns true if peer should be disconnected, false otherwise.
  */
-CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self,CBPeer * peer);
+CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self, CBPeer * peer);
 /**
  @brief Called when a peer socket is ready for reading.
  @param vself The CBNetworkCommunicator object.
  @param vpeer The CBPeer index with data to read.
  */
-void CBNetworkCommunicatorOnCanReceive(void * vself,void * vpeer);
+void CBNetworkCommunicatorOnCanReceive(void * vself, void * vpeer);
 /**
  @brief Called when a peer socket is ready for writing.
  @param vself The CBNetworkCommunicator object.
  @param vpeer The CBPeer
  */
-void CBNetworkCommunicatorOnCanSend(void * vself,void * vpeer);
+void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer);
 /**
  @brief Called when a header is received.
  @param self The CBNetworkCommunicator object.
  @param peer The CBPeer.
  */
-void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self,CBPeer * peer);
+void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer * peer);
 /**
  @brief Called on an error with the socket event loop. The error event is given with CB_ERROR_NETWORK_COMMUNICATOR_LOOP_FAIL.
  @param vself The CBNetworkCommunicator object.
@@ -201,14 +209,14 @@ void CBNetworkCommunicatorOnLoopError(void * vself);
  @param self The CBNetworkCommunicator object.
  @param peer The CBPeer.
  */
-void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self,CBPeer * peer);
+void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer * peer);
 /**
  @brief Called on a timeout error. The peer is removed.
  @param vself The CBNetworkCommunicator object.
  @param vpeer The CBPeer index which timedout.
  @param type The type of the timeout
  */
-void CBNetworkCommunicatorOnTimeOut(void * vself,void * vpeer,CBTimeOutType type);
+void CBNetworkCommunicatorOnTimeOut(void * vself, void * vpeer, CBTimeOutType type);
 /**
  @brief Sends a message by placing it on the send queue. Will serialise standard messages (unless serialised already) but not alternative messages or alert messages.
  @param self The CBNetworkCommunicator object.
@@ -216,7 +224,7 @@ void CBNetworkCommunicatorOnTimeOut(void * vself,void * vpeer,CBTimeOutType type
  @param message The CBMessage to send.
  @returns true if successful, false otherwise.
  */
-bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self,CBPeer * peer,CBMessage * message);
+bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
 /**
  @brief Sends pings to all connected peers.
  @param self The CBNetworkCommunicator object.
@@ -227,32 +235,32 @@ void CBNetworkCommunicatorSendPings(void * vself);
  @param self The CBNetworkCommunicator object.
  @param addr The CBAddressManager
  */
-void CBNetworkCommunicatorSetAddressManager(CBNetworkCommunicator * self,CBAddressManager * addrMan);
+void CBNetworkCommunicatorSetAddressManager(CBNetworkCommunicator * self, CBAddressManager * addrMan);
 /**
  @brief Sets the alternative messages
  @param self The alternative messages as a CBByteArray with 12 characters per message command, one after the other.
  @param altMaxSizes An allocated memory block of 32 bit integers with the max sizes for the alternative messages.
  @param addr The CBAddressManager
  */
-void CBNetworkCommunicatorSetAlternativeMessages(CBNetworkCommunicator * self,CBByteArray * altMessages,uint32_t * altMaxSizes);
+void CBNetworkCommunicatorSetAlternativeMessages(CBNetworkCommunicator * self, CBByteArray * altMessages, uint32_t * altMaxSizes);
 /**
  @brief Sets the IPv4 address for the CBNetworkCommunicator.
  @param self The CBNetworkCommunicator object.
  @param addr The IPv4 address as a CBNetworkAddress.
  */
-void CBNetworkCommunicatorSetOurIPv4(CBNetworkCommunicator * self,CBNetworkAddress * ourIPv4);
+void CBNetworkCommunicatorSetOurIPv4(CBNetworkCommunicator * self, CBNetworkAddress * ourIPv4);
 /**
  @brief Sets the IPv6 address for the CBNetworkCommunicator.
  @param self The CBNetworkCommunicator object.
  @param addr The IPv6 address as a CBNetworkAddress.
  */
-void CBNetworkCommunicatorSetOurIPv6(CBNetworkCommunicator * self,CBNetworkAddress * ourIPv6);
+void CBNetworkCommunicatorSetOurIPv6(CBNetworkCommunicator * self, CBNetworkAddress * ourIPv6);
 /**
  @brief Sets the user agent.
  @param self The CBNetworkCommunicator object.
  @param addr The user agent as a CBByteArray.
  */
-void CBNetworkCommunicatorSetUserAgent(CBNetworkCommunicator * self,CBByteArray * userAgent);
+void CBNetworkCommunicatorSetUserAgent(CBNetworkCommunicator * self, CBByteArray * userAgent);
 /**
  @brief Starts a CBNetworkCommunicator by connecting to the peers in the peers list. This starts the socket event loop.
  @param self The CBNetworkCommunicator object.

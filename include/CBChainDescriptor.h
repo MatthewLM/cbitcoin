@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBChainDescriptor object.
  @returns A new CBChainDescriptor object.
 */
-CBChainDescriptor * CBNewChainDescriptor(void (*logError)(char *,...));
+CBChainDescriptor * CBNewChainDescriptor(void);
 /**
-@brief Creates a new CBChainDescriptor object from serialised data.
+ @brief Creates a new CBChainDescriptor object from serialised data.
  @param data Serialised CBChainDescriptor data.
  @returns A new CBChainDescriptor object.
 */
-CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,void (*logError)(char *,...));
+CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBChainDescriptor from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBChainDescriptor * CBGetChainDescriptor(void * self);
  @param self The CBChainDescriptor object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitChainDescriptor(CBChainDescriptor * self,void (*logError)(char *,...));
+bool CBInitChainDescriptor(CBChainDescriptor * self);
 /**
  @brief Initialises a CBChainDescriptor object from serialised data
  @param self The CBChainDescriptor object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitChainDescriptorFromData(CBChainDescriptor * self, CBByteArray * data);
 
 /**
  @brief Frees a CBChainDescriptor object.
@@ -88,7 +88,7 @@ void CBFreeChainDescriptor(void * self);
  @param hash The hash to add.
  @returns true if the hash was added successfully, false on error.
  */
-bool CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash);
+bool CBChainDescriptorAddHash(CBChainDescriptor * self, CBByteArray * hash);
 /**
  @brief Deserialises a CBChainDescriptor so that it can be used as an object.
  @param self The CBChainDescriptor object
@@ -107,6 +107,6 @@ uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self);
  @param hash The hash to take.
  @returns true if the hash was taken successfully, false on error.
  */
-bool CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash);
+bool CBChainDescriptorTakeHash(CBChainDescriptor * self, CBByteArray * hash);
 
 #endif

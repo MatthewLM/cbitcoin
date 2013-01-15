@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -25,10 +25,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include "CBFile.h"
+#include "CBFileEC.h"
 
-void logError(char * format,...);
-void logError(char * format,...){
+void CBLogError(char * format, ...);
+void CBLogError(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -39,37 +39,39 @@ void logError(char * format,...){
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	s = 1337544566;
-	printf("Session = %ui\n",s);
+	printf("Session = %ui\n", s);
 	srand(s);
 	remove("./test.dat");
 	// Test newly opening file
-	CBFile file;
-	if (CBFileOpen(&file, "./test.dat", false)) {
+	uint64_t file = CBFileOpen("./test.dat", false);
+	if (file) {
 		printf("OPEN NOT EXIST FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileOpen(&file, "./test.dat", true)) {
+	file = CBFileOpen("./test.dat", true);
+	if (NOT file) {
 		printf("OPEN NEW FAIL\n");
 		return 1;
 	}
-	if (NOT file.new) {
-		printf("NEW NEW FAIL\n");
+	uint32_t len;
+	if (NOT CBFileGetLength(file, &len)) {
+		printf("NEW DATA GET LEN FAIL\n");
 		return 1;
 	}
-	if (file.dataLength) {
+	if (len) {
 		printf("NEW DATA LEN FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileAppend(&file, (uint8_t *)"Hello There World!", 18)) {
+	if (NOT CBFileAppend(file, (uint8_t *)"Hello There World!", 18)) {
 		printf("NEW APPEND FAIL\n");              
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 0)) {
+	if (NOT CBFileSeek(file, 0)) {
 		printf("NEW SEEK FAIL\n");
 		return 1;
 	}
 	uint8_t data[44];
-	if (NOT CBFileRead(&file, data, 11)) {
+	if (NOT CBFileRead(file, data, 11)) {
 		printf("NEW READ FAIL\n");
 		return 1;
 	}
@@ -77,7 +79,7 @@ int main(){
 		printf("NEW READ DATA FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 7)) {
+	if (NOT CBFileRead(file, data, 7)) {
 		printf("NEW READ SEEK FAIL\n");
 		return 1;
 	}
@@ -85,19 +87,19 @@ int main(){
 		printf("NEW READ SEEK DATA FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 6)) {
+	if (NOT CBFileSeek(file, 6)) {
 		printf("NEW SEEK 6 FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileOverwrite(&file, (uint8_t *)"Good People.", 12)) {
+	if (NOT CBFileOverwrite(file, (uint8_t *)"Good People.", 12)) {
 		printf("NEW OVERWRITE FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 0)) {
+	if (NOT CBFileSeek(file, 0)) {
 		printf("NEW SEEK AFTER OVERWRITE FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 18)) {
+	if (NOT CBFileRead(file, data, 18)) {
 		printf("NEW READ ALL FAIL\n");
 		return 1;
 	}
@@ -105,15 +107,15 @@ int main(){
 		printf("NEW OVERWRITE DATA FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileAppend(&file, (uint8_t *)" Now Goodbye!", 13)) {
+	if (NOT CBFileAppend(file, (uint8_t *)" Now Goodbye!", 13)) {
 		printf("NEW 2ND APPEND FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 0)) {
+	if (NOT CBFileSeek(file, 0)) {
 		printf("NEW SEEK AFTER 2ND APPEND FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 31)) {
+	if (NOT CBFileRead(file, data, 31)) {
 		printf("NEW READ AFTER 2ND APPEND FAIL\n");
 		return 1;
 	}
@@ -121,21 +123,24 @@ int main(){
 		printf("NEW 2ND APPEND DATA FAIL\n");
 		return 1;
 	}
-	if (file.dataLength != 31) {
+	CBFileGetLength(file, &len);
+	if (len != 31) {
 		printf("NEW 2ND APPEND DATA LENGTH FAIL\n");
 		return 1;
 	}
 	// Close and then reopen file
-	CBFileClose(&file);
-	if (NOT CBFileOpen(&file, "./test.dat", false)){
+	CBFileClose(file);
+	file = CBFileOpen("./test.dat", false);
+	if (NOT file){
 		printf("EXISTING OPEN FAIL\n");
 		return 1;
 	}
-	if (file.dataLength != 31) {
+	CBFileGetLength(file, &len);
+	if (len != 31) {
 		printf("EXISTING DATA LENGTH FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 31)) {
+	if (NOT CBFileRead(file, data, 31)) {
 		printf("EXISTING READ FAIL\n");
 		return 1;
 	}                       
@@ -143,23 +148,23 @@ int main(){
 		printf("EXISTING READ DATA FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 6)) {
+	if (NOT CBFileSeek(file, 6)) {
 		printf("EXISTING SEEK FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileOverwrite(&file, (uint8_t *)"Great World!", 12)) {
+	if (NOT CBFileOverwrite(file, (uint8_t *)"Great World!", 12)) {
 		printf("EXISTING OVERWRITE FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileAppend(&file, (uint8_t *)" Hello Again.", 13)) {
+	if (NOT CBFileAppend(file, (uint8_t *)" Hello Again.", 13)) {
 		printf("EXISTING APPEND FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 0)) {
+	if (NOT CBFileSeek(file, 0)) {
 		printf("EXISTING SEEK TO START FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 44)) {
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("EXISTING READ CHANGES FAIL\n");
 		return 1;
 	}                                   
@@ -167,25 +172,28 @@ int main(){
 		printf("EXISTING READ CHANGES DATA FAIL\n");
 		return 1;
 	}
-	if (file.dataLength != 44) {
+	CBFileGetLength(file, &len);
+	if (len != 44) {
 		printf("EXISTING CHANGES DATA LENGTH FAIL\n");
 		return 1;
 	}
 	// Test hamming code correction
-	rewind(file.rdwr);
-	fwrite((uint8_t []){44}, 1, 1, file.rdwr);
-	fseek(file.rdwr, 5, SEEK_SET);
-	fwrite((uint8_t []){74}, 1, 1, file.rdwr);
-	CBFileClose(&file);
-	if (NOT CBFileOpen(&file, "./test.dat", false)) {
+	rewind(((CBFile *)file)->rdwr);
+	fwrite((uint8_t []){44}, 1, 1, ((CBFile *)file)->rdwr);
+	fseek(((CBFile *)file)->rdwr, 5, SEEK_SET);
+	fwrite((uint8_t []){74}, 1, 1, ((CBFile *)file)->rdwr);
+	CBFileClose(file);
+	file = CBFileOpen("./test.dat", false);
+	if (NOT file) {
 		printf("LENGTH BIT ERR OPEN FAIL\n");
 		return 1;
 	}
-	if (file.dataLength != 44) {
+	CBFileGetLength(file, &len);
+	if (len != 44) {
 		printf("LENGTH BIT ERR LENGTH FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 1)) {
+	if (NOT CBFileRead(file, data, 1)) {
 		printf("DATA BIT ERR READ FAIL\n");
 		return 1;
 	}
@@ -193,23 +201,23 @@ int main(){
 		printf("DATA BIT ERR READ DATA FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 6)) {
+	if (NOT CBFileSeek(file, 6)) {
 		printf("DOUBLE OVERWRITE SEEK FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileOverwrite(&file, (uint8_t *)"Super Lands.", 12)) {
+	if (NOT CBFileOverwrite(file, (uint8_t *)"Super Lands.", 12)) {
 		printf("DOUBLE OVERWRITE ONE FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileOverwrite(&file, (uint8_t *)" Very Lovely.", 13)) {
+	if (NOT CBFileOverwrite(file, (uint8_t *)" Very Lovely.", 13)) {
 		printf("DOUBLE OVERWRITE TWO FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileSeek(&file, 6)) {
+	if (NOT CBFileSeek(file, 6)) {
 		printf("DOUBLE OVERWRITE READ SEEK FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 15)) {
+	if (NOT CBFileRead(file, data, 15)) {
 		printf("DOUBLE OVERWRITE READ FAIL\n");
 		return 1;
 	}
@@ -217,21 +225,23 @@ int main(){
 		printf("DOUBLE OVERWRITE READ DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Test Truncation
 	if (NOT CBFileTruncate("./test.dat", 31)) {
 		printf("TRUNCATE FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileOpen(&file, "./test.dat", false)) {
+	file = CBFileOpen("./test.dat", false);
+	if (NOT file) {
 		printf("TRUNCATE OPEN FAIL\n");
 		return 1;
 	}
-	if (file.dataLength != 31) {
+	CBFileGetLength(file, &len);
+	if (len != 31) {
 		printf("TRUNCATE LENGTH FAIL\n");
 		return 1;
 	}
-	if (NOT CBFileRead(&file, data, 31)) {
+	if (NOT CBFileRead(file, data, 31)) {
 		printf("TRUNCATE READ FAIL\n");
 		return 1;
 	}

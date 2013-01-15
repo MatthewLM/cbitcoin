@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -47,7 +47,7 @@ bool CBDecodeBase58(CBBigInt * bi, char * str);
  @param str Base 58 string to decode.
  @returns true on success, false on failure.
  */
-bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*logError)(char *,...));
+bool CBDecodeBase58Checked(CBBigInt * bi, char * str);
 /**
  @brief Encodes byte data into base 58.
  @param bytes Pointer to a normalised CBBigInt containing the byte data to encode. Will almost certainly be modified. Copy data beforehand if needed.

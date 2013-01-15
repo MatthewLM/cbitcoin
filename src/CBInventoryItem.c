@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,void (*logError)(char *,...)){
+CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type, CBByteArray * hash){
 	CBInventoryItem * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewInventoryItem\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewInventoryItem\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	if(CBInitInventoryItem(self,type,hash,logError))
+	if(CBInitInventoryItem(self, type, hash))
 		return self;
 	free(self);
 	return NULL;
 }
-CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,void (*logError)(char *,...)){
+CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data){
 	CBInventoryItem * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewInventoryItemFromData\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewInventoryItemFromData\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	if(CBInitInventoryItemFromData(self,data,logError))
+	if(CBInitInventoryItemFromData(self, data))
 		return self;
 	free(self);
 	return NULL;
@@ -59,17 +59,17 @@ CBInventoryItem * CBGetInventoryItem(void * self){
 
 //  Initialisers
 
-bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteArray * hash,void (*logError)(char *,...)){
+bool CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash){
 	self->type = type;
 	self->hash = hash;
 	CBRetainObject(hash);
-	if (NOT CBInitMessageByObject(CBGetMessage(self), logError))
+	if (NOT CBInitMessageByObject(CBGetMessage(self)))
 		return false;
 	return true;
 }
-bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,void (*logError)(char *,...)){
+bool CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data){
 	self->hash = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, logError))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;
 	return true;
 }
@@ -87,11 +87,11 @@ void CBFreeInventoryItem(void * vself){
 uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBInventoryItem with no bytes.");
+		CBLogError("Attempting to deserialise a CBInventoryItem with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 36) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBInventoryItem with less than 36 bytes.");
+		CBLogError("Attempting to deserialise a CBInventoryItem with less than 36 bytes.");
 		return 0;
 	}
 	self->type = CBByteArrayReadInt32(bytes, 0);
@@ -103,16 +103,17 @@ uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 uint32_t CBInventoryItemSerialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBInventoryItem with no bytes.");
+		CBLogError("Attempting to serialise a CBInventoryItem with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 36) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBInventoryItem with less than 36 bytes.");
+		CBLogError("Attempting to serialise a CBInventoryItem with less than 36 bytes.");
 		return 0;
 	}
 	CBByteArraySetInt32(bytes, 0, self->type);
 	CBByteArrayCopyByteArray(bytes, 4, self->hash);
 	CBByteArrayChangeReference(self->hash, bytes, 4);
+	bytes->length = 36;
 	CBGetMessage(self)->serialised = true;
 	return 36;
 }

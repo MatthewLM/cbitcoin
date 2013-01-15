@@ -1,5 +1,5 @@
 //
-//  CBFile.c
+//  CBFileEC.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 28/12/2012.
@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -22,20 +22,21 @@
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
-#include "CBFile.h"
+#include "CBFileEC.h"
 
-bool CBFileAppend(CBFile * file, uint8_t * data, uint32_t dataLen){
+bool CBFileAppend(uint64_t file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
+	CBFile * fileObj = (CBFile *)file;
 	// Look for appending to existing section
-	uint8_t offset = file->dataLength % 8;
-	if (NOT CBFileSeek(file, file->dataLength)) 
+	uint8_t offset = fileObj->dataLength % 8;
+	if (NOT CBFileSeek(file, fileObj->dataLength)) 
 		return false;
 	// Increase total data length.
-	file->dataLength += dataLen;
+	fileObj->dataLength += dataLen;
 	if (offset) {
 		// There is an existing section
 		// Write to existing section.
-		if (NOT CBFileWriteMidway(file->rdwr, offset, &data, &dataLen))
+		if (NOT CBFileWriteMidway(fileObj->rdwr, offset, &data, &dataLen))
 			return false;
 	}
 	// Make complete sections
@@ -45,7 +46,7 @@ bool CBFileAppend(CBFile * file, uint8_t * data, uint32_t dataLen){
 		memcpy(section, data, 8);
 		CBHamming72Encode(section, 8, section + 8);
 		// Write section
-		if (fwrite(section, 1, 9, file->rdwr) != 9)
+		if (fwrite(section, 1, 9, fileObj->rdwr) != 9)
 			return false;
 		// Modify variables
 		data += 8;
@@ -59,62 +60,75 @@ bool CBFileAppend(CBFile * file, uint8_t * data, uint32_t dataLen){
 		// Remaining data does not matter. It is not used and can be anything. Encode parity bits.
 		CBHamming72Encode(section, 8, section + 8);
 		// Write section
-		if (fwrite(section, 1, 9, file->rdwr) != 9)
+		if (fwrite(section, 1, 9, fileObj->rdwr) != 9)
 			return false;
 	}
 	// Change data size. Use the section variable for the data
-	CBInt32ToArray(section, 0, file->dataLength);
+	CBInt32ToArray(section, 0, fileObj->dataLength);
 	CBHamming72Encode(section, 4, section + 4);
-	rewind(file->rdwr);
-	return fwrite(section, 1, 5, file->rdwr) == 5;
+	rewind(fileObj->rdwr);
+	return fwrite(section, 1, 5, fileObj->rdwr) == 5;
 }
-void CBFileClose(CBFile * file){
-	fclose(file->rdwr);
+void CBFileClose(uint64_t file){
+	fclose(((CBFile *)file)->rdwr);
 }
-bool CBFileOpen(CBFile * file, char * filename, bool new){
-	file->new = new;
-	file->rdwr = fopen(filename, new ? "wb+" : "rb+");
-	if (NOT file->rdwr)
+bool CBFileGetLength(uint64_t file, uint32_t * length){
+	*length = ((CBFile *)file)->dataLength;
+	return true;
+}
+uint64_t CBFileOpen(char * filename, bool new){
+	CBFile * fileObj = malloc(sizeof(*fileObj));
+	if (NOT fileObj)
+		return 0;
+	fileObj->new = new;
+	fileObj->rdwr = fopen(filename, new ? "wb+" : "rb+");
+	if (NOT fileObj->rdwr)
 		return false;
 	uint8_t data[5];
 	if (new) {
 		// Write length
 		CBInt32ToArray(data, 0, 0);
 		CBHamming72Encode(data, 4, data + 4);
-		if (fwrite(data, 1, 5, file->rdwr) != 5) {
-			CBFileClose(file);
+		if (fwrite(data, 1, 5, fileObj->rdwr) != 5) {
+			CBFileClose((uint64_t)fileObj);
 			return false;
 		}
-		file->dataLength = 0;
+		fileObj->dataLength = 0;
 	}else{
 		// Get length
-		if (NOT CBFileReadLength(file->rdwr, &file->dataLength)) {
-			CBFileClose(file);
+		if (NOT CBFileReadLength(fileObj->rdwr, &fileObj->dataLength)) {
+			CBFileClose((uint64_t)fileObj);
 			return false;
 		}
 	}
 	// Cursor is initially 0.
-	file->cursor = 0;
+	fileObj->cursor = 0;
 	// Set F_FULLFSYNC
+	// F_FULLFSYNC will ensure writes are stored on disk in-order. It is not necessarily important that writes are written immediately but they must be written in order to avoid data corruption. Unfortunately this makes IO operations extremely slow. ??? How to ensure in-order disk writes on other systems?
 #ifdef F_FULLFSYNC
-	if (fcntl(fileno(file->rdwr), F_FULLFSYNC)){
-		CBFileClose(file);
+	if (fcntl(fileno(fileObj->rdwr), F_FULLFSYNC)){
+		CBFileClose((uint64_t)fileObj);
 		return false;
 	}
 #endif
-	return NOT fseek(file->rdwr, 5, SEEK_SET);
+	if (fseek(fileObj->rdwr, 5, SEEK_SET) == -1) {
+		CBFileClose((uint64_t)fileObj);
+		return false;
+	}
+	return (uint64_t)fileObj;
 }
-bool CBFileOverwrite(CBFile * file, uint8_t * data, uint32_t dataLen){
+bool CBFileOverwrite(uint64_t file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
+	CBFile * fileObj = (CBFile *)file;
 	// Add data into sections or adjust existing sections
 	// First look at inserting the data midway through a section
-	uint8_t offset = file->cursor % 8;
+	uint8_t offset = fileObj->cursor % 8;
 	if (offset) {
-		uint8_t insertLen = CBFileWriteMidway(file->rdwr, offset, &data, &dataLen);
+		uint8_t insertLen = CBFileWriteMidway(fileObj->rdwr, offset, &data, &dataLen);
 		if (NOT insertLen)
 			return false;
 		// Move cursor
-		file->cursor += insertLen;
+		fileObj->cursor += insertLen;
 	}
 	// Overwrite entire sections
 	uint32_t turns = dataLen/8;
@@ -123,12 +137,12 @@ bool CBFileOverwrite(CBFile * file, uint8_t * data, uint32_t dataLen){
 		memcpy(section, data, 8);
 		CBHamming72Encode(section, 8, section + 8);
 		// Write section
-		if (fwrite(section, 1, 9, file->rdwr) != 9)
+		if (fwrite(section, 1, 9, fileObj->rdwr) != 9)
 			return false;
 		// Modify variables
 		data += 8;
 		dataLen -= 8;
-		file->cursor += 8;
+		fileObj->cursor += 8;
 	}
 	// If no more data then return
 	if (NOT dataLen)
@@ -137,26 +151,27 @@ bool CBFileOverwrite(CBFile * file, uint8_t * data, uint32_t dataLen){
 	memcpy(section, data, dataLen);
 	// Read remaining data
 	uint8_t readAmount = 8 - dataLen;
-	if (fseek(file->rdwr, dataLen, SEEK_CUR)
-		|| fread(section + dataLen, 1, readAmount, file->rdwr) != readAmount)
+	if (fseek(fileObj->rdwr, dataLen, SEEK_CUR)
+		|| fread(section + dataLen, 1, readAmount, fileObj->rdwr) != readAmount)
 		return false;
 	CBHamming72Encode(section, 8, section + 8);
 	// Write section
-	if (fseek(file->rdwr, -8, SEEK_CUR)
-		|| fwrite(section, 1, 9, file->rdwr) != 9)
+	if (fseek(fileObj->rdwr, -8, SEEK_CUR)
+		|| fwrite(section, 1, 9, fileObj->rdwr) != 9)
 		return false;
 	// Increase cursor
-	file->cursor += dataLen;
+	fileObj->cursor += dataLen;
 	// Reseek
-	if (NOT CBFileSeek(file, file->cursor))
+	if (NOT CBFileSeek(file, fileObj->cursor))
 		return false;
 	return true;
 }
-bool CBFileRead(CBFile * file, uint8_t * data, uint32_t dataLen){
+bool CBFileRead(uint64_t file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
+	CBFile * fileObj = (CBFile *)file;
 	while (dataLen) {
 		// Read 9 byte section
-		if (fread(section, 1, 9, file->rdwr) != 9)
+		if (fread(section, 1, 9, fileObj->rdwr) != 9)
 			return false;
 		// Check section
 		uint8_t res = CBHamming72Check(section, 8);
@@ -164,15 +179,15 @@ bool CBFileRead(CBFile * file, uint8_t * data, uint32_t dataLen){
 			return false;
 		if (res != CB_ZERO_BIT_ERROR){
 			// Write corrected byte.
-			long pos = ftell(file->rdwr);
-			if (fseek(file->rdwr, -9 + res, SEEK_CUR))
+			long pos = ftell(fileObj->rdwr);
+			if (fseek(fileObj->rdwr, -9 + res, SEEK_CUR))
 				return false;
-			fwrite(section + res, 1, 1, file->rdwr);
-			if (fseek(file->rdwr, pos, SEEK_SET))
+			fwrite(section + res, 1, 1, fileObj->rdwr);
+			if (fseek(fileObj->rdwr, pos, SEEK_SET))
 				return false;
 		}
 		// Copy section to data
-		uint8_t offset = file->cursor % 8;
+		uint8_t offset = fileObj->cursor % 8;
 		uint8_t remaining = 8 - offset;
 		// dataLen is actually the bytes left for the data. remaining is for the bytes needed in this section
 		if (dataLen < remaining)
@@ -182,10 +197,10 @@ bool CBFileRead(CBFile * file, uint8_t * data, uint32_t dataLen){
 		data += remaining;
 		dataLen -= remaining;
 		// Adjust cursor
-		file->cursor += remaining;
+		fileObj->cursor += remaining;
 	}
 	// Reseek for next read
-	if (NOT CBFileSeek(file, file->cursor))
+	if (NOT CBFileSeek(file, fileObj->cursor))
 		return false;
 	return true;
 }
@@ -211,14 +226,16 @@ bool CBFileReadLength(FILE * rd, uint32_t * length){
 	*length = CBArrayToInt32(data, 0);
 	return true;
 }
-bool CBFileSeek(CBFile * file, uint32_t pos){
-	file->cursor = pos;
-	return NOT fseek(file->rdwr, 5 + pos / 8 * 9, SEEK_SET);
+bool CBFileSeek(uint64_t file, uint32_t pos){
+	CBFile * fileObj = (CBFile *)file;
+	fileObj->cursor = pos;
+	return NOT fseek(fileObj->rdwr, 5 + pos / 8 * 9, SEEK_SET);
 }
-bool CBFileSync(CBFile * file){
-	if (fflush(file->rdwr))
+bool CBFileSync(uint64_t file){
+	CBFile * fileObj = (CBFile *)file;
+	if (fflush(fileObj->rdwr))
 		return false;
-	if (fsync(fileno(file->rdwr)))
+	if (fsync(fileno(fileObj->rdwr)))
 		return false;
 	return true;
 }
@@ -226,8 +243,11 @@ bool CBFileSyncDir(char * dir){
 	int dird = open(dir, 0);
 	if (dird == -1)
 		return false;
-	if (fsync(dird))
+	if (fsync(dird)){
+		close(dird);
 		return false;
+	}
+	close(dird);
 	return true;
 }
 bool CBFileTruncate(char * filename, uint32_t newSize){

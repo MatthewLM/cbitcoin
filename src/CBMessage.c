@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,14 +26,14 @@
 
 //  Constructor
 
-CBMessage * CBNewMessageByObject(void (*logError)(char *,...)){
+CBMessage * CBNewMessageByObject(){
 	CBMessage * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewMessageByObject\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewMessageByObject\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeMessage;
-	if (CBInitMessageByObject(self,logError))
+	if (CBInitMessageByObject(self))
 		return self;
 	free(self);
 	return NULL;
@@ -47,21 +47,19 @@ CBMessage * CBGetMessage(void * self){
 
 //  Initialiser
 
-bool CBInitMessageByObject(CBMessage * self,void (*logError)(char *,...)){
+bool CBInitMessageByObject(CBMessage * self){
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->bytes = NULL;
-	self->logError = logError;
 	self->expectResponse = false;
 	self->serialised = false;
 	return true;
 }
-bool CBInitMessageByData(CBMessage * self,CBByteArray * data,void (*logError)(char *,...)){
+bool CBInitMessageByData(CBMessage * self, CBByteArray * data){
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->bytes = data;
 	CBRetainObject(data); // Retain data for this object.
-	self->logError = logError;
 	self->expectResponse = false;
 	self->serialised = true;
 	return true;

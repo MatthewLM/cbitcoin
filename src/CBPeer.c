@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -28,9 +28,9 @@
 
 CBPeer * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
 	CBPeer * self = CBGetNode(addr);
-	self = realloc(self,sizeof(*self));
+	self = realloc(self, sizeof(*self));
 	if (NOT self) {
-		CBGetMessage(self)->logError("Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n",sizeof(*self));
+		CBLogError("Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNode;

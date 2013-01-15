@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBInventoryItem object.
  @returns A new CBInventoryItem object.
 */
-CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type,CBByteArray * hash,void (*logError)(char *,...));
+CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type, CBByteArray * hash);
 /**
 @brief Creates a new CBInventoryItem object from serialised data.
  @param data Serialised CBInventoryItem data.
  @returns A new CBInventoryItem object.
 */
-CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data,void (*logError)(char *,...));
+CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBInventoryItem from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBInventoryItem * CBGetInventoryItem(void * self);
  @param self The CBInventoryItem object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitInventoryItem(CBInventoryItem * self,CBInventoryItemType type,CBByteArray * hash,void (*logError)(char *,...));
+bool CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash);
 /**
  @brief Initialises a CBInventoryItem object from serialised data
  @param self The CBInventoryItem object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitInventoryItemFromData(CBInventoryItem * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data);
 
 /**
  @brief Frees a CBInventoryItem object.

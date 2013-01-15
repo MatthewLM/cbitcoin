@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,26 +26,26 @@
 
 //  Constructor
 
-CBNetworkAddress * CBNewNetworkAddress(uint32_t time,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*logError)(char *,...)){
+CBNetworkAddress * CBNewNetworkAddress(uint32_t time, CBByteArray * ip, uint16_t port, CBVersionServices services){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewNetworkAddress\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddress\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	if (CBInitNetworkAddress(self,time,ip,port,services,logError))
+	if (CBInitNetworkAddress(self, time, ip, port, services))
 		return self;
 	free(self);
 	return NULL;
 }
-CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data,void (*logError)(char *,...)){
+CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewNetworkAddressFromData\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddressFromData\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	if(CBInitNetworkAddressFromData(self,data,logError))
+	if(CBInitNetworkAddressFromData(self, data))
 		return self;
 	free(self);
 	return NULL;
@@ -59,11 +59,11 @@ CBNetworkAddress * CBGetNetworkAddress(void * self){
 
 //  Initialiser
 
-bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*logError)(char *,...)){
+bool CBInitNetworkAddress(CBNetworkAddress * self, uint32_t score, CBByteArray * ip, uint16_t port, CBVersionServices services){
 	self->score = score;
 	self->ip = ip;
 	if (NOT ip) {
-		ip = CBNewByteArrayOfSize(16, logError);
+		ip = CBNewByteArrayOfSize(16);
 		if (NOT ip)
 			return false;
 		memset(CBByteArrayGetData(ip), 0, 16);
@@ -76,16 +76,16 @@ bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * i
 	self->port = port;
 	self->services = services;
 	self->public = false; // Private by default.
-	if (NOT CBInitMessageByObject(CBGetMessage(self), logError)){
+	if (NOT CBInitMessageByObject(CBGetMessage(self))){
 		CBReleaseObject(ip);
 		return false;
 	}
 	return true;
 }
-bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,void (*logError)(char *,...)){
+bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data){
 	self->ip = NULL;
 	self->public = false; // Private by default.
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, logError))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;
 	return true;
 }
@@ -100,14 +100,14 @@ void CBFreeNetworkAddress(void * vself){
 
 //  Functions
 
-uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score){
+uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool score){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBNetworkAddress with no bytes.");
+		CBLogError("Attempting to deserialise a CBNetworkAddress with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 26 + score * 4) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBNetworkAddress with less bytes than required.");
+		CBLogError("Attempting to deserialise a CBNetworkAddress with less bytes than required.");
 		return 0;
 	}
 	uint8_t cursor;
@@ -129,20 +129,20 @@ uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score){
 	self->port = CBByteArrayReadPort(bytes, cursor);
 	return cursor + 2;
 }
-bool CBNetworkAddressEquals(CBNetworkAddress * self,CBNetworkAddress * addr){
+bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr){
 	return (self->ip
 			&& addr->ip
 			&& CBByteArrayCompare(self->ip, addr->ip) == CB_COMPARE_EQUAL
 			&& self->port == addr->port);
 }
-uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool score){
+uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool score){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBNetworkAddress with no bytes.");
+		CBLogError("Attempting to serialise a CBNetworkAddress with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 26 + score * 4) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBNetworkAddress with less bytes than required.");
+		CBLogError("Attempting to serialise a CBNetworkAddress with less bytes than required.");
 		return 0;
 	}
 	uint8_t cursor;
@@ -156,6 +156,7 @@ uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool score){
 	CBByteArrayChangeReference(self->ip, bytes, cursor);
 	cursor += 16;
 	CBByteArraySetPort(bytes, cursor, self->port);
+	bytes->length = cursor + 2;
 	CBGetMessage(self)->serialised = true;
 	return cursor + 2;
 

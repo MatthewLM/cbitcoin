@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -58,7 +58,7 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 				free(bi2.data);
 				return false;
 			}
-			if (NOT CBBigIntEqualsAdditionByBigInt(bi,&bi2)){
+			if (NOT CBBigIntEqualsAdditionByBigInt(bi, &bi2)){
 				// Error occured.
 				free(bi2.data);
 				return false;
@@ -83,19 +83,19 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 	}
 	return true;
 }
-bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*logError)(char *,...)){
+bool CBDecodeBase58Checked(CBBigInt * bi, char * str){
 	if(NOT CBDecodeBase58(bi, str)) {
-		logError("Memory failure in CBDecodeBase58.");
+		CBLogError("Memory failure in CBDecodeBase58.");
 		return false;
 	}
 	if (bi->length < 4){
-		logError("The string passed into CBDecodeBase58Checked decoded into data that was too short.");
+		CBLogError("The string passed into CBDecodeBase58Checked decoded into data that was too short.");
 		return false;
 	}
 	// Reverse bytes for checksum generation
 	uint8_t * reversed = malloc(bi->length - 4);
 	if (NOT reversed) {
-		logError("Cannot allocate %i bytes of memory in CBDecodeBase58Checked",bi->length - 4);
+		CBLogError("Cannot allocate %i bytes of memory in CBDecodeBase58Checked", bi->length - 4);
 		return false;
 	}
 	for (uint8_t x = 4; x < bi->length; x++)
@@ -111,7 +111,7 @@ bool CBDecodeBase58Checked(CBBigInt * bi, char * str, void (*logError)(char *,..
 		if (checksum2[x] != bi->data[3-x])
 			ok = false;
 	if (NOT ok){
-		logError("The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
+		CBLogError("The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		return false;
 	}
 	return true;

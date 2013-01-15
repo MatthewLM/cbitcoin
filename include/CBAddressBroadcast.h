@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -46,13 +46,13 @@ typedef struct{
  @brief Creates a new CBAddressBroadcast object.
  @returns A new CBAddressBroadcast object.
  */
-CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps,void (*logError)(char *,...));
+CBAddressBroadcast * CBNewAddressBroadcast(bool timeStamps);
 /**
-@brief Creates a new CBAddressBroadcast object from serialised data.
+ @brief Creates a new CBAddressBroadcast object from serialised data.
  @param data Serialised CBAddressBroadcast data.
  @returns A new CBAddressBroadcast object.
 */
-CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data,bool timeStamps,void (*logError)(char *,...));
+CBAddressBroadcast * CBNewAddressBroadcastFromData(CBByteArray * data, bool timeStamps);
 
 /**
  @brief Gets a CBAddressBroadcast from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBAddressBroadcast * CBGetAddressBroadcast(void * self);
  @param self The CBAddressBroadcast object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitAddressBroadcast(CBAddressBroadcast * self,bool timeStamps,void (*logError)(char *,...));
+bool CBInitAddressBroadcast(CBAddressBroadcast * self, bool timeStamps);
 /**
  @brief Initialises a CBAddressBroadcast object from serialised data
  @param self The CBAddressBroadcast object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self,bool timeStamps,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitAddressBroadcastFromData(CBAddressBroadcast * self, bool timeStamps, CBByteArray * data);
 
 /**
  @brief Frees a CBAddressBroadcast object.
@@ -89,7 +89,7 @@ void CBFreeAddressBroadcast(void * self);
  @param address The CBNetworkAddress to add.
  @returns true if the network address was added successfully, false if there was an error in doing so.
  */
-bool CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
+bool CBAddressBroadcastAddNetworkAddress(CBAddressBroadcast * self, CBNetworkAddress * address);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBAddressBroadcast object.
@@ -115,6 +115,6 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self, bool force);
  @param address The CBNetworkAddress to take.
  @returns true if the network address was taken successfully, false if there was an error in doing so.
  */
-bool CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self,CBNetworkAddress * address);
+bool CBAddressBroadcastTakeNetworkAddress(CBAddressBroadcast * self, CBNetworkAddress * address);
 
 #endif

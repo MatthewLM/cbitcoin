@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -45,13 +45,13 @@ typedef struct{
  @brief Creates a new CBBlockHeaders object.
  @returns A new CBBlockHeaders object.
 */
-CBBlockHeaders * CBNewBlockHeaders(void (*logError)(char *,...));
+CBBlockHeaders * CBNewBlockHeaders(void);
 /**
 @brief Creates a new CBBlockHeaders object from serialised data.
  @param data Serialised CBBlockHeaders data.
  @returns A new CBBlockHeaders object.
 */
-CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data,void (*logError)(char *,...));
+CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBBlockHeaders from another object. Use this to avoid casts.
@@ -65,14 +65,14 @@ CBBlockHeaders * CBGetBlockHeaders(void * self);
  @param self The CBBlockHeaders object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitBlockHeaders(CBBlockHeaders * self,void (*logError)(char *,...));
+bool CBInitBlockHeaders(CBBlockHeaders * self);
 /**
  @brief Initialises a CBBlockHeaders object from serialised data
  @param self The CBBlockHeaders object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitBlockHeadersFromData(CBBlockHeaders * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitBlockHeadersFromData(CBBlockHeaders * self, CBByteArray * data);
 
 /**
  @brief Frees a CBBlockHeaders object.
@@ -88,7 +88,7 @@ void CBFreeBlockHeaders(void * self);
  @param address The CBBlock to add.
  @returns true if the block header was added successfully or false on error.
  */
-bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header);
+bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self, CBBlock * header);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBBlockHeaders object.
@@ -114,6 +114,6 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force);
  @param address The CBBlock to take.
  @returns true if the block header was taken successfully or false on error.
  */
-bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header);
+bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self, CBBlock * header);
 
 #endif

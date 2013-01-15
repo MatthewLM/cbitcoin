@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -75,13 +75,13 @@ typedef struct{
  @brief Creates a new CBAddressManager object.
  @returns A new CBAddressManager object.
 */
-CBAddressManager * CBNewAddressManager(void (*logError)(char *,...),void (*onBadTime)(void *));
+CBAddressManager * CBNewAddressManager(void (*onBadTime)(void *));
 /**
-@brief Creates a new CBAddressManager object from serialised data.
+ @brief Creates a new CBAddressManager object from serialised data.
  @param data Serialised CBAddressManager data.
  @returns A new CBAddressManager object.
 */
-CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data,void (*logError)(char *,...),void (*onBadTime)(void *));
+CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data, void (*onBadTime)(void *));
 
 /**
  @brief Gets a CBAddressManager from another object. Use this to avoid casts.
@@ -95,14 +95,14 @@ CBAddressManager * CBGetAddressManager(void * self);
  @param self The CBAddressManager object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitAddressManager(CBAddressManager * self,void (*logError)(char *,...),void (*onBadTime)(void *));
+bool CBInitAddressManager(CBAddressManager * self, void (*onBadTime)(void *));
 /**
  @brief Initialises a CBAddressManager object from serialised data
  @param self The CBAddressManager object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitAddressManagerFromData(CBAddressManager * self,CBByteArray * data,void (*logError)(char *,...),void (*onBadTime)(void *));
+bool CBInitAddressManagerFromData(CBAddressManager * self, CBByteArray * data, void (*onBadTime)(void *));
 
 /**
  @brief Frees a CBAddressManager object.
@@ -118,7 +118,7 @@ void CBFreeAddressManager(void * vself);
  @param peer The CBNetworkAddress to take.
  @returns true if the address was taken successfully, false if an error occured.
  */
-bool CBAddressManagerAddAddress(CBAddressManager * self,CBNetworkAddress * addr);
+bool CBAddressManagerAddAddress(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Adjust the network time offset with a peer's time.
  @param self The CBAddressManager object.
@@ -137,21 +137,21 @@ uint32_t CBAddressManagerDeserialise(CBAddressManager * self);
  @param num The number of addresses to get.
  @returns The addresses in a newly allocated memory block. This block is NULL terminated. The number of addresses returned may be less than "num". CBNetworkAddressLocator is used to locate addresses if needed. This will return NULL if malloc() fails.
  */
-CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self,uint32_t num);
+CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num);
 /**
  @brief Gets the bucket index for an address.
  @param self The CBAddressManager object.
  @param addr The address.
  @returns The bucket index.
  */
-uint8_t CBAddressManagerGetBucketIndex(CBAddressManager * self,CBNetworkAddress * addr);
+uint8_t CBAddressManagerGetBucketIndex(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Gets the group number for an address. It is seperated such as to make it difficult to use an IP in many different groups. This is done such as the original bitcoin client.
  @param self The CBAddressManager object.
  @param addr The address.
  @returns The address group number.
  */
-uint64_t CBAddressManagerGetGroup(CBAddressManager * self,CBNetworkAddress * addr);
+uint64_t CBAddressManagerGetGroup(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Gets the total amount of addresses, including connected ones. Not thread safe.
  @param self The CBAddressManager object.
@@ -164,33 +164,33 @@ uint64_t CBAddressManagerGetNumberOfAddresses(CBAddressManager * self);
  @param addr The address.
  @returns If the address already exists, returns the existing object. Else returns NULL.
  */
-CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self,CBNetworkAddress * addr);
+CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Determines if a CBNetworkAddress is in the "peers" list. Compares the IP address and port.
  @param self The CBAddressManager object.
  @param addr The address.
  @returns If the address already exists as a connected peer, returns the existing object. Else returns NULL.
  */
-CBPeer * CBAddressManagerGotNode(CBAddressManager * self,CBNetworkAddress * addr);
+CBPeer * CBAddressManagerGotNode(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Determines if an IP type is reachable.
  @param self The CBAddressManager object.
  @param type The type.
  @returns true if reachable, false if not reachable.
  */
-bool CBAddressManagerIsReachable(CBAddressManager * self,CBIPType type);
+bool CBAddressManagerIsReachable(CBAddressManager * self, CBIPType type);
 /**
  @brief Removes a CBNetworkAddress if the CBAddressManager has it.
  @param self The CBAddressManager object.
  @param addr The CBNetworkAddress to remove
  */
-void CBAddressManagerRemoveAddress(CBAddressManager * self,CBNetworkAddress * addr);
+void CBAddressManagerRemoveAddress(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Remove a CBPeer from the peers list.
  @param self The CBAddressManager object.
  @param peer The CBPeer to remove
  */
-void CBAddressManagerRemoveNode(CBAddressManager * self,CBPeer * peer);
+void CBAddressManagerRemoveNode(CBAddressManager * self, CBPeer * peer);
 /**
  @brief Serialises a CBAddressManager to the byte data.
  @param self The CBAddressManager object
@@ -217,12 +217,12 @@ bool CBAddressManagerSetup(CBAddressManager * self);
  @param peer The CBNetworkAddress to take.
  @returns true if the address was taken successfully, false if an error occured.
  */
-bool CBAddressManagerTakeAddress(CBAddressManager * self,CBNetworkAddress * addr);
+bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Takes a CBPeer an places it into the peers list.
  @param self The CBAddressManager object.
  @param peer The CBPeer to take.
  */
-bool CBAddressManagerTakePeer(CBAddressManager * self,CBPeer * peer);
+bool CBAddressManagerTakePeer(CBAddressManager * self, CBPeer * peer);
 
 #endif

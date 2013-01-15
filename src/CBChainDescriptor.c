@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBChainDescriptor * CBNewChainDescriptor(void (*logError)(char *,...)){
+CBChainDescriptor * CBNewChainDescriptor(){
 	CBChainDescriptor * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewChainDescriptor\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewChainDescriptor\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeChainDescriptor;
-	if(CBInitChainDescriptor(self,logError))
+	if(CBInitChainDescriptor(self))
 		return self;
 	free(self);
 	return NULL;
 }
-CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data,void (*logError)(char *,...)){
+CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data){
 	CBChainDescriptor * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewChainDescriptorFromData\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewChainDescriptorFromData\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeChainDescriptor;
-	if(CBInitChainDescriptorFromData(self,data,logError))
+	if(CBInitChainDescriptorFromData(self, data))
 		return self;
 	free(self);
 	return NULL;
@@ -59,17 +59,17 @@ CBChainDescriptor * CBGetChainDescriptor(void * self){
 
 //  Initialisers
 
-bool CBInitChainDescriptor(CBChainDescriptor * self,void (*logError)(char *,...)){
+bool CBInitChainDescriptor(CBChainDescriptor * self){
 	self->hashNum = 0;
 	self->hashes = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self), logError))
+	if (NOT CBInitMessageByObject(CBGetMessage(self)))
 		return false;
 	return true;
 }
-bool CBInitChainDescriptorFromData(CBChainDescriptor * self,CBByteArray * data,void (*logError)(char *,...)){
+bool CBInitChainDescriptorFromData(CBChainDescriptor * self, CBByteArray * data){
 	self->hashNum = 0;
 	self->hashes = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, logError))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;
 	return true;
 }
@@ -87,33 +87,33 @@ void CBFreeChainDescriptor(void * vself){
 
 //  Functions
 
-bool CBChainDescriptorAddHash(CBChainDescriptor * self,CBByteArray * hash){
+bool CBChainDescriptorAddHash(CBChainDescriptor * self, CBByteArray * hash){
 	CBRetainObject(hash);
-	return CBChainDescriptorTakeHash(self,hash);
+	return CBChainDescriptorTakeHash(self, hash);
 }
 uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBChainDescriptor with no bytes.");
+		CBLogError("Attempting to deserialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 33) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBChainDescriptor with less bytes than required for one hash.");
+		CBLogError("Attempting to deserialise a CBChainDescriptor with less bytes than required for one hash.");
 		return 0;
 	}
 	CBVarInt hashNum = CBVarIntDecode(bytes, 0);
 	if (hashNum.val > 500) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBChainDescriptor with a var int over 500.");
+		CBLogError("Attempting to deserialise a CBChainDescriptor with a var int over 500.");
 		return 0;
 	}
 	if (bytes->length < hashNum.size + hashNum.val * 32) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBChainDescriptor with less bytes than required for the hashes.");
+		CBLogError("Attempting to deserialise a CBChainDescriptor with less bytes than required for the hashes.");
 		return 0;
 	}
 	// Deserialise each hash
 	self->hashes = malloc(sizeof(*self->hashes) * (size_t)hashNum.val);
 	if (NOT self->hashes) {
-		CBGetMessage(self)->logError("Cannot allocate %i bytes of memory in CBChainDescriptorDeserialise\n",sizeof(*self->hashes) * (size_t)hashNum.val);
+		CBLogError("Cannot allocate %i bytes of memory in CBChainDescriptorDeserialise\n", sizeof(*self->hashes) * (size_t)hashNum.val);
 		return 0;
 	}
 	self->hashNum = hashNum.val;
@@ -121,7 +121,7 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	for (uint16_t x = 0; x < self->hashNum; x++) {
 		self->hashes[x] = CBNewByteArraySubReference(bytes, cursor, 32);
 		if (NOT self->hashes[x]){
-			CBGetMessage(self)->logError("Cannot create new CBByteArray in CBChainDescriptorDeserialise\n");
+			CBLogError("Cannot create new CBByteArray in CBChainDescriptorDeserialise\n");
 			return 0;
 		}
 		cursor += 32;
@@ -131,12 +131,12 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBChainDescriptor with no bytes.");
+		CBLogError("Attempting to serialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
 	CBVarInt hashNum = CBVarIntFromUInt64(self->hashNum);
 	if (bytes->length < hashNum.size + self->hashNum * 32) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBChainDescriptor with less bytes than required for the hashes.");
+		CBLogError("Attempting to serialise a CBChainDescriptor with less bytes than required for the hashes.");
 		return 0;
 	}
 	CBVarIntEncode(bytes, 0, hashNum);
@@ -149,7 +149,7 @@ uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
-bool CBChainDescriptorTakeHash(CBChainDescriptor * self,CBByteArray * hash){
+bool CBChainDescriptorTakeHash(CBChainDescriptor * self, CBByteArray * hash){
 	self->hashNum++;
 	CBByteArray ** temp = realloc(self->hashes, sizeof(*self->hashes) * self->hashNum);
 	if (NOT temp)

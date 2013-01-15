@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -22,7 +22,7 @@
 
 /**
  @file
- @brief File for weak linked functions for dependency injection. All these functions are unimplemented. The functions include the crytography functions which are key for the functioning of bitcoin. Sockets must be non-blocking and use an asynchronous logError-type system. The use of the sockets is designed to be compatible with libevent. The random number functions should be cryptographically secure. See the dependecies folder for implementations.
+ @brief File for weak linked functions for dependency injection. All these functions are unimplemented. The functions include the crytography functions which are key for the functioning of bitcoin. Sockets must be non-blocking and asynchronous. The use of the sockets is designed to be compatible with libevent. The random number functions should be cryptographically secure. See the dependecies folder for implementations.
  */
 
 #ifndef CBDEPENDENCIESH
@@ -102,6 +102,10 @@
 #pragma weak CBBlockChainStorageSaveUnspentOutput
 #pragma weak CBBlockChainStorageUnspentOutputExists
 
+// Logging dependencies
+
+#pragma weak CBLogError
+
 // CRYPTOGRAPHIC DEPENDENCIES
 
 /**
@@ -110,21 +114,21 @@
  @param length The length of the data to hash.
  @param output A pointer to hold a 32-byte hash.
  */
-void CBSha256(uint8_t * data,uint16_t length,uint8_t * output);
+void CBSha256(uint8_t * data, uint16_t length, uint8_t * output);
 /**
  @brief RIPEMD-160 cryptographic hash function.
  @param data A pointer to the byte data to hash.
  @param length The length of the data to hash.
  @param output A pointer to hold a 20-byte hash.
  */
-void CBRipemd160(uint8_t * data,uint16_t length,uint8_t * output);
+void CBRipemd160(uint8_t * data, uint16_t length, uint8_t * output);
 /**
  @brief SHA-1 cryptographic hash function.
  @param data A pointer to the byte data to hash.
  @param length The length of the data to hash.
  @param output A pointer to hold a 10-byte hash.
  */
-void CBSha160(uint8_t * data,uint16_t length,uint8_t * output);
+void CBSha160(uint8_t * data, uint16_t length, uint8_t * output);
 /**
  @brief Verifies an ECDSA signature. This function must stick to the cryptography requirements in OpenSSL version 1.0.0 or any other compatible version. There may be compatibility problems when using libraries or code other than OpenSSL since OpenSSL does not adhere fully to the SEC1 ECDSA standards. This could cause security problems in your code. If in doubt, stick to OpenSSL.
  @param signature BER encoded signature bytes.
@@ -134,7 +138,7 @@ void CBSha160(uint8_t * data,uint16_t length,uint8_t * output);
  @param keyLen The length of the public key bytes.
  @returns true if the signature is valid and false if invalid.
  */
-bool CBEcdsaVerify(uint8_t * signature,uint8_t sigLen,uint8_t * hash,const uint8_t * pubKey,uint8_t keyLen);
+bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const uint8_t * pubKey, uint8_t keyLen);
 
 // NETWORKING DEPENDENCIES
 
@@ -144,7 +148,7 @@ bool CBEcdsaVerify(uint8_t * signature,uint8_t sigLen,uint8_t * hash,const uint8
  @param IPv6 true if the socket is used to connect to the IPv6 network.
  @returns CB_SOCKET_OK if the socket was successfully created, CB_SOCKET_NO_SUPPORT and CB_SOCKET_BAD if the socket could not be created for any other reason.
  */
-CBSocketReturn CBNewSocket(uint64_t * socketID,bool IPv6);
+CBSocketReturn CBNewSocket(uint64_t * socketID, bool IPv6);
 /*
  @brief Binds the host machine and a port number to a new socket.
  @param socketID The socket id to set to the new socket.
@@ -152,7 +156,7 @@ CBSocketReturn CBNewSocket(uint64_t * socketID,bool IPv6);
  @param port The port to bind to.
  @returns true if the bind was sucessful and false otherwise.
  */
-bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port);
+bool CBSocketBind(uint64_t * socketID, bool IPv6, uint16_t port);
 /**
  @brief Begin connecting to an external host with a socket. This should be non-blocking.
  @param socketID The socket id
@@ -161,74 +165,74 @@ bool CBSocketBind(uint64_t * socketID,bool IPv6,uint16_t port);
  @param port Port to connect to.
  @returns true if the function was sucessful and false otherwise.
  */
-bool CBSocketConnect(uint64_t socketID,uint8_t * IP,bool IPv6,uint16_t port);
+bool CBSocketConnect(uint64_t socketID, uint8_t * IP, bool IPv6, uint16_t port);
 /**
  @brief Begin listening for incomming connections on a bound socket. This should be non-blocking. 
  @param socketID The socket id
  @param maxConnections The maximum incomming connections to allow.
  @returns true if function was sucessful and false otherwise.
  */
-bool CBSocketListen(uint64_t socketID,uint16_t maxConnections);
+bool CBSocketListen(uint64_t socketID, uint16_t maxConnections);
 /**
  @brief Accepts an incomming IPv4 connection on a bound socket. This should be non-blocking.
  @param socketID The socket id
  @param connectionSocketID A socket id for a new socket for the connection.
  @returns true if function was sucessful and false otherwise.
  */
-bool CBSocketAccept(uint64_t socketID,uint64_t * connectionSocketID);
+bool CBSocketAccept(uint64_t socketID, uint64_t * connectionSocketID);
 /**
- @brief Starts a event loop for socket logError on a seperate thread. Access to the loop id should be thread safe.
+ @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
  @param loopID A uint64_t storing an integer or pointer representation of the new event loop.
  @param onError If the event loop fails during execution of the thread, this function should be called.
- @param onDidTimeout The function to call for timeout logError. The second argument is for the peer given by logError. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
+ @param onDidTimeout The function to call for timeout event. The second argument is for the peer. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
  @param communicator A CBNetworkCommunicator to pass to all event functions (first parameter), including "onError" and "onDidTimeout"
  @returns true on success, false on failure.
  */
-bool CBNewEventLoop(uint64_t * loopID,void (*onError)(void *),void (*onDidTimeout)(void *,void *,CBTimeOutType),void * communicator);
+bool CBNewEventLoop(uint64_t * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator);
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
- @param loopID The loop id for socket logError.
- @param socketID The socket id
+ @param loopID The loop id.
+ @param socketID The socket id.
  @param onCanAccept The function to call for the event. Accepts "onEventArg" and the socket ID.
  @returns true on success, false on failure.
  */
-bool CBSocketCanAcceptEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanAccept)(void *,uint64_t));
+bool CBSocketCanAcceptEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onCanAccept)(void *, uint64_t));
 /**
  @brief Sets a function pointer for the event where a socket has connected. The event only needs to fire once on the successful connection or timeout.
- @param loopID The loop id for socket logError.
+ @param loopID The loop id.
  @param socketID The socket id
  @param onDidConnect The function to call for the event.
  @param peer The peer to send to the "onDidConnect" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketDidConnectEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onDidConnect)(void *,void *),void * peer);
+bool CBSocketDidConnectEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onDidConnect)(void *, void *), void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for sending data. This should be persistent.
- @param loopID The loop id for socket logError.
+ @param loopID The loop id.
  @param socketID The socket id
  @param onCanSend The function to call for the event.
  @param peer The peer to send to the "onCanSend" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketCanSendEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanSend)(void *,void *),void * peer);
+bool CBSocketCanSendEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onCanSend)(void *, void *), void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for receiving data. This should be persistent.
- @param loopID The loop id for socket logError.
+ @param loopID The loop id.
  @param socketID The socket id
  @param onCanReceive The function to call for the event.
  @param peer The peer to send to the "onCanReceive" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketCanReceiveEvent(uint64_t * eventID,uint64_t loopID,uint64_t socketID,void (*onCanReceive)(void *,void *),void * peer);
+bool CBSocketCanReceiveEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onCanReceive)(void *, void *), void * peer);
 /**
  @brief Adds an event to be pending.
  @param eventID The event ID to add.
  @param timeout The time in milliseconds to issue a timeout for the event. 0 for no timeout.
  @returns true if sucessful, false otherwise.
  */
-bool CBSocketAddEvent(uint64_t eventID,uint32_t timeout);
+bool CBSocketAddEvent(uint64_t eventID, uint32_t timeout);
 /**
- @brief Removes an event so no more logError are made.
+ @brief Removes an event so no more events are made.
  @param eventID The event ID to remove
  @returns true if sucessful, false otherwise.
  */
@@ -245,7 +249,7 @@ void CBSocketFreeEvent(uint64_t eventID);
  @param len The length of the data to send.
  @returns The number of bytes actually sent, and CB_SOCKET_FAILURE on failure that suggests further data cannot be sent.
  */
-int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len);
+int32_t CBSocketSend(uint64_t socketID, uint8_t * data, uint32_t len);
 /**
  @brief Receives data from a socket. This should be non-blocking.
  @param socketID The socket id to receive data from.
@@ -253,16 +257,16 @@ int32_t CBSocketSend(uint64_t socketID,uint8_t * data,uint32_t len);
  @param len The length of the data.
  @returns The number of bytes actually written into "data", CB_SOCKET_CONNECTION_CLOSE on connection closure, 0 on no bytes received, and CB_SOCKET_FAILURE on failure.
  */
-int32_t CBSocketReceive(uint64_t socketID,uint8_t * data,uint32_t len);
+int32_t CBSocketReceive(uint64_t socketID, uint8_t * data, uint32_t len);
 /**
  @brief Calls a callback every "time" seconds, until the timer is ended.
- @param loopID The loop id for logError.
+ @param loopID The loop id.
  @param timer The timer sent by reference to be set.
  @param time The number of milliseconds between each call of the callback.
  @param callback The callback function.
  @param arg The callback argument.
  */
-bool CBStartTimer(uint64_t loopID,uint64_t * timer,uint16_t time,void (*callback)(void *),void * arg);
+bool CBStartTimer(uint64_t loopID, uint64_t * timer, uint16_t time, void (*callback)(void *), void * arg);
 /**
  @brief Ends a timer.
  @param timer The timer sent by reference to be set.
@@ -297,7 +301,7 @@ void CBSecureRandomSeed(uint64_t gen);
  @param gen The generator.
  @param seed The 64-bit integer.
  */
-void CBRandomSeed(uint64_t gen,uint64_t seed);
+void CBRandomSeed(uint64_t gen, uint64_t seed);
 /**
  @brief Generates a 64 bit integer.
  @param gen The generator.
@@ -315,10 +319,9 @@ void CBFreeSecureRandomGenerator(uint64_t gen);
 /**
  @brief Returns the object used for block-chain storage.
  @param dataDir The directory where the data files should be stored.
- @param logError The error log function pointer.
  @returns The block chain storage object or 0 on failure.
  */
-uint64_t CBNewBlockChainStorage(char * dataDir, void (*logError)(char *,...));
+uint64_t CBNewBlockChainStorage(char * dataDir);
 /**
  @brief Frees the block-chain storage object.
  @param iself The block-chain storage object.
@@ -346,15 +349,16 @@ bool CBBlockChainStorageCommitData(uint64_t iself);
  */
 bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t blockIndex);
 /**
- @brief Deletes an unspent output reference. The ouput should still be in the block.
+ @brief Deletes an unspent output reference. The ouput should still be in the block. The number of unspent outputs for the transaction should be decremented.
  @param validator A CBFullValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
  @param outputIndex The index of the output in the transaction.
+ @param decrement If true decrement the number of unspent outputs for the transaction.
  @returns true on sucess or false on failure.
  */
-bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex);
+bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, bool decrement);
 /**
- @brief Deletes a transaction reference. The transaction should still be in the block.
+ @brief Deletes a transaction reference once all instances have been removed. Decrement the instance count and remove if zero. The transaction should still be in the block. Reset the unspent output count to 0.
  @param validator A CBFullValidator object. The storage object can be found within this.
  @param txHash The transaction's hash.
  @returns true on sucess or false on failure.
@@ -391,6 +395,14 @@ uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint3
  @returns The target on sucess or 0 on failure.
  */
 uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uint32_t blockIndex);
+/**
+ @brief Determines if a transaction exists in the index, which has more than zero unspent outputs.
+ @param validator A CBFullValidator object. The storage object can be found within this.
+ @param txHash The hash of the transaction to search for.
+ @param exists To be set to true if the transaction exists and has unspent outputs, else set to false.
+ @param true on success or false on failure.
+ */
+bool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_t * txHash, bool * exists);
 /**
  @brief Loads the basic validator information, not any branches or orphans.
  @param validator A CBFullValidator object. The storage object can be found within this.
@@ -430,12 +442,12 @@ bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum);
  @brief Obtains the outputs for a transaction
  @param validator A CBFullValidator object. The storage object can be found within this.
  @param txHash The transaction hash to load the output data for.
- @param data The buffer to set to the data.
+ @param data A pointer to the buffer to set to the data.
  @param dataAllocSize If the size of the outputs is beyond this number, data will be reallocated to the size of the outputs and the number will be increased to the size of the outputs.
  @param position The position of the outputs in the block to be set.
  @returns true on sucess or false on failure.
  */
-bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t * data, uint32_t * dataAllocSize, uint32_t * position);
+bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t ** data, uint32_t * dataAllocSize, uint32_t * position);
 /**
  @brief Obtains an unspent output.
  @param validator A CBFullValidator object. The storage object can be found within this.
@@ -499,7 +511,7 @@ bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branch);
  */
 bool CBBlockChainStorageSaveOrphan(void * validator, void * block, uint8_t orphanNum);
 /**
- @brief Saves a transaction reference.
+ @brief Saves a transaction reference. If the transaction exists in the block chain already, increment a counter. Else add a new reference.
  @param validator A CBFullValidator object. The storage object can be found within this.
  @param txHash The transaction's hash.
  @param branch The branch where the transaction exists.
@@ -507,9 +519,10 @@ bool CBBlockChainStorageSaveOrphan(void * validator, void * block, uint8_t orpha
  @param outputPos The position of the outputs in the block for this transaction.
  @param outputsLen The length of the outputs in this transaction.
  @param coinbase If true the transaction is a coinbase, else it is not.
+ @param numOutputs The number of outputs for this transaction.
  @returns true if successful or false otherwise.
  */
-bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, uint8_t branch, uint32_t blockIndex, uint32_t outputPos, uint32_t outputsLen, bool coinbase);
+bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, uint8_t branch, uint32_t blockIndex, uint32_t outputPos, uint32_t outputsLen, bool coinbase, uint32_t numOutputs);
 /**
  @brief Saves an output as unspent.
  @param validator A CBFullValidator object. The storage object can be found within this.
@@ -517,9 +530,10 @@ bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, u
  @param outputIndex The index of the output in the transaction.
  @param position The position of the unspent output in the block.
  @param length The length of the unspent output in the block.
+ @param increment If true, increment the number of unspent outputs for the transaction.
  @returns true if successful or false otherwise.
  */
-bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, uint32_t position, uint32_t length);
+bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, uint32_t position, uint32_t length, bool increment);
 /**
  @brief Determines if an unspent output exists.
  @param validator A CBFullValidator object. The storage object can be found within this.
@@ -528,5 +542,13 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
  @returns true if exists or false if it doesn't.
  */
 bool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, uint32_t outputIndex);
+
+// LOGGING DEPENDENCIES
+
+/**
+ @brief Logs an error.
+ @param error The error message followed by arguments displayed by the printf() format.
+ */
+void CBLogError(char * error, ...);
 
 #endif

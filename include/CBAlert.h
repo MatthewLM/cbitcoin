@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -59,13 +59,13 @@ typedef struct{
  @brief Creates a new CBAlert object.
  @returns A new CBAlert object.
 */
-CBAlert * CBNewAlert(int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,void (*logError)(char *,...));
+CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature);
 /**
 @brief Creates a new CBAlert object from serialised data.
  @param data Serialised CBAlert data.
  @returns A new CBAlert object.
 */
-CBAlert * CBNewAlertFromData(CBByteArray * data,void (*logError)(char *,...));
+CBAlert * CBNewAlertFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBAlert from another object. Use this to avoid casts.
@@ -79,14 +79,14 @@ CBAlert * CBGetAlert(void * self);
  @param self The CBAlert object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitAlert(CBAlert * self,int32_t version,int64_t relayUntil,int64_t expiration,int32_t ID,int32_t cancel,int32_t minVer,int32_t maxVer,int32_t priority,CBByteArray * hiddenComment,CBByteArray * displayedComment,CBByteArray * reserved,CBByteArray * signature,void (*logError)(char *,...));
+bool CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature);
 /**
  @brief Initialises a CBAlert object from serialised data
  @param self The CBAlert object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitAlertFromData(CBAlert * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitAlertFromData(CBAlert * self, CBByteArray * data);
 
 /**
  @brief Frees a CBAlert object.
@@ -102,14 +102,14 @@ void CBFreeAlert(void * self);
  @param ID The id to add.
  @returns true if the cancel ID was added successfully or false on error.
  */
-bool CBAlertAddCancelID(CBAlert * self,uint32_t ID);
+bool CBAlertAddCancelID(CBAlert * self, uint32_t ID);
 /**
  @brief Adds a user agent to the user agent set
  @param self The CBAlert object
  @param userAgent The user agent to add.
  @returns true if the user agent was added successfully or false on error.
  */
-bool CBAlertAddUserAgent(CBAlert * self,CBByteArray * userAgent);
+bool CBAlertAddUserAgent(CBAlert * self, CBByteArray * userAgent);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBAlert object.
@@ -140,13 +140,13 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self);
  @param offset The offset to the begining of the signature which should be exactly after the payload.
  @returns The total length of the serialised CBAlert on sucess, else false.
  */
-uint16_t CBAlertSerialiseSignature(CBAlert * self,uint16_t offset);
+uint16_t CBAlertSerialiseSignature(CBAlert * self, uint16_t offset);
 /**
  @brief Takes a user agent for the user agent set. This does not retain the CBByteArray so you can pass an CBByteArray into this while releasing control from the calling function.
  @param self The CBAlert object
  @param userAgent The user agent to take.
  @returns true if the user agent was taken successfully or false on error.
  */
-bool CBAlertTakeUserAgent(CBAlert * self,CBByteArray * userAgent);
+bool CBAlertTakeUserAgent(CBAlert * self, CBByteArray * userAgent);
 
 #endif

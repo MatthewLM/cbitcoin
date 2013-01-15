@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -28,8 +28,8 @@
 #include <openssl/rand.h>
 #include "CBAddress.h"
 
-void err(CBError a,char * format,...);
-void err(CBError a,char * format,...){
+void err(CBError a, char * format, ...);
+void err(CBError a, char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -56,7 +56,7 @@ void getLine(char * ptr) {
 }
 
 int main(){
-	printf("OpenSSL version: %s\n",OPENSSL_VERSION_TEXT);
+	printf("OpenSSL version: %s\n", OPENSSL_VERSION_TEXT);
 	printf("Enter the number of keys: ");
 	fflush(stdout);
 	char stringMatch[31];
@@ -75,7 +75,7 @@ int main(){
 	}
 	RAND_add(entropy, 32, 32);
 	fclose(f);
-	printf("Making %lu addresses for \"%s\"\n\n",i,stringMatch);
+	printf("Making %lu addresses for \"%s\"\n\n", i, stringMatch);
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
 	uint8_t * pubKey = NULL;
 	int pubSize = 0;
@@ -139,13 +139,13 @@ int main(){
 			// Print data to stdout
 			printf("Private key (hex): ");
 			for (int x = 0; x < privSize; x++) {
-				printf(" %.2X",privKey[x]);
+				printf(" %.2X", privKey[x]);
 			}
 			printf("\nPublic key (hex): ");
 			for (int x = 0; x < pubSize; x++) {
-				printf(" %.2X",pubKey[x]);
+				printf(" %.2X", pubKey[x]);
 			}
-			printf("\nAddress (base-58): %s\n\n",CBByteArrayGetData(string));
+			printf("\nAddress (base-58): %s\n\n", CBByteArrayGetData(string));
 			x++; // Move to next
 		}
 		CBReleaseObject(string);

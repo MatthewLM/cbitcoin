@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -53,12 +53,12 @@ typedef struct{
  @param ip The IP address in a 16 byte IPv6 format. If NULL, the IP will be a 16 byte CBByteArray set will all zero.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddress(uint32_t score,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*logError)(char *,...));
+CBNetworkAddress * CBNewNetworkAddress(uint32_t score, CBByteArray * ip, uint16_t port, CBVersionServices services);
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data,void (*logError)(char *,...));
+CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBNetworkAddress from another object. Use this to avoid casts.
@@ -72,13 +72,13 @@ CBNetworkAddress * CBGetNetworkAddress(void * self);
  @param self The CBNetworkAddress object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddress(CBNetworkAddress * self,uint32_t score,CBByteArray * ip,uint16_t port,CBVersionServices services,void (*logError)(char *,...));
+bool CBInitNetworkAddress(CBNetworkAddress * self, uint32_t score, CBByteArray * ip, uint16_t port, CBVersionServices services);
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data);
 
 /**
  @brief Frees a CBNetworkAddress object.
@@ -87,27 +87,26 @@ bool CBInitNetworkAddressFromData(CBNetworkAddress * self,CBByteArray * data,voi
 void CBFreeNetworkAddress(void * self);
  
 //  Functions
-
 /**
  @brief Deserialises a CBNetworkAddress so that it can be used as an object.
  @param self The CBNetworkAddress object
- @param time If true a timestamp is expected, else it is not. If a timestamp is not expected then "time" will not be set and will be the previous value.
+ @param score If true a timestamp is expected, else it is not. If a timestamp is not expected then "time" will not be set and will be the previous value.
  @returns The length read on success, 0 on failure.
  */
-uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self,bool score);
+uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool score);
 /**
  @brief Compares two network addresses
  @param self The CBNetworkAddress object
  @param addr The CBNetworkAddress for comparison
  @returns true if the IP and port match and the IP is not NULL. False otherwise.
  */
-bool CBNetworkAddressEquals(CBNetworkAddress * self,CBNetworkAddress * addr);
+bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr);
 /**
  @brief Serialises a CBNetworkAddress to the byte data.
  @param self The CBNetworkAddress object
  @param time If true the time will be included, else it will not.
  @returns The length written on success, 0 on failure.
  */
-uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self,bool score);
+uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool score);
 
 #endif

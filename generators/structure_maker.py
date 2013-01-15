@@ -13,7 +13,7 @@
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
 #  
-#  cbitcoin is distributed in the hope that it will be useful,
+#  cbitcoin is distributed in the hope that it will be useful, 
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
@@ -23,7 +23,7 @@
 
 #  This file makes a structure inheriting CBObject. May be improved to make structures inheriting a selected structure.
 
-import os,sys
+import os, sys
 from datetime import datetime
 
 name = raw_input("Enter the name of the new structure (Do not include CB): ")
@@ -39,8 +39,8 @@ if os.path.exists(dir):
 else:
 	os.makedirs(dir)
 # Make files
-header = open(dir + "/CB" + name + ".h","w")
-source = open(dir + "/CB" + name + ".c","w")
+header = open(dir + "/CB" + name + ".h", "w")
+source = open(dir + "/CB" + name + ".c", "w")
 # Header
 header.write("//\n\
 //  CB"+name+".h\n\
@@ -56,7 +56,7 @@ header.write("//\n\
 //  the Free Software Foundation, either version 3 of the License, or\n\
 //  (at your option) any later version.\n\
 //  \n\
-//  cbitcoin is distributed in the hope that it will be useful,\n\
+//  cbitcoin is distributed in the hope that it will be useful, \n\
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
 //  GNU General Public License for more details.\n\
@@ -127,7 +127,7 @@ source.write("//\n\
 //  the Free Software Foundation, either version 3 of the License, or\n\
 //  (at your option) any later version.\n\
 //  \n\
-//  cbitcoin is distributed in the hope that it will be useful,\n\
+//  cbitcoin is distributed in the hope that it will be useful, \n\
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
 //  GNU General Public License for more details.\n\

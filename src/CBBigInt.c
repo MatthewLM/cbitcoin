@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -40,7 +40,7 @@ CBCompare CBBigIntCompareTo58(CBBigInt * a){
 		return CB_COMPARE_LESS_THAN;
 	return CB_COMPARE_EQUAL;
 }
-CBCompare CBBigIntCompareToBigInt(CBBigInt * a,CBBigInt * b){
+CBCompare CBBigIntCompareToBigInt(CBBigInt * a, CBBigInt * b){
 	if (a->length > b->length)
 		return CB_COMPARE_MORE_THAN;
 	else if (a->length < b->length)
@@ -53,7 +53,7 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	return CB_COMPARE_EQUAL;
 }
-bool CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
+bool CBBigIntEqualsAdditionByBigInt(CBBigInt * a, CBBigInt * b){
 	if (a->length < b->length) {
 		if (NOT CBBigIntRealloc(a, b->length))
 			return false;
@@ -81,7 +81,7 @@ bool CBBigIntEqualsAdditionByBigInt(CBBigInt * a,CBBigInt * b){
 	}
 	return true;
 }
-void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
+void CBBigIntEqualsDivisionBy58(CBBigInt * a, uint8_t * ans){
 	if (a->length == 1 && NOT a->data[0]) // "a" is zero
 		return;
 	// base-256 long division.
@@ -96,7 +96,7 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a,uint8_t * ans){
 		a->length--;
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
-bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b){
+bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a, uint8_t b){
 	if (NOT b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
@@ -121,10 +121,10 @@ bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a,uint8_t b){
 	}
 	return true;
 }
-void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a,CBBigInt * b){
+void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a, CBBigInt * b){
 	uint8_t x;
 	bool carry = 0;
-	// This can be made much nicer when using signed arithmetic,
+	// This can be made much nicer when using signed arithmetic, 
 	// carry and tmp could be merged to be 0 or -1 between rounds.
 	for (x = 0; x < b->length; x++) {
 		uint16_t tmp = carry + b->data[x];
@@ -135,7 +135,7 @@ void CBBigIntEqualsSubtractionByBigInt(CBBigInt * a,CBBigInt * b){
 		a->data[x]--;
 	CBBigIntNormalise(a);
 }
-void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
+void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a, uint8_t b){
 	uint8_t carry = b;
 	uint8_t x = 0;
 	for (; a->data[x] < carry; x++){
@@ -145,7 +145,7 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a,uint8_t b){
 	a->data[x] -= carry;
 	CBBigIntNormalise(a);
 }
-bool CBBigIntFromPowUInt8(CBBigInt * bi,uint8_t a,uint8_t b){
+bool CBBigIntFromPowUInt8(CBBigInt * bi, uint8_t a, uint8_t b){
 	bi->length = 1;
 	bi->data[0] = 1;
 	for (uint8_t x = 0; x < b; x++) {

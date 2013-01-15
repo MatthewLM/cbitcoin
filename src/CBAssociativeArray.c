@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -24,6 +24,7 @@
 //  SEE HEADER FILE FOR DOCUMENTATION ??? Many optimisations can be done here.
 
 #include "CBAssociativeArray.h"
+#include <assert.h>
 
 void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 	if (NOT pos.node->children[0]) {
@@ -222,13 +223,14 @@ bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBIterator * it){
 }
 bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBFindResult pos, CBBTreeNode * right){
 	// See if we can insert data in this node
+	assert(NOT pos.found);
 	if (pos.node->numElements < CB_BTREE_ORDER) {
 		// Yes we can, do that.
 		if (pos.node->numElements > pos.pos){
 			// Move up the keys, data and children
 			// . 0 . x . 1 . 2 . 3 .
 			memmove(pos.node->elements + pos.pos + 1, pos.node->elements + pos.pos, (pos.node->numElements - pos.pos) * sizeof(*pos.node->elements));
-			memmove(pos.node->children + pos.pos + 2, pos.node->children + pos.pos + 1, (pos.node->numElements - pos.pos) *  sizeof(*pos.node->children));
+			memmove(pos.node->children + pos.pos + 2, pos.node->children + pos.pos + 1, (pos.node->numElements - pos.pos) * sizeof(*pos.node->children));
 		}
 		// Copy over new key, data and children
 		pos.node->elements[pos.pos] = keyValue;

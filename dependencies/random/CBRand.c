@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -37,8 +37,8 @@ void CBSecureRandomSeed(uint64_t gen){
 	FILE * f = fopen("/dev/urandom", "r"); // Using urandom for speed.
 	fread((void *)gen, 32, 1, f);
 }
-void CBRandomSeed(uint64_t gen,uint64_t seed){
-	memcpy((void *)gen,&seed,8);
+void CBRandomSeed(uint64_t gen, uint64_t seed){
+	memcpy((void *)gen, &seed, 8);
 	memset(((uint8_t *)gen) + 8, 0, 24); // Blank out the rest of the data
 }
 uint64_t CBSecureRandomInteger(uint64_t gen){

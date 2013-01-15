@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -53,7 +53,7 @@ bool CBCalculateBlockWork(CBBigInt * work, uint32_t target){
 		temp <<= 32;
 	}
 }
-void CBCalculateMerkleRoot(uint8_t * hashes,uint32_t hashNum){
+void CBCalculateMerkleRoot(uint8_t * hashes, uint32_t hashNum){
 	uint8_t hash[32];
 	for (uint32_t x = 0; hashNum != 1;) {
 		if (x == hashNum - 1) {
@@ -134,55 +134,42 @@ bool CBTransactionIsFinal(CBTransaction * tx, uint64_t time, uint64_t height){
 	}
 	return true;
 }
-CBPrevOut * CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * outputValue, bool * err){
-	*err = false;
+bool CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * outputValue){
 	if (NOT tx->inputNum || NOT tx->outputNum)
-		return NULL;
+		return false;
 	uint32_t length;
 	if (CBGetMessage(tx)->bytes) // Already have length
 		length = CBGetMessage(tx)->bytes->length;
-	else{
+	else
 		// Calculate length. Worthwhile having a cache? ???
 		length = CBTransactionCalculateLength(tx);
-	}
-	if (length > CB_BLOCK_MAX_SIZE){
-		return NULL;
-	}
+	if (length > CB_BLOCK_MAX_SIZE)
+		return false;
 	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the C++ client on this where an attacker could overflow very large outputs to equal small inputs.
 	*outputValue = 0;
 	for (uint32_t x = 0; x < tx->outputNum; x++) {
 		if (tx->outputs[x]->value > CB_MAX_MONEY)
-			return NULL;
+			return false;
 		*outputValue += tx->outputs[x]->value;
 		if (*outputValue > CB_MAX_MONEY)
-			return NULL;
+			return false;
 	}
 	if (coinbase){
 		// Validate input script for coinbase
 		if (tx->inputs[0]->scriptObject->length < 2
 			|| tx->inputs[0]->scriptObject->length > 100)
-			return NULL;
+			return false;
 	}else for (uint32_t x = 0; x < tx->inputNum; x++)
 		// Check each input for null previous output hashes.
 		if (CBByteArrayIsNull(tx->inputs[x]->prevOut.hash))
-			return NULL;
-	// Check for duplicate transaction output spends and add them to a list of CBPrevOut structures.
-	CBPrevOut * prevOutputs = malloc(sizeof(*prevOutputs) * tx->inputNum);
-	if (NOT prevOutputs){
-		*err = true;
-		return NULL;
-	}
-	for (uint32_t x = 0; x < tx->inputNum; x++) {
+			return false;
+	// Check for duplicate transaction output spends
+	for (uint32_t x = 0; x < tx->inputNum; x++)
 		for (uint32_t y = 0; y < x; y++)
-			if (CBByteArrayCompare(prevOutputs[y].hash, tx->inputs[x]->prevOut.hash) == CB_COMPARE_EQUAL
-				&& prevOutputs[y].index == tx->inputs[x]->prevOut.index) {
-				// Duplicate previous output
-				free(prevOutputs);
-				return NULL;
-			}
-		prevOutputs[x] = tx->inputs[x]->prevOut;
-	}
-	return prevOutputs;
+			if (CBByteArrayCompare(tx->inputs[y]->prevOut.hash, tx->inputs[x]->prevOut.hash) == CB_COMPARE_EQUAL
+				&& tx->inputs[y]->prevOut.index == tx->inputs[x]->prevOut.index)
+				return false;
+	return true;
 }
 bool CBValidateProofOfWork(uint8_t * hash, uint32_t target){
 	// Get trailing zero bytes

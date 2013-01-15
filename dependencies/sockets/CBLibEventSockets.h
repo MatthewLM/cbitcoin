@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -27,7 +27,7 @@
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
 #include <pthread.h> // POSIX threads
-#include <event2/event.h> // libevent logError
+#include <event2/event.h> // libevent CBLogError
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -55,23 +55,23 @@
 
 void event_base_add_virtual(struct event_base *); // Add virtual event.
 void * CBStartEventLoop(void *);
-void CBCanAccept(evutil_socket_t socketID,short eventNum,void * arg);
-void CBDidConnect(evutil_socket_t socketID,short eventNum,void * arg);
-void CBCanSend(evutil_socket_t socketID,short eventNum,void * arg);
-void CBCanReceive(evutil_socket_t socketID,short eventNum,void * arg);
-void CBFireTimer(evutil_socket_t foo,short bar,void * timer);
-void CBDoRun(evutil_socket_t socketID,short eventNum,void * arg);
+void CBCanAccept(evutil_socket_t socketID, short eventNum, void * arg);
+void CBDidConnect(evutil_socket_t socketID, short eventNum, void * arg);
+void CBCanSend(evutil_socket_t socketID, short eventNum, void * arg);
+void CBCanReceive(evutil_socket_t socketID, short eventNum, void * arg);
+void CBFireTimer(evutil_socket_t foo, short bar, void * timer);
+void CBDoRun(evutil_socket_t socketID, short eventNum, void * arg);
 /**
  @brief Runs a callback on the network thread.
  @param loopID The loop ID
  @returns true if sucessful, false otherwise.
  */
-bool CBRunOnNetworkThread(uint64_t loopID,void (*callback)(void *),void * arg);
+bool CBRunOnNetworkThread(uint64_t loopID, void (*callback)(void *), void * arg);
 
 typedef struct{
 	struct event_base * base;
 	void (*onError)(void *);
-	void (*onTimeOut)(void *,void *,CBTimeOutType); /**< Callback for timeouts */
+	void (*onTimeOut)(void *, void *, CBTimeOutType); /**< Callback for timeouts */
 	void * communicator;
 	pthread_t loopThread; /**< The thread ID for the event loop. */
 	void  (*userCallback)(void *);
@@ -80,12 +80,12 @@ typedef struct{
 }CBEventLoop;
 
 union CBOnEvent{
-	void (*i)(void *,uint64_t);
-	void (*ptr)(void *,void *);
+	void (*i)(void *, uint64_t);
+	void (*ptr)(void *, void *);
 };
 
 typedef struct{
-	CBEventLoop * loop; /**< For getting timeout logError */
+	CBEventLoop * loop; /**< For getting timeout CBLogError */
 	struct event * event; /**< libevent event. */
 	union CBOnEvent onEvent;
 	void * peer;

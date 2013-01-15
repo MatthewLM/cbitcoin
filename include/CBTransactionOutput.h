@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -46,12 +46,12 @@ typedef struct{
  @brief Creates a new CBTransactionOutput object.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script,void (*logError)(char *,...));
+CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script);
 /**
  @brief Creates a new CBTransactionOutput object from byte data. Should be serialised for object data.
  @returns A new CBTransactionOutput object.
  */
-CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data, void (*logError)(char *,...));
+CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBTransactionOutput from another object. Use this to avoid casts.
@@ -65,13 +65,13 @@ CBTransactionOutput * CBGetTransactionOutput(void * self);
  @param self The CBTransactionOutput object to initialise.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script,void (*logError)(char *,...));
+bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script);
 /**
  @brief Initialises a CBTransactionOutput object.
  @param self The CBTransactionOutput object to initialise.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data,void (*logError)(char *,...));
+bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data);
 
 /**
  @brief Frees a CBTransactionOutput object.
@@ -81,6 +81,12 @@ void CBFreeTransactionOutput(void * self);
  
 //  Functions
 
+/**
+ @brief Calculates the byte length of an output
+ @param self The CBTransactionOutput object
+ @returns The calculated length.
+ */
+uint32_t CBTransactionOutputCalculateLength(CBTransactionOutput * self);
 /**
  @brief Deserialises a CBTransactionOutput so that it can be used as an object.
  @param self The CBTransactionOutput object

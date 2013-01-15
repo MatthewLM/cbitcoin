@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBBlockHeaders * CBNewBlockHeaders(void (*logError)(char *,...)){
+CBBlockHeaders * CBNewBlockHeaders(){
 	CBBlockHeaders * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewBlockHeaders\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockHeaders\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeBlockHeaders;
-	if(CBInitBlockHeaders(self,logError))
+	if(CBInitBlockHeaders(self))
 		return self;
 	free(self);
 	return NULL;
 }
-CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data,void (*logError)(char *,...)){
+CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data){
 	CBBlockHeaders * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewBlockHeadersFromData\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockHeadersFromData\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeBlockHeaders;
-	if(CBInitBlockHeadersFromData(self,data,logError))
+	if(CBInitBlockHeadersFromData(self, data))
 		return self;
 	free(self);
 	return NULL;
@@ -59,17 +59,17 @@ CBBlockHeaders * CBGetBlockHeaders(void * self){
 
 //  Initialisers
 
-bool CBInitBlockHeaders(CBBlockHeaders * self,void (*logError)(char *,...)){
+bool CBInitBlockHeaders(CBBlockHeaders * self){
 	self->headerNum = 0;
 	self->blockHeaders = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self), logError))
+	if (NOT CBInitMessageByObject(CBGetMessage(self)))
 		return false;
 	return true;
 }
-bool CBInitBlockHeadersFromData(CBBlockHeaders * self,CBByteArray * data,void (*logError)(char *,...)){
+bool CBInitBlockHeadersFromData(CBBlockHeaders * self, CBByteArray * data){
 	self->headerNum = 0;
 	self->blockHeaders = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data, logError))
+	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;
 	return true;
 }
@@ -87,9 +87,9 @@ void CBFreeBlockHeaders(void * vself){
 
 //  Functions
 
-bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self,CBBlock * header){
+bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self, CBBlock * header){
 	CBRetainObject(header);
-	return CBBlockHeadersTakeBlockHeader(self,header);
+	return CBBlockHeadersTakeBlockHeader(self, header);
 }
 uint32_t CBBlockHeadersCalculateLength(CBBlockHeaders * self){
 	return CBVarIntSizeOf(self->headerNum) + self->headerNum * 81;
@@ -97,22 +97,22 @@ uint32_t CBBlockHeadersCalculateLength(CBBlockHeaders * self){
 uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBBlockHeaders with no bytes.");
+		CBLogError("Attempting to deserialise a CBBlockHeaders with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 82) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBBlockHeaders with less bytes than required for one header.");
+		CBLogError("Attempting to deserialise a CBBlockHeaders with less bytes than required for one header.");
 		return 0;
 	}
 	CBVarInt headerNum = CBVarIntDecode(bytes, 0);
 	if (headerNum.val > 2000) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBBlockHeaders with a var int over 2000.");
+		CBLogError("Attempting to deserialise a CBBlockHeaders with a var int over 2000.");
 		return 0;
 	}
 	// Deserialise each header
 	self->blockHeaders = malloc(sizeof(*self->blockHeaders) * (size_t)headerNum.val);
 	if (NOT self->blockHeaders) {
-		CBGetMessage(self)->logError("Cannot allocate %i bytes of memory in CBBlockHeadersDeserialise\n",sizeof(*self->blockHeaders) * (size_t)headerNum.val);
+		CBLogError("Cannot allocate %i bytes of memory in CBBlockHeadersDeserialise\n", sizeof(*self->blockHeaders) * (size_t)headerNum.val);
 		return 0;
 	}
 	self->headerNum = headerNum.val;
@@ -121,19 +121,19 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 		// Make new CBBlock from the rest of the data.
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		if (NOT data) {
-			CBGetMessage(self)->logError("Cannot create a new CBByteArray in CBBlockHeadersDeserialise for the header number %u.",x);
+			CBLogError("Cannot create a new CBByteArray in CBBlockHeadersDeserialise for the header number %u.", x);
 			return 0;
 		}
-		self->blockHeaders[x] = CBNewBlockFromData(data, CBGetMessage(self)->logError);
+		self->blockHeaders[x] = CBNewBlockFromData(data);
 		if (NOT self->blockHeaders[x]){
-			CBGetMessage(self)->logError("Cannot create a new CBBlock in CBBlockHeadersDeserialise for the header number %u.",x);
+			CBLogError("Cannot create a new CBBlock in CBBlockHeadersDeserialise for the header number %u.", x);
 			CBReleaseObject(data);
 			return 0;
 		}
 		// Deserialise
 		uint8_t len = CBBlockDeserialise(self->blockHeaders[x], false); // false for no transactions. Only the header.
 		if (NOT len){
-			CBGetMessage(self)->logError("CBBlockHeaders cannot be deserialised because of an error with the CBBlock number %u.",x);
+			CBLogError("CBBlockHeaders cannot be deserialised because of an error with the CBBlock number %u.", x);
 			CBReleaseObject(data);
 			return 0;
 		}
@@ -147,45 +147,51 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
-		CBGetMessage(self)->logError("Attempting to serialise a CBBlockHeaders with no bytes.");
+		CBLogError("Attempting to serialise a CBBlockHeaders with no bytes.");
 		return 0;
 	}
 	if (bytes->length < 81 * self->headerNum) {
-		CBGetMessage(self)->logError("Attempting to deserialise a CBBlockHeaders with less bytes than minimally required.");
+		CBLogError("Attempting to deserialise a CBBlockHeaders with less bytes than minimally required.");
 		return 0;
 	}
 	CBVarInt num = CBVarIntFromUInt64(self->headerNum);
 	CBVarIntEncode(bytes, 0, num);
 	uint16_t cursor = num.size;
 	for (uint16_t x = 0; x < num.val; x++) {
-		if (force && CBGetMessage(self->blockHeaders[x])->serialised)
-			CBReleaseObject(CBGetMessage(self->blockHeaders[x])->bytes);
-		if (NOT CBGetMessage(self->blockHeaders[x])->serialised || force) {
+		if (NOT CBGetMessage(self->blockHeaders[x])->serialised // Serailise if not serialised yet.
+			// Serialise if force is true.
+			|| force
+			// If the data shares the same data as the block headers message, re-serialise the block header, in case it got overwritten.
+			|| CBGetMessage(self->blockHeaders[x])->bytes->sharedData == bytes->sharedData) {
+			if (CBGetMessage(self->blockHeaders[x])->serialised)
+				// Release old byte array
+				CBReleaseObject(CBGetMessage(self->blockHeaders[x])->bytes);
 			CBGetMessage(self->blockHeaders[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 			if (NOT CBGetMessage(self->blockHeaders[x])->bytes) {
-				CBGetMessage(self)->logError("Cannot create a new CBByteArray sub reference in CBBlockHeadersSerialise for the header number %u",x);
+				CBLogError("Cannot create a new CBByteArray sub reference in CBBlockHeadersSerialise for the header number %u", x);
 				return 0;
 			}
-			uint32_t len = CBBlockSerialise(self->blockHeaders[x], false, force); // false for no transactions.
-			if (NOT len) {
-				CBGetMessage(self)->logError("CBBlockHeaders cannot be serialised because of an error with the CBBlock number %u.",x);
+			if (NOT CBBlockSerialise(self->blockHeaders[x], false, force)) { // false for no transactions.
+				CBLogError("CBBlockHeaders cannot be serialised because of an error with the CBBlock number %u.", x);
 				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
 				for (uint8_t y = 0; y < x + 1; y++)
 					CBReleaseObject(CBGetMessage(self->blockHeaders[y])->bytes);
 				return 0;
 			}
-			CBGetMessage(self->blockHeaders[x])->bytes->length = len;
-		}else if (CBGetMessage(self->blockHeaders[x])->bytes->sharedData != bytes->sharedData){
+		}else{
 			// Move serialsed data to one location
 			CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(self->blockHeaders[x])->bytes);
 			CBByteArrayChangeReference(CBGetMessage(self->blockHeaders[x])->bytes, bytes, cursor);
 		}
 		cursor += CBGetMessage(self->blockHeaders[x])->bytes->length;
 	}
+	// Ensure length is correct
+	bytes->length = cursor;
+	// Is now serialised
 	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
-bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self,CBBlock * header){
+bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self, CBBlock * header){
 	self->headerNum++;
 	CBBlock ** temp = realloc(self->blockHeaders, sizeof(*self->blockHeaders) * self->headerNum);
 	if (NOT temp)

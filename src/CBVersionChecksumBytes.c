@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,26 +26,26 @@
 
 //  Constructors
 
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string,bool cacheString,void (*logError)(char *,...)){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string, bool cacheString){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromString\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromString\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	if(CBInitVersionChecksumBytesFromString(self,string,cacheString,logError))
+	if(CBInitVersionChecksumBytesFromString(self, string, cacheString))
 		return self;
 	free(self);
 	return NULL;
 }
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes,uint32_t size,bool cacheString,void (*logError)(char *,...)){
+CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
 	if (NOT self) {
-		logError("Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromBytes\n",sizeof(*self));
+		CBLogError("Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromBytes\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	if(CBInitVersionChecksumBytesFromBytes(self,bytes,size,cacheString,logError))
+	if(CBInitVersionChecksumBytesFromBytes(self, bytes, size, cacheString))
 		return self;
 	free(self);
 	return NULL;
@@ -59,7 +59,7 @@ CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self){
 
 //  Initialisers
 
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteArray * string,bool cacheString,void (*logError)(char *,...)){
+bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteArray * string, bool cacheString){
 	// Cache string if needed
 	if (cacheString) {
 		self->cachedString = string;
@@ -70,18 +70,18 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self,CBByteAr
 	// Get bytes from string conversion
 	CBBigInt bytes;
 	CBBigIntAlloc(&bytes, 25); // 25 is the number of bytes for bitcoin addresses.
-	if (NOT CBDecodeBase58Checked(&bytes, (char *)CBByteArrayGetData(string), logError))
+	if (NOT CBDecodeBase58Checked(&bytes, (char *)CBByteArrayGetData(string)))
 		return false;
 	// Take over the bytes with the CBByteArray
-	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length, logError))
+	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length))
 		return false;
 	CBByteArrayReverseBytes(CBGetByteArray(self)); // CBBigInt is in little-endian. Conversion needed to make bitcoin address the right way.
 	return true;
 }
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self,uint8_t * bytes,uint32_t size,bool cacheString,void (*logError)(char *,...)){
+bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString){
 	self->cacheString = cacheString;
 	self->cachedString = NULL;
-	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes, size, logError))
+	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes, size))
 		return false;
 	return true;
 }
@@ -114,7 +114,7 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 		char * string = CBEncodeBase58(&bytes);
 		if (NOT string)
 			return NULL;
-		CBByteArray * str = CBNewByteArrayFromString(string, true, CBGetByteArray(self)->logError);
+		CBByteArray * str = CBNewByteArrayFromString(string, true);
 		if (NOT str) {
 			free(string);
 			return NULL;

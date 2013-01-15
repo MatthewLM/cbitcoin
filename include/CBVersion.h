@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -52,13 +52,13 @@ typedef struct{
  @brief Creates a new CBVersion object.
  @returns A new CBVersion object.
  */
-CBVersion * CBNewVersion(int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nonce,CBByteArray * userAgent,int32_t blockHeight,void (*logError)(char *,...));
+CBVersion * CBNewVersion(int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight);
 /**
  @brief Creates a new CBVersion object from serialised data.
  @param data A CBByteArray holding the serialised data.
  @returns A new CBVersion object.
  */
-CBVersion * CBNewVersionFromData(CBByteArray * data,void (*logError)(char *,...));
+CBVersion * CBNewVersionFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBVersion from another object. Use this to avoid casts.
@@ -72,14 +72,14 @@ CBVersion * CBGetVersion(void * self);
  @param self The CBVersion object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitVersion(CBVersion * self,int32_t version,CBVersionServices services,int64_t time,CBNetworkAddress * addRecv,CBNetworkAddress * addSource,uint64_t nonce,CBByteArray * userAgent,int32_t blockHeight,void (*logError)(char *,...));
+bool CBInitVersion(CBVersion * self, int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight);
 /**
  @brief Initialises a new CBVersion object from serialised data.
  @param self The CBVersion object to initialise
  @param data A CBByteArray holding the serialised data.
  @returns true on success, false on failure.
  */
-bool CBInitVersionFromData(CBVersion * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitVersionFromData(CBVersion * self, CBByteArray * data);
 
 /**
  @brief Frees a CBVersion object.

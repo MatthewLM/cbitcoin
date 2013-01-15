@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "CBVarInt.h"
+#include "CBDependencies.h"
 
 /**
  @brief Structure for CBMessage objects. @see CBMessage.h
@@ -43,7 +44,6 @@ typedef struct CBMessage{
 	uint8_t * altText; /**< For an alternative message: This is the type text. */
 	CBByteArray * bytes; /**< Raw message data minus the message header. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */
 	uint8_t checksum[4]; /**< The message checksum. When sending messages using a CBNetworkCommunicator, this is calculated for you. */
-	void (*logError)(char *,...); /**< Pointer to error callback */
 	CBMessageType expectResponse; /**< Set to zero if no message expected or the type of message expected as a response. */
 	bool serialised; /**< True if this object has been serialised. If an object as already been serialised it is not serialised by parent objects. For instance when serialising a block, the transactions are not serialised if they have been already. However objects can be explicitly reserialised */
 } CBMessage;
@@ -53,7 +53,7 @@ typedef struct CBMessage{
  @param 
  @returns A new CBMessage object.
  */
-CBMessage * CBNewMessageByObject(void (*logError)(char *,...));
+CBMessage * CBNewMessageByObject(void);
 
 /**
  @brief Gets a CBMessage from another object. Use this to avoid casts.
@@ -67,14 +67,14 @@ CBMessage * CBGetMessage(void * self);
  @param self The CBMessage object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitMessageByObject(CBMessage * self,void (*logError)(char *,...));
+bool CBInitMessageByObject(CBMessage * self);
 /**
  @brief Initialises a CBMessage object from byte data.
  @param self The CBMessage object to initialise
  @param data The byte data for the object. The data will not be copied but retained by this object. 
  @returns true on success, false on failure.
  */
-bool CBInitMessageByData(CBMessage * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitMessageByData(CBMessage * self, CBByteArray * data);
 
 /**
  @brief Frees a CBMessage object.

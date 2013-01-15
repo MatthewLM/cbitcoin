@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -45,13 +45,13 @@ typedef struct{
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
  @returns A new CBPingPong object.
 */
-CBPingPong * CBNewPingPong(uint64_t ID,void (*logError)(char *,...));
+CBPingPong * CBNewPingPong(uint64_t ID);
 /**
 @brief Creates a new CBPingPong object from serialised data.
  @param data Serialised CBPingPong data.
  @returns A new CBPingPong object.
 */
-CBPingPong * CBNewPingPongFromData(CBByteArray * data,void (*logError)(char *,...));
+CBPingPong * CBNewPingPongFromData(CBByteArray * data);
 
 /**
  @brief Gets a CBPingPong from another object. Use this to avoid casts.
@@ -66,14 +66,14 @@ CBPingPong * CBGetPingPong(void * self);
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
  @returns true on success, false on failure.
 */
-bool CBInitPingPong(CBPingPong * self,uint64_t ID,void (*logError)(char *,...));
+bool CBInitPingPong(CBPingPong * self, uint64_t ID);
 /**
  @brief Initialises a CBPingPong object from serialised data
  @param self The CBPingPong object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitPingPongFromData(CBPingPong * self,CBByteArray * data,void (*logError)(char *,...));
+bool CBInitPingPongFromData(CBPingPong * self, CBByteArray * data);
 
 /**
  @brief Frees a CBPingPong object.

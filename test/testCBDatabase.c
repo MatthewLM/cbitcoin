@@ -12,7 +12,7 @@
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
 //  
-//  cbitcoin is distributed in the hope that it will be useful,
+//  cbitcoin is distributed in the hope that it will be useful, 
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
@@ -26,8 +26,8 @@
 #include <time.h>
 #include "stdarg.h"
 
-void logError(char * format,...);
-void logError(char * format,...){
+void CBLogError(char * format, ...);
+void CBLogError(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
     vfprintf(stderr, format, argptr);
@@ -37,15 +37,19 @@ void logError(char * format,...){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
-	printf("Session = %ui\n",s);
+	printf("Session = %ui\n", s);
 	srand(s);
 	// Test
 	remove("./0.dat");
 	remove("./1.dat");
 	remove("./2.dat");
 	remove("./log.dat");
-	CBDatabase * storage = CBNewDatabase("./", logError);
-	if (memcmp(storage->dataDir,"./",3)) {
+	CBDatabase * storage = CBNewDatabase("./");
+	if (NOT storage) {
+		printf("NEW STORAGE FAIL\n");
+		return 1;
+	}
+	if (memcmp(storage->dataDir, "./", 3)) {
 		printf("OBJECT DATA DIR FAIL\n");
 		return 1;
 	}
@@ -67,29 +71,29 @@ int main(){
 	}
 	CBFreeDatabase(storage);
 	// Check index files are OK
-	FILE * index = fopen("./0.dat", "rb");
+	uint64_t file = CBFileOpen("./0.dat", false);
 	uint8_t data[105];
-	if (fread(data, 1, 16, index) != 16) {
+	if (NOT CBFileRead(file, data, 10)) {
 		printf("INDEX CREATE FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [16]){0x0A,0x00,0x00,0x00,0xFD,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0xD2,0x00,0x00}, 16)) {
+	if (memcmp(data, (uint8_t [10]){0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00}, 10)) {
 		printf("INDEX INITIAL DATA FAIL\n");
 		return 1;
 	}
-	fclose(index);
-	index = fopen("./1.dat", "rb");
-	if (fread(data, 1, 9, index) != 9) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 4)) {
 		printf("DELETION INDEX CREATE FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [9]){0x04,0x00,0x00,0x00,0xF5,0x00,0x00,0x00,0x00}, 9)) {
+	if (memcmp(data, (uint8_t [4]){0x00, 0x00, 0x00, 0x00}, 4)) {
 		printf("DELETION INDEX INITIAL DATA FAIL\n");
 		return 1;
 	}
-	fclose(index);
+	CBFileClose(file);
 	// Test opening of initial files
-	storage = (CBDatabase *)CBNewDatabase("./", logError);
+	storage = (CBDatabase *)CBNewDatabase("./");
 	if (storage->numValues) {
 		printf("INDEX NUM VALUES FAIL\n");
 		return 1;
@@ -133,55 +137,54 @@ int main(){
 		printf("INSERT SINGLE VAL LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFile file;
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 27)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 27)) {
 		printf("INSERT SINGLE VAL INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [27]){
-		1,0,0,0, // One value
-		2,0, // File 2 is last
-		15,0,0,0, // Size of file is 15
-		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		15,0,0,0, // Data length is 15
+		1, 0, 0, 0, // One value
+		2, 0, // File 2 is last
+		15, 0, 0, 0, // Size of file is 15
+		key[0], key[1], key[2], key[3], key[4], key[5], key[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		15, 0, 0, 0, // Data length is 15
 	}, 27)) {
 		printf("INSERT SINGLE VAL INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 4)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 4)) {
 		printf("INSERT SINGLE VAL DELETION INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [4]){0,0,0,0}, 4)) {
+	if (memcmp(data, (uint8_t [4]){0, 0, 0, 0}, 4)) {
 		printf("INSERT SINGLE VAL DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./log.dat", false);
-	if (NOT CBFileRead(&file, data, 35)) {
+	CBFileClose(file);
+	file = CBFileOpen("./log.dat", false);
+	if (NOT CBFileRead(file, data, 35)) {
 		printf("INSERT SINGLE VAL LOG FILE READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [35]){
 		0, // Inactive
-		10,0,0,0, // Index previously size 10
-		4,0,0,0, // Deletion index previously size 4
-		2,0, // Previous last file 2
-		0,0,0,0, // Previous last file size 0
-		0,0, // Overwrite file ID index
-		0,0,0,0, // Offset is zero
-		10,0,0,0, // Length of change is 10
-		0,0,0,0,2,0,0,0,0,0, // Previous data
+		10, 0, 0, 0, // Index previously size 10
+		4, 0, 0, 0, // Deletion index previously size 4
+		2, 0, // Previous last file 2
+		0, 0, 0, 0, // Previous last file size 0
+		0, 0, // Overwrite file ID index
+		0, 0, 0, 0, // Offset is zero
+		10, 0, 0, 0, // Length of change is 10
+		0, 0, 0, 0, 2, 0, 0, 0, 0, 0, // Previous data
 	}, 35)) {
 		printf("INSERT SINGLE VAL LOG FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Try reding a section of the value
 	CBDatabaseReadValue(storage, key, (uint8_t *)readStr, 5, 3);
 	if (memcmp(readStr, "There", 5)) {
@@ -219,62 +222,62 @@ int main(){
 		printf("INSERT 2ND VAL LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 44)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("INSERT 2ND VAL INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [44]){
-		2,0,0,0, // Two values
-		2,0, // File 2 is last
-		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		15,0,0,0, // Data length is 15
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
-		2,0, // File index 2
-		15,0,0,0, // Position 15
-		12,0,0,0, // Data length is 12
+		2, 0, 0, 0, // Two values
+		2, 0, // File 2 is last
+		27, 0, 0, 0, // Size of file is 27
+		key[0], key[1], key[2], key[3], key[4], key[5], key[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		15, 0, 0, 0, // Data length is 15
+		key2[0], key2[1], key2[2], key2[3], key2[4], key2[5], key2[6], 
+		2, 0, // File index 2
+		15, 0, 0, 0, // Position 15
+		12, 0, 0, 0, // Data length is 12
 	}, 44)) {
 		printf("INSERT 2ND VAL INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 4)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 4)) {
 		printf("INSERT 2ND VAL DELETION INDEX READ FAIL\n");
 		return 1;
 	}
-	if (memcmp(data, (uint8_t [10]){0,0,0,0}, 4)) {
+	if (memcmp(data, (uint8_t [10]){0, 0, 0, 0}, 4)) {
 		printf("INSERT 2ND VAL DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./log.dat", false);
-	if (NOT CBFileRead(&file, data, 60)) {
+	CBFileClose(file);
+	file = CBFileOpen("./log.dat", false);
+	if (NOT CBFileRead(file, data, 60)) {
 		printf("INSERT 2ND VAL LOG FILE READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [60]){
 		0, // Inactive
-		27,0,0,0, // Index previously size 27
-		4,0,0,0, // Deletion index previously size 4
-		2,0, // Previous last file 2
-		15,0,0,0, // Previous last file size 15
-		2,0, // Overwrite the data file
-		0,0,0,0, // Offset is zero
-		15,0,0,0, // Length of change is 15
-		'H','i',' ','T','h','e','r','e',' ','M','a','t','e','!','\0', // Previous data
-		0,0, // Overwrite the index
-		0,0,0,0, // Offset is zero
-		10,0,0,0, // Length of change is 10
-		1,0,0,0,2,0,15,0,0,0, // Previous data
+		27, 0, 0, 0, // Index previously size 27
+		4, 0, 0, 0, // Deletion index previously size 4
+		2, 0, // Previous last file 2
+		15, 0, 0, 0, // Previous last file size 15
+		2, 0, // Overwrite the data file
+		0, 0, 0, 0, // Offset is zero
+		15, 0, 0, 0, // Length of change is 15
+		'H', 'i', ' ', 'T', 'h', 'e', 'r', 'e', ' ', 'M', 'a', 't', 'e', '!', '\0', // Previous data
+		0, 0, // Overwrite the index
+		0, 0, 0, 0, // Offset is zero
+		10, 0, 0, 0, // Length of change is 10
+		1, 0, 0, 0, 2, 0, 15, 0, 0, 0, // Previous data
 	}, 60)) {
 		printf("INSERT 2ND VAL LOG FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Remove first value
 	CBDatabaseRemoveValue(storage, key);
 	CBDatabaseCommit(storage);
@@ -296,68 +299,68 @@ int main(){
 		printf("DELETE 1ST VAL LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 44)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("DELETE 1ST VAL INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [44]){
-		2,0,0,0, // Two values
-		2,0, // File 2 is last
-		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		0,0,0,0, // Data length is 0 ie. deleted
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
-		2,0, // File index 2
-		15,0,0,0, // Position 15
-		12,0,0,0, // Data length is 12
+		2, 0, 0, 0, // Two values
+		2, 0, // File 2 is last
+		27, 0, 0, 0, // Size of file is 27
+		key[0], key[1], key[2], key[3], key[4], key[5], key[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		0, 0, 0, 0, // Data length is 0 ie. deleted
+		key2[0], key2[1], key2[2], key2[3], key2[4], key2[5], key2[6], 
+		2, 0, // File index 2
+		15, 0, 0, 0, // Position 15
+		12, 0, 0, 0, // Data length is 12
 	}, 44)) {
 		printf("DELETE 1ST VAL INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 15)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 15)) {
 		printf("DELETE 1ST VAL DELETION INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [15]){
-		1,0,0,0, // One deletion entry.
+		1, 0, 0, 0, // One deletion entry.
 		1, // Active deletion entry.
-		0,0,0,15, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		0,0,0,0, // Position is 0
+		0, 0, 0, 15, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		0, 0, 0, 0, // Position is 0
 	}, 15)) {
 		printf("DELETE 1ST VAL DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./log.dat", false);
-	if (NOT CBFileRead(&file, data, 43)) {
+	CBFileClose(file);
+	file = CBFileOpen("./log.dat", false);
+	if (NOT CBFileRead(file, data, 43)) {
 		printf("DELETE 1ST VAL LOG FILE READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [43]){
 		0, // Inactive
-		44,0,0,0, // Index previously size 44
-		4,0,0,0, // Deletion index previously size 4
-		2,0, // Previous last file 2
-		27,0,0,0, // Previous last file size 27
-		0,0, // Overwrite the index
-		23,0,0,0, // Offset is 23
-		4,0,0,0, // Length of change is 4
-		15,0,0,0, // Previous data
-		1,0, // Overwrite the deletion index
-		0,0,0,0, // Offset is zero
-		4,0,0,0, // Length of change is 4
-		0,0,0,0, // Previous data
+		44, 0, 0, 0, // Index previously size 44
+		4, 0, 0, 0, // Deletion index previously size 4
+		2, 0, // Previous last file 2
+		27, 0, 0, 0, // Previous last file size 27
+		0, 0, // Overwrite the index
+		23, 0, 0, 0, // Offset is 23
+		4, 0, 0, 0, // Length of change is 4
+		15, 0, 0, 0, // Previous data
+		1, 0, // Overwrite the deletion index
+		0, 0, 0, 0, // Offset is zero
+		4, 0, 0, 0, // Length of change is 4
+		0, 0, 0, 0, // Previous data
 	}, 43)) {
 		printf("DELETE 1ST VAL LOG FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Increase size of second key-value to 15 to replace deleted section
 	CBDatabaseWriteValue(storage, key2, (uint8_t *)"Annoying code.", 15);
 	CBDatabaseCommit(storage);   
@@ -371,84 +374,84 @@ int main(){
 		printf("INCREASE 2ND VAL LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 44)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("INCREASE 2ND VAL INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [44]){
-		2,0,0,0, // Two values
-		2,0, // File 2 is last
-		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		0,0,0,0, // Data length is 0 ie. deleted
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		15,0,0,0, // Data length is 15
+		2, 0, 0, 0, // Two values
+		2, 0, // File 2 is last
+		27, 0, 0, 0, // Size of file is 27
+		key[0], key[1], key[2], key[3], key[4], key[5], key[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		0, 0, 0, 0, // Data length is 0 ie. deleted
+		key2[0], key2[1], key2[2], key2[3], key2[4], key2[5], key2[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		15, 0, 0, 0, // Data length is 15
 	}, 44)) {
 		printf("INCREASE 2ND VAL INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 26)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 26)) {
 		printf("INCREASE 2ND VAL DELETION INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [26]){
-		2,0,0,0, // Two deletion entries.
+		2, 0, 0, 0, // Two deletion entries.
 		0, // Inactive deletion entry.
-		0,0,0,15, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		0,0,0,0, // Position is 0
+		0, 0, 0, 15, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		0, 0, 0, 0, // Position is 0
 		1, // Active deletion entry
-		0,0,0,12, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		15,0,0,0, // Position is 15
+		0, 0, 0, 12, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		15, 0, 0, 0, // Position is 15
 	}, 26)) {
 		printf("INCREASE 2ND VAL DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./log.dat", false);
-	if (NOT CBFileRead(&file, data, 89)) {
+	CBFileClose(file);
+	file = CBFileOpen("./log.dat", false);
+	if (NOT CBFileRead(file, data, 89)) {
 		printf("INCREASE 2ND VAL LOG FILE READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [89]){
 		0, // Inactive
-		44,0,0,0, // Index previously size 44
-		15,0,0,0, // Deletion index previously size 15
-		2,0, // Previous last file 2
-		27,0,0,0, // Previous last file size 27
+		44, 0, 0, 0, // Index previously size 44
+		15, 0, 0, 0, // Deletion index previously size 15
+		2, 0, // Previous last file 2
+		27, 0, 0, 0, // Previous last file size 27
 		
-		2,0, // Overwrite the data file
-		0,0,0,0, // Offset is 0
-		15,0,0,0, // Length of change is 15
-		'R','e','p','l','a','c','e','m','e','n','t','!','!','!','\0',
+		2, 0, // Overwrite the data file
+		0, 0, 0, 0, // Offset is 0
+		15, 0, 0, 0, // Length of change is 15
+		'R', 'e', 'p', 'l', 'a', 'c', 'e', 'm', 'e', 'n', 't', '!', '!', '!', '\0', 
 		
-		1,0, // Overwrite the deletion index
-		4,0,0,0, // Offset is 4
-		5,0,0,0, // Length of change is 5
-		1,0,0,0,15, // Previous data
+		1, 0, // Overwrite the deletion index
+		4, 0, 0, 0, // Offset is 4
+		5, 0, 0, 0, // Length of change is 5
+		1, 0, 0, 0, 15, // Previous data
 		
-		0,0, // Overwrite index
-		34,0,0,0, // Offset is 34
-		10,0,0,0, // Length of change is 10
-		2,0,15,0,0,0,12,0,0,0, // Previous data
+		0, 0, // Overwrite index
+		34, 0, 0, 0, // Offset is 34
+		10, 0, 0, 0, // Length of change is 10
+		2, 0, 15, 0, 0, 0, 12, 0, 0, 0, // Previous data
 		
-		1,0, // Overwrite the deletion index
-		0,0,0,0, // Offset is zero
-		4,0,0,0, // Length of change is 4
-		1,0,0,0, // Previous data
+		1, 0, // Overwrite the deletion index
+		0, 0, 0, 0, // Offset is zero
+		4, 0, 0, 0, // Length of change is 4
+		1, 0, 0, 0, // Previous data
 	}, 89)) {
 		printf("INCREASE 2ND VAL LOG FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Add value and try database recovery.
 	uint8_t key3[7];
 	key3[0] = 6;
@@ -466,12 +469,12 @@ int main(){
 	// Free everything
 	CBFreeDatabase(storage);
 	// Activate log file
-	CBFileOpen(&file, "./log.dat", false);
+	file = CBFileOpen("./log.dat", false);
 	data[0] = 1;
-	CBFileOverwrite(&file, data, 1);
-	CBFileClose(&file);
+	CBFileOverwrite(file, data, 1);
+	CBFileClose(file);
 	// Load storage object
-	storage = (CBDatabase *)CBNewDatabase("./", logError);
+	storage = (CBDatabase *)CBNewDatabase("./");
 	// Verify recovery.
 	CBDatabaseReadValue(storage, key2, (uint8_t *)readStr, 15, 0);
 	if (memcmp(readStr, "Annoying code.", 15)) {
@@ -495,50 +498,50 @@ int main(){
 		return 1;
 	}
 	// Check files
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 44)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("RECOVERY INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [44]){
-		2,0,0,0, // Two values
-		2,0, // File 2 is last
-		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		0,0,0,0, // Data length is 0 ie. deleted
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		15,0,0,0, // Data length is 15
+		2, 0, 0, 0, // Two values
+		2, 0, // File 2 is last
+		27, 0, 0, 0, // Size of file is 27
+		key[0], key[1], key[2], key[3], key[4], key[5], key[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		0, 0, 0, 0, // Data length is 0 ie. deleted
+		key2[0], key2[1], key2[2], key2[3], key2[4], key2[5], key2[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		15, 0, 0, 0, // Data length is 15
 	}, 44)) {
 		printf("RECOVERY INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 26)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 26)) {
 		printf("RECOVERY DELETION INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [26]){
-		2,0,0,0, // Two deletion entries.
+		2, 0, 0, 0, // Two deletion entries.
 		0, // Inactive deletion entry.
-		0,0,0,15, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		0,0,0,0, // Position is 0
+		0, 0, 0, 15, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		0, 0, 0, 0, // Position is 0
 		1, // Active deletion entry
-		0,0,0,12, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		15,0,0,0, // Position is 15
+		0, 0, 0, 12, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		15, 0, 0, 0, // Position is 15
 	}, 26)) {
 		printf("RECOVERY DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./2.dat", false);
-	if (NOT CBFileRead(&file, data, 27)) {
+	CBFileClose(file);
+	file = CBFileOpen("./2.dat", false);
+	if (NOT CBFileRead(file, data, 27)) {
 		printf("RECOVERY DATA FILE READ FAIL\n");
 		return 1;
 	}
@@ -546,8 +549,8 @@ int main(){
 		printf("RECOVERY DATA FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	// Add value with smaller total length than before
+	CBFileClose(file);
+	// Add value with smaller length than deleted section
 	CBDatabaseWriteValue(storage, key, (uint8_t *)"Maniac", 7);
 	CBDatabaseCommit(storage);
 	// Look at data
@@ -560,79 +563,79 @@ int main(){
 		printf("SMALLER LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 44)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("SMALLER INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [44]){
-		2,0,0,0, // Two values
-		2,0, // File 2 is last
-		27,0,0,0, // Size of file is 27
-		key[0],key[1],key[2],key[3],key[4],key[5],key[6],
-		2,0, // File index 2
-		20,0,0,0, // Position 20
-		7,0,0,0, // Data length is 7
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		15,0,0,0, // Data length is 15
+		2, 0, 0, 0, // Two values
+		2, 0, // File 2 is last
+		27, 0, 0, 0, // Size of file is 27
+		key[0], key[1], key[2], key[3], key[4], key[5], key[6], 
+		2, 0, // File index 2
+		20, 0, 0, 0, // Position 20
+		7, 0, 0, 0, // Data length is 7
+		key2[0], key2[1], key2[2], key2[3], key2[4], key2[5], key2[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		15, 0, 0, 0, // Data length is 15
 	}, 44)) {
 		printf("SMALLER INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 26)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 26)) {
 		printf("SMALLER DELETION INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [26]){
-		2,0,0,0, // Two deletion entries.
-		1, // Active deletion entry.
-		0,0,0,5, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		0,0,0,0, // Position is 0
+		2, 0, 0, 0, // Two deletion entries.
+		0, // Inactive deletion entry.
+		0, 0, 0, 15, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		0, 0, 0, 0, // Position is 0
 		1, // Active deletion entry
-		0,0,0,12, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		15,0,0,0, // Position is 15
+		0, 0, 0, 5, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		15, 0, 0, 0, // Position is 15
 	}, 26)) {
 		printf("SMALLER DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./log.dat", false);
-	if (NOT CBFileRead(&file, data, 67)) {
+	CBFileClose(file);
+	file = CBFileOpen("./log.dat", false);
+	if (NOT CBFileRead(file, data, 67)) {
 		printf("SMALLER LOG FILE READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [67]){
 		0, // Inactive
-		44,0,0,0, // Index previously size 42
-		26,0,0,0, // Deletion index previously size 26
-		2,0, // Previous last file 2
-		27,0,0,0, // Previous last file size 27
+		44, 0, 0, 0, // Index previously size 42
+		26, 0, 0, 0, // Deletion index previously size 26
+		2, 0, // Previous last file 2
+		27, 0, 0, 0, // Previous last file size 27
 		
-		2,0, // Overwrite the data file
-		20,0,0,0, // Offset is 20
-		7,0,0,0, // Length of change is 7
-		'e','r',' ','o','n','e','\0', // Previous data
+		2, 0, // Overwrite the data file
+		20, 0, 0, 0, // Offset is 20
+		7, 0, 0, 0, // Length of change is 7
+		'e', 'r', ' ', 'o', 'n', 'e', '\0', // Previous data
 		
-		1,0, // Overwrite the deletion index
-		4,0,0,0, // Offset is 4
-		5,0,0,0, // Length of change is 5
-		0,0,0,0,15, // Previous data
+		1, 0, // Overwrite the deletion index
+		15, 0, 0, 0, // Offset is 4
+		5, 0, 0, 0, // Length of change is 5
+		1, 0, 0, 0, 12, // Previous data
 		
-		0,0, // Overwrite the index
-		17,0,0,0, // Offset is 17
-		10,0,0,0, // Length of change is 10
-		2,0,0,0,0,0,0,0,0,0 // Previous data
+		0, 0, // Overwrite the index
+		17, 0, 0, 0, // Offset is 17
+		10, 0, 0, 0, // Length of change is 10
+		2, 0, 0, 0, 0, 0, 0, 0, 0, 0 // Previous data
 	}, 67)) {
 		printf("SMALLER LOG FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Change the first key
 	uint8_t key4[7];
 	key4[0] = 6;
@@ -651,69 +654,69 @@ int main(){
 		printf("CHANGE KEY LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./0.dat", false);
-	if (NOT CBFileRead(&file, data, 44)) {
+	file = CBFileOpen("./0.dat", false);
+	if (NOT CBFileRead(file, data, 44)) {
 		printf("CHANGE KEY INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [44]){
-		2,0,0,0, // Two values
-		2,0, // File 2 is last
-		27,0,0,0, // Size of file is 27
-		key4[0],key4[1],key4[2],key4[3],key4[4],key4[5],key4[6],
-		2,0, // File index 2
-		20,0,0,0, // Position 20
-		7,0,0,0, // Data length is 7
-		key2[0],key2[1],key2[2],key2[3],key2[4],key2[5],key2[6],
-		2,0, // File index 2
-		0,0,0,0, // Position 0
-		15,0,0,0, // Data length is 15
+		2, 0, 0, 0, // Two values
+		2, 0, // File 2 is last
+		27, 0, 0, 0, // Size of file is 27
+		key4[0], key4[1], key4[2], key4[3], key4[4], key4[5], key4[6], 
+		2, 0, // File index 2
+		20, 0, 0, 0, // Position 20
+		7, 0, 0, 0, // Data length is 7
+		key2[0], key2[1], key2[2], key2[3], key2[4], key2[5], key2[6], 
+		2, 0, // File index 2
+		0, 0, 0, 0, // Position 0
+		15, 0, 0, 0, // Data length is 15
 	}, 44)) {
 		printf("CHANGE KEY INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./1.dat", false);
-	if (NOT CBFileRead(&file, data, 26)) {
+	CBFileClose(file);
+	file = CBFileOpen("./1.dat", false);
+	if (NOT CBFileRead(file, data, 26)) {
 		printf("CHANGE KEY DELETION INDEX READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [26]){
-		2,0,0,0, // Two deletion entries.
-		1, // Active deletion entry.
-		0,0,0,5, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		0,0,0,0, // Position is 0
+		2, 0, 0, 0, // Two deletion entries.
+		0, // Inactive deletion entry.
+		0, 0, 0, 15, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		0, 0, 0, 0, // Position is 0
 		1, // Active deletion entry
-		0,0,0,12, // Big endian length of deleted section.
-		2,0, // File-ID is 2
-		15,0,0,0, // Position is 15
+		0, 0, 0, 5, // Big endian length of deleted section.
+		2, 0, // File-ID is 2
+		15, 0, 0, 0, // Position is 15
 	}, 26)) {
 		printf("CHANGE KEY DELETION INDEX DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
-	CBFileOpen(&file, "./log.dat", false);
-	if (NOT CBFileRead(&file, data, 31)) {
+	CBFileClose(file);
+	file = CBFileOpen("./log.dat", false);
+	if (NOT CBFileRead(file, data, 31)) {
 		printf("CHANGE KEY LOG FILE READ FAIL\n");
 		return 1;
 	}
 	if (memcmp(data, (uint8_t [31]){
 		0, // Inactive
-		44,0,0,0, // Index previously size 44
-		26,0,0,0, // Deletion index previously size 26
-		2,0, // Previous last file 2
-		27,0,0,0, // Previous last file size 47
+		44, 0, 0, 0, // Index previously size 44
+		26, 0, 0, 0, // Deletion index previously size 26
+		2, 0, // Previous last file 2
+		27, 0, 0, 0, // Previous last file size 47
 		
-		0,0, // Overwrite the index
-		11,0,0,0, // Offset is 11
-		6,0,0,0, // Length of change is 6
-		key[1],key[2],key[3],key[4],key[5],key[6], // Previous data
+		0, 0, // Overwrite the index
+		11, 0, 0, 0, // Offset is 11
+		6, 0, 0, 0, // Length of change is 6
+		key[1], key[2], key[3], key[4], key[5], key[6], // Previous data
 	}, 31)) {
 		printf("CHANGE KEY LOG FILE DATA FAIL\n");
 		return 1;
 	}
-	CBFileClose(&file);
+	CBFileClose(file);
 	// Finally try reading length of values
 	if (CBDatabaseGetLength(storage, key4) != 7) {
 		printf("READ 1ST VAL LENGTH FAIL\n");
