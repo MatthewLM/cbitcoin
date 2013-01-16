@@ -559,7 +559,7 @@ Date: Tuesday 1st January 2013
 		
 			* Completed hamming codes for storage.
 	
-		Lines Added: 1, 332
+		Lines Added: 1,332
 		Lined Removed: 669
 		Total Time: 14.933333333 hours
 	--------------------------------------------------------------------------
@@ -680,3 +680,18 @@ Date: Monday 15th January 2013
 
 	Start Time: 13:16
 	End Time: 14:26
+	
+	--------------------------------------------------------------------------
+	Commit: 9fb7a5ad96cf00cb608cfb7561682eb84c373d39
+	
+		Work Completed:
+		
+			* Changed serialisation. 
+			* Incomplete validation tests successful.
+	
+		Lines Added: 4,644
+		Lined Removed: 3,384
+		Total Time: 48.716666667 hours
+	--------------------------------------------------------------------------
+	
+
