@@ -2,7 +2,7 @@
 cbitcoin.xcodeproj
 cbitcoin.1
 documentation/
-build/
+build
 Makefile
 autom4te.cache
 bin

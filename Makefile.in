@@ -143,9 +143,7 @@ TEST_FILES = $(wildcard test/*.c)
 TEST_BINARIES = $(patsubst test/%.c, bin/%, $(TEST_FILES))
 TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
 
-test : $(TEST_BINARIES)
-
-$(TEST_BINARIES): all
+test : all $(TEST_BINARIES)
 
 $(TEST_BINARIES): bin/%: build/%.o
 	$(CC) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -levent_core -levent_pthreads -L$(BINDIR) $< -o $@
