@@ -28,9 +28,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
 	[AC_MSG_CHECKING([whether CC supports -m64])]
 	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])], 
 		[AC_MSG_RESULT([yes])]
-		[LINKER_CONFIG_FLAGS="-m64"], 
-		[AC_MSG_RESULT([no])]
-		[AC_MSG_ERROR([Cannot configure core library])]
+		[LINKER_CONFIG_FLAGS="-m64"]
 	)
 )
 CFLAGS="$save_cflags"
