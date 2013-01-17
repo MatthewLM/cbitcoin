@@ -46,6 +46,10 @@ core : $(CORE_OBJS) | bin
 
 -include build/*.d
 
+# Objects depend on directory
+
+$(CORE_OBS) : | build
+
 # Create build directory
 
 build:
