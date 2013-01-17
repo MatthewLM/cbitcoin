@@ -46,10 +46,6 @@ core : $(CORE_OBJS) | bin
 
 -include build/*.d
 
-# Objects depend on directory
-
-$(CORE_OBS) : | build
-
 # Create build directory
 
 build:
@@ -62,7 +58,7 @@ bin:
 
 # Core Compilation
 
-$(CORE_OBJS): build/%.o: src/%.c
+$(CORE_OBJS): build/%.o: src/%.c | build
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 	$(CC) -I$(INCDIR) -MM $< > build/$*.d
 	@cp build/$*.d build/$*.P
