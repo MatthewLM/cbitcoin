@@ -32,6 +32,11 @@
 
 #include "CBInventoryItem.h"
 
+// Constants
+
+#define CB_GET_DATA_MAX_SIZE 50000
+#define CB_INVENTORY_BROADCAST_MAX_SIZE 50000
+
 /**
  @brief Structure for CBInventoryBroadcast objects. @see CBInventoryBroadcast.h
 */

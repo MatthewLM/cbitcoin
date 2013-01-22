@@ -59,6 +59,7 @@ typedef struct{
  */
 typedef struct{
 	char * dataDir; /**< The data directory. */
+	char * prefix; /**< The file prefix. */
 	CBAssociativeArray index; /**< Index of all key/value pairs */
 	uint32_t numValues; /**< Number of values in the index */
 	uint16_t lastFile; /**< The last file ID. */
@@ -82,10 +83,10 @@ typedef struct{
 /**
  @brief Returns a new database object.
  @param dataDir The directory where the data files should be stored.
- @param CBLogError The error log function pointer.
+ @param prefix A prefix for the data files to prevent conflicts.
  @returns The database object or 0 on failure.
  */
-CBDatabase * CBNewDatabase(char * dataDir);
+CBDatabase * CBNewDatabase(char * dataDir, char * prefix);
 /**
  @brief Reads and opens the index during initialisation
  @param self The storage object.

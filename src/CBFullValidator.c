@@ -220,7 +220,7 @@ CBBlockStatus CBFullValidatorBasicBlockValidation(CBFullValidator * self, CBBloc
 		&& NOT CBValidateProofOfWork(hash, block->target))
 		return CB_BLOCK_STATUS_BAD;
 	// Check the block is within two hours of the network time.
-	if (block->time > networkTime + 7200)
+	if (block->time > networkTime + CB_BLOCK_ALLOWED_TIME_DRIFT)
 		return CB_BLOCK_STATUS_BAD_TIME;
 	// Calculate merkle root.
 	uint8_t * txHashes = CBBlockCalculateMerkleRoot(block);

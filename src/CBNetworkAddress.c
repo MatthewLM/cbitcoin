@@ -26,14 +26,14 @@
 
 //  Constructor
 
-CBNetworkAddress * CBNewNetworkAddress(uint32_t time, CBByteArray * ip, uint16_t port, CBVersionServices services){
+CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	if (NOT self) {
 		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddress\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	if (CBInitNetworkAddress(self, time, ip, port, services))
+	if (CBInitNetworkAddress(self, lastSeen, ip, port, services))
 		return self;
 	free(self);
 	return NULL;
@@ -59,8 +59,9 @@ CBNetworkAddress * CBGetNetworkAddress(void * self){
 
 //  Initialiser
 
-bool CBInitNetworkAddress(CBNetworkAddress * self, uint32_t score, CBByteArray * ip, uint16_t port, CBVersionServices services){
-	self->score = score;
+bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services){
+	self->lastSeen = lastSeen;
+	self->penalty = 0;
 	self->ip = ip;
 	if (NOT ip) {
 		ip = CBNewByteArrayOfSize(16);
@@ -75,7 +76,8 @@ bool CBInitNetworkAddress(CBNetworkAddress * self, uint32_t score, CBByteArray *
 	}
 	self->port = port;
 	self->services = services;
-	self->public = false; // Private by default.
+	// Private by default.
+	self->public = false;
 	if (NOT CBInitMessageByObject(CBGetMessage(self))){
 		CBReleaseObject(ip);
 		return false;
@@ -84,7 +86,8 @@ bool CBInitNetworkAddress(CBNetworkAddress * self, uint32_t score, CBByteArray *
 }
 bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data){
 	self->ip = NULL;
-	self->public = false; // Private by default.
+	// Private by default.
+	self->public = false;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;
 	return true;
@@ -100,34 +103,36 @@ void CBFreeNetworkAddress(void * vself){
 
 //  Functions
 
-uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool score){
+uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBLogError("Attempting to deserialise a CBNetworkAddress with no bytes.");
 		return 0;
 	}
-	if (bytes->length < 26 + score * 4) {
+	if (bytes->length < 26 + timestamp * 4) {
 		CBLogError("Attempting to deserialise a CBNetworkAddress with less bytes than required.");
 		return 0;
 	}
-	uint8_t cursor;
-	if (score) {
-		self->score = CBByteArrayReadInt32(bytes, 0);
-		cursor = 4;
+	uint8_t start;
+	uint64_t twoHoursAgo = time(NULL) - 3600;
+	if (timestamp) {
+		// Make sure we do not set self->lastSeen later than one hour ago.
+		self->lastSeen = CBByteArrayReadInt32(bytes, 0);
+		if (self->lastSeen > twoHoursAgo)
+			self->lastSeen = twoHoursAgo;
+		start = 4;
 	}else{
-		self->score = 0;
-		cursor = 0;
+		self->lastSeen = twoHoursAgo;
+		start = 0;
 	}
-	self->services = (CBVersionServices) CBByteArrayReadInt64(bytes, cursor);
-	cursor += 8;
-	self->ip = CBNewByteArraySubReference(bytes, cursor, 16);
+	self->services = (CBVersionServices) CBByteArrayReadInt64(bytes, start);
+	self->ip = CBNewByteArraySubReference(bytes, start + 8, 16);
 	if (NOT self->ip)
 		return 0;
 	// Determine IP type
 	self->type = CBGetIPType(CBByteArrayGetData(self->ip));
-	cursor += 16;
-	self->port = CBByteArrayReadPort(bytes, cursor);
-	return cursor + 2;
+	self->port = CBByteArrayReadPort(bytes, start + 24);
+	return start + 26;
 }
 bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr){
 	return (self->ip
@@ -135,19 +140,19 @@ bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr){
 			&& CBByteArrayCompare(self->ip, addr->ip) == CB_COMPARE_EQUAL
 			&& self->port == addr->port);
 }
-uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool score){
+uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (NOT bytes) {
 		CBLogError("Attempting to serialise a CBNetworkAddress with no bytes.");
 		return 0;
 	}
-	if (bytes->length < 26 + score * 4) {
+	if (bytes->length < 26 + timestamp * 4) {
 		CBLogError("Attempting to serialise a CBNetworkAddress with less bytes than required.");
 		return 0;
 	}
 	uint8_t cursor;
-	if (score) {
-		CBByteArraySetInt32(bytes, 0, self->score);
+	if (timestamp) {
+		CBByteArraySetInt32(bytes, 0, (uint32_t)(self->lastSeen - self->penalty));
 		cursor = 4;
 	}else cursor = 0;
 	CBByteArraySetInt64(bytes, cursor, self->services);

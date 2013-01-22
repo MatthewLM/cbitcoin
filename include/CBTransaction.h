@@ -34,6 +34,10 @@
 #include "CBTransactionInput.h"
 #include "CBTransactionOutput.h"
 
+// Constants
+
+#define CB_TRANSACTION_MAX_SIZE 999915 // Block size minus the header
+
 /**
  @brief Structure for CBTransaction objects. @see CBTransaction.h
 */

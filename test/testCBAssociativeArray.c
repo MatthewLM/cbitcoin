@@ -34,6 +34,15 @@ void onErrorReceived(char * format, ...){
 	printf("\n");
 }
 
+uint32_t getLen(CBBTreeNode * self);
+uint32_t getLen(CBBTreeNode * self){
+	uint32_t len = self->numElements;
+	if (self->children[0])
+		for (uint8_t x = 0; x < self->numElements + 1; x++)
+			len += getLen(self->children[x]);
+	return len;
+}
+
 int main(){
 	// ??? Add more in-depth tests.
 	unsigned int s = (unsigned int)time(NULL);
@@ -41,7 +50,7 @@ int main(){
 	printf("Session = %u\n", s);
 	//srand(s);
 	CBAssociativeArray array;
-	CBInitAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
 	uint8_t key[4];
 	CBFindResult res = CBAssociativeArrayFind(&array, key);
 	if (res.found) {
@@ -87,9 +96,9 @@ int main(){
 			}
 		}
 	}
-	CBFreeAssociativeArray(&array, false);
+	CBFreeAssociativeArray(&array);
 	// Create array again and test for insertion overflow situations
-	CBInitAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
 	// Insert CB_BTREE_ORDER elements
 	uint8_t keys2[CB_BTREE_ORDER+1][4];
 	for (uint8_t x = 0; x < CB_BTREE_ORDER; x++) {
@@ -574,9 +583,9 @@ int main(){
 		printf("TAKE FROM RIGHT CHILD 1 DATA FAIL\n");
 		return 1;
 	}
-	CBFreeAssociativeArray(&array, false);
+	CBFreeAssociativeArray(&array);
 	// Test lots of random keys
-	CBInitAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
 	// Generate keys
 	int size = CB_BTREE_ORDER * (CB_BTREE_ORDER + 2) * 20;
 	uint8_t * keys5 = malloc(size);
@@ -593,6 +602,11 @@ int main(){
 				printf("RANDOM FIND FAIL %u - %u\n", y, x);
 				return 1;
 			}
+		}
+		// Check length
+		if (getLen(array.root) != x/10 + 1) {
+			printf("INSERT LENGTH FAIL");
+			return 1;
 		}
 	}
 	// Test iteration

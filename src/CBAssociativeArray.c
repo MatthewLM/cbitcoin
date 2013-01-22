@@ -43,7 +43,7 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 				// We have a parent so we can check siblings.
 				// First find the position of this node in the parent. ??? Worth additional pointers?
 				// Search for second key in case the first has been taken by the parent.
-				CBFindResult res = CBBTreeNodeBinarySearch(parent, pos.node->elements[1]);
+				CBFindResult res = CBBTreeNodeBinarySearch(parent, pos.node->elements[1], self->compareFunc);
 				CBBTreeNode * left;
 				CBBTreeNode * right;
 				if (res.pos) {
@@ -189,12 +189,12 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos){
 		CBAssociativeArrayDelete(self, pos);
 	}
 }
-CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
+CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element){
 	CBFindResult result;
 	CBBTreeNode * node = self->root;
 	for (;;) {
 		// Do binary search on node
-		result = CBBTreeNodeBinarySearch(node, key);
+		result = CBBTreeNodeBinarySearch(node, element, self->compareFunc);
 		if (result.found){
 			// Found the data on this node.
 			result.node = node;
@@ -212,6 +212,15 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, uint8_t * key){
 		}
 	}
 }
+bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBIterator * it, uint32_t index){
+	if (NOT CBAssociativeArrayGetFirst(self, it))
+		return false;
+	// ??? Lazy method of iteration.
+	for (uint32_t x = 0; x < index;)
+		if (NOT CBAssociativeArrayIterate(self, it))
+			return false;
+	return true;
+}
 bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBIterator * it){
 	if (NOT self->root->numElements)
 		return false;
@@ -221,7 +230,7 @@ bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBIterator * it){
 		it->node = it->node->children[0];
 	return true;
 }
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBFindResult pos, CBBTreeNode * right){
+bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBFindResult pos, CBBTreeNode * right){
 	// See if we can insert data in this node
 	assert(NOT pos.found);
 	if (pos.node->numElements < CB_BTREE_ORDER) {
@@ -233,7 +242,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 			memmove(pos.node->children + pos.pos + 2, pos.node->children + pos.pos + 1, (pos.node->numElements - pos.pos) * sizeof(*pos.node->children));
 		}
 		// Copy over new key, data and children
-		pos.node->elements[pos.pos] = keyValue;
+		pos.node->elements[pos.pos] = element;
 		pos.node->children[pos.pos + 1] = right;
 		// Increase number of elements
 		pos.node->numElements++;
@@ -273,7 +282,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 				// First child in right of the split becomes the right input node
 				new->children[0] = right;
 				// Middle value is the inserted value
-				midKeyValue = keyValue;
+				midKeyValue = element;
 			}else{
 				// In new child. Visualisation of order of 4:
 				//
@@ -303,7 +312,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 				if (pos.pos > CB_BTREE_HALF_ORDER + 1)
 					memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ORDER + 1, (pos.pos - CB_BTREE_HALF_ORDER - 1) * sizeof(*new->elements));
 				// Copy in data
-				new->elements[pos.pos - CB_BTREE_HALF_ORDER - 1] = keyValue;
+				new->elements[pos.pos - CB_BTREE_HALF_ORDER - 1] = element;
 				// Copy over the last part of the new child. It seems so simple to visualise but coding this is very hard...
 				memcpy(new->elements + pos.pos - CB_BTREE_HALF_ORDER, pos.node->elements + pos.pos, (CB_BTREE_ORDER - pos.pos) * sizeof(*new->elements));
 				// Copy children (Can be the confusing part) o 0 i 1 ii 3 iii 4 iv
@@ -323,7 +332,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 			memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ORDER, CB_BTREE_HALF_ORDER * sizeof(*new->elements));
 			// Insert key and data
 			memmove(pos.node->elements + pos.pos + 1, pos.node->elements + pos.pos, (CB_BTREE_HALF_ORDER - pos.pos) * sizeof(*pos.node->elements));
-			pos.node->elements[pos.pos] = keyValue;
+			pos.node->elements[pos.pos] = element;
 			// Children...
 			memcpy(new->children, pos.node->children + CB_BTREE_HALF_ORDER, (CB_BTREE_HALF_ORDER + 1) * sizeof(*new->children)); // OK
 			if (CB_BTREE_HALF_ORDER > 1 + pos.pos)
@@ -353,7 +362,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, uint8_t * keyValue, CBF
 		// New node requires that the parent be set
 		new->parent = pos.node->parent;
 		// Find position of value in parent and then insert.
-		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKeyValue);
+		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKeyValue, self->compareFunc);
 		res.node = pos.node->parent;
 		return CBAssociativeArrayInsert(self, midKeyValue, res, new);
 	}
@@ -376,7 +385,7 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBIterator * it){
 					return true;
 				// Find position in parent
 				CBFindResult res;
-				res = CBBTreeNodeBinarySearch(it->node->parent, key);
+				res = CBBTreeNodeBinarySearch(it->node->parent, key, self->compareFunc);
 				// Move to parent
 				it->node = it->node->parent;
 				it->pos = res.pos;
@@ -391,7 +400,7 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBIterator * it){
 	}
 	return false;
 }
-CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key){
+CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, void * key, CBCompare (*compareFunc)(void *, void *)){
 	CBFindResult res;
 	res.found = false;
 	if (NOT self->numElements){
@@ -400,43 +409,38 @@ CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, uint8_t * key){
 	}
 	uint8_t left = 0;
 	uint8_t right = self->numElements - 1;
-	int cmp;
+	CBCompare cmp;
 	while (left <= right) {
 		res.pos = (right+left)/2;
-		uint8_t keySize = *self->elements[res.pos];
-		if (*key > keySize)
-			cmp = 1;
-		else if (*key < keySize)
-			cmp = -1;
-		else
-			cmp = memcmp(key + 1, self->elements[res.pos] + 1, *key);
-		if (cmp == 0) {
+		cmp = compareFunc(key,self->elements[res.pos]);
+		if (cmp == CB_COMPARE_EQUAL) {
 			res.found = true;
 			break;
-		}else if (cmp < 0){
+		}else if (cmp == CB_COMPARE_LESS_THAN){
 			if (NOT res.pos)
 				break;
 			right = res.pos - 1;
 		}else
 			left = res.pos + 1;
 	}
-	if (cmp > 0)
+	if (cmp == CB_COMPARE_MORE_THAN)
 		res.pos++;
 	return res;
 }
-void CBFreeAssociativeArray(CBAssociativeArray * self, bool elDel){
-	CBFreeBTreeNode(self->root, elDel);
+void CBFreeAssociativeArray(CBAssociativeArray * self){
+	CBFreeBTreeNode(self->root, self->onFree, false);
 }
-void CBFreeBTreeNode(CBBTreeNode * self, bool elDel){
+void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildren){
 	if (self->children[0])
 		for (uint8_t x = 0; x < self->numElements + 1; x++)
-			CBFreeBTreeNode(self->children[x], elDel);
-	if (elDel)
+			CBFreeBTreeNode(self->children[x], onFree, false);
+	if (onFree)
 		for (uint8_t x = 0; x < self->numElements; x++)
-			free(self->elements[x]);
-	free(self);
+			onFree(self->elements[x]);
+	if (NOT onlyChildren)
+		free(self);
 }
-bool CBInitAssociativeArray(CBAssociativeArray * self){
+bool CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *)){
 	self->root = malloc(sizeof(*self->root));
 	if (NOT self)
 		return false;
@@ -444,5 +448,19 @@ bool CBInitAssociativeArray(CBAssociativeArray * self){
 	self->root->numElements = 0;
 	for (uint8_t x = 0; x < CB_BTREE_ORDER + 1; x++)
 		self->root->children[x] = NULL;
+	self->compareFunc = compareFunc;
+	self->onFree = onFree;
 	return true;
+}
+CBCompare CBKeyCompare(void * key1, void * key2){
+	if (*(uint8_t *)key1 > *(uint8_t *)key2)
+		return CB_COMPARE_MORE_THAN;
+	if (*(uint8_t *)key1 < *(uint8_t *)key2)
+		return CB_COMPARE_LESS_THAN;
+	int cmp = memcmp(((uint8_t *)key1) + 1, ((uint8_t *)key2) + 1, *(uint8_t *)key1);
+	if (cmp > 0)
+		return CB_COMPARE_MORE_THAN;
+	if (NOT cmp)
+		return CB_COMPARE_EQUAL;
+	return CB_COMPARE_LESS_THAN;
 }

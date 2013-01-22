@@ -32,6 +32,10 @@
 
 #include "CBMessage.h"
 
+// Constants
+
+#define CB_ALERT_MAX_SIZE 2100 // Max size for payload is 2000. Extra 100 for signature though the signature will likely be less.
+
 /**
  @brief Structure for CBAlert objects. @see CBAlert.h
 */

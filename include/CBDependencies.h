@@ -142,6 +142,27 @@ bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const ui
 
 // NETWORKING DEPENDENCIES
 
+// Constants
+
+typedef enum{
+	CB_TIMEOUT_CONNECT,
+	CB_TIMEOUT_RESPONSE,
+	CB_TIMEOUT_NO_DATA,
+	CB_TIMEOUT_SEND,
+	CB_TIMEOUT_RECEIVE
+} CBTimeOutType;
+
+typedef enum{
+	CB_SOCKET_OK,
+	CB_SOCKET_NO_SUPPORT,
+	CB_SOCKET_BAD
+} CBSocketReturn;
+
+#define CB_SOCKET_CONNECTION_CLOSE -1
+#define CB_SOCKET_FAILURE -2
+
+// Functions
+
 /**
  @brief Creates a new TCP/IP socket. The socket should use a non-blocking mode.
  @param socketID Pointer to uint64_t. Can be pointer value.
@@ -314,7 +335,7 @@ uint64_t CBSecureRandomInteger(uint64_t gen);
  */
 void CBFreeSecureRandomGenerator(uint64_t gen);
 
-// STORAGE DEPENDENCES
+// BLOCK CHAIN STORAGE DEPENDENCES
 
 /**
  @brief Returns the object used for block-chain storage.
@@ -543,6 +564,48 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
  */
 bool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, uint32_t outputIndex);
 
+// ADDRESS STORAGE DEPENDENCES
+
+/**
+ @brief Creates a new address storage object.
+ @param dataDir The directory where the data files should be stored.
+ @returns The address storage object.
+ */
+uint64_t CBNewAddressStorage(char * dataDir);
+/**
+ @brief Frees the address storage object.
+ @param iself The address storage object.
+ */
+void CBFreeAddressStorage(uint64_t iself);
+/**
+ @brief Removes an address from storage.
+ @param iself The address storage object.
+ @param address The address object.
+ @returns true on success or false on failure.
+ */
+bool CBAddressStorageDeleteAddress(uint64_t iself, void * address);
+/**
+ @brief Obtains the number of addresses in storage.
+ @param iself The address storage object.
+ @param num To be set to the number of addresses in storage.
+ @returns true on success or false on failure.
+ */
+bool CBAddressStorageGetNumberOfAddresses(uint64_t iself, uint32_t * num);
+/**
+ @brief Loads all of the addresses from storage into an address manager.
+ @param iself The address storage object.
+ @param addrMan A CBAddressManager object.
+ @returns true on success or false on failure.
+ */
+bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan);
+/**
+ @brief Saves an address to storage.
+ @param iself The address storage object.
+ @param address The CBNetworkAddress object.
+ @returns true on success or false on failure.
+ */
+bool CBAddressStorageSaveAddress(uint64_t iself, void * address);
+
 // LOGGING DEPENDENCIES
 
 /**
@@ -550,5 +613,13 @@ bool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, 
  @param error The error message followed by arguments displayed by the printf() format.
  */
 void CBLogError(char * error, ...);
+
+// TIME DEPENDENCIES
+
+/**
+ @brief Millisecond precision time function
+ @returns A value which when called twice will reflect the milliseconds passed between each call.
+ */
+uint64_t CBGetMilliseconds(void);
 
 #endif

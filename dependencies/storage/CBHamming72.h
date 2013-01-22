@@ -31,6 +31,7 @@
 #include "CBConstants.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define CB_DOUBLE_BIT_ERROR 9
 #define CB_ZERO_BIT_ERROR 10

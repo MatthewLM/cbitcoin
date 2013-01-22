@@ -32,6 +32,11 @@
 
 #include "CBChainDescriptor.h"
 
+// Constants
+
+#define CB_GET_BLOCKS_MAX_SIZE 16045
+#define CB_GET_HEADERS_MAX_SIZE 64045
+
 /**
  @brief Structure for CBGetBlocks objects. @see CBGetBlocks.h
 */

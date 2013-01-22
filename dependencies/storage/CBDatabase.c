@@ -24,7 +24,7 @@
 
 #include "CBDatabase.h"
 
-CBDatabase * CBNewDatabase(char * dataDir){
+CBDatabase * CBNewDatabase(char * dataDir, char * prefix){
 	// Try to create the object
 	CBDatabase * self = malloc(sizeof(*self));
 	if (NOT self) {
@@ -32,66 +32,87 @@ CBDatabase * CBNewDatabase(char * dataDir){
 		return 0;
 	}
 	self->dataDir = dataDir;
+	self->prefix = prefix;
 	self->lastUsedFileObject = 0; // No stored file yet.
-	CBInitAssociativeArray(&self->deleteKeys);
-	CBInitAssociativeArray(&self->valueWrites);
 	// Check data consistency
 	if (NOT CBDatabaseEnsureConsistent(self)){
 		free(self);
 		CBLogError("The database is inconsistent and could not be recovered in CBNewDatabase");
 		return 0;
 	}
-	// Load index
-	if (NOT CBInitAssociativeArray(&self->index)){
+	if (NOT CBInitAssociativeArray(&self->deleteKeys, CBKeyCompare, free)){
 		free(self);
+		CBLogError("Could not initilaise the deleteKeys array.");
+		return 0;
+	}
+	if (NOT CBInitAssociativeArray(&self->valueWrites, CBKeyCompare, free)){
+		free(self);
+		CBFreeAssociativeArray(&self->deleteKeys);
+		CBLogError("Could not initilaise the valueWrites array.");
+		return 0;
+	}
+	// Load index
+	if (NOT CBInitAssociativeArray(&self->index, CBKeyCompare, free)){
+		free(self);
+		CBFreeAssociativeArray(&self->deleteKeys);
+		CBFreeAssociativeArray(&self->valueWrites);
 		CBLogError("Could not initialise the database index.");
 		return 0;
 	}
-	char filename[strlen(dataDir) + 6];
-	memcpy(filename, dataDir, strlen(dataDir));
-	strcpy(filename + strlen(dataDir), "0.dat");
+	char filename[strlen(dataDir) + strlen(prefix) + 7];
+	sprintf(filename, "%s%s_0.dat", dataDir, prefix);
 	// First check that the index exists
 	if (NOT access(filename, F_OK)) {
 		// Can be read
 		if (NOT CBDatabaseReadAndOpenIndex(self, filename)) {
-			CBFreeAssociativeArray(&self->index, true);
 			free(self);
+			CBFreeAssociativeArray(&self->deleteKeys);
+			CBFreeAssociativeArray(&self->valueWrites);
+			CBFreeAssociativeArray(&self->index);
 			CBLogError("Could not load the database index.");
 			return 0;
 		}
 	}else{
 		if (NOT CBDatabaseCreateIndex(self, filename)) {
-			CBFreeAssociativeArray(&self->index, true);
 			free(self);
+			CBFreeAssociativeArray(&self->deleteKeys);
+			CBFreeAssociativeArray(&self->valueWrites);
+			CBFreeAssociativeArray(&self->index);
 			CBLogError("Could not create the database index.");
 			return 0;
 		}
 	}
 	// Load deletion index
-	if (NOT CBInitAssociativeArray(&self->deletionIndex)){
-		CBFreeAssociativeArray(&self->index, true);
+	if (NOT CBInitAssociativeArray(&self->deletionIndex, CBKeyCompare, free)){
 		free(self);
+		CBFreeAssociativeArray(&self->deleteKeys);
+		CBFreeAssociativeArray(&self->valueWrites);
+		CBFreeAssociativeArray(&self->index);
 		CBLogError("Could not initialise the database deletion index.");
 		return 0;
 	}
-	filename[strlen(dataDir)] = '1';
+	filename[strlen(dataDir) + strlen(prefix) + 1] = '1';
 	// First check that the index exists
 	if (NOT access(filename, F_OK)) {
 		// Can read deletion index
 		if (NOT CBDatabaseReadAndOpenDeletionIndex(self, filename)) {
-			CBFreeAssociativeArray(&self->index, true);
-			CBFreeAssociativeArray(&self->deletionIndex, true);
-			CBFileClose(self->indexFile);
 			free(self);
+			CBFreeAssociativeArray(&self->deleteKeys);
+			CBFreeAssociativeArray(&self->valueWrites);
+			CBFreeAssociativeArray(&self->index);
+			CBFreeAssociativeArray(&self->deletionIndex);
+			CBFileClose(self->indexFile);
 			CBLogError("Could not load the database deletion index.");
 		}
 	}else{
 		// Else empty deletion index
 		if (NOT CBDatabaseCreateDeletionIndex(self, filename)) {
-			CBFreeAssociativeArray(&self->index, true);
-			CBFreeAssociativeArray(&self->deletionIndex, true);
-			CBFileClose(self->indexFile);
 			free(self);
+			CBFreeAssociativeArray(&self->deleteKeys);
+			CBFreeAssociativeArray(&self->valueWrites);
+			CBFreeAssociativeArray(&self->index);
+			CBFreeAssociativeArray(&self->deletionIndex);
+			CBFileClose(self->indexFile);
 			CBLogError("Could not create the database deletion index.");
 		}
 	}
@@ -255,17 +276,17 @@ bool CBDatabaseCreateDeletionIndex(CBDatabase * self, char * filename){
 }
 void CBFreeDatabase(CBDatabase * self){
 	// Free write data
-	CBFreeAssociativeArray(&self->valueWrites, true);
+	CBFreeAssociativeArray(&self->valueWrites);
 	// Free deletion data
-	CBFreeAssociativeArray(&self->deleteKeys, true);
+	CBFreeAssociativeArray(&self->deleteKeys);
 	// Free key change data
 	for (uint32_t x = 0; x < self->numChangeKeys; x++) {
 		free(self->changeKeys[x][0]);
 		free(self->changeKeys[x][1]);
 	}
 	free(self->changeKeys);
-	CBFreeAssociativeArray(&self->index, true);
-	CBFreeAssociativeArray(&self->deletionIndex, true);
+	CBFreeAssociativeArray(&self->index);
+	CBFreeAssociativeArray(&self->deletionIndex);
 	// Close files
 	CBFileClose(self->indexFile);
 	CBFileClose(self->deletionIndexFile);
@@ -274,10 +295,9 @@ void CBFreeDatabase(CBDatabase * self){
 	free(self);
 }
 bool CBDatabaseCommit(CBDatabase * self){
-	char filename[strlen(self->dataDir) + 8];
-	memcpy(filename, self->dataDir, strlen(self->dataDir));
+	char filename[strlen(self->dataDir) + strlen(self->prefix) + 9];
+	sprintf(filename, "%s%s_log.dat", self->dataDir, self->prefix);
 	// Open the log file
-	strcpy(filename + strlen(self->dataDir), "log.dat");
 	uint64_t logFile = CBFileOpen(filename, true);
 	if (NOT logFile) {
 		CBLogError("The log file for overwritting could not be opened.");
@@ -555,7 +575,7 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
 	CBFindResult res;
 	res.node = self->deletionIndex.root;
 	for (; res.node->children[0]; res.node = res.node->children[0]);
-	if (res.node->numElements && NOT res.node->elements[0][1]) {
+	if (res.node->numElements && NOT ((uint8_t *)res.node->elements[0])[1]) {
 		// Inactive deletion entry. We will use this one.
 		CBDeletedSection * section = (CBDeletedSection *)res.node->elements[0];
 		section->key[1] = 1; // Re-activate.
@@ -775,11 +795,11 @@ bool CBDatabaseChangeKey(CBDatabase * self, uint8_t * previousKey, uint8_t * new
 }
 void CBDatabaseClearPending(CBDatabase * self){
 	// Free write data
-	CBFreeAssociativeArray(&self->valueWrites, true);
-	CBInitAssociativeArray(&self->valueWrites);
+	CBFreeAssociativeArray(&self->valueWrites);
+	CBInitAssociativeArray(&self->valueWrites, CBKeyCompare, free);
 	// Free deletion data
-	CBFreeAssociativeArray(&self->deleteKeys, true);
-	CBInitAssociativeArray(&self->deleteKeys);
+	CBFreeAssociativeArray(&self->deleteKeys);
+	CBInitAssociativeArray(&self->deleteKeys, CBKeyCompare, free);
 	// Free key change data
 	for (uint32_t x = 0; x < self->numChangeKeys; x++) {
 		free(self->changeKeys[x][0]);
@@ -790,9 +810,8 @@ void CBDatabaseClearPending(CBDatabase * self){
 	self->numChangeKeys = 0;
 }
 bool CBDatabaseEnsureConsistent(CBDatabase * self){
-	char filename[strlen(self->dataDir) + 10];
-	memcpy(filename, self->dataDir, strlen(self->dataDir));
-	strcpy(filename + strlen(self->dataDir), "log.dat");
+	char filename[strlen(self->dataDir) + strlen(self->prefix) + 11];
+	sprintf(filename, "%s%s_log.dat", self->dataDir, self->prefix);
 	// Determine if the logfile has been created or not
 	if (access(filename, F_OK))
 		// Not created, so no history.
@@ -822,27 +841,28 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 		return false;
 	}
 	// Truncate files
-	strcpy(filename + strlen(self->dataDir), "0.dat");
+	char * filenameEnd = filename + strlen(self->dataDir) + strlen(self->prefix) + 1;
+	strcpy(filenameEnd, "0.dat");
 	if (NOT CBFileTruncate(filename, CBArrayToInt32(data, 0))) {
 		CBLogError("Failed to truncate the index file down to the previous size.");
 		CBFileClose(logFile);
 		return false;
 	}
-	filename[strlen(self->dataDir)] = '1';
+	*filenameEnd = '1';
 	if (NOT CBFileTruncate(filename, CBArrayToInt32(data, 4))) {
 		CBLogError("Failed to truncate the deletion index file down to the previous size.");
 		CBFileClose(logFile);
 		return false;
 	}
 	uint16_t lastFile = CBArrayToInt16(data, 8);
-	sprintf(filename + strlen(self->dataDir), "%u.dat", lastFile);
+	sprintf(filenameEnd, "%u.dat", lastFile);
 	if (NOT CBFileTruncate(filename, CBArrayToInt32(data, 10))) {
 		CBLogError("Failed to truncate the last file down to the previous size.");
 		CBFileClose(logFile);
 		return false;
 	}
 	// Check if a new file had been created. If it has, delete it.
-	sprintf(filename + strlen(self->dataDir), "%u.dat", lastFile + 1);
+	sprintf(filenameEnd, "%u.dat", lastFile + 1);
 	if (NOT access(filename, F_OK))
 		remove(filename);
 	// Reverse overwrite operations
@@ -873,7 +893,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 			return false;
 		}
 		// Write the data to the file
-		sprintf(filename + strlen(self->dataDir), "%u.dat", CBArrayToInt16(data, 0));
+		sprintf(filenameEnd, "%u.dat", CBArrayToInt16(data, 0));
 		uint64_t file = CBFileOpen(filename, false);
 		if (NOT file) {
 			CBLogError("Could not open the file for writting the previous data.");
@@ -921,7 +941,9 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length){
 	for (; res.node->children[res.node->numElements]; res.node = res.node->children[res.node->numElements]);
 	res.pos = res.node->numElements - 1;
 	// Found when there are elements, the deleted section is active and the deleted section length is equal or greater to "length".
-	res.found = res.node->numElements && res.node->elements[res.pos][1] && CBArrayToInt32BigEndian(res.node->elements[res.pos], 2) >= length;
+	res.found = res.node->numElements
+				&& ((uint8_t *)res.node->elements[res.pos])[1]
+				&& CBArrayToInt32BigEndian(((uint8_t *)res.node->elements[res.pos]), 2) >= length;
 	return res;
 }
 uint64_t CBDatabaseGetFile(CBDatabase * self, uint16_t fileID){
@@ -943,11 +965,11 @@ uint64_t CBDatabaseGetFile(CBDatabase * self, uint16_t fileID){
 			CBFileClose(self->fileObjectCache);
 		}
 		// Open the new file
-		char filename[strlen(self->dataDir) + 10];
-		sprintf(filename, "%s%i.dat", self->dataDir, fileID);
+		char filename[strlen(self->dataDir) + strlen(self->prefix) + 11];
+		sprintf(filename, "%s%s_%i.dat", self->dataDir, self->prefix, fileID);
 		self->fileObjectCache = CBFileOpen(filename, access(filename, F_OK));
 		if (NOT self->fileObjectCache) {
-			CBLogError("Could not open file %u.", fileID);
+			CBLogError("Could not open file %s.", filename);
 			return false;
 		}
 		self->lastUsedFileObject = fileID;
@@ -962,9 +984,9 @@ uint32_t CBDatabaseGetLength(CBDatabase * self, uint8_t * key) {
 		res = CBAssociativeArrayFind(&self->valueWrites, key);
 		if (NOT res.found)
 			return 0;
-		return CBArrayToInt32(res.node->elements[res.pos], *key + 1);
+		return CBArrayToInt32(((uint8_t *)res.node->elements[res.pos]), *key + 1);
 	}
-	return ((CBIndexValue *)(res.node->elements[res.pos] + *key + 1))->length;
+	return ((CBIndexValue *)((uint8_t *)res.node->elements[res.pos] + *key + 1))->length;
 }
 bool CBDatabaseReadValue(CBDatabase * self, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset){
 	// Look in index for value
@@ -984,7 +1006,7 @@ bool CBDatabaseReadValue(CBDatabase * self, uint8_t * key, uint8_t * data, uint3
 		memcpy(data, existingData + offset, dataSize);
 		return true;
 	}
-	CBIndexValue * val = (CBIndexValue *)(res.node->elements[res.pos] + *res.node->elements[res.pos] + 1);
+	CBIndexValue * val = (CBIndexValue *)((uint8_t *)res.node->elements[res.pos] + *key + 1);
 	// Get file
 	uint64_t file = CBDatabaseGetFile(self, val->fileID);
 	if (NOT file) {
