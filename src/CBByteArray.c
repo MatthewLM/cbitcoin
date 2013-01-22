@@ -204,7 +204,12 @@ CBCompare CBByteArrayCompare(CBByteArray * self, CBByteArray * second){
 		return CB_COMPARE_MORE_THAN;
 	else if (self->length < second->length)
 		return CB_COMPARE_LESS_THAN;
-	return memcmp(CBByteArrayGetData(self), CBByteArrayGetData(second), self->length);
+	int res = memcmp(CBByteArrayGetData(self), CBByteArrayGetData(second), self->length);
+	if (res > 0)
+		return CB_COMPARE_MORE_THAN;
+	else if (res < 0)
+		return CB_COMPARE_LESS_THAN;
+	return CB_COMPARE_EQUAL;
 }
 CBByteArray * CBByteArrayCopy(CBByteArray * self){
 	CBByteArray * new = CBNewByteArrayOfSize(self->length);

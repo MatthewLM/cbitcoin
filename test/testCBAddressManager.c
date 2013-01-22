@@ -59,7 +59,7 @@ int main(){
 	// Test adding addresses
 	for (uint8_t x = 0; x < 255; x++) {
 		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x/2}, 16);
-		CBAddressManagerTakeAddress(addrMan, CBNewNetworkAddress(1358856884 + rand() % 7, ip, 45562 + rand() % 5 + 5 * (x % 2), CB_SERVICE_FULL_BLOCKS));
+		CBAddressManagerTakeAddress(addrMan, CBNewNetworkAddress(1358856884 + rand() % 7, ip, 45562 + (rand() % 5) + 6 * (x % 2), CB_SERVICE_FULL_BLOCKS));
 		CBReleaseObject(ip);
 		// Check length
 		if (getLen(addrMan->addresses.root) != addrMan->addrNum) {
@@ -86,10 +86,10 @@ int main(){
 			lastLastSeen = 0;
 			memset(lastIP, 0, 16);
 			lastPort = 0;
-		}else if (addr->lastSeen < lastLastSeen){
+		}else if (addr->lastSeen > lastLastSeen){
 			printf("ADDR LAST SEEN ORDER FAIL");
 			return 1;
-		}else if (addr->lastSeen > lastLastSeen){
+		}else if (addr->lastSeen < lastLastSeen){
 			memset(lastIP, 0, 16);
 			lastPort = 0;
 		}else{
