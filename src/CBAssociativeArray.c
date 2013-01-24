@@ -216,8 +216,8 @@ bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBIterator * it, ui
 	if (NOT CBAssociativeArrayGetFirst(self, it))
 		return false;
 	// ??? Lazy method of iteration.
-	for (uint32_t x = 0; x < index;)
-		if (NOT CBAssociativeArrayIterate(self, it))
+	for (uint32_t x = 0; x < index; x++)
+		if (CBAssociativeArrayIterate(self, it))
 			return false;
 	return true;
 }
@@ -437,7 +437,12 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
 	if (onFree)
 		for (uint8_t x = 0; x < self->numElements; x++)
 			onFree(self->elements[x]);
-	if (NOT onlyChildren)
+	if (onlyChildren){
+		// We are only freeing the children so reset this node
+		for (uint8_t x = 0; x < self->numElements + 1; x++)
+			self->children[x] = NULL;
+		self->numElements = 0;
+	}else
 		free(self);
 }
 bool CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *)){

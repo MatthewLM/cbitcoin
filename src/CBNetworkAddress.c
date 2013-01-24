@@ -76,6 +76,7 @@ bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArra
 	}
 	self->port = port;
 	self->services = services;
+	self->bucketSet = false;
 	// Private by default.
 	self->public = false;
 	if (NOT CBInitMessageByObject(CBGetMessage(self))){
@@ -88,6 +89,7 @@ bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data){
 	self->ip = NULL;
 	// Private by default.
 	self->public = false;
+	self->bucketSet = false;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;
 	return true;

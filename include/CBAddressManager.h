@@ -46,7 +46,7 @@
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	CBAssociativeArray addresses; /**< Unconnected addresses. */
+	CBAssociativeArray addresses[CB_BUCKET_NUM]; /**< Unconnected addresses, seperated into buckets. */
 	uint32_t addrNum; /**< Number of addresses. */
 	CBAssociativeArray peers; /**< The peers sorted by their time offset */
 	uint32_t peersNum; /**< Number of connected peers. */
@@ -91,12 +91,19 @@ void CBFreeAddressManager(void * vself);
 //  Functions
 
 /**
- @brief Adds a CBPeer an places it into the CBAddressManager with a retain, but not permenent storage.
+ @brief Adds a CBNetworkAddress an places it into the CBAddressManager with a retain, but not permenent storage.
  @param self The CBAddressManager object.
- @param peer The CBNetworkAddress to take.
+ @param addr The CBNetworkAddress to take.
  @returns true if the address was taken successfully, false if an error occured.
  */
 bool CBAddressManagerAddAddress(CBAddressManager * self, CBNetworkAddress * addr);
+/**
+ @brief Adds a CBPeer an places it into the CBAddressManager with a retain.
+ @param self The CBAddressManager object.
+ @param peer The CBPeer to take.
+ @returns true if the peer was taken successfully, false if an error occured.
+ */
+bool CBAddressManagerAddPeer(CBAddressManager * self, CBPeer * peer);
 /**
  @brief Adjust the network time offset with a peer's time.
  @param self The CBAddressManager object.
@@ -117,7 +124,7 @@ void CBAddressManagerClearPeers(CBAddressManager * self);
  */
 uint32_t CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num, CBNetworkAddress ** addresses);
 /**
- @brief Sets the bucket index for an address.
+ @brief Sets the bucket index for an address, if it has not already (ie. "bucketSet" is false).
  @param self The CBAddressManager object.
  @param addr The CBNetworkAddress.
  */
@@ -149,7 +156,7 @@ CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self, CB
  @param addr The address.
  @returns If the address already exists as a connected peer, returns the existing object. Else returns NULL.
  */
-CBPeer * CBAddressManagerGotPeer(CBAddressManager * self, CBNetworkAddress * addr);
+CBPeer * CBAddressManagerGotPeer(CBAddressManager * self, CBNetworkAddress * peer);
 /**
  @brief Removes a CBNetworkAddress if the CBAddressManager has it. This does not remove it from the permenent storage.
  @param self The CBAddressManager object.
@@ -176,17 +183,10 @@ bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * add
  */
 bool CBAddressManagerTakePeer(CBAddressManager * self, CBPeer * peer);
 /**
- @brief Compares a bucket number to a network address.
- @param bucket The bucket number as an 8 bit integer.
- @param address The CBNetworkAddress.
- @returns If the bucket number is higher than in the CBNetworkAddress then CB_COMPARE_LESS_THAN is returned, if the bucket number is lower then in the CBNetworkAddress then CB_COMPARE_MORE_THAN is returned, else CB_COMPARE_EQUAL is returned.
- */
-CBCompare CBBucketCompare(void * bucket, void * address);
-/**
- @brief Compares two peers for ordering by the time last seen.
+ @brief Compares two peers for ordering by the time offset.
  @param peer1 The first CBPeer.
  @param peer2 The second CBPeer.
- @returns If the first address has a higher time last seen then CB_COMPARE_MORE_THAN is returned. If the first address has a lower time last seen CB_COMPARE_LESS_THAN is returned. If the time last seen are equal then the ip/ports are compared in the same way. If they are equal then CB_COMPARE_EQUAL is returned.
+ @returns If the first address has a higher time offset then CB_COMPARE_MORE_THAN is returned. If the first address has a lower time offset CB_COMPARE_LESS_THAN is returned. If the time offset are equal then the ip/ports are compared in the same way. If they are equal then CB_COMPARE_EQUAL is returned.
  */
 CBCompare CBPeerCompareByTime(void * peer1, void * peer2);
 /**

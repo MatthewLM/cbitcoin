@@ -55,6 +55,7 @@ typedef struct{
 	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
 	bool public; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. This doesn't include failure from "CBNetworkCommunicatorConnect". If false the address is private and should be forgotten when connections are closed and never relayed. */
 	uint8_t bucket; /**< The bucket number for this address. */
+	bool bucketSet; /**< True if the bucket has been previously set */
 } CBNetworkAddress;
 
 /**

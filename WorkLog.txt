@@ -747,4 +747,14 @@ Date: Tuesday 22th January 2013
 	End Time: 13:30
 	
 	Start Time: 16:55
-	End Time: 
+	End Time: 18:54
+	
+------------------------------------------------------------------------------
+Date: Thursday 24th January 2013
+------------------------------------------------------------------------------
+
+	Start Time: 13:17
+	End Time: 13:48
+	
+	Start Time: 16:40
+	End Time:

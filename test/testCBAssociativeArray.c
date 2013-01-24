@@ -611,6 +611,7 @@ int main(){
 	}
 	// Test iteration
 	CBIterator it;
+	CBIterator it2;
 	CBAssociativeArrayGetFirst(&array, &it);
 	uint8_t * lastKey;
 	bool end = false;
@@ -621,6 +622,14 @@ int main(){
 		}
 		if (NOT CBAssociativeArrayFind(&array, it.node->elements[it.pos]).found) {
 			printf("ITERATE FIND FAIL %u\n", x);
+			return 1;
+		}
+		if (NOT CBAssociativeArrayGetElement(&array, &it2, x/10)) {
+			printf("GET ELEMENT FAIL %u\n", x);
+			return 1;
+		}
+		if (it.node != it2.node || it.pos != it2.pos) {
+			printf("GET ELEMENT AND ITERATOR CONSISTENCY FAIL %u\n", x);
 			return 1;
 		}
 		lastKey = it.node->elements[it.pos];
@@ -635,9 +644,8 @@ int main(){
 		return 1;
 	}
 	// Try removing half of elements
-	for (int x = 0; x < size/2; x += 10) {
+	for (int x = 0; x < size/2; x += 10)
 		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, keys5 + x));
-	}
 	// Now ensure the rest can be found
 	for (int x = size/2; x < size; x += 10) {
 		CBFindResult res = CBAssociativeArrayFind(&array, keys5 + x);
