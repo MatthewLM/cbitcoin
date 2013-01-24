@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include "CBAddressManager.h"
+#include "CBDependencies.h"
 #include <time.h>
 #include "stdarg.h"
 
@@ -215,5 +216,90 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(addrMan);
+	// Test address storage
+	remove("./addr_0.dat");
+	remove("./addr_1.dat");
+	remove("./addr_2.dat");
+	remove("./addr_log.dat");
+	uint64_t storage = CBNewAddressStorage("./");
+	if (NOT storage) {
+		printf("NEW ADDRESS STORAGE FAIL\n");
+		return 1;
+	}
+	// Add 10 addresses to storage
+	for (uint8_t x = 0; x < 10; x++) {
+		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x}, 16);
+		addrs[x] = CBNewNetworkAddress(x, ip, x, x % 2);
+		addrs[x]->penalty = x;
+		CBReleaseObject(ip);
+		if (NOT CBAddressStorageSaveAddress(storage, addrs[x])){
+			printf("SAVE ADDRESS FAIL\n");
+			return 1;
+		}
+	}
+	uint32_t num;
+	if (NOT CBAddressStorageGetNumberOfAddresses(storage, &num)) {
+		printf("GET ADDR NUM FAIL\n");
+		return 1;
+	}
+	if (num != 10) {
+		printf("ADDR NUM FAIL\n");
+		return 1;
+	}
+	// Remove 5 of them
+	for (uint8_t x = 0; x < 10; x += 2) {
+		if (NOT CBAddressStorageDeleteAddress(storage, addrs[x])){
+			printf("REMOVE ADDRESS FAIL\n");
+			return 1;
+		}
+	}
+	if (NOT CBAddressStorageGetNumberOfAddresses(storage, &num)) {
+		printf("GET ADDR NUM AFTER REMOVE FAIL\n");
+		return 1;
+	}
+	if (num != 5) {
+		printf("ADDR NUM AFTER REMOVE FAIL\n");
+		return 1;
+	}
+	// Test loading addresses
+	addrMan = CBNewAddressManager(onBadTime);
+	if (NOT CBAddressStorageLoadAddresses(storage, addrMan)) {
+		printf("LOAD ADDRESSES FAIL\n");
+		return 1;
+	}
+	if (addrMan->addrNum != 5) {
+		printf("STORAGE ADDR NUM FAIL\n");
+		return 1;
+	}
+	// Check each address.
+	if (CBAddressManagerGetAddresses(addrMan, 5, addrs) != 5) {
+		printf("STORAGE GET ADDRS FAIL\n");
+		return 1;
+	}
+	for (uint8_t x = 0; x < 5; x++) {
+		uint8_t val = x*2 + 1;
+		if (addrs[x]->lastSeen != val) {
+			printf("STORAGE LOAD LAST SEEN FAIL\n");
+			return 1;
+		}
+		if (addrs[x]->port != val) {
+			printf("STORAGE LOAD PORT FAIL\n");
+			return 1;
+		}
+		if (addrs[x]->penalty != val) {
+			printf("STORAGE LOAD PENALTY FAIL\n");
+			return 1;
+		}
+		if (addrs[x]->services != val % 2) {
+			printf("STORAGE LOAD SERVICES FAIL\n");
+			return 1;
+		}
+		if (memcmp((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,val}, CBByteArrayGetData(addrs[x]->ip), 16)) {
+			printf("STORAGE LOAD IP FAIL\n");
+			return 1;
+		}
+	}
+	CBReleaseObject(addrMan);
+	CBFreeAddressStorage(storage);
 	return 0;
 }
