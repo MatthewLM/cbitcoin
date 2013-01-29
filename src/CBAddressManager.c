@@ -70,10 +70,17 @@ bool CBInitAddressManager(CBAddressManager * self, void (*onBadTime)(void *)){
 	// Generate secret
 	self->secret = CBSecureRandomInteger(self->rndGen);
 	// Initialise arrays for addresses and peers.
-	if (NOT CBInitAssociativeArray(&self->peers, CBPeerCompareByTime, CBReleaseObject)){
+	if (NOT CBInitAssociativeArray(&self->peers, CBNetworkAddressCompare, CBReleaseObject)){
 		CBFreeSecureRandomGenerator(self->rndGen);
 		CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
 		CBLogError("Could not initialise the array for the network peers.");
+		return false;
+	}
+	if (NOT CBInitAssociativeArray(&self->peersByTimeOffset, CBPeerCompareByTime, NULL)){
+		CBFreeSecureRandomGenerator(self->rndGen);
+		CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
+		CBFreeAssociativeArray(&self->peers);
+		CBLogError("Could not initialise the array for the network peers sorted by time offset.");
 		return false;
 	}
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
@@ -81,6 +88,7 @@ bool CBInitAddressManager(CBAddressManager * self, void (*onBadTime)(void *)){
 			CBFreeSecureRandomGenerator(self->rndGen);
 			CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
 			CBFreeAssociativeArray(&self->peers);
+			CBFreeAssociativeArray(&self->peersByTimeOffset);
 			for (uint8_t y = 0; y < x; y++)
 				CBFreeAssociativeArray(&self->addresses[y]);
 			CBLogError("Could not initialise an array for the network addresses.");
@@ -117,26 +125,27 @@ bool CBAddressManagerAddPeer(CBAddressManager * self, CBPeer * peer){
 void CBAddressManagerAdjustTime(CBAddressManager * self){
 	// Get median timeOffset. Nodes are pre-ordered to the timeOffset.
 	uint32_t index = (self->peersNum - 1) / 2;
-	CBIterator it;
-	CBAssociativeArrayGetElement(&self->peers, &it, index);
-	int16_t median = ((CBPeer *)it.node->elements[it.pos])->timeOffset;
+	CBPosition it;
+	CBAssociativeArrayGetElement(&self->peersByTimeOffset, &it, index);
+	int16_t median = ((CBPeer *)it.node->elements[it.index])->timeOffset;
 	if (NOT (self->peersNum % 2)){
 		// Average middle pair
-		CBAssociativeArrayGetElement(&self->peers, &it, index + 1);
-		median = (((CBPeer *)it.node->elements[it.pos])->timeOffset + median) / 2;
+		CBAssociativeArrayGetElement(&self->peersByTimeOffset, &it, index + 1);
+		median = (((CBPeer *)it.node->elements[it.index])->timeOffset + median) / 2;
 	}
 	if (abs(median) > CB_NETWORK_TIME_ALLOWED_TIME_DRIFT) {
 		// Revert to system time
 		self->networkTimeOffset = 0;
 		// Check to see if any peers are within 5 minutes of the system time and do not have the same time, else give a bad time error.
 		bool found = false;
-		for (uint16_t x = 0; x < self->peersNum; x++){
-			CBAssociativeArrayGetElement(&self->peers, &it, x);
-			CBPeer * peer = it.node->elements[it.pos];
+		if (CBAssociativeArrayGetFirst(&self->peers, &it)) for (;;){
+			CBPeer * peer = it.node->elements[it.index];
 			if (peer->timeOffset < 300 && peer->timeOffset){
 				found = true;
 				break;
 			}
+			if (CBAssociativeArrayIterate(&self->peers, &it))
+				break;
 		}
 		if (NOT found)
 			self->onBadTime(self->callbackHandler);
@@ -145,6 +154,7 @@ void CBAddressManagerAdjustTime(CBAddressManager * self){
 }
 void CBAddressManagerClearPeers(CBAddressManager * self){
 	CBFreeBTreeNode(self->peers.root, self->peers.onFree, true);
+	CBFreeBTreeNode(self->peersByTimeOffset.root, self->peers.onFree, true);
 	self->peersNum = 0;
 }
 uint32_t CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num, CBNetworkAddress ** addresses){
@@ -156,10 +166,10 @@ uint32_t CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num, CBN
 	uint32_t index = 0;
 	for (uint8_t x = 0; x < num;) {
 		// See if an address is in the bucket at the index.
-		CBIterator it;
+		CBPosition it;
 		if (CBAssociativeArrayGetElement(&self->addresses[bucketIndex], &it, index)) {
 			// An address was found for this bucket, insert it insto "addresses"
-			addresses[x] = it.node->elements[it.pos];
+			addresses[x] = it.node->elements[it.index];
 			// Retain the address
 			CBRetainObject(addresses[x]);
 			// Increment x as we have an address.
@@ -231,22 +241,22 @@ uint64_t CBAddressManagerGetGroup(CBAddressManager * self, CBNetworkAddress * ad
 	return group;
 }
 CBPeer * CBAddressManagerGetPeer(CBAddressManager * self, uint32_t x){
-	CBIterator it;
+	CBPosition it;
 	if (NOT CBAssociativeArrayGetElement(&self->peers, &it, x)){
 		CBLogError("Attempted to get a peer with an out of range index");
 		return NULL;
 	}
 	// Retain peer
-	CBRetainObject(it.node->elements[it.pos]);
-	return it.node->elements[it.pos];
+	CBRetainObject(it.node->elements[it.index]);
+	return it.node->elements[it.index];
 }
 CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self, CBNetworkAddress * addr){
 	CBAddressManagerSetBucketIndex(self, addr);
 	CBFindResult res = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr);
 	if (res.found){
 		// Retain network address
-		CBRetainObject(res.node->elements[res.pos]);
-		return res.node->elements[res.pos];
+		CBRetainObject(res.position.node->elements[res.position.index]);
+		return res.position.node->elements[res.position.index];
 	}
 	return NULL;
 }
@@ -254,8 +264,8 @@ CBPeer * CBAddressManagerGotPeer(CBAddressManager * self, CBNetworkAddress * add
 	CBFindResult res = CBAssociativeArrayFind(&self->peers, addr);
 	if (res.found){
 		// Retain peer
-		CBRetainObject(res.node->elements[res.pos]);
-		return res.node->elements[res.pos];
+		CBRetainObject(res.position.node->elements[res.position.index]);
+		return res.position.node->elements[res.position.index];
 	}
 	return NULL;
 }
@@ -265,7 +275,7 @@ void CBAddressManagerRemoveAddress(CBAddressManager * self, CBNetworkAddress * a
 	if (res.found){
 		// Release address
 		CBReleaseObject(addr);
-		CBAssociativeArrayDelete(&self->addresses[addr->bucket], res);
+		CBAssociativeArrayDelete(&self->addresses[addr->bucket], res.position);
 		self->addrNum--;
 	}
 }
@@ -274,15 +284,38 @@ void CBAddressManagerRemovePeer(CBAddressManager * self, CBPeer * peer){
 	if (res.found){
 		// Release peer
 		CBReleaseObject(peer);
-		CBAssociativeArrayDelete(&self->peers, res);
+		// Remove from arrays
+		CBAssociativeArrayDelete(&self->peers, res.position);
+		CBAssociativeArrayDelete(&self->peersByTimeOffset, CBAssociativeArrayFind(&self->peersByTimeOffset, peer).position);
+		// Decrement number of peers
 		self->peersNum--;
 	}
+}
+CBNetworkAddress * CBAddressManagerSelectAndRemoveAddress(CBAddressManager * self){
+	uint8_t bucketIndex = CBSecureRandomInteger(self->rndGen) % CB_BUCKET_NUM;
+	for (;;) {
+		// See if an address is in the bucket
+		CBPosition it;
+		if (CBAssociativeArrayGetLast(&self->addresses[bucketIndex], &it)) {
+			// Got an address, remove and then return it.
+			CBNetworkAddress * addr = it.node->elements[it.index];
+			CBAssociativeArrayDelete(&self->addresses[bucketIndex], it);
+			self->addrNum--;
+			return addr;
+		}
+		// Move to the next bucket
+		bucketIndex++;
+		// If we have gone past the allowable bucker range, return to the start
+		if (bucketIndex == CB_BUCKET_NUM)
+			bucketIndex = 0;
+	}
+
 }
 bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * addr){
 	// Find the bucket for this address and insert it into the object
 	CBAddressManagerSetBucketIndex(self, addr);
 	// Add address to array
-	if (NOT CBAssociativeArrayInsert(&self->addresses[addr->bucket], addr, CBAssociativeArrayFind(&self->addresses[addr->bucket], addr), NULL)){
+	if (NOT CBAssociativeArrayInsert(&self->addresses[addr->bucket], addr, CBAssociativeArrayFind(&self->addresses[addr->bucket], addr).position, NULL)){
 		CBLogError("Could not insert an address into the addresses array");
 		return false;
 	}
@@ -291,9 +324,16 @@ bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * add
 	return true;
 }
 bool CBAddressManagerTakePeer(CBAddressManager * self, CBPeer * peer){
-	// Add peer to array
-	if (NOT CBAssociativeArrayInsert(&self->peers, peer, CBAssociativeArrayFind(&self->peers, peer), NULL)){
+	// Add peer to arrays
+	CBPosition firstArrPos = CBAssociativeArrayFind(&self->peers, peer).position;
+	if (NOT CBAssociativeArrayInsert(&self->peers, peer, firstArrPos, NULL)){
 		CBLogError("Could not insert a peer into the peers array");
+		return false;
+	}
+	if (NOT CBAssociativeArrayInsert(&self->peersByTimeOffset, peer, CBAssociativeArrayFind(&self->peersByTimeOffset, peer).position, NULL)){
+		CBLogError("Could not insert a peer into the peers array which is ordered by the time offset.");
+		// Remove from the other array since it failed for the second.
+		CBAssociativeArrayDelete(&self->peers, firstArrPos);
 		return false;
 	}
 	// Increase the number of peers.

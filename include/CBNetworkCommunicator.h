@@ -39,6 +39,7 @@
 #include "CBBlockHeaders.h"
 #include "CBPingPong.h"
 #include "CBAlert.h"
+#include <assert.h>
 
 // Constants
 
@@ -86,8 +87,9 @@ typedef struct {
 	uint32_t numIncommingConnections; /**< Number of incomming connections made */
 	uint32_t maxIncommingConnections; /**< Maximum number of incomming connections. */
 	CBAddressManager * addresses; /**< All addresses both connected and unconnected */
-	uint16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all peers after this interval. bitcoin-qt uses 1800 (30 minutes) */
-	uint16_t timeOut; /**< Time of zero contact from a peer before timeout. bitcoin-qt uses 5400 (90 minutes) */
+	uint64_t maxAddresses; /**< The maximum number of addresses to store */
+	uint16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all peers after this interval. bitcoin-qt uses 1800000 (30 minutes) */
+	uint16_t timeOut; /**< Time of zero contact from a peer before timeout. bitcoin-qt uses 5400000 (90 minutes) */
 	uint16_t sendTimeOut; /**< Time to wait for a socket to be ready to write before a timeout. */
 	uint16_t recvTimeOut; /**< When receiving data after the initial response, the time to wait for the following data before timeout. */
 	uint16_t responseTimeOut; /**< Time to wait for a peer to respond to a request before timeout.  */

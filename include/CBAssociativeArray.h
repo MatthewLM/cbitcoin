@@ -52,21 +52,20 @@ typedef struct{
 } CBBTreeNode;
 
 /**
- @brief Describes the result of a find operation
- */
-typedef struct{
-	CBBTreeNode * node; /**< If found, this is the node with the data, otherwise it is the node where the data should be inserted. */
-	uint8_t pos; /**< If found, this is the element with the data, otherwise it is the position where the data should be inserted. */
-	bool found; /**< True if found, false otherwise. */
-} CBFindResult;
-
-/**
- @brief References an element in an array which can be iterated.
+ @brief References an element in an array or a position for insertion.
  */
 typedef struct{
 	CBBTreeNode * node; /**< The node for the element */
-	uint8_t pos; /**< The element position in the node */
-} CBIterator;
+	uint8_t index; /**< The element index in the node */
+} CBPosition;
+
+/**
+ @brief Describes the result of a find operation
+ */
+typedef struct{
+	CBPosition position; /**< If found, this is the position of the data, otherwise it is the position where the data should be inserted. */
+	bool found; /**< True if found, false otherwise. */
+} CBFindResult;
 
 /**
  @brief @see CBAssociativeArray.h
@@ -83,7 +82,7 @@ typedef struct{
  @param self The array object
  @param pos The result from CBAssociativeArrayFind which determines the position to delete data.
  */
-void CBAssociativeArrayDelete(CBAssociativeArray * self, CBFindResult pos);
+void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos);
 /**
  @brief Finds data for a key in the array
  @param self The array object
@@ -94,34 +93,41 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element);
 /**
  @brief Gets the element in the array at a specified index.
  @param self The array object
- @param it The CBIterator object to be set to the element.
+ @param it The CBPosition object to be set to the element.
  @param index The index to receive the element.
  @returns true if the element exists at the index, or false.
  */
-bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBIterator * it, uint32_t index);
+bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBPosition * it, uint32_t index);
 /**
  @brief Gets the first element (lowest key) in the array.
  @param self The array object
- @param it The CBIterator object to be set to the first element.
+ @param it The CBPosition object to be set to the first element.
  @returns true if there is at least one element, or false.
  */
-bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBIterator * it);
+bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it);
+/**
+ @brief Gets the last element (highest key) in the array.
+ @param self The array object
+ @param it The CBPosition object to be set to the last element.
+ @returns true if there is at least one element, or false.
+ */
+bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it);
 /**
  @brief Inserts an element into an array.
  @param self The array object.
  @param element The key-value pair to insert.
- @param pos The result from CBAssociativeArrayFind which determines the position to insert data.
+ @param pos The position to insert data.
  @oaram right The child to the right of the value we are inserting, which will be a new child from a split or NULL for a new value.
  @returns true on success and false on failure.
  */
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBFindResult pos, CBBTreeNode * right);
+bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right);
 /**
  @brief Iterates to the next element, in order.
  @param self The array object.
  @param it The CBFindResult to be iterated.
  @returns true if the end of the array has been reached and no iteration could take place. false if the end has not been reached.
  */
-bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBIterator * it);
+bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it);
 /**
  @brief Does a binary search on a B-tree node.
  @param self The node

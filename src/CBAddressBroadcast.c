@@ -119,7 +119,8 @@ uint32_t CBAddressBroadcastDeserialise(CBAddressBroadcast * self){
 		uint8_t len;
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		if (data) {
-			self->addresses[x] = CBNewNetworkAddressFromData(data);
+			// Create a new network address object. It is public since it is in an address broadcast.
+			self->addresses[x] = CBNewNetworkAddressFromData(data, true);
 			if (self->addresses[x]){
 				// Deserialise
 				len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);

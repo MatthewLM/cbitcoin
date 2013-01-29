@@ -71,7 +71,7 @@
 #pragma weak CBSecureRandomInteger
 #pragma weak CBFreeSecureRandomGenerator
 
-// Weak linking for storage functions
+// Weak linking for block storage functions
 
 #pragma weak CBNewBlockChainStorage
 #pragma weak CBFreeBlockChainStorage
@@ -102,9 +102,20 @@
 #pragma weak CBBlockChainStorageSaveUnspentOutput
 #pragma weak CBBlockChainStorageUnspentOutputExists
 
-// Logging dependencies
+// Weak linking for address storage functions
+
+#pragma weak CBNewAddressStorage
+#pragma weak CBFreeAddressStorage
+#pragma weak CBAddressStorageLoadAddresses
+#pragma weak CBAddressStorageSaveAddress
+
+// Weak linking for logging dependencies
 
 #pragma weak CBLogError
+
+// Weak linking for timing dependencies
+
+#pragma weak CBGetMilliseconds
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
@@ -587,10 +598,9 @@ bool CBAddressStorageDeleteAddress(uint64_t iself, void * address);
 /**
  @brief Obtains the number of addresses in storage.
  @param iself The address storage object.
- @param num To be set to the number of addresses in storage.
- @returns true on success or false on failure.
+ @returns The number of addresses in storage
  */
-bool CBAddressStorageGetNumberOfAddresses(uint64_t iself, uint32_t * num);
+uint64_t CBAddressStorageGetNumberOfAddresses(uint64_t iself);
 /**
  @brief Loads all of the addresses from storage into an address manager.
  @param iself The address storage object.
@@ -599,7 +609,7 @@ bool CBAddressStorageGetNumberOfAddresses(uint64_t iself, uint32_t * num);
  */
 bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan);
 /**
- @brief Saves an address to storage.
+ @brief Saves an address to storage. If the number of addresses is at "maxAddresses" remove an address to make room.
  @param iself The address storage object.
  @param address The CBNetworkAddress object.
  @returns true on success or false on failure.

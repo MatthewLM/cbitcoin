@@ -114,7 +114,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 		CBLogError("Cannot create a new CBByteArray in CBVersionDeserialise for the receiving address.");
 		return 0;
 	}
-	self->addRecv = CBNewNetworkAddressFromData(data);
+	self->addRecv = CBNewNetworkAddressFromData(data, false);
 	if (NOT self->addRecv) {
 		CBLogError("Cannot create a new CBNetworkAddress in CBVersionDeserialise for the receiving address.");
 		CBReleaseObject(data);
@@ -140,7 +140,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 			CBLogError("Cannot create a new CBByteArray in CBVersionDeserialise for the source address.");
 			return 0;
 		}
-		self->addSource = CBNewNetworkAddressFromData(data);
+		self->addSource = CBNewNetworkAddressFromData(data, false);
 		if (NOT self->addSource) {
 			CBLogError("Cannot create a new CBNetworkAddress in CBVersionDeserialise for the source address.");
 			CBReleaseObject(data);

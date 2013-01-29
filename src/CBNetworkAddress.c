@@ -26,26 +26,26 @@
 
 //  Constructor
 
-CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services){
+CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	if (NOT self) {
 		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddress\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	if (CBInitNetworkAddress(self, lastSeen, ip, port, services))
+	if (CBInitNetworkAddress(self, lastSeen, ip, port, services, isPublic))
 		return self;
 	free(self);
 	return NULL;
 }
-CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data){
+CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	if (NOT self) {
 		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddressFromData\n", sizeof(*self));
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	if(CBInitNetworkAddressFromData(self, data))
+	if(CBInitNetworkAddressFromData(self, data, isPublic))
 		return self;
 	free(self);
 	return NULL;
@@ -59,10 +59,11 @@ CBNetworkAddress * CBGetNetworkAddress(void * self){
 
 //  Initialiser
 
-bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services){
+bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic){
 	self->lastSeen = lastSeen;
 	self->penalty = 0;
 	self->ip = ip;
+	self->isPublic = isPublic;
 	if (NOT ip) {
 		ip = CBNewByteArrayOfSize(16);
 		if (NOT ip)
@@ -77,18 +78,14 @@ bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArra
 	self->port = port;
 	self->services = services;
 	self->bucketSet = false;
-	// Private by default.
-	self->public = false;
 	if (NOT CBInitMessageByObject(CBGetMessage(self))){
 		CBReleaseObject(ip);
 		return false;
 	}
 	return true;
 }
-bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data){
+bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, bool isPublic){
 	self->ip = NULL;
-	// Private by default.
-	self->public = false;
 	self->bucketSet = false;
 	if (NOT CBInitMessageByData(CBGetMessage(self), data))
 		return false;

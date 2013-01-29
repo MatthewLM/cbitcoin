@@ -53,7 +53,7 @@ typedef struct{
 	CBIPType type; /**< The type of the IP */
 	uint16_t port; /**< Port number */
 	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
-	bool public; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. This doesn't include failure from "CBNetworkCommunicatorConnect". If false the address is private and should be forgotten when connections are closed and never relayed. */
+	bool isPublic; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. If false the address is private and should be forgotten when connections are closed and never relayed. Addresses are made public when we receive them in an address broadcast. */
 	uint8_t bucket; /**< The bucket number for this address. */
 	bool bucketSet; /**< True if the bucket has been previously set */
 } CBNetworkAddress;
@@ -64,14 +64,16 @@ typedef struct{
  @param ip The IP address in a 16 byte IPv6 format. If NULL, the IP will be a 16 byte CBByteArray set will all zero.
  @param port The port for this address.
  @param services The services this address can provide.
+ @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services);
+CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic);
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
+ @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data);
+CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic);
 
 /**
  @brief Gets a CBNetworkAddress from another object. Use this to avoid casts.
@@ -87,15 +89,17 @@ CBNetworkAddress * CBGetNetworkAddress(void * self);
  @param ip The IP address in a 16 byte IPv6 format. If NULL, the IP will be a 16 byte CBByteArray set will all zero.
  @param port The port for this address.
  @param services The services this address can provide.
+ @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services);
+bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic);
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
+ @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data);
+bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, bool isPublic);
 
 /**
  @brief Frees a CBNetworkAddress object.

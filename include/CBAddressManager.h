@@ -48,7 +48,8 @@ typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	CBAssociativeArray addresses[CB_BUCKET_NUM]; /**< Unconnected addresses, seperated into buckets. */
 	uint32_t addrNum; /**< Number of addresses. */
-	CBAssociativeArray peers; /**< The peers sorted by their time offset */
+	CBAssociativeArray peers; /**< The peers sorted by CBNetworkAddressCompare */
+	CBAssociativeArray peersByTimeOffset; /**< The peers sorted by their time offset */
 	uint32_t peersNum; /**< Number of connected peers. */
 	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
 	uint16_t maxAddressesInBucket; /**< Maximum number of addresses that can be stored in a single bucket. */
@@ -170,6 +171,12 @@ void CBAddressManagerRemoveAddress(CBAddressManager * self, CBNetworkAddress * a
  */
 void CBAddressManagerRemovePeer(CBAddressManager * self, CBPeer * peer);
 /**
+ @brief Removes an address from the address manager. It will remove the address from a random bucket which has the lowest score in that bucket.
+ @param self The CBAddressManager object.
+ @returns The network address which was removed from the address manager.
+ */
+CBNetworkAddress * CBAddressManagerSelectAndRemoveAddress(CBAddressManager * self);
+/**
  @brief Takes a CBPeer an places it into the CBAddressManager, but not permenent storage.
  @param self The CBAddressManager object.
  @param peer The CBNetworkAddress to take.
@@ -193,7 +200,7 @@ CBCompare CBPeerCompareByTime(void * peer1, void * peer2);
  @brief Compares two network addresses.
  @param address1 The first CBNetworkAddress.
  @param address2 The second CBNetworkAddress.
- @returns If the first address has a higher bucket/(-lastSeen + penalty)/IP/port then CB_COMPARE_MORE_THAN is returned. If the bucket/(-lastSeen + penalty)/IP/ports are equal thrn CB_COMPARE_EQUAL is returned. If the first address has a lower bucket/(-lastSeen + penalty)/IP/port CB_COMPARE_LESS_THAN is returned.
+ @returns If the first address has a higher (-lastSeen + penalty)/IP/port then CB_COMPARE_MORE_THAN is returned. If the (-lastSeen + penalty)/IP/ports are equal thrn CB_COMPARE_EQUAL is returned. If the first address has a lower (-lastSeen + penalty)/IP/port CB_COMPARE_LESS_THAN is returned.
  */
 CBCompare CBNetworkAddressCompare(void * address1, void * address2);
 /**

@@ -60,7 +60,7 @@ int main(){
 	// Test adding addresses
 	for (uint8_t x = 0; x < 255; x++) {
 		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x/2}, 16);
-		CBNetworkAddress * addr = CBNewNetworkAddress(1358856884 + rand() % 15, ip, 45562 + (rand() % 5) + 6 * (x % 2), CB_SERVICE_FULL_BLOCKS);
+		CBNetworkAddress * addr = CBNewNetworkAddress(1358856884 + rand() % 15, ip, 45562 + (rand() % 5) + 6 * (x % 2), CB_SERVICE_FULL_BLOCKS, true);
 		addr->penalty = rand() % 20;
 		CBAddressManagerTakeAddress(addrMan, addr);
 		CBReleaseObject(ip);
@@ -75,13 +75,13 @@ int main(){
 	}
 	// Test ordering
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
-		CBIterator it;
+		CBPosition it;
 		if (CBAssociativeArrayGetFirst(&addrMan->addresses[x], &it)) {
 			uint64_t lastScore = 0xFFFFFFFFFFFFFFFF;
 			uint8_t lastIP[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 			uint16_t lastPort = 0;
 			for (;;) {
-				CBNetworkAddress * addr = it.node->elements[it.pos];
+				CBNetworkAddress * addr = it.node->elements[it.index];
 				uint64_t score = addr->lastSeen - addr->penalty;
 				if (score > lastScore){
 					printf("ADDR LAST SEEN ORDER FAIL\n");
@@ -229,7 +229,7 @@ int main(){
 	// Add 10 addresses to storage
 	for (uint8_t x = 0; x < 10; x++) {
 		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x}, 16);
-		addrs[x] = CBNewNetworkAddress(x, ip, x, x % 2);
+		addrs[x] = CBNewNetworkAddress(x, ip, x, x % 2, true);
 		addrs[x]->penalty = x;
 		CBReleaseObject(ip);
 		if (NOT CBAddressStorageSaveAddress(storage, addrs[x])){
@@ -237,29 +237,12 @@ int main(){
 			return 1;
 		}
 	}
-	uint32_t num;
-	if (NOT CBAddressStorageGetNumberOfAddresses(storage, &num)) {
-		printf("GET ADDR NUM FAIL\n");
-		return 1;
-	}
-	if (num != 10) {
-		printf("ADDR NUM FAIL\n");
-		return 1;
-	}
 	// Remove 5 of them
 	for (uint8_t x = 0; x < 10; x += 2) {
 		if (NOT CBAddressStorageDeleteAddress(storage, addrs[x])){
 			printf("REMOVE ADDRESS FAIL\n");
 			return 1;
 		}
-	}
-	if (NOT CBAddressStorageGetNumberOfAddresses(storage, &num)) {
-		printf("GET ADDR NUM AFTER REMOVE FAIL\n");
-		return 1;
-	}
-	if (num != 5) {
-		printf("ADDR NUM AFTER REMOVE FAIL\n");
-		return 1;
 	}
 	// Test loading addresses
 	addrMan = CBNewAddressManager(onBadTime);
@@ -271,12 +254,19 @@ int main(){
 		printf("STORAGE ADDR NUM FAIL\n");
 		return 1;
 	}
-	// Check each address.
-	if (CBAddressManagerGetAddresses(addrMan, 5, addrs) != 5) {
+	// Test select and remove
+	CBNetworkAddress * removed = CBAddressManagerSelectAndRemoveAddress(addrMan);
+	if (removed->penalty != 9) {
+		printf("REMOVE PENALTY FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(removed);
+	// Check each remaining address.
+	if (CBAddressManagerGetAddresses(addrMan, 5, addrs) != 4) {
 		printf("STORAGE GET ADDRS FAIL\n");
 		return 1;
 	}
-	for (uint8_t x = 0; x < 5; x++) {
+	for (uint8_t x = 0; x < 4; x++) {
 		uint8_t val = x*2 + 1;
 		if (addrs[x]->lastSeen != val) {
 			printf("STORAGE LOAD LAST SEEN FAIL\n");
