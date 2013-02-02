@@ -38,7 +38,7 @@ uint8_t CB_TRANSACTION_INDEX_KEY[34] = {33, CB_STORAGE_TRANSACTION_INDEX, 0, 0, 
 uint8_t CB_DATA_ARRAY[22];
 
 uint64_t CBNewBlockChainStorage(char * dataDir){
-	return (uint64_t)CBNewDatabase(dataDir);
+	return (uint64_t)CBNewDatabase(dataDir, "blk");
 }
 void CBFreeBlockChainStorage(uint64_t iself){
 	CBFreeDatabase((CBDatabase *)iself);

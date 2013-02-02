@@ -114,7 +114,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 		CBLogError("Cannot create a new CBByteArray in CBVersionDeserialise for the receiving address.");
 		return 0;
 	}
-	self->addRecv = CBNewNetworkAddressFromData(data);
+	self->addRecv = CBNewNetworkAddressFromData(data, false);
 	if (NOT self->addRecv) {
 		CBLogError("Cannot create a new CBNetworkAddress in CBVersionDeserialise for the receiving address.");
 		CBReleaseObject(data);
@@ -140,7 +140,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 			CBLogError("Cannot create a new CBByteArray in CBVersionDeserialise for the source address.");
 			return 0;
 		}
-		self->addSource = CBNewNetworkAddressFromData(data);
+		self->addSource = CBNewNetworkAddressFromData(data, false);
 		if (NOT self->addSource) {
 			CBLogError("Cannot create a new CBNetworkAddress in CBVersionDeserialise for the source address.");
 			CBReleaseObject(data);
@@ -205,7 +205,9 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 		// Serialise if force is true.
 		|| force
 		// If the data shares the same data as this version message, re-serialise the receiving address, in case it got overwritten.
-		|| CBGetMessage(self->addRecv)->bytes->sharedData == bytes->sharedData) {
+		|| CBGetMessage(self->addRecv)->bytes->sharedData == bytes->sharedData
+		// Reserialise if the address has a timestamp
+		|| (CBGetMessage(self->addRecv)->bytes->length != 26)) {
 		if (CBGetMessage(self->addRecv)->serialised)
 			// Release old byte array
 			CBReleaseObject(CBGetMessage(self->addRecv)->bytes);
@@ -238,7 +240,9 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 			// Serialise if force is true.
 			|| force
 			// If the data shares the same data as this version message, re-serialise the source address, in case it got overwritten.
-			|| CBGetMessage(self->addSource)->bytes->sharedData == bytes->sharedData) {
+			|| CBGetMessage(self->addSource)->bytes->sharedData == bytes->sharedData
+			// Reserialise if the address has a timestamp
+			|| (CBGetMessage(self->addSource)->bytes->length != 26)) {
 			if (CBGetMessage(self->addSource)->serialised)
 				// Release old byte array
 				CBReleaseObject(CBGetMessage(self->addSource)->bytes);
@@ -272,7 +276,7 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 		bytes->length = 84 + varInt.size + (uint32_t)varInt.val;
 		CBGetMessage(self)->serialised = true;
 		return bytes->length;
-	} else {
+	}else{
 		// Not the further message
 		// Ensure length is correct
 		bytes->length = 46;

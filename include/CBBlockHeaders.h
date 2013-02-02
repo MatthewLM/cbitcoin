@@ -32,6 +32,10 @@
 
 #include "CBBlock.h"
 
+// Cosntants
+
+#define CB_BLOCK_HEADERS_MAX_SIZE 178009
+
 /**
  @brief Structure for CBBlockHeaders objects. @see CBBlockHeaders.h
 */

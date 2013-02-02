@@ -28,6 +28,14 @@ vpath %.c src
 vpath %.o build
 vpath %.d build
 
+# Debugging
+
+debug-all: CFLAGS += -g
+debug-all: all
+
+debug-test: CFLAGS += -g
+debug-test: test
+
 # Default goal
 
 all: core crypto random network storage file-ec file-no-ec
@@ -121,12 +129,15 @@ build/CBFileNoEC.o: dependencies/storage/CBFileNoEC.c dependencies/storage/CBFil
 
 # Storage library target linking
 
-storage : build/CBBlockChainStorage.o build/CBDatabase.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o build/CBDatabase.o
+storage : build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o
 
 # Storage library compile
 
 build/CBBlockChainStorage.o: dependencies/storage/CBBlockChainStorage.c dependencies/storage/CBBlockChainStorage.h dependencies/storage/CBDatabase.h
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+
+build/CBAddressStorage.o: dependencies/storage/CBAddressStorage.c dependencies/storage/CBAddressStorage.h dependencies/storage/CBDatabase.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 build/CBDatabase.o: dependencies/storage/CBDatabase.c dependencies/storage/CBDatabase.h
@@ -146,9 +157,9 @@ TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
 test : all $(TEST_BINARIES)
 
 $(TEST_BINARIES): bin/%: build/%.o
-	$(CC) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -levent_core -levent_pthreads -L$(BINDIR) $< -o $@
+	$(CC) -lcbitcoin.$(LIBRARY_VERSION) -lpthread -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -levent_core -levent_pthreads -lcrypto -L$(BINDIR) $< -o $@
 	$@
 
 $(TEST_OBJS): build/%.o: test/%.c
 	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ -I$(CURDIR)/dependencies/storage $< -o $@
-
+	

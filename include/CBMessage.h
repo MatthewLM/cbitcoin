@@ -35,6 +35,31 @@
 #include "CBVarInt.h"
 #include "CBDependencies.h"
 
+// Constants
+
+/*
+ @brief The type of a CBMessage.
+ */
+typedef enum{
+	CB_MESSAGE_TYPE_VERSION = 1, /**< @see CBVersion.h */
+	CB_MESSAGE_TYPE_VERACK = 2, /**< Acknowledgement and acceptance of a peer's version and connection. */
+	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBAddressBroadcast.h */
+	CB_MESSAGE_TYPE_INV = 8, /**< @see CBInventoryBroadcast.h */
+	CB_MESSAGE_TYPE_GETDATA = 16, /**< @see CBInventoryBroadcast.h */
+	CB_MESSAGE_TYPE_GETBLOCKS = 32, /**< @see CBGetBlocks.h */
+	CB_MESSAGE_TYPE_GETHEADERS = 64, /**< @see CBGetBlocks.h */
+	CB_MESSAGE_TYPE_TX = 128, /**< @see CBTransaction.h */
+	CB_MESSAGE_TYPE_BLOCK = 256, /**< @see CBBlock.h */
+	CB_MESSAGE_TYPE_HEADERS = 512, /**< @see CBBlockHeaders.h */
+	CB_MESSAGE_TYPE_GETADDR = 1024, /**< Request for "active peers". bitcoin-qt consiers active peers to be those that have sent messages in the last 30 minutes. */
+	CB_MESSAGE_TYPE_PING = 2048, /**< @see CBPingPong.h */
+	CB_MESSAGE_TYPE_PONG = 4096, /**< @see CBPingPong.h */
+	CB_MESSAGE_TYPE_ALERT = 8192, /**< @see CBAlert.h */
+	CB_MESSAGE_TYPE_ALT = 16384, /**< The message was defined by "alternativeMessages" in a CBNetworkCommunicator */
+	CB_MESSAGE_TYPE_ADDRMAN = 32768, /**< @see CBAddressManager.h */
+	CB_MESSAGE_TYPE_CHAINDESC = 65536, /**< @see CBChainDescriptor.h */
+}CBMessageType;
+
 /**
  @brief Structure for CBMessage objects. @see CBMessage.h
  */

@@ -65,10 +65,10 @@ void CBLogError(char * format, ...){
 }
 
 int main(){
-	remove("./log.dat");
-	remove("./0.dat");
-	remove("./1.dat");
-	remove("./2.dat");
+	remove("./blk_log.dat");
+	remove("./blk_0.dat");
+	remove("./blk_1.dat");
+	remove("./blk_2.dat");
 	// Create validator
 	uint64_t storage = CBNewBlockChainStorage("./");
 	bool bad;

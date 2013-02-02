@@ -34,6 +34,10 @@
 #include "CBScript.h"
 #include "CBTransactionOutput.h"
 
+// Constants
+
+#define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
+
 /**
  @brief Structure for previous outputs that are being spent by an input.
  */

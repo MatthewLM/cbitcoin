@@ -130,7 +130,7 @@ int main(){
 	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
 	CBReleaseObject(version->addSource->ip);
 	version->addSource->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xBA, 0xF2, 0x30, 0x01}, 16);
-	if(CBVersionSerialise(version) != 91){
+	if(CBVersionSerialise(version, true) != 91){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
 	}
@@ -198,7 +198,7 @@ int main(){
 	memset(CBByteArrayGetData(versionBytes), 0, 46);
 	CBReleaseObject(version->addRecv->ip);
 	version->addRecv->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
-	if(CBVersionSerialise(version) != 46){
+	if(CBVersionSerialise(version, true) != 46){
 		printf("SERIALISATION OLD LEN FAIL\n");
 		return 1;
 	}

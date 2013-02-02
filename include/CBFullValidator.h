@@ -35,9 +35,42 @@
 #include "CBAssociativeArray.h"
 #include <string.h>
 
+// Constants
+
 typedef enum{
 	CB_FULL_VALIDATOR_DISABLE_POW_CHECK = 1, /**< Does not verify the proof of work during validation. Used for testing. */
 }CBFullValidatorFlags;
+
+/**
+ @brief The return type for CBFullValidatorProcessBlock
+ */
+typedef enum{
+	CB_BLOCK_STATUS_MAIN, /**< The block has extended the main branch. */
+	CB_BLOCK_STATUS_SIDE, /**< The block has extended a branch which is not the main branch. */
+	CB_BLOCK_STATUS_ORPHAN, /**< The block is an orphan */
+	CB_BLOCK_STATUS_BAD, /**< The block is not ok. */
+	CB_BLOCK_STATUS_BAD_TIME, /**< The block has a bad time */
+	CB_BLOCK_STATUS_DUPLICATE, /**< The block has already been received. */
+	CB_BLOCK_STATUS_ERROR, /**< There was an error while processing a block */
+	CB_BLOCK_STATUS_CONTINUE, /**< Continue with the validation */
+	CB_BLOCK_STATUS_NO_NEW, /**< Cannot remove a branch for a new one. */
+} CBBlockStatus;
+
+/**
+ @brief The return type for CBFullValidatorCompleteBlockValidation
+ */
+typedef enum{
+	CB_BLOCK_VALIDATION_OK, /**< The validation passed with no problems. */
+	CB_BLOCK_VALIDATION_BAD, /**< The block failed valdiation. */
+	CB_BLOCK_VALIDATION_ERR, /**< There was an error during the validation processing. */
+} CBBlockValidationResult;
+
+#define CB_MAX_ORPHAN_CACHE 20
+#define CB_MAX_BRANCH_CACHE 5
+#define CB_NO_VALIDATION 0xFFFFFFFF
+#define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
+#define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
+#define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours from network time
 
 /**
  @brief Gives the last block in a branch used in a chain.

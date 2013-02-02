@@ -32,6 +32,14 @@
 
 #include "CBMessage.h"
 
+// Constants
+
+typedef enum{
+	CB_INVENTORY_ITEM_ERROR = 0,
+	CB_INVENTORY_ITEM_TRANSACTION = 1,
+	CB_INVENTORY_ITEM_BLOCK = 2,
+}CBInventoryItemType;
+
 /**
  @brief Structure for CBInventoryItem objects. @see CBInventoryItem.h
 */
