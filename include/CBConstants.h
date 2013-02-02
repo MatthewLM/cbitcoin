@@ -36,34 +36,34 @@
 #define CB_24_HOURS 86400
 #define NOT ! // Better readability than !
 #define CBInt16ToArray(arr, offset, i) arr[offset] = i; \
-									 arr[offset + 1] = i >> 8;
+									 arr[offset + 1] = (i) >> 8;
 #define CBInt32ToArray(arr, offset, i) CBInt16ToArray(arr, offset, i) \
-									 arr[offset + 2] = i >> 16; \
-							         arr[offset + 3] = i >> 24;
+									 arr[offset + 2] = (i) >> 16; \
+							         arr[offset + 3] = (i) >> 24;
 #define CBInt64ToArray(arr, offset, i) CBInt32ToArray(arr, offset, i) \
-									 arr[offset + 4] = i >> 32; \
-									 arr[offset + 5] = i >> 40; \
-									 arr[offset + 6] = i >> 48; \
-									 arr[offset + 7] = i >> 56; 
-#define CBArrayToInt16(arr, offset) arr[offset] \
-                                     | (uint16_t)arr[offset + 1] << 8
-#define CBArrayToInt32(arr, offset) CBArrayToInt16(arr, offset) \
+									 arr[offset + 4] = (i) >> 32; \
+									 arr[offset + 5] = (i) >> 40; \
+									 arr[offset + 6] = (i) >> 48; \
+									 arr[offset + 7] = (i) >> 56;
+#define CBArrayToInt16(arr, offset) (arr[offset] \
+                                     | (uint16_t)arr[offset + 1] << 8)
+#define CBArrayToInt32(arr, offset) (CBArrayToInt16(arr, offset) \
                                      | (uint32_t)arr[offset + 2] << 16 \
-									 | (uint32_t)arr[offset + 3] << 24
-#define CBArrayToInt48(arr, offset) CBArrayToInt32(arr, offset) \
+									 | (uint32_t)arr[offset + 3] << 24)
+#define CBArrayToInt48(arr, offset) (CBArrayToInt32(arr, offset) \
                                      | (uint64_t)arr[offset + 4] << 32 \
-                                     | (uint64_t)arr[offset + 5] << 40 
-#define CBArrayToInt64(arr, offset) CBArrayToInt48(arr, offset) \
+                                     | (uint64_t)arr[offset + 5] << 40) 
+#define CBArrayToInt64(arr, offset) (CBArrayToInt48(arr, offset) \
                                      | (uint64_t)arr[offset + 6] << 48 \
-                                     | (uint64_t)arr[offset + 7] << 56
-#define CBInt32ToArrayBigEndian(arr, offset, i) arr[offset] = i >> 24; \
-										      arr[offset + 1] = i >> 16;\
-                                              arr[offset + 2] = i >> 8; \
-                                              arr[offset + 3] = i;
-#define CBArrayToInt32BigEndian(arr, offset) arr[offset] << 24 \
+                                     | (uint64_t)arr[offset + 7] << 56)
+#define CBInt32ToArrayBigEndian(arr, offset, i) arr[offset] = (i) >> 24; \
+										      arr[offset + 1] = (i) >> 16;\
+                                              arr[offset + 2] = (i) >> 8; \
+                                              arr[offset + 3] = (i);
+#define CBArrayToInt32BigEndian(arr, offset) (arr[offset] << 24 \
                                               | (uint16_t)arr[offset + 1] << 16 \
                                               | (uint32_t)arr[offset + 2] << 8 \
-                                              | (uint32_t)arr[offset + 3]
+                                              | (uint32_t)arr[offset + 3])
 
 //  Enums
 

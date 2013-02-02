@@ -34,6 +34,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 /**
  @brief Contains a file pointer and the length of the data.

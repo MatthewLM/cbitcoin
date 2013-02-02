@@ -2,7 +2,7 @@
 
 INCDIR = $(CURDIR)/include
 BINDIR = $(CURDIR)/bin
-CFLAGS += -Wall -Wno-overflow -pedantic -D_POSIX_C_SOURCE=200809L -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include -O3 @COMPILE_CONFIG_FLAGS@ -std=c99
+CFLAGS += -Wall -Wno-overflow -Wno-uninitialized -pedantic -D_POSIX_C_SOURCE=200809L -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include @COMPILE_CONFIG_FLAGS@ -std=c99 -Werror
 LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
@@ -16,6 +16,7 @@ else # Assuming Linux for now
 	LFLAGS += -shared
 	LIBRARY_EXTENSION=.$(LIBRARY_VERSION).so
 	ADDITIONAL_OPENSSL_FLAGS = -ldl -L/lib/x86_64-linux-gnu/
+	LD_LIBRARY_PATH = :$(BINDIR)
 endif
 LIBCFLAGS = @LIB_COMPILE_CONFIG_FLAGS@
 
@@ -28,17 +29,25 @@ vpath %.c src
 vpath %.o build
 vpath %.d build
 
+# Non-debugging
+
+all: CFLAGS += -O3
+all: all-build
+
+test: CFLAGS += -O3
+test: test-build
+
 # Debugging
 
 debug-all: CFLAGS += -g
-debug-all: all
+debug-all: all-build
 
 debug-test: CFLAGS += -g
-debug-test: test
+debug-test: test-build
 
-# Default goal
+# Build all
 
-all: core crypto random network storage file-ec file-no-ec
+all-build: core crypto random network storage file-ec file-no-ec
 
 # Get files for the core library
 
@@ -154,10 +163,12 @@ TEST_FILES = $(wildcard test/*.c)
 TEST_BINARIES = $(patsubst test/%.c, bin/%, $(TEST_FILES))
 TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
 
-test : all $(TEST_BINARIES)
+test-build : all-build $(TEST_BINARIES)
+
+# REMEMBER to add dependencies after the objects or libraries that depend on them.
 
 $(TEST_BINARIES): bin/%: build/%.o
-	$(CC) -lcbitcoin.$(LIBRARY_VERSION) -lpthread -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -levent_core -levent_pthreads -lcrypto -L$(BINDIR) $< -o $@
+	$(CC) $< -L$(BINDIR) -lpthread -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION)  -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -levent_core -levent_pthreads -lcrypto -o $@
 	$@
 
 $(TEST_OBJS): build/%.o: test/%.c

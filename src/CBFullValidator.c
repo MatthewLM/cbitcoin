@@ -816,39 +816,38 @@ CBBlockStatus CBFullValidatorProcessIntoBranch(CBFullValidator * self, CBBlock *
 	}
 	// Validate a new block for the main chain.
 	CBBlockValidationResult res = CBFullValidatorCompleteBlockValidation(self, branch, block, self->branches[branch].startHeight + self->branches[branch].numBlocks);
-	switch (res) {
-		case CB_BLOCK_VALIDATION_BAD:
-			CBBlockChainStorageReset(self->storage);
-			return CB_BLOCK_STATUS_BAD;
-		case CB_BLOCK_VALIDATION_ERR:
-			return CB_BLOCK_STATUS_ERROR;
-		case CB_BLOCK_VALIDATION_OK:
-			// Update branch and unspent outputs.
-			if (NOT CBFullValidatorAddBlockToBranch(self, branch, block, work)){
-				CBLogError("There was an error when adding a new block to the branch.");
-				return CB_BLOCK_STATUS_ERROR;
-			}
-			self->branches[branch].lastValidation = self->branches[branch].numBlocks - 1;
-			// Update storage
-			if (NOT CBBlockChainStorageSaveBranch(self, branch)) {
-				CBLogError("Could not save the last validated block for a branch when adding a new block to the main chain.");
-				return CB_BLOCK_STATUS_ERROR;
-			}
-			if (branch != self->mainBranch) {
-				// Update main branch
-				self->mainBranch = branch;
-				if (NOT CBBlockChainStorageSaveBasicValidator(self)) {
-					CBLogError("Could not save the new main branch when adding a new block to the main chain.");
-					return CB_BLOCK_STATUS_ERROR;
-				}
-			}
-			// Update the unspent output indicies.
-			if (NOT CBFullValidatorUpdateUnspentOutputsForward(self, block, branch, self->branches[branch].lastValidation)) {
-				CBLogError("Could not update the unspent outputs when adding a block to the main chain.");
-				return CB_BLOCK_STATUS_ERROR;
-			}
-			return CB_BLOCK_STATUS_MAIN;
+	// If the validation was bad then reset the pending IO and return.
+	if (res == CB_BLOCK_VALIDATION_BAD) {
+		CBBlockChainStorageReset(self->storage);
+		return CB_BLOCK_STATUS_BAD;
 	}
+	if (res == CB_BLOCK_VALIDATION_ERR)
+		return CB_BLOCK_STATUS_ERROR;
+	// Everything is OK so update branch and unspent outputs.
+	if (NOT CBFullValidatorAddBlockToBranch(self, branch, block, work)){
+		CBLogError("There was an error when adding a new block to the branch.");
+		return CB_BLOCK_STATUS_ERROR;
+	}
+	self->branches[branch].lastValidation = self->branches[branch].numBlocks - 1;
+	// Update storage
+	if (NOT CBBlockChainStorageSaveBranch(self, branch)) {
+		CBLogError("Could not save the last validated block for a branch when adding a new block to the main chain.");
+		return CB_BLOCK_STATUS_ERROR;
+	}
+	if (branch != self->mainBranch) {
+		// Update main branch
+		self->mainBranch = branch;
+		if (NOT CBBlockChainStorageSaveBasicValidator(self)) {
+			CBLogError("Could not save the new main branch when adding a new block to the main chain.");
+			return CB_BLOCK_STATUS_ERROR;
+		}
+	}
+	// Update the unspent output indicies.
+	if (NOT CBFullValidatorUpdateUnspentOutputsForward(self, block, branch, self->branches[branch].lastValidation)) {
+		CBLogError("Could not update the unspent outputs when adding a block to the main chain.");
+		return CB_BLOCK_STATUS_ERROR;
+	}
+	return CB_BLOCK_STATUS_MAIN;
 }
 bool CBFullValidatorSaveLastValidatedBlocks(CBFullValidator * self, uint8_t branches){
 	for (uint8_t x = 0; x < 5; x++) {

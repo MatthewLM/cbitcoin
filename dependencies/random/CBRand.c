@@ -33,9 +33,9 @@ bool CBNewSecureRandomGenerator(uint64_t * gen){
 	*gen = (uint64_t)malloc(32);
 	return *gen;
 }
-void CBSecureRandomSeed(uint64_t gen){
+bool CBSecureRandomSeed(uint64_t gen){
 	FILE * f = fopen("/dev/urandom", "r"); // Using urandom for speed.
-	fread((void *)gen, 32, 1, f);
+	return fread((void *)gen, 1, 32, f) == 32;
 }
 void CBRandomSeed(uint64_t gen, uint64_t seed){
 	memcpy((void *)gen, &seed, 8);

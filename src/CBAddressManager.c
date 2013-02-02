@@ -62,7 +62,11 @@ bool CBInitAddressManager(CBAddressManager * self, void (*onBadTime)(void *)){
 		return false;
 	}
 	// Seed the random number generator.
-	CBSecureRandomSeed(self->rndGen);
+	if (NOT CBSecureRandomSeed(self->rndGen)){
+		CBFreeSecureRandomGenerator(self->rndGen);
+		CBLogError("Could not securely seed the random number generator.");
+		return false;
+	}
 	if (NOT CBNewSecureRandomGenerator(&self->rndGenForBucketIndices)){
 		CBFreeSecureRandomGenerator(self->rndGen);
 		CBLogError("Could not create a random number generator for the bucket indices.");

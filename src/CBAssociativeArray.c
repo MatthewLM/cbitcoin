@@ -49,8 +49,8 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 				// First find the position of this node in the parent. ??? Worth additional pointers?
 				// Search for second key in case the first has been taken by the parent.
 				uint8_t parentPosition = CBBTreeNodeBinarySearch(parent, pos.node->elements[1], self->compareFunc).position.index;
-				CBBTreeNode * left;
-				CBBTreeNode * right;
+				CBBTreeNode * left = NULL;
+				CBBTreeNode * right = NULL;
 				if (parentPosition) {
 					// Create left sibling data
 					left = parent->children[parentPosition - 1];
@@ -273,7 +273,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		if (pos.index >= CB_BTREE_HALF_ORDER) {
 			// Not in first child.
 			if (pos.index == CB_BTREE_HALF_ORDER) {
-				// New key is median. Visualisation of median insertion:
+				/* New key is median. Visualisation of median insertion:
 				//
 				//      . C  .  G .
 				//     /     |     \
@@ -288,7 +288,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 				//      .C.         .G.
 				//     /   \       /   \
 				//  .A.B.  .D.   .F.  .H.I.
-				//
+				*/
 				memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ORDER, CB_BTREE_HALF_ORDER * sizeof(*new->elements));
 				// Copy children
 				memcpy(new->children + 1, pos.node->children + CB_BTREE_HALF_ORDER + 1, CB_BTREE_HALF_ORDER * sizeof(*new->children));
@@ -297,7 +297,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 				// Middle value is the inserted value
 				midKeyValue = element;
 			}else{
-				// In new child. Visualisation of order of 4:
+				/* In new child. Visualisation of order of 4:
 				//
 				//        . - E - . -- J -- . -- O -- . - T - .
 				//       /        |         |         |        \
@@ -320,7 +320,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 				//  .A.B.C.D. .F.G.H.I. .K.L.M.N. .P.Q.R.S. .U.V. .X.Y.
 				//
 				// 
-				//
+				*/
 				// Copy over first part of the new child
 				if (pos.index > CB_BTREE_HALF_ORDER + 1)
 					memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ORDER + 1, (pos.index - CB_BTREE_HALF_ORDER - 1) * sizeof(*new->elements));

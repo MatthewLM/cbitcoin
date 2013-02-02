@@ -79,7 +79,9 @@ bool CBFileSyncDir(char * dir){
 	int dird = open(dir, 0);
 	if (dird == -1)
 		return false;
-	if (fsync(dird)){
+	if (fsync(dird)
+		// If errno is EINVAL then it is likely the filesystem doesn't support directory synchronisation or does not need it. ???
+		&& errno != EINVAL){
 		close(dird);
 		return false;
 	}

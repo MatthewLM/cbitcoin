@@ -326,8 +326,9 @@ bool CBNewSecureRandomGenerator(uint64_t * gen);
 /**
  @brief Seeds the random number generator securely.
  @param gen The generator.
+ @retruns true if the random number generator was securely seeded, or false otherwise.
  */
-void CBSecureRandomSeed(uint64_t gen);
+bool CBSecureRandomSeed(uint64_t gen);
 /**
  @brief Seeds the generator from a 64-bit integer.
  @param gen The generator.

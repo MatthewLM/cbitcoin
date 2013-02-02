@@ -27,6 +27,7 @@
 #include "openssl/ripemd.h"
 #include "openssl/rand.h"
 #include "stdarg.h"
+#include <inttypes.h>
 
 void CBLogError(char * format, ...);
 void CBLogError(char * format, ...){
@@ -112,7 +113,7 @@ int main(){
 	CBTransactionOutput * output = CBNewTransactionOutputFromData(bytes);
 	CBTransactionOutputDeserialise(output);
 	if (output->value != value) {
-		printf("CBTransactionOutput DESERIALISED value INCORRECT: %llu != %llu\n", output->value, value);
+		printf("CBTransactionOutput DESERIALISED value INCORRECT: %" PRIu64 " != %" PRIu64 "\n", output->value, value);
 		return 1;
 	}
 	stack = CBNewEmptyScriptStack();

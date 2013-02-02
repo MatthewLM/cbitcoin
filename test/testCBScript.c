@@ -68,9 +68,6 @@ int main(){
 				return 1;
 			}else{
 				CBScriptStack stack = CBNewEmptyScriptStack();
-				if (x == 31) {
-					printf("");
-				}
 				bool res = CBScriptExecute(script, &stack, NULL, NULL, 0, true);
 				CBFreeScriptStack(stack);
 				char c = fgetc(f);

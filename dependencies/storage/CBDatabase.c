@@ -42,6 +42,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * prefix){
 	self->dataDir = dataDir;
 	self->prefix = prefix;
 	self->lastUsedFileObject = 0; // No stored file yet.
+	self->numChangeKeys = 0;
 	// Check data consistency
 	if (NOT CBDatabaseEnsureConsistent(self)){
 		CBLogError("The database is inconsistent and could not be recovered in CBNewDatabase");
@@ -338,7 +339,7 @@ bool CBDatabaseCommit(CBDatabase * self){
 	}
 	// Sync directory for log file
 	if (NOT CBFileSyncDir(self->dataDir)) {
-		CBLogError("Failed to synchronise the directory during a commit.");
+		CBLogError("Failed to synchronise the directory during a commit for the log file.");
 		CBFileClose(logFile);
 		CBDatabaseClearPending(self);
 		return false;
