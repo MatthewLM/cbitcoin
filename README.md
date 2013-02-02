@@ -39,9 +39,7 @@ Christian von Roques
 Installation
 ------------
 
-Note: Installation may not work or work completely on the snapshots of cbitcoin.
-
-cbitcoin comes with an installation script which has been tested on OSX Mountain Lion and Linux Mint 13, and out of those it only works on OSX Mountain Lion. To install type into your terminal:
+To build, type into your terminal:
 
     ./configure
     make
@@ -49,6 +47,14 @@ cbitcoin comes with an installation script which has been tested on OSX Mountain
 If you wish to test the library then type:
 
     make test
+
+You can install a debug version of cbitcoin with:
+
+    make debug-all
+
+And you can build debug versions of the test executables with:
+
+    make debug-test
 
 The library will be built into a ./bin directory; there is no install target yet.
 

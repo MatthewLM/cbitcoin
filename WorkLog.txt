@@ -798,5 +798,17 @@ Date: Saturday 2nd Febuary 2013
 	End Time: 17:57
 	
 	Start Time: 19:26
-	End Time: 
+	End Time: 20:06
+	
+	--------------------------------------------------------------------------
+	Merge: 656202224e46d719797359f8cae1a590b49187b0
+	
+		Work Completed:
+		
+			* Updated network code
+	
+		Lines Added: 2,483
+		Lined Removed: 1,769
+		Total Time: 41.416666667 hours
+	--------------------------------------------------------------------------
 	
