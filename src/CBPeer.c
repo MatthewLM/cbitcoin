@@ -33,7 +33,6 @@ CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr){
 		CBLogError("Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n", sizeof(*self));
 		return NULL;
 	}
-	CBGetObject(self)->free = CBFreePeer;
 	if(CBInitPeerByTakingNetworkAddress(self))
 		return self;
 	free(self);
@@ -71,10 +70,4 @@ bool CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->sendQueueSize = 0;
 	self->messageReceived = false;
 	return true;
-}
-
-//  Destructor
-
-void CBFreePeer(void * self){
-	CBFreeNetworkAddress(self);
 }

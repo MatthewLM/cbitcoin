@@ -529,7 +529,7 @@ bool CBDatabaseCommit(CBDatabase * self){
 		// Obtain index entry
 		uint8_t * indexKey = res.position.node->elements[res.position.index];
 		// Delete key
-		CBAssociativeArrayDelete(&self->index, res.position);
+		CBAssociativeArrayDelete(&self->index, res.position, false);
 		// Change key
 		// Copy in new key.
 		memcpy(indexKey + 1, self->changeKeys[x][1] + 1, *self->changeKeys[x][1]);
@@ -588,7 +588,7 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
 		CBInt32ToArray(section->key, 8, pos);
 		// Remove from index
 		res.index = 0;
-		CBAssociativeArrayDelete(&self->deletionIndex, res);
+		CBAssociativeArrayDelete(&self->deletionIndex, res, false);
 		// Re-insert into index with new key
 		if (NOT CBAssociativeArrayInsert(&self->deletionIndex, section->key, CBAssociativeArrayFind(&self->deletionIndex, (uint8_t *)section).position, NULL)){
 			CBLogError("Could not insert replacement deletion entry into the array.");
@@ -704,7 +704,7 @@ bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CB
 		indexValue->pos = sectionOffset + newSectionLen;
 		// Change deletion index
 		// Remove from array
-		CBAssociativeArrayDelete(&self->deletionIndex, res.position);
+		CBAssociativeArrayDelete(&self->deletionIndex, res.position, false);
 		if (newSectionLen){
 			// Change deletion section length
 			CBInt32ToArrayBigEndian(section->key, 2, newSectionLen);
@@ -742,7 +742,7 @@ bool CBDatabaseAddWriteValue(CBDatabase * self, uint8_t * writeValue){
 	// Remove from deletion array if needed.
 	CBFindResult res = CBAssociativeArrayFind(&self->deleteKeys, writeValue);
 	if (res.found)
-		CBAssociativeArrayDelete(&self->deleteKeys, res.position);
+		CBAssociativeArrayDelete(&self->deleteKeys, res.position, false);
 	// See if key exists to be written already
 	res = CBAssociativeArrayFind(&self->valueWrites, writeValue);
 	if (res.found) {
@@ -1037,7 +1037,7 @@ bool CBDatabaseRemoveValue(CBDatabase * self, uint8_t * key){
 	// If in valueWrites array, remove it
 	CBFindResult res = CBAssociativeArrayFind(&self->valueWrites, key);
 	if (res.found){
-		CBAssociativeArrayDelete(&self->valueWrites, res.position);
+		CBAssociativeArrayDelete(&self->valueWrites, res.position, false);
 		// Only continue if the value is also in the index. Else we do not want to try and delete anything since it isn't there.
 		if (NOT CBAssociativeArrayFind(&self->index, key).found){
 			free(keyPtr);

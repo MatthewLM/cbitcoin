@@ -90,7 +90,7 @@ int main(){
 			return 1;
 		}
 		if (x) {
-			if (memcmp(array.root->elements[x] + 1, array.root->elements[x-1] + 1, 3) <= 0) {
+			if (memcmp((uint8_t *)array.root->elements[x] + 1, (uint8_t *)array.root->elements[x-1] + 1, 3) <= 0) {
 				printf("ROOT FIND ORDER FAIL\n");
 				return 1;
 			}
@@ -326,7 +326,7 @@ int main(){
 	key[1] = 1;
 	key[2] = 126;
 	key[3] = 0;
-	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position);
+	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	// Child 0 should be merged with child 1. Check new root.
 	if (array.root->numElements != 2) {
 		printf("REMOVE [1, 126, 0] ROOT NUM ELEMENTS FAIL\n");
@@ -382,7 +382,7 @@ int main(){
 	key[1] = 32;
 	key[2] = 15;
 	key[3] = 0;
-	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position);
+	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	// Check root
 	if (array.root->numElements != 1) {
 		printf("REMOVE [32, 15, 0] ROOT NUM ELEMENTS FAIL\n");
@@ -438,7 +438,7 @@ int main(){
 		key[1] = CB_BTREE_HALF_ORDER + x - ((x > 8)? 1 : 0);
 		key[2] = 126 - ((x == 8)? 1 : 0);
 		key[3] = 0;
-		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position);
+		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	}
 	// Check child 0
 	if (child0->numElements != CB_BTREE_ORDER - 1) {
@@ -524,7 +524,7 @@ int main(){
 		key[1] = 15;
 		key[2] = 128 + x - ((x > 8) ? 1 : 0);
 		key[3] = (x == 8) ? 127 : 0;
-		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position);
+		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	}
 	// Check root
 	if (array.root->numElements != 1) {
@@ -655,7 +655,7 @@ int main(){
 	}
 	// Try removing half of elements
 	for (int x = 0; x < size/2; x += 10)
-		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, keys5 + x).position);
+		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, keys5 + x).position, false);
 	// Now ensure the rest can be found
 	for (int x = size/2; x < size; x += 10) {
 		CBFindResult res = CBAssociativeArrayFind(&array, keys5 + x);

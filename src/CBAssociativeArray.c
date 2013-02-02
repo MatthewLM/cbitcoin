@@ -26,7 +26,12 @@
 #include "CBAssociativeArray.h"
 #include <assert.h>
 
-void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos){
+void CBAssociativeArrayClear(CBAssociativeArray * self){
+	CBFreeBTreeNode(self->root, self->onFree, true);
+}
+void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool doFree){
+	if (doFree)
+		self->onFree(pos.node->elements[pos.index]);
 	if (NOT pos.node->children[0]) {
 		// Leaf
 		CBBTreeNode * parent = pos.node->parent;
@@ -186,7 +191,7 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos){
 		// Now delete the successive element.
 		pos.node = child;
 		pos.index = 0;
-		CBAssociativeArrayDelete(self, pos);
+		CBAssociativeArrayDelete(self, pos, false);
 	}
 }
 CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element){

@@ -76,13 +76,18 @@ typedef struct{
 	void (*onFree)(void *); /**< Called for each element in the array when CBFreeAssociativeArray is called. The arguement is the element. If assigned to NULL, instead nothing will happen. */
 } CBAssociativeArray;
 
-
+/**
+ @brief Clears an array of all elements.
+ @param self The array object
+ */
+void CBAssociativeArrayClear(CBAssociativeArray * self);
 /**
  @brief Deletes an element from an array.
  @param self The array object
  @param pos The result from CBAssociativeArrayFind which determines the position to delete data.
+ @param doFree If true, this will call the onFree function for the element being removed.
  */
-void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos);
+void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool doFree);
 /**
  @brief Finds data for a key in the array
  @param self The array object

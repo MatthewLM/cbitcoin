@@ -47,10 +47,12 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	CBAssociativeArray addresses[CB_BUCKET_NUM]; /**< Unconnected addresses, seperated into buckets. */
+	CBAssociativeArray addressScores[CB_BUCKET_NUM]; /**< Addresses, seperated into buckets and ordered by CBNetworkAddressCompare. */
 	uint32_t addrNum; /**< Number of addresses. */
-	CBAssociativeArray peers; /**< The peers sorted by CBNetworkAddressCompare */
-	CBAssociativeArray peersByTimeOffset; /**< The peers sorted by their time offset */
+	CBAssociativeArray peers; /**< The peers sorted by CBNetworkAddressIPPortCompare */
 	uint32_t peersNum; /**< Number of connected peers. */
+	CBAssociativeArray peerTimeOffsets; /**< The time offsets of the peers */
+	uint32_t timeOffsetNum; /**< The number of time offsets recorded. */
 	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
 	uint16_t maxAddressesInBucket; /**< Maximum number of addresses that can be stored in a single bucket. */
 	uint64_t secret; /**< Securely generated pseudo-random number to generate a secret used to mix-up groups into different buckets. */
@@ -112,7 +114,7 @@ bool CBAddressManagerAddPeer(CBAddressManager * self, CBPeer * peer);
  */
 void CBAddressManagerAdjustTime(CBAddressManager * self);
 /**
- @brief Removes all the peers from the peers list.
+ @brief Removes all the peers from the peers list but does not release them.
  @param self The CBAddressManager object.
  */
 void CBAddressManagerClearPeers(CBAddressManager * self);
@@ -165,11 +167,17 @@ CBPeer * CBAddressManagerGotPeer(CBAddressManager * self, CBNetworkAddress * pee
  */
 void CBAddressManagerRemoveAddress(CBAddressManager * self, CBNetworkAddress * addr);
 /**
- @brief Remove a CBPeer from the peers list.
+ @brief Remove a CBPeer from the peers list and also the peer's time offset, if it exists int he time offsets array.
  @param self The CBAddressManager object.
  @param peer The CBPeer to remove
  */
 void CBAddressManagerRemovePeer(CBAddressManager * self, CBPeer * peer);
+/**
+ @brief Remove a CBPeer from the peer time offset list.
+ @param self The CBAddressManager object.
+ @param peer The CBPeer to remove
+ */
+void CBAddressManagerRemovePeerTimeOffset(CBAddressManager * self, CBPeer * peer);
 /**
  @brief Removes an address from the address manager. It will remove the address from a random bucket which has the lowest score in that bucket.
  @param self The CBAddressManager object.
@@ -189,6 +197,12 @@ bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * add
  @param peer The CBPeer to take.
  */
 bool CBAddressManagerTakePeer(CBAddressManager * self, CBPeer * peer);
+/**
+ @brief Records a peers time offset for dtemining the median time.
+ @param self The CBAddressManager object.
+ @param peer The peer with the time offset.
+ */
+bool CBAddressManagerTakePeerTimeOffset(CBAddressManager * self, CBPeer * peer);
 /**
  @brief Compares two peers for ordering by the time offset.
  @param peer1 The first CBPeer.

@@ -32,6 +32,7 @@
 
 #include "CBMessage.h"
 #include "CBNetworkAddress.h"
+#include <assert.h>
 
 // Constants
 

@@ -145,7 +145,7 @@ bool CBAddressStorageSaveAddress(uint64_t iself, void * address){
 	CBInt16ToArray(CB_ADDRESS_KEY, 17, addrObj->port);
 	// Create data
 	CBInt64ToArray(CB_DATA_ARRAY, 0, addrObj->lastSeen);
-	CBInt64ToArray(CB_DATA_ARRAY, 8, addrObj->services);
+	CBInt64ToArray(CB_DATA_ARRAY, 8, (uint64_t) addrObj->services);
 	CBInt32ToArray(CB_DATA_ARRAY, 16, addrObj->penalty);
 	// Write data
 	if (NOT CBDatabaseWriteValue(CBGetDatabase(self), CB_ADDRESS_KEY, CB_DATA_ARRAY, 20)) {

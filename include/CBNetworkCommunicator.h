@@ -40,6 +40,7 @@
 #include "CBPingPong.h"
 #include "CBAlert.h"
 #include <assert.h>
+#include <stdio.h>
 
 // Constants
 
@@ -88,8 +89,8 @@ typedef struct {
 	uint32_t maxIncommingConnections; /**< Maximum number of incomming connections. */
 	CBAddressManager * addresses; /**< All addresses both connected and unconnected */
 	uint64_t maxAddresses; /**< The maximum number of addresses to store */
-	uint16_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all peers after this interval. bitcoin-qt uses 1800000 (30 minutes) */
-	uint16_t timeOut; /**< Time of zero contact from a peer before timeout. bitcoin-qt uses 5400000 (90 minutes) */
+	uint32_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all peers after this interval. The default is 1800000 (30 minutes) */
+	uint32_t timeOut; /**< Time of zero contact from a peer before timeout. The default is 5400000 (90 minutes) */
 	uint16_t sendTimeOut; /**< Time to wait for a socket to be ready to write before a timeout. */
 	uint16_t recvTimeOut; /**< When receiving data after the initial response, the time to wait for the following data before timeout. */
 	uint16_t responseTimeOut; /**< Time to wait for a peer to respond to a request before timeout.  */
@@ -107,8 +108,11 @@ typedef struct {
 	uint64_t pingTimer; /**< Timer for ping event */
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
 	bool stoppedListening; /**< True if listening was stopped because there are too many connections */
+	uint64_t pendingIP; /**< A 64 bit integer to create placeholder IPs so that peers which have un-associated addresses are given somehing to make them unique until they get a real IP associated with them. */
 	CBIPType reachability; /**< Bitfield for reachable address types */
 	uint64_t addrStorage; /**< The object for address storage. If not 0 and if the CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY flag is given, broadcast addresses will be recorded into the storage. */
+	CBAssociativeArray relayedAddrs; /**< An array of the relayed addresses in a 24 hour period, in which the array is cleared. */
+	uint64_t relayedAddrsLastClear; /**< The time relayedAddrs was last cleared */
 	void * callbackHandler; /**< Sent to event callbacks */
 	void (*onTimeOut)(void *, void *, void *, CBTimeOutType); /**< Timeout event callback with a void pointer argument for the callback handler followed by a CBNetworkCommunicator and CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The second argument is the CBNetworkCommunicator responsible for the timeout. The third argument is the peer with the timeout. Lastly there is the CBTimeOutType */
 	CBOnMessageReceivedAction (*onMessageReceived)(void *, void *, void *); /**< The callback for when a message has been received from a peer. The first argument in the void pointer for the callback handler. The second argument is the CBNetworkCommunicator responsible for receiving the message. The third argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */

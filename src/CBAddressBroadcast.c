@@ -155,11 +155,11 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self, bool force){
 		CBLogError("Attempting to serialise a CBAddressBroadcast with no bytes.");
 		return 0;
 	}
-	if (bytes->length < (26 + self->timeStamps * 4) * self->addrNum) {
+	CBVarInt num = CBVarIntFromUInt64(self->addrNum);
+	if (bytes->length < (26 + self->timeStamps * 4) * self->addrNum + num.size) {
 		CBLogError("Attempting to serialise a CBAddressBroadcast without enough bytes.");
 		return 0;
 	}
-	CBVarInt num = CBVarIntFromUInt64(self->addrNum);
 	CBVarIntEncode(bytes, 0, num);
 	uint16_t cursor = num.size;
 	for (uint8_t x = 0; x < num.val; x++) {
@@ -167,7 +167,8 @@ uint32_t CBAddressBroadcastSerialise(CBAddressBroadcast * self, bool force){
 			// Serialise if force is true.
 			|| force
 			// If the data shares the same data as this address broadcast, re-serialise the address, in case it got overwritten.
-			|| CBGetMessage(self->addresses[x])->bytes->sharedData == bytes->sharedData) {
+			|| CBGetMessage(self->addresses[x])->bytes->sharedData == bytes->sharedData
+			|| (CBGetMessage(self->addresses[x])->bytes->length != 26) ^ self->timeStamps) {
 			if (CBGetMessage(self->addresses[x])->serialised)
 				// Release old byte array
 				CBReleaseObject(CBGetMessage(self->addresses[x])->bytes);

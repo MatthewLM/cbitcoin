@@ -41,7 +41,8 @@ typedef enum{
 	GOTACK = 2, 
 	GOTPING = 4, 
 	GOTPONG = 8, 
-	GOTGETADDR = 16, 
+	GOTGETADDR = 16,
+	COMPLETE = 32,
 }TesterProgress;
 
 typedef struct{
@@ -178,11 +179,11 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 			break;
 	}
 	if (*prog == (GOTVERSION | GOTACK | GOTPING | GOTPONG | GOTGETADDR)) {
-		*prog = 0;
+		*prog |= COMPLETE;
 		tester->complete++;
 	}
 	printf("COMPLETION: %i - %i\n", tester->addrComplete, tester->complete);
-	if (tester->addrComplete == 6 && tester->complete == 6) { // Connector sends other peer twice (2). Listeners send self to connector (2). Listeners send selves to each other (2). 2 + 2 + 2 = 6
+	if (tester->addrComplete == 6 && tester->complete == 6) {
 		// Completed testing
 		printf("DONE\n");
 		printf("STOPPING COMM L1\n");
@@ -340,14 +341,16 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 	// And lastly the connecting CBNetworkCommunicator
-	if (commListen->addresses->addrNum != 2) {
+	if (commConnect->addresses->addrNum != 2) {
 		printf("ADDRESS DISCOVERY CONNECT ADDR NUM FAIL\n");
 		exit(EXIT_FAILURE);
 	}
+	addrListen->bucketSet = false;
 	if (NOT CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
+	addrListen2->bucketSet = false;
 	if (NOT CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);

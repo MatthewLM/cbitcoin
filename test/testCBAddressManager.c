@@ -204,8 +204,10 @@ int main(){
 	peers[3]->timeOffset = 8394;
 	peers[4]->timeOffset = 4603;
 	peers[5]->timeOffset = 72787;
-	for (uint8_t x = 0; x < 6; x++)
+	for (uint8_t x = 0; x < 6; x++){
 		CBAddressManagerAddPeer(addrMan, peers[x]);
+		CBAddressManagerTakePeerTimeOffset(addrMan, peers[x]);
+	}
 	// Median is 4199
 	if (addrMan->peersNum != 6) {
 		printf("ADD SIX PEERS NUM FAIL\n");
@@ -258,6 +260,10 @@ int main(){
 	CBNetworkAddress * removed = CBAddressManagerSelectAndRemoveAddress(addrMan);
 	if (removed->penalty != 9) {
 		printf("REMOVE PENALTY FAIL\n");
+		return 1;
+	}
+	if (addrMan->addrNum != 4) {
+		printf("STORAGE ADDR NUM AFTER REMOVE FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(removed);

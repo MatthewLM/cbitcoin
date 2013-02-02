@@ -63,7 +63,7 @@ typedef struct{
 	uint32_t messageReceived; /**< Used by a CBNetworkCommunicator to store the message length received. When the header is received 24 bytes are taken off. */
 	uint16_t acceptedTypes; /**< Set messages that will be accepted on receiving. When a peer tries to send another message, drop the peer. Starts empty */
 	bool receivedHeader; /**< True if the receiving message's header has been received. */
-	int16_t timeOffset; /**< The offset from the system time this peer has */
+	int64_t timeOffset; /**< The offset from the system time this peer has */
 	uint64_t timeBroadcast; /**< Time of the last own address brodcast. */
 	bool connectionWorking; /**< True when the connection has been successful and the peer has ben added to the CBAddressManager. */
 	CBMessageType typesExpected[CB_MAX_RESPONSES_EXPECTED]; /**< List of expected responses */
@@ -97,11 +97,5 @@ CBPeer * CBGetPeer(void * self);
  @returns true on success, false on failure.
  */
 bool CBInitPeerByTakingNetworkAddress(CBPeer * self);
-
-/**
- @brief Frees a CBPeer object.
- @param self The CBPeer object to free.
- */
-void CBFreePeer(void * self);
 
 #endif
