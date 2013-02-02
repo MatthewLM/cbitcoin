@@ -28,6 +28,22 @@
 #include <string.h>
 #include "CBConstants.h"
 
+// Constants
+
+typedef enum{
+	CB_IP_INVALID = 0,
+	CB_IP_IPv4 = 1,
+	CB_IP_IPv6 = 2,
+	CB_IP_LOCAL = 4,
+	CB_IP_TOR = 8,
+	CB_IP_I2P = 16,
+	CB_IP_SITT = 32,
+	CB_IP_RFC6052 = 64,
+	CB_IP_6TO4 = 128,
+	CB_IP_TEREDO = 256,
+	CB_IP_HENET = 512
+} CBIPType;
+
 static const uint8_t IPv4Start[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF};
 static const uint8_t SITTStart[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0};
 static const uint8_t RFC6052Start[12] = {0, 0x64, 0xFF, 0x9B, 0, 0, 0, 0, 0, 0, 0, 0};

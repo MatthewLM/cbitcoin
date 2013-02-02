@@ -38,18 +38,6 @@ CBAddressManager * CBNewAddressManager(void (*onBadTime)(void *)){
 	free(self);
 	return NULL;
 }
-CBAddressManager * CBNewAddressManagerFromData(CBByteArray * data, void (*onBadTime)(void *)){
-	CBAddressManager * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewAddressManagerFromData\n", sizeof(*self));
-		return NULL;
-	}
-	CBGetObject(self)->free = CBFreeAddressManager;
-	if(CBInitAddressManagerFromData(self, data, onBadTime))
-		return self;
-	free(self);
-	return NULL;
-}
 
 //  Object Getter
 
@@ -57,24 +45,70 @@ CBAddressManager * CBGetAddressManager(void * self){
 	return self;
 }
 
-//  Initialisers
+//  Initialiser
 
 bool CBInitAddressManager(CBAddressManager * self, void (*onBadTime)(void *)){
-	if (NOT CBAddressManagerSetup(self)) return false;
-	self->secret = CBSecureRandomInteger(self->rndGen);
+	if (NOT CBInitMessageByObject(CBGetMessage(self)))
+		return false;
+	// We start with no peers or addresses.
+	self->peersNum = 0;
+	self->addrNum = 0;
+	self->timeOffsetNum = 0;
+	// Assign arguments to structure
 	self->onBadTime = onBadTime;
-	if (NOT CBInitMessageByObject(CBGetMessage(self))){
-		CBFreeSecureRandomGenerator(self->rndGen);
+	// Create random number generators.
+	if (NOT CBNewSecureRandomGenerator(&self->rndGen)) {
+		CBLogError("Could not create a random number generator.");
 		return false;
 	}
-	return true;
-}
-bool CBInitAddressManagerFromData(CBAddressManager * self, CBByteArray * data, void (*onBadTime)(void *)){
-	if (NOT CBAddressManagerSetup(self)) return false;
-	self->onBadTime = onBadTime;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data)){
+	// Seed the random number generator.
+	CBSecureRandomSeed(self->rndGen);
+	if (NOT CBNewSecureRandomGenerator(&self->rndGenForBucketIndices)){
 		CBFreeSecureRandomGenerator(self->rndGen);
+		CBLogError("Could not create a random number generator for the bucket indices.");
 		return false;
+	}
+	// Generate secret
+	self->secret = CBSecureRandomInteger(self->rndGen);
+	// Initialise arrays for addresses and peers.
+	if (NOT CBInitAssociativeArray(&self->peers, CBNetworkAddressIPPortCompare, CBReleaseObject)){
+		CBFreeSecureRandomGenerator(self->rndGen);
+		CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
+		CBLogError("Could not initialise the array for the network peers.");
+		return false;
+	}
+	if (NOT CBInitAssociativeArray(&self->peerTimeOffsets, CBPeerCompareByTime, NULL)){
+		CBFreeSecureRandomGenerator(self->rndGen);
+		CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
+		CBFreeAssociativeArray(&self->peers);
+		CBLogError("Could not initialise the array for the network peers sorted by time offset.");
+		return false;
+	}
+	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
+		if (NOT CBInitAssociativeArray(&self->addresses[x], CBNetworkAddressIPPortCompare, CBReleaseObject)){
+			CBFreeSecureRandomGenerator(self->rndGen);
+			CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
+			CBFreeAssociativeArray(&self->peers);
+			CBFreeAssociativeArray(&self->peerTimeOffsets);
+			for (uint8_t y = 0; y < x; y++)
+				CBFreeAssociativeArray(&self->addresses[y]);
+			CBLogError("Could not initialise an array for the network addresses.");
+			return false;
+		}
+	}
+	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
+		if (NOT CBInitAssociativeArray(&self->addressScores[x], CBNetworkAddressCompare, NULL)){
+			CBFreeSecureRandomGenerator(self->rndGen);
+			CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
+			CBFreeAssociativeArray(&self->peers);
+			CBFreeAssociativeArray(&self->peerTimeOffsets);
+			for (uint8_t y = 0; y < CB_BUCKET_NUM; y++)
+				CBFreeAssociativeArray(&self->addresses[y]);
+			for (uint8_t y = 0; y < x; y++)
+				CBFreeAssociativeArray(&self->addressScores[y]);
+			CBLogError("Could not initialise an array for the network addresses ordered by the score.");
+			return false;
+		}
 	}
 	return true;
 }
@@ -83,10 +117,16 @@ bool CBInitAddressManagerFromData(CBAddressManager * self, CBByteArray * data, v
 
 void CBFreeAddressManager(void * vself){
 	CBAddressManager * self = vself;
+	// Free the random number generators
+	CBFreeSecureRandomGenerator(self->rndGenForBucketIndices);
 	CBFreeSecureRandomGenerator(self->rndGen);
-	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++)
-		for (uint16_t y = 0; y < (self->buckets + x)->addrNum; y++)
-			CBReleaseObject((self->buckets + x)->addresses[y]);
+	// Free the arrays
+	CBFreeAssociativeArray(&self->peers);
+	CBFreeAssociativeArray(&self->peerTimeOffsets);
+	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++){
+		CBFreeAssociativeArray(&self->addresses[x]);
+		CBFreeAssociativeArray(&self->addressScores[x]);
+	}
 	CBFreeMessage(self);
 }
 
@@ -96,121 +136,88 @@ bool CBAddressManagerAddAddress(CBAddressManager * self, CBNetworkAddress * addr
 	CBRetainObject(addr);
 	return CBAddressManagerTakeAddress(self, addr);
 }
+bool CBAddressManagerAddPeer(CBAddressManager * self, CBPeer * peer){
+	CBRetainObject(peer);
+	return CBAddressManagerTakePeer(self, peer);
+}
 void CBAddressManagerAdjustTime(CBAddressManager * self){
 	// Get median timeOffset. Nodes are pre-ordered to the timeOffset.
-	uint32_t index = (self->peersNum-1)/2;
-	int16_t median = self->peers[index]->timeOffset;
-	if (NOT self->peersNum % 2)
-		// Average middle pair
-		median = (self->peers[index + 1]->timeOffset + median)/2;
-	if (median > CB_NETWORK_TIME_ALLOWED_TIME_DRIFT) {
-		// Revert to system time
-		self->networkTimeOffset = 0;
-		// Check to see if any peers are within 5 minutes of the system time and do not have the same time, else give bad time error.
-		bool found = false;
-		for (uint16_t x = 0; x < self->peersNum; x++)
-			if (self->peers[x]->timeOffset < 300 && self->peers[x]->timeOffset)
-				found = true;
-		if (NOT found)
-			self->onBadTime(self->callbackHandler);
+	if (self->timeOffsetNum) {
+		// There are time offsets. Get the index for the median value
+		uint32_t index = (self->timeOffsetNum - 1) / 2;
+		CBPosition it;
+		CBAssociativeArrayGetElement(&self->peerTimeOffsets, &it, index);
+		int16_t median = ((CBPeer *)it.node->elements[it.index])->timeOffset;
+		if (NOT (self->timeOffsetNum % 2)){
+			// Average middle pair
+			CBAssociativeArrayGetElement(&self->peerTimeOffsets, &it, index + 1);
+			median = (((CBPeer *)it.node->elements[it.index])->timeOffset + median) / 2;
+		}
+		if (abs(median) > CB_NETWORK_TIME_ALLOWED_TIME_DRIFT) {
+			// Revert to system time
+			self->networkTimeOffset = 0;
+			// Check to see if any peers are within 5 minutes of the system time and do not have the same time, else give a bad time error.
+			bool found = false;
+			if (CBAssociativeArrayGetFirst(&self->peers, &it)) for (;;){
+				CBPeer * peer = it.node->elements[it.index];
+				if (peer->timeOffset < 300 && peer->timeOffset){
+					found = true;
+					break;
+				}
+				if (CBAssociativeArrayIterate(&self->peers, &it))
+					break;
+			}
+			if (NOT found)
+				self->onBadTime(self->callbackHandler);
+		}else
+			self->networkTimeOffset = median;
 	}else
-		self->networkTimeOffset = median;
+		// There are no time offsets so make the time offset 0.
+		self->networkTimeOffset = 0;
 }
-uint32_t CBAddressManagerDeserialise(CBAddressManager * self){
-	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
-		CBLogError("Attempting to deserialise a CBAddressManager with no bytes.");
-		return 0;
-	}
-	if (bytes->length < CB_BUCKET_NUM * 2 + 12) { // The minimum size is to hold the 16 bit integers for the number of addresses, the version and the secret integer.
-		CBLogError("Attempting to deserialise a CBAddressManager with too few bytes");
-		return 0;
-	}
-	uint32_t cursor = 4;
-	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
-		CBBucket * bucket = self->buckets + x;
-		bucket->addrNum = CBByteArrayReadInt16(bytes, cursor);
-		cursor += 2;
-		if (bytes->length < cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8) {
-			CBLogError("Attempting to deserialise a CBAddressManager with too few bytes at bucket %u: %u < %u", x, bytes->length, cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8);
-			return 0;
-		}
-		bucket->addresses = malloc(sizeof(*bucket->addresses) * bucket->addrNum);
-		if (NOT bucket->addresses) {
-			CBLogError("Cannot allocate %i bytes of memory in CBAddressManagerDeserialise", sizeof(*bucket->addresses) * bucket->addrNum);
-			// Free data.
-			for (uint8_t y = 0; y < x; y++) {
-				CBBucket * freeBucket = self->buckets + y;
-				for (uint16_t z = 0; z < freeBucket->addrNum; x++)
-					CBReleaseObject(freeBucket->addresses[z]);
-				free(freeBucket->addresses);
-			}
-			return 0;
-		}
-		for (uint16_t y = 0; y < bucket->addrNum; y++) {
-			CBByteArray * data = CBByteArraySubReference(bytes, cursor, 30);
-			if (NOT data) {
-				CBLogError("Could not create CBByteArray in CBAddressManager for the network address number %u.", x);
-				return 0;
-			}
-			bucket->addresses[y] = CBNewNetworkAddressFromData(data);
-			if (NOT bucket->addresses[y]) {
-				CBLogError("Could not create CBNetworkAddress in CBAddressManager for the network address number %u.", x);
-				CBReleaseObject(data);
-				return 0;
-			}
-			CBReleaseObject(data);
-			if(NOT CBNetworkAddressDeserialise(bucket->addresses[y], true)){
-				CBLogError("Cannot deserialise a CBAddressManager due to an error with the network address number %u", x);
-				return 0;
-			}
-			cursor += 30;
-		}
-	}
-	self->secret = CBByteArrayReadInt64(bytes, cursor);
-	return cursor + 8;
+void CBAddressManagerClearPeers(CBAddressManager * self){
+	CBFreeBTreeNode(self->peers.root, NULL, true);
+	CBFreeBTreeNode(self->peerTimeOffsets.root, NULL, true);
+	self->peersNum = 0;
+	self->timeOffsetNum = 0;
 }
-CBNetworkAddressLocator * CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num){
+uint32_t CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num, CBNetworkAddress ** addresses){
 	uint8_t start = CBSecureRandomInteger(self->rndGen) % CB_BUCKET_NUM;
 	uint8_t bucketIndex = start;
-	uint16_t index = 0;
-	int16_t firstEmpty = -1;
-	CBNetworkAddressLocator * addrs = malloc(sizeof(*addrs) * (num + 1)); // Plus one for termination
-	if (NOT addrs) {
-		CBLogError("Cannot allocate %i bytes of memory in CBAddressManagerGetAddresses\n", sizeof(*addrs) * (num + 1));
-		return NULL;
-	}
-	uint8_t x = 0;
-	while (x < num) {
+	if (num > self->addrNum)
+		// We can only retrieve no more than the number of addresses we actually have
+		num = self->addrNum;
+	uint32_t index = 0;
+	for (uint8_t x = 0; x < num;) {
+		// See if an address is in the bucket at the index.
+		CBPosition it;
+		if (CBAssociativeArrayGetElement(&self->addressScores[bucketIndex], &it, index)) {
+			// An address was found for this bucket, insert it insto "addresses"
+			addresses[x] = it.node->elements[it.index];
+			// Retain the address
+			CBRetainObject(addresses[x]);
+			// Increment x as we have an address.
+			x++;
+		}
+		// Move to the next bucket
+		bucketIndex++;
+		// If we have gone past the allowable bucker range, return to the start
 		if (bucketIndex == CB_BUCKET_NUM)
 			bucketIndex = 0;
-		if (bucketIndex == firstEmpty)
-			break;
-		CBBucket * bucket = self->buckets + bucketIndex;
-		if (bucket->addrNum > index) {
-			// Are addresses to fetch.
-			(addrs + x)->addr = bucket->addresses[bucket->addrNum - index - 1];
-			(addrs + x)->bucketIndex = bucketIndex;
-			(addrs + x)->addrIndex = bucket->addrNum - index - 1;
-			CBRetainObject((addrs + x)->addr);
-			x++;
-			firstEmpty = -1; // Not got all around to first empty. Wait again until we see an empty bucket
-		}else if (firstEmpty == -1)
-			// First empty one we have seen.
-			firstEmpty = bucketIndex;
-		// Move to next bucket
-		bucketIndex++;
-		// If we are back at the start, increment the index
+		// If we have reached the start again, increase the index
 		if (bucketIndex == start)
 			index++;
 	}
-	(addrs + x)->addr = NULL; // NULL termination
-	return addrs;
+	return num;
 }
-uint8_t CBAddressManagerGetBucketIndex(CBAddressManager * self, CBNetworkAddress * addr){
-	uint64_t group = CBAddressManagerGetGroup(self, addr);
-	CBRandomSeed(self->rndGenForBucketIndexes, group + self->secret); // Add the group with the secure secret generated during initialisation.
-	return CBSecureRandomInteger(self->rndGenForBucketIndexes) % CB_BUCKET_NUM;
+void CBAddressManagerSetBucketIndex(CBAddressManager * self, CBNetworkAddress * addr){
+	if (NOT addr->bucketSet) {
+		uint64_t group = CBAddressManagerGetGroup(self, addr);
+		// Add the group with the secure secret generated during initialisation.
+		CBRandomSeed(self->rndGenForBucketIndices, group + self->secret);
+		addr->bucket = CBSecureRandomInteger(self->rndGenForBucketIndices) % CB_BUCKET_NUM;
+		addr->bucketSet = true;
+	}
 }
 uint64_t CBAddressManagerGetGroup(CBAddressManager * self, CBNetworkAddress * addr){
 	uint8_t start = 0;
@@ -258,202 +265,160 @@ uint64_t CBAddressManagerGetGroup(CBAddressManager * self, CBNetworkAddress * ad
 		group |= (CBByteArrayGetByte(addr->ip, start) | ((1 << bits) - 1)) << x;
 	return group;
 }
-uint64_t CBAddressManagerGetNumberOfAddresses(CBAddressManager * self){
-	uint64_t total = self->peersNum;
-	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
-		total += (self->buckets + x)->addrNum;
+CBPeer * CBAddressManagerGetPeer(CBAddressManager * self, uint32_t x){
+	CBPosition it;
+	if (NOT CBAssociativeArrayGetElement(&self->peers, &it, x)){
+		CBLogError("Attempted to get a peer with an out of range index");
+		return NULL;
 	}
-	return total;
+	// Retain peer
+	CBRetainObject(it.node->elements[it.index]);
+	return it.node->elements[it.index];
 }
 CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self, CBNetworkAddress * addr){
-	// Find the bucket for this address.
-	CBBucket * bucket = self->buckets + CBAddressManagerGetBucketIndex(self, addr);
-	// Look in that bucket for the address...
-	for (uint16_t x = 0; x < bucket->addrNum; x++)
-		if (CBNetworkAddressEquals(bucket->addresses[x], addr))
-			// IP and port match
-			return bucket->addresses[x];
+	CBAddressManagerSetBucketIndex(self, addr);
+	CBFindResult res = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr);
+	if (res.found){
+		// Retain network address
+		CBRetainObject(res.position.node->elements[res.position.index]);
+		return res.position.node->elements[res.position.index];
+	}
 	return NULL;
 }
-CBPeer * CBAddressManagerGotNode(CBAddressManager * self, CBNetworkAddress * addr){
-	for (uint16_t x = 0; x < self->peersNum; x++)
-		if (CBNetworkAddressEquals(CBGetNetworkAddress(self->peers[x]), addr))
-			return self->peers[x];
+CBPeer * CBAddressManagerGotPeer(CBAddressManager * self, CBNetworkAddress * addr){
+	CBFindResult res = CBAssociativeArrayFind(&self->peers, addr);
+	if (res.found){
+		// Retain peer
+		CBPeer * peer = res.position.node->elements[res.position.index];
+		CBRetainObject(peer);
+		return peer;
+	}
 	return NULL;
-}
-bool CBAddressManagerIsReachable(CBAddressManager * self, CBIPType type){
-	if (type == CB_IP_INVALID)
-		return false;
-	return self->reachability & type;
 }
 void CBAddressManagerRemoveAddress(CBAddressManager * self, CBNetworkAddress * addr){
-	CBBucket * bucket = (self->buckets + CBAddressManagerGetBucketIndex(self, addr));
-	for (uint16_t x = 0; x < bucket->addrNum; x++) {
-		if (CBNetworkAddressEquals(addr, bucket->addresses[x])) {
-			bucket->addrNum--;
-			if (bucket->addrNum) {
-				// Move memory down.
-				if (bucket->addrNum - x)
-					memmove(bucket->addresses + x, bucket->addresses + x + 1, (bucket->addrNum - x) * sizeof(*bucket->addresses));
-				// Reallocate memory.
-				CBNetworkAddress ** temp = realloc(bucket->addresses, sizeof(*bucket->addresses) * bucket->addrNum);
-				// Even when shrinking the memory block, memory errors can occur. Best not to make assumptions for a library.
-				if (temp)
-					bucket->addresses = temp;
-				// If shinking failed we continue we the old larger memort block.
-			}
-			// Release from addresses.
-			CBReleaseObject(bucket->addresses[x]->ip);
-			break;
+	CBAddressManagerSetBucketIndex(self, addr);
+	CBFindResult res = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr);
+	if (res.found){
+		CBAssociativeArrayDelete(&self->addresses[addr->bucket], res.position, true);
+		// Delete from the score ordered array
+		CBAssociativeArrayDelete(&self->addressScores[addr->bucket], CBAssociativeArrayFind(&self->addressScores[addr->bucket], addr).position, false);
+		// Decrement the number of addresses.
+		self->addrNum--;
+	}
+}
+void CBAddressManagerRemovePeer(CBAddressManager * self, CBPeer * peer){
+	CBFindResult peersRes = CBAssociativeArrayFind(&self->peers, peer);
+	if (peersRes.found){
+		// Find if in time offsets array and where.
+		CBAddressManagerRemovePeerTimeOffset(self, peer);
+		// Remove from peers array
+		CBAssociativeArrayDelete(&self->peers, peersRes.position, true);
+		// Decrement number of peers
+		self->peersNum--;
+	}
+}
+void CBAddressManagerRemovePeerTimeOffset(CBAddressManager * self, CBPeer * peer){
+	CBFindResult timeOffsetRes = CBAssociativeArrayFind(&self->peerTimeOffsets, peer);
+	if (timeOffsetRes.found){
+		// The peer is found in this array, so remove it and re-adjust the time.
+		CBAssociativeArrayDelete(&self->peerTimeOffsets, timeOffsetRes.position, false);
+		self->timeOffsetNum--;
+		// Adjust time
+		CBAddressManagerAdjustTime(self);
+	}
+}
+CBNetworkAddress * CBAddressManagerSelectAndRemoveAddress(CBAddressManager * self){
+	uint8_t bucketIndex = CBSecureRandomInteger(self->rndGen) % CB_BUCKET_NUM;
+	for (;;) {
+		// See if an address is in the bucket
+		CBPosition it;
+		if (CBAssociativeArrayGetLast(&self->addressScores[bucketIndex], &it)) {
+			// Got an address, remove and then return it.
+			// Remove from both arrays.
+			// Do not release the data, as we want to return it, so pass false to "doFree"
+			CBAssociativeArrayDelete(&self->addresses[bucketIndex], CBAssociativeArrayFind(&self->addresses[bucketIndex], it.node->elements[it.index]).position, false);
+			CBAssociativeArrayDelete(&self->addressScores[bucketIndex], it, false);
+			self->addrNum--;
+			return it.node->elements[it.index];
 		}
+		// Move to the next bucket
+		bucketIndex++;
+		// If we have gone past the allowable bucker range, return to the start
+		if (bucketIndex == CB_BUCKET_NUM)
+			bucketIndex = 0;
 	}
-}
-void CBAddressManagerRemoveNode(CBAddressManager * self, CBPeer * peer){
-	// Find position of peer. Basic linear search (Better alternative in this case ???). Assumes peer is in the list properly or a fatal overflow is caused.
-	uint16_t peerPos = 0;
-	for (;; peerPos++) if (self->peers[peerPos] == peer) break;
-	// Moves rest of peers down
-	memmove(self->peers + peerPos, self->peers + peerPos + 1, (self->peersNum - peerPos - 1) * sizeof(*self->peers));
-	self->peersNum--; // Removed peer. Don't bother reallocating memory which will be done upon a new peer.
-	if (CBGetNetworkAddress(peer)->public){
-		// Public peer, return to addresses list.
-		CBNetworkAddress * temp = realloc(peer, sizeof(CBNetworkAddress));
-		if (temp)
-			// Taking the address may fail. If it does, we just ignore it and lose the address.
-			CBAddressManagerTakeAddress(self, temp);
-		else
-			CBAddressManagerTakeAddress(self, (CBNetworkAddress *)peer); // Realloc failed so jsut use larger memory block.
-	}else
-		// Private peer (Never been advertised as address)
-		CBReleaseObject(peer);
-	// Re-adjust time without this peer. If no peers are available do not adjust anything.
-	if (self->peersNum) CBAddressManagerAdjustTime(self);
-}
-uint32_t CBAddressManagerSerialise(CBAddressManager * self, bool force){
-	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
-		CBLogError("Attempting to serialise a CBAddressManager with no bytes.");
-		return 0;
-	}
-	if (bytes->length < CB_BUCKET_NUM * 2 + 12) {
-		CBLogError("Attempting to serialise a CBAddressManager with too few bytes.");
-		return 0;
-	}
-	CBByteArraySetInt32(bytes, 0, CB_LIBRARY_VERSION);
-	uint32_t cursor = 4;
-	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
-		CBBucket * bucket = self->buckets + x;
-		CBByteArraySetInt16(bytes, cursor, bucket->addrNum);
-		cursor += 2;
-		if (bytes->length < cursor + 30 * bucket->addrNum + (CB_BUCKET_NUM - x - 1) * 2 + 8) {
-			CBLogError("Attempting to serialise a CBAddressManager with too few bytes at the bucket %u.", x);
-			bucket->addrNum = 0; // Modify so that freeing works.
-			return 0;
-		}
-		for (uint16_t y = 0; y < bucket->addrNum; y++) {
-			if (NOT CBGetMessage(bucket->addresses[y])->serialised // Serailise if not serialised yet.
-				// Serialise if force is true.
-				|| force
-				// If the data shares the same data as the address manager, re-serialise the address, in case it got overwritten.
-				|| CBGetMessage(bucket->addresses[y])->bytes->sharedData == bytes->sharedData) {
-				if (CBGetMessage(bucket->addresses[y])->serialised)
-					// Release old byte array
-					CBReleaseObject(CBGetMessage(bucket->addresses[y])->bytes);
-				CBGetMessage(bucket->addresses[y])->bytes = CBByteArraySubReference(bytes, cursor, 30);
-				if (NOT CBGetMessage(bucket->addresses[y])->bytes) {
-					CBLogError("Cannot create a new CBByteArray sub reference in CBAddressManagerSerialise for the network address %u - %u.", x, y);
-					bucket->addrNum = y; // Modify so that we can free the address manager later.
-					return 0;
-				}
-				CBNetworkAddressSerialise(bucket->addresses[y], true);
-			}else{
-				// Move serialsed data to one location
-				CBByteArrayCopyByteArray(bytes, cursor, CBGetMessage(bucket->addresses[y])->bytes);
-				CBByteArrayChangeReference(CBGetMessage(bucket->addresses[y])->bytes, bytes, cursor);
-			}
-			cursor += 30;
-		}
-	}
-	CBByteArraySetInt64(bytes, cursor, self->secret);
-	CBGetMessage(self)->serialised = true;
-	return cursor + 8;
-}
-void CBAddressManagerSetReachability(CBAddressManager * self, CBIPType type, bool reachable){
-	if (reachable)
-		self->reachability |= type;
-	else
-		self->reachability &= ~type;
-}
-bool CBAddressManagerSetup(CBAddressManager * self){
-	self->peers = NULL;
-	self->peersNum = 0;
-	self->reachability = 0;
-	// Clear buckets
-	memset(self->buckets, 0, sizeof(*self->buckets) * CB_BUCKET_NUM);
-	// Create random number generators.
-	if (CBNewSecureRandomGenerator(&self->rndGen)) {
-		CBSecureRandomSeed(self->rndGen); // Cryptographically secure.
-		if (CBNewSecureRandomGenerator(&self->rndGenForBucketIndexes))
-			return true;
-		CBFreeSecureRandomGenerator(self->rndGen);
-	}
-	return false;
+
 }
 bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * addr){
-	// Find the bucket for this address.
-	CBBucket * bucket = self->buckets + CBAddressManagerGetBucketIndex(self, addr);
-	// Find insersion point for address
-	uint16_t insert = 0;
-	for (; insert < bucket->addrNum; insert++)
-		if (bucket->addresses[insert]->score > addr->score)
-			// Insert here
-			break;
-	if (bucket->addrNum == self->maxAddressesInBucket) {
-		// A lot of addresses stored, remove random address but with bias to a low scoring address.
-		uint16_t remove = (CBSecureRandomInteger(self->rndGen) % bucket->addrNum);
-		remove *= remove;
-		remove /= bucket->addrNum;
-		// Release address
-		CBReleaseObject(bucket->addresses[remove]);
-		if (insert < remove)
-			// Insersion happens below removal. Move memory up to overwrite removed address and make space to insert.
-			memmove(bucket->addresses + insert + 1, bucket->addresses + insert, (remove-insert) * sizeof(*bucket->addresses));
-		else if (insert > remove){
-			// Insersion happens above removal. Move memory down to overwrite removed address and make space to insert.
-			memmove(bucket->addresses + remove, bucket->addresses + remove + 1, (insert-remove) * sizeof(*bucket->addresses));
-			insert--; // Move insert down since we moved memory down.
-		}
-	}else{
-		bucket->addrNum++;
-		CBNetworkAddress ** temp = realloc(bucket->addresses, sizeof(*bucket->addresses) * bucket->addrNum);
-		if (NOT temp)
-			return false;
-		bucket->addresses = temp;
-		// Move memory up to allow insertion of address.
-		if (bucket->addrNum - insert - 1)
-			memmove(bucket->addresses + insert + 1, bucket->addresses + insert, (bucket->addrNum - insert - 1) * sizeof(*bucket->addresses));
+	// Find the bucket for this address and insert it into the object
+	CBAddressManagerSetBucketIndex(self, addr);
+	// Add address to array
+	CBPosition pos = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr).position;
+	if (NOT CBAssociativeArrayInsert(&self->addresses[addr->bucket], addr, pos, NULL)){
+		CBLogError("Could not insert an address into the addresses array.");
+		return false;
 	}
-	bucket->addresses[insert] = addr;
+	// Add address to array sorted by the score
+	if (NOT CBAssociativeArrayInsert(&self->addressScores[addr->bucket], addr, CBAssociativeArrayFind(&self->addressScores[addr->bucket], addr).position, NULL)){
+		CBLogError("Could not insert an address into the addresses array sorted by the score.");
+		// Remove the address from the other array since there was a failure
+		CBAssociativeArrayDelete(&self->addresses[addr->bucket], pos, false);
+		return false;
+	}
+	// Increase the number of addresses.
+	self->addrNum++;
 	return true;
 }
 bool CBAddressManagerTakePeer(CBAddressManager * self, CBPeer * peer){
-	// Find insertion point
-	uint16_t insert = 0;
-	for (; insert < self->peersNum; insert++)
-		if (self->peers[insert]->timeOffset > peer->timeOffset)
-			// Insert here
-			break;
-	// Reallocate peers
-	self->peersNum++;
-	CBPeer ** temp = realloc(self->peers, sizeof(*self->peers) * self->peersNum);
-	if (NOT temp)
+	// Add peer to array
+	if (NOT CBAssociativeArrayInsert(&self->peers, peer, CBAssociativeArrayFind(&self->peers, peer).position, NULL)){
+		CBLogError("Could not insert a peer into the peers array");
 		return false;
-	self->peers = temp;
-	// Move memory up to allow for peer
-	memmove(self->peers + insert + 1, self->peers + insert, (self->peersNum - insert - 1) * sizeof(*self->peers));
-	// Insert
-	self->peers[insert] = peer;
+	}
+	// Increase the number of peers.
+	self->peersNum++;
+	return true;
+}
+bool CBAddressManagerTakePeerTimeOffset(CBAddressManager * self, CBPeer * peer){
+	// Add peer to array
+	if (NOT CBAssociativeArrayInsert(&self->peerTimeOffsets, peer, CBAssociativeArrayFind(&self->peerTimeOffsets, peer).position, NULL)){
+		CBLogError("Could not insert a peer into the peer time offsets array");
+		return false;
+	}
+	self->timeOffsetNum++;
 	// Adjust time
 	CBAddressManagerAdjustTime(self);
 	return true;
+}
+CBCompare CBPeerCompareByTime(void * peer1, void * peer2){
+	CBPeer * peerObj1 = peer1;
+	CBPeer * peerObj2 = peer2;
+	if (peerObj1->timeOffset < peerObj2->timeOffset)
+		return CB_COMPARE_MORE_THAN;
+	if (peerObj1->timeOffset > peerObj2->timeOffset)
+		return CB_COMPARE_LESS_THAN;
+	return CBNetworkAddressIPPortCompare(peer1, peer2);
+}
+CBCompare CBNetworkAddressCompare(void * address1, void * address2){
+	CBNetworkAddress * addrObj1 = address1;
+	CBNetworkAddress * addrObj2 = address2;
+	uint64_t addrScore1 = addrObj1->lastSeen - addrObj1->penalty;
+	uint64_t addrScore2 = addrObj2->lastSeen - addrObj2->penalty;
+	if (addrScore1 < addrScore2)
+		return CB_COMPARE_MORE_THAN;
+	if (addrScore1 > addrScore2)
+		return CB_COMPARE_LESS_THAN;
+	return CBNetworkAddressIPPortCompare(address1, address2);
+}
+CBCompare CBNetworkAddressIPPortCompare(void * address1, void * address2){
+	CBNetworkAddress * addrObj1 = address1;
+	CBNetworkAddress * addrObj2 = address2;
+	CBCompare res = CBByteArrayCompare(addrObj1->ip, addrObj2->ip);
+	if (res == CB_COMPARE_EQUAL) {
+		if (addrObj1->port > addrObj2->port)
+			return CB_COMPARE_MORE_THAN;
+		if (addrObj1->port < addrObj2->port)
+			return CB_COMPARE_LESS_THAN;
+	}
+	return res;
 }

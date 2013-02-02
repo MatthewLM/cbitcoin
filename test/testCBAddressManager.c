@@ -22,10 +22,10 @@
 
 #include <stdio.h>
 #include "CBAddressManager.h"
+#include "CBDependencies.h"
 #include <time.h>
 #include "stdarg.h"
 
-void CBLogError(char * format, ...);
 void CBLogError(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
@@ -38,230 +38,264 @@ void onBadTime(void * foo){
 	printf("BAD TIME FAIL\n");
 	exit(EXIT_FAILURE);
 }
+uint32_t getLen(CBBTreeNode * self);
+uint32_t getLen(CBBTreeNode * self){
+	uint32_t len = self->numElements;
+	if (self->children[0])
+		for (uint8_t x = 0; x < self->numElements + 1; x++)
+			len += getLen(self->children[x]);
+	return len;
+}
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
-	// Test deserialisation
-	uint8_t dataRepeat[94] = {
-		0x02, 0x00, // Two addresses.
-		// Address 1
-		0x46, 0xAE, 0xF4, 0x4F, // Time 1341435462
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // CB_SERVICE_FULL_BLOCKS
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01, // IP ::ffff:10.0.0.1
-		0x20, 0x8D, // Port 8333
-		// Address 2
-		0x7E, 0xB7, 0xF4, 0x4F, // Time 1341437822
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // No services
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08, // IP ::ffff:36.96.162.8
-		0x5F, 0x2E, // Port 24366
-		0x01, 0x00, // One address.
-		// Address 1
-		0x46, 0xAE, 0xF4, 0x4F, // Time 1341435462
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // CB_SERVICE_FULL_BLOCKS
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01, // IP ::ffff:10.0.0.1
-		0x20, 0x8D, // Port 8333
-	};
-	uint8_t * data = malloc(12012);
-	// cbitcoin version
-	data[0] = CB_LIBRARY_VERSION;
-	data[1] = CB_LIBRARY_VERSION >> 8;
-	data[2] = CB_LIBRARY_VERSION >> 16;
-	data[3] = CB_LIBRARY_VERSION >> 24;
-	// secret 0x56AFE32056AFE320
-	data[12004] = 0x20;
-	data[12005] = 0xE3;
-	data[12006] = 0xAF;
-	data[12007] = 0x56;
-	data[12008] = 0x20;
-	data[12009] = 0xE3;
-	data[12010] = 0xAF;
-	data[12011] = 0x56;
-	// Repeat data
-	for (uint8_t x = 0; x < (CB_BUCKET_NUM-1)/2; x++)
-		memcpy(data + 4 + 94*x , dataRepeat, 94);
-	memcpy(data + 11942, dataRepeat, 62);
-	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 12012);
-	CBAddressManager * addrMan = CBNewAddressManagerFromData(bytes, onBadTime);
-	addrMan->maxAddressesInBucket = 500;
-	uint32_t len = CBAddressManagerDeserialise(addrMan);
-	if(len != 12012){
-		printf("DESERIALISATION LEN FAIL %u != 12014\n", len);
+	CBAddressManager * addrMan = CBNewAddressManager(onBadTime);
+	if (NOT addrMan) {
+		printf("NEW ADDR MAN FAIL\n");
 		return 1;
 	}
-	if (addrMan->secret != 0x56AFE32056AFE320) {
-		printf("DESERIALISATION SECRET FAIL %llx != 0x56AFE32056AFE320\n", (long long int)addrMan->secret);
-		return 1;
+	// Test adding addresses
+	for (uint8_t x = 0; x < 255; x++) {
+		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x/2}, 16);
+		CBNetworkAddress * addr = CBNewNetworkAddress(1358856884 + rand() % 15, ip, 45562 + (rand() % 5) + 6 * (x % 2), CB_SERVICE_FULL_BLOCKS, true);
+		addr->penalty = rand() % 20;
+		CBAddressManagerTakeAddress(addrMan, addr);
+		CBReleaseObject(ip);
+		// Check length
+		uint8_t len = 0;
+		for (uint8_t x = 0; x < CB_BUCKET_NUM; x++)
+			len += getLen(addrMan->addresses[x].root);
+		if (len != addrMan->addrNum) {
+			printf("ASSOC ARRAY AND ADDR NUM MATCH FAIL");
+			return 1;
+		}
 	}
+	// Test ordering
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
-		CBBucket * bucket = addrMan->buckets + x;
-		bool odd = x % 2;
-		if (bucket->addrNum != (odd ? 1 : 2)) {
-			printf("DESERIALISATION BUCKET ADDR NUM FAIL %u: %u != %u\n", x, bucket->addrNum, odd? 1 : 2);
-			return 1;
-		}
-		if (bucket->addresses[0]->score != 1341435462) {
-			printf("DESERIALISATION FIRST ADDR SCORE FAIL %u: %u != %u\n", x, bucket->addresses[0]->score, 1341435462);
-			return 1;
-		}
-		if (bucket->addresses[0]->services != CB_SERVICE_FULL_BLOCKS) {
-			printf("DESERIALISATION ADDR SERVICES FAIL\n");
-			return 1;
-		}
-		if (memcmp(CBByteArrayGetData(bucket->addresses[0]->ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16)) {
-			printf("DESERIALISATION IP FAIL\n0x");
-			return 1;
-		}
-		if (bucket->addresses[0]->port != 8333) {
-			printf("DESERIALISATION PORT FAIL\n");
-			return 1;
-		}
-		if (odd) {
-			continue;
-		}
-		if (bucket->addresses[1]->score != 1341437822) {
-			printf("DESERIALISATION ADDR SCORE FAIL\n");
-			return 1;
-		}
-		if (bucket->addresses[1]->services != 0) {
-			printf("DESERIALISATION ADDR SERVICES FAIL\n");
-			return 1;
-		}
-		if (memcmp(CBByteArrayGetData(bucket->addresses[1]->ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08, }, 16)) {
-			printf("DESERIALISATION IP FAIL\n0x");
-			return 1;
-		}
-		if (bucket->addresses[1]->port != 24366) {
-			printf("DESERIALISATION PORT FAIL\n");
-			return 1;
-		}
-	}
-	if (CBAddressManagerGetNumberOfAddresses(addrMan) != 383) {
-		printf("CBAddressManagerGetNumberOfAddresses FAIL\n");
-		return 1;
-	}
-	// Test serialisation
-	memset(CBByteArrayGetData(bytes), 0, 12012);
-	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++) {
-		CBBucket * bucket = addrMan->buckets + x;
-		bool odd = x % 2;
-		CBReleaseObject(bucket->addresses[0]->ip);
-		bucket->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
-		if (!odd) {
-			CBReleaseObject(bucket->addresses[1]->ip);
-			bucket->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
-		}
-	}
-	if (CBAddressManagerSerialise(addrMan, true) != 12012){
-		printf("SERIALISATION LEN FAIL\n");
-		return 1;
-	}
-	if (memcmp(data, CBByteArrayGetData(bytes), 12012)) {
-		printf("SERIALISATION FAIL");
-		uint8_t * d = CBByteArrayGetData(bytes);
-		for (int x = 0; x < 12012; x++) {
-			if (data[x] != d[x]) {
-				printf(" AT %i\n 0x", x);
+		CBPosition it;
+		if (CBAssociativeArrayGetFirst(&addrMan->addresses[x], &it)) {
+			uint64_t lastScore = 0xFFFFFFFFFFFFFFFF;
+			uint8_t lastIP[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+			uint16_t lastPort = 0;
+			for (;;) {
+				CBNetworkAddress * addr = it.node->elements[it.index];
+				uint64_t score = addr->lastSeen - addr->penalty;
+				if (score > lastScore){
+					printf("ADDR LAST SEEN ORDER FAIL\n");
+					return 1;
+				}else if (score < lastScore){
+					memset(lastIP, 0, 16);
+					lastPort = 0;
+				}else{
+					int res = memcmp(CBByteArrayGetData(addr->ip), lastIP, 16);
+					if (res < 0) {
+						printf("ADDR IP ORDER FAIL");
+						return 1;
+					}else if (res > 0){
+						lastPort = 0;
+					}else if (addr->port <= lastPort){
+						printf("ADDR PORT ORDER/DUPLICATE FAIL");
+						return 1;
+					}
+				}
+				// Test getting addresses
+				CBNetworkAddress * addr2 = CBAddressManagerGotNetworkAddress(addrMan, addr);
+				if (NOT addr2 || addr2 != addr) {
+					printf("GOT NETWORK ADDR FAIL");
+					return 1;
+				}
+				CBReleaseObject(addr2);
+				if (CBAssociativeArrayIterate(&addrMan->addresses[x], &it))
+					break;
 			}
 		}
-		for (int x = 0; x < 12012; x++) {
-			printf("%.2X", d[x]);
-		}
-		printf("\n!=\n0x");
-		for (int x = 0; x < 12012; x++) {
-			printf("%.2X", data[x]);
-		}
+	}
+	// Test removing an address
+	CBNetworkAddress * addr[1];
+	if (CBAddressManagerGetAddresses(addrMan, 1, addr) != 1) {
+		printf("GET SINGLE ADDR FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(bytes);
-	// Test adding 4 peers. Check order.
-	int16_t timeOffsets[] = {-4, -10, 19, -5};
-	CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 16);
-	for (int x = 0; x < 4; x++) {
-		CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0);
-		CBPeer * peer = CBNewNodeByTakingNetworkAddress(addr);
-		peer->timeOffset = timeOffsets[x];
-		CBAddressManagerTakePeer(addrMan, peer);
+	CBRetainObject(*addr);
+	CBAddressManagerRemoveAddress(addrMan, *addr);
+	*addr = CBAddressManagerGotNetworkAddress(addrMan, *addr);
+	if (*addr) {
+		printf("REMOVE NETWORK ADDR FAIL");
+		return 1;
 	}
-	int16_t orderedOffsets[] = {-10, -5, -4, 19};
-	for (int x = 0; x < 4; x++) {
-		if (addrMan->peers[x]->timeOffset != orderedOffsets[x]) {
-			printf("NODE ORDER FAIL %i: %i != %i\n", x, addrMan->peers[x]->timeOffset, orderedOffsets[x]);
+	// Test getting addresses under number
+	CBNetworkAddress * addrs[255];
+	if (CBAddressManagerGetAddresses(addrMan, 253, addrs) != 253) {
+		printf("GET ADDRS BELOW FAIL\n");
+		return 1;
+	}
+	// Test getting addresses at number
+	if (CBAddressManagerGetAddresses(addrMan, 254, addrs) != 254) {
+		printf("GET ADDRS AT FAIL\n");
+		return 1;
+	}
+	// Test getting addresses over number
+	if (CBAddressManagerGetAddresses(addrMan, 255, addrs) != 254) {
+		printf("GET ADDRS OVER FAIL\n");
+		return 1;
+	}
+	// Check no duplicates
+	for (uint8_t x = 0; x < 254; x++) { 
+		for (uint8_t y = 0; y < 254; y++) {
+			if (y != x && CBNetworkAddressCompare(addrs[x], addrs[y]) == CB_COMPARE_EQUAL) {
+				printf("GET ADDRS NO DUPLICATES FAIL\n");
+				return 1;
+			}
+		}
+	}
+	// Add peers
+	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++){
+		CBFreeAssociativeArray(&addrMan->addresses[x]);
+		CBInitAssociativeArray(&addrMan->addresses[x], CBNetworkAddressCompare, CBReleaseObject);
+	}
+	CBPeer * peers[254];
+	for (uint8_t x = 0; x < 254; x++) {
+		peers[x] = CBNewPeerByTakingNetworkAddress(addrs[x]);
+		if (NOT CBAddressManagerAddPeer(addrMan, peers[x])) {
+			printf("ADD PEER FAIL\n");
 			return 1;
 		}
 	}
-	// Test if we got peers
-	CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0);
-	if(NOT CBAddressManagerGotNode(addrMan, addr)){
-		printf("GOT NODE FAIL\n");
+	if (addrMan->peersNum != 254) {
+		printf("ADD PEERS NUM FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(addr);
-	CBByteArray * temp = CBByteArrayCopy(ip);
-	CBReleaseObject(ip);
-	ip = temp;
-	CBByteArraySetByte(ip, 0, CBByteArrayGetByte(ip, 0) + 1);
-	addr = CBNewNetworkAddress(0, ip, 0, 0);
-	if(CBAddressManagerGotNode(addrMan, addr)){
-		printf("GOT NOT NODE FAIL\n");
+	// Test removing peers and looking for peers
+	CBAddressManagerRemovePeer(addrMan, peers[0]);
+	CBAddressManagerRemovePeer(addrMan, peers[34]);
+	CBAddressManagerRemovePeer(addrMan, peers[253]);
+	if (addrMan->peersNum != 251) {
+		printf("REMOVE PEERS NUM FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(addr);
-	// Median should be -5
-	if (addrMan->networkTimeOffset != -5) {
-		printf("MEDIAN FAIL %i != -5\n", addrMan->networkTimeOffset);
+	for (uint8_t x = 0; x < 254; x++) {
+		CBPeer * peer = CBAddressManagerGotPeer(addrMan, CBGetNetworkAddress(peers[x]));
+		if (x == 0 || x == 34 || x == 253) {
+			if (peer) {
+				printf("REMOVE PEER FAIL\n");
+				return 1;
+			}
+		}else if (peer != peers[x]){
+			printf("ADD PEER FAIL\n");
+			return 1;
+		}
+	}
+	// Test clear peers and then network time.
+	CBAddressManagerClearPeers(addrMan);
+	if (addrMan->peersNum) {
+		printf("CLEAR PEERS NUM FAIL\n");
 		return 1;
 	}
-	// Remove the peer with the timeoffset of -5 and check that the median now equals -4
-	CBAddressManagerRemoveNode(addrMan, addrMan->peers[1]);
-	if (addrMan->networkTimeOffset != -4) {
-		printf("MEDIAN FAIL %i != -4\n", addrMan->networkTimeOffset);
+	if (getLen(addrMan->peers.root)) {
+		printf("CLEAR PEERS GET LEN FAIL\n");
 		return 1;
 	}
-	// Add 5 addresses with max addresses at 4.
-	addrMan->maxAddressesInBucket = 4;
-	for (int x = 0; x < 4; x++) {
-		CBByteArray * temp = CBByteArrayCopy(ip);
-		CBReleaseObject(ip);
-		ip = temp;
-		CBByteArraySetByte(ip, 0, CBByteArrayGetByte(ip, 0) + 1);
-		CBAddressManagerTakeAddress(addrMan, CBNewNetworkAddress(0, ip, 0, 0));
+	peers[0]->timeOffset = 483;
+	peers[1]->timeOffset = 1839;
+	peers[2]->timeOffset = 3795;
+	peers[3]->timeOffset = 8394;
+	peers[4]->timeOffset = 4603;
+	peers[5]->timeOffset = 72787;
+	for (uint8_t x = 0; x < 6; x++){
+		CBAddressManagerAddPeer(addrMan, peers[x]);
+		CBAddressManagerTakePeerTimeOffset(addrMan, peers[x]);
 	}
-	addr = CBNewNetworkAddress(0, ip, 0, 0);
-	if(NOT CBAddressManagerGotNetworkAddress(addrMan, addr)){
-		printf("GOT ADDR FAIL\n");
+	// Median is 4199
+	if (addrMan->peersNum != 6) {
+		printf("ADD SIX PEERS NUM FAIL\n");
 		return 1;
 	}
-	CBReleaseObject(addr);
-	temp = CBByteArrayCopy(ip);
-	CBReleaseObject(ip);
-	ip = temp;
-	CBByteArraySetByte(ip, 0, CBByteArrayGetByte(ip, 0) + 1);
-	addr = CBNewNetworkAddress(0, ip, 0, 0);
-	if(CBAddressManagerGotNetworkAddress(addrMan, addr)){
-		printf("GOT NOT ADDR FAIL\n");
-		return 1;
-	}
-	CBReleaseObject(addr);
-	CBReleaseObject(ip);
-	// Test reachability.
-	CBAddressManagerSetReachability(addrMan, CB_IP_IPv6, true);
-	CBAddressManagerSetReachability(addrMan, CB_IP_IPv4, true);
-	if (NOT CBAddressManagerIsReachable(addrMan, CB_IP_IPv6)) {
-		printf("REACHABILITY ONE FAIL\n");
-		return 1;
-	}
-	if (CBAddressManagerIsReachable(addrMan, CB_IP_6TO4)) {
-		printf("REACHABILITY TWO FAIL\n");
-		return 1;
-	}
-	CBAddressManagerSetReachability(addrMan, CB_IP_IPv4, false);
-	if (CBAddressManagerIsReachable(addrMan, CB_IP_IPv4)) {
-		printf("REACHABILITY THREE FAIL\n");
+	if (addrMan->networkTimeOffset != 4199) {
+		printf("MEDIAN TIME FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(addrMan);
+	// Test address storage
+	remove("./addr_0.dat");
+	remove("./addr_1.dat");
+	remove("./addr_2.dat");
+	remove("./addr_log.dat");
+	uint64_t storage = CBNewAddressStorage("./");
+	if (NOT storage) {
+		printf("NEW ADDRESS STORAGE FAIL\n");
+		return 1;
+	}
+	// Add 10 addresses to storage
+	for (uint8_t x = 0; x < 10; x++) {
+		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x}, 16);
+		addrs[x] = CBNewNetworkAddress(x, ip, x, x % 2, true);
+		addrs[x]->penalty = x;
+		CBReleaseObject(ip);
+		if (NOT CBAddressStorageSaveAddress(storage, addrs[x])){
+			printf("SAVE ADDRESS FAIL\n");
+			return 1;
+		}
+	}
+	// Remove 5 of them
+	for (uint8_t x = 0; x < 10; x += 2) {
+		if (NOT CBAddressStorageDeleteAddress(storage, addrs[x])){
+			printf("REMOVE ADDRESS FAIL\n");
+			return 1;
+		}
+	}
+	// Test loading addresses
+	addrMan = CBNewAddressManager(onBadTime);
+	if (NOT CBAddressStorageLoadAddresses(storage, addrMan)) {
+		printf("LOAD ADDRESSES FAIL\n");
+		return 1;
+	}
+	if (addrMan->addrNum != 5) {
+		printf("STORAGE ADDR NUM FAIL\n");
+		return 1;
+	}
+	// Test select and remove
+	CBNetworkAddress * removed = CBAddressManagerSelectAndRemoveAddress(addrMan);
+	if (removed->penalty != 9) {
+		printf("REMOVE PENALTY FAIL\n");
+		return 1;
+	}
+	if (addrMan->addrNum != 4) {
+		printf("STORAGE ADDR NUM AFTER REMOVE FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(removed);
+	// Check each remaining address.
+	if (CBAddressManagerGetAddresses(addrMan, 5, addrs) != 4) {
+		printf("STORAGE GET ADDRS FAIL\n");
+		return 1;
+	}
+	for (uint8_t x = 0; x < 4; x++) {
+		uint8_t val = x*2 + 1;
+		if (addrs[x]->lastSeen != val) {
+			printf("STORAGE LOAD LAST SEEN FAIL\n");
+			return 1;
+		}
+		if (addrs[x]->port != val) {
+			printf("STORAGE LOAD PORT FAIL\n");
+			return 1;
+		}
+		if (addrs[x]->penalty != val) {
+			printf("STORAGE LOAD PENALTY FAIL\n");
+			return 1;
+		}
+		if (addrs[x]->services != val % 2) {
+			printf("STORAGE LOAD SERVICES FAIL\n");
+			return 1;
+		}
+		if (memcmp((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,val}, CBByteArrayGetData(addrs[x]->ip), 16)) {
+			printf("STORAGE LOAD IP FAIL\n");
+			return 1;
+		}
+	}
+	CBReleaseObject(addrMan);
+	CBFreeAddressStorage(storage);
 	return 0;
 }

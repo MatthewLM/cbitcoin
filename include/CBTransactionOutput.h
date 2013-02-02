@@ -33,6 +33,10 @@
 #include "CBMessage.h"
 #include "CBScript.h"
 
+// Constants
+
+#define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
+
 /**
  @brief Structure for CBTransactionOutput objects. @see CBTransactionOutput.h
 */

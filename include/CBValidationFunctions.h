@@ -32,6 +32,13 @@
 #include "CBConstants.h"
 #include "CBBlock.h"
 
+// Constants
+
+#define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
+#define CB_TARGET_INTERVAL 1209600 // Two week interval
+#define CB_MAX_TARGET 0x1D00FFFF
+#define CB_MAX_MONEY 21000000LL * CB_ONE_BITCOIN // 21 million Bitcoins.
+
 /**
  @brief Calculates the block reward at a particular block height
  @param blockHeight The height

@@ -34,6 +34,15 @@ void onErrorReceived(char * format, ...){
 	printf("\n");
 }
 
+uint32_t getLen(CBBTreeNode * self);
+uint32_t getLen(CBBTreeNode * self){
+	uint32_t len = self->numElements;
+	if (self->children[0])
+		for (uint8_t x = 0; x < self->numElements + 1; x++)
+			len += getLen(self->children[x]);
+	return len;
+}
+
 int main(){
 	// ??? Add more in-depth tests.
 	unsigned int s = (unsigned int)time(NULL);
@@ -41,18 +50,18 @@ int main(){
 	printf("Session = %u\n", s);
 	//srand(s);
 	CBAssociativeArray array;
-	CBInitAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
 	uint8_t key[4];
 	CBFindResult res = CBAssociativeArrayFind(&array, key);
 	if (res.found) {
 		printf("EMPTY TREE FOUND FAIL\n");
 		return 1;
 	}
-	if (res.node != array.root) {
+	if (res.position.node != array.root) {
 		printf("EMPTY TREE FIND ROOT FAIL\n");
 		return 1;
 	}
-	if (res.pos) {
+	if (res.position.index) {
 		printf("EMPTY TREE FIND POS FAIL\n");
 		return 1;
 	}
@@ -63,7 +72,7 @@ int main(){
 		keys[x][1] = rand();
 		keys[x][2] = x;
 		keys[x][3] = rand();
-		CBAssociativeArrayInsert(&array, keys[x], CBAssociativeArrayFind(&array, keys[x]), NULL);
+		CBAssociativeArrayInsert(&array, keys[x], CBAssociativeArrayFind(&array, keys[x]).position, NULL);
 	}
 	// Check in-order
 	for (uint8_t x = 0; x < CB_BTREE_ORDER; x++) {
@@ -72,24 +81,24 @@ int main(){
 			printf("ROOT FIND FOUND FAIL\n");
 			return 1;
 		}
-		if (res2.node != array.root) {
+		if (res2.position.node != array.root) {
 			printf("ROOT FIND NODE FAIL\n");
 			return 1;
 		}
-		if (res2.pos != x) {
+		if (res2.position.index != x) {
 			printf("ROOT FIND POS FAIL\n");
 			return 1;
 		}
 		if (x) {
-			if (memcmp(array.root->elements[x] + 1, array.root->elements[x-1] + 1, 3) <= 0) {
+			if (memcmp((uint8_t *)array.root->elements[x] + 1, (uint8_t *)array.root->elements[x-1] + 1, 3) <= 0) {
 				printf("ROOT FIND ORDER FAIL\n");
 				return 1;
 			}
 		}
 	}
-	CBFreeAssociativeArray(&array, false);
+	CBFreeAssociativeArray(&array);
 	// Create array again and test for insertion overflow situations
-	CBInitAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
 	// Insert CB_BTREE_ORDER elements
 	uint8_t keys2[CB_BTREE_ORDER+1][4];
 	for (uint8_t x = 0; x < CB_BTREE_ORDER; x++) {
@@ -97,17 +106,17 @@ int main(){
 		keys2[x][1] = x;
 		keys2[x][2] = 126;
 		keys2[x][3] = 0;
-		CBAssociativeArrayInsert(&array, keys2[x], CBAssociativeArrayFind(&array, keys2[x]), NULL);
+		CBAssociativeArrayInsert(&array, keys2[x], CBAssociativeArrayFind(&array, keys2[x]).position, NULL);
 	}
 	// Try inserting value in the middle.
 	keys2[CB_BTREE_ORDER][0] = 3;
 	keys2[CB_BTREE_ORDER][1] = CB_BTREE_HALF_ORDER;
 	keys2[CB_BTREE_ORDER][2] = 0;
 	keys2[CB_BTREE_ORDER][3] = 0;
-	CBAssociativeArrayInsert(&array, keys2[CB_BTREE_ORDER], CBAssociativeArrayFind(&array, keys2[CB_BTREE_ORDER]), NULL);
+	CBAssociativeArrayInsert(&array, keys2[CB_BTREE_ORDER], CBAssociativeArrayFind(&array, keys2[CB_BTREE_ORDER]).position, NULL);
 	// Check the new root.
 	res = CBAssociativeArrayFind(&array, keys2[CB_BTREE_ORDER]);
-	if (res.node != array.root) {
+	if (res.position.node != array.root) {
 		printf("INSERT MIDDLE SPLIT NODE FAIL\n");
 		return 1;
 	}
@@ -115,7 +124,7 @@ int main(){
 		printf("INSERT MIDDLE SPLIT FOUND FAIL\n");
 		return 1;
 	}
-	if (res.pos) {
+	if (res.position.index) {
 		printf("INSERT MIDDLE SPLIT POS FAIL\n");
 		return 1;
 	}
@@ -127,7 +136,7 @@ int main(){
 		key[2] = 126;
 		key[3] = 0;
 		res = CBAssociativeArrayFind(&array, key);
-		if (res.node != array.root->children[0]) {
+		if (res.position.node != array.root->children[0]) {
 			printf("LEFT CHILD NODE FAIL\n");
 			return 1;
 		}
@@ -135,7 +144,7 @@ int main(){
 			printf("LEFT CHILD FOUND FAIL\n");
 			return 1;
 		}
-		if (res.pos != x) {
+		if (res.position.index != x) {
 			printf("LEFT CHILD POS FAIL\n");
 			return 1;
 		}
@@ -146,7 +155,7 @@ int main(){
 		key[2] = 126;
 		key[3] = 0;
 		res = CBAssociativeArrayFind(&array, key);
-		if (res.node != array.root->children[1]) {
+		if (res.position.node != array.root->children[1]) {
 			printf("RIGHT CHILD NODE FAIL\n");
 			return 1;
 		}
@@ -154,7 +163,7 @@ int main(){
 			printf("RIGHT CHILD FOUND FAIL\n");
 			return 1;
 		}
-		if (res.pos != x - CB_BTREE_HALF_ORDER) {
+		if (res.position.index != x - CB_BTREE_HALF_ORDER) {
 			printf("RIGHT CHILD POS FAIL\n");
 			return 1;
 		}
@@ -166,7 +175,7 @@ int main(){
 		keys3[x][1] = CB_BTREE_HALF_ORDER - 1;
 		keys3[x][2] = 128 + x;
 		keys3[x][3] = 0;
-		CBAssociativeArrayInsert(&array, keys3[x], CBAssociativeArrayFind(&array, keys3[x]), NULL);
+		CBAssociativeArrayInsert(&array, keys3[x], CBAssociativeArrayFind(&array, keys3[x]).position, NULL);
 	}
 	// Add value to the right of the left child
 	keys3[CB_BTREE_HALF_ORDER][0] = 3;
@@ -174,13 +183,13 @@ int main(){
 	keys3[CB_BTREE_HALF_ORDER][2] = 128 + CB_BTREE_HALF_ORDER/2;
 	keys3[CB_BTREE_HALF_ORDER][3] = 127;
 	CBFindResult res2 = CBAssociativeArrayFind(&array, keys3[CB_BTREE_HALF_ORDER]);
-	CBAssociativeArrayInsert(&array, keys3[CB_BTREE_HALF_ORDER], res2, NULL);
+	CBAssociativeArrayInsert(&array, keys3[CB_BTREE_HALF_ORDER], res2.position, NULL);
 	// Now check root
 	key[1] = CB_BTREE_HALF_ORDER - 1;
 	key[2] = 128;
 	key[3] = 0;
 	res = CBAssociativeArrayFind(&array, key);
-	if (res.node != array.root) {
+	if (res.position.node != array.root) {
 		printf("INSERT RIGHT SPLIT NODE FAIL\n");
 		return 1;
 	}
@@ -188,7 +197,7 @@ int main(){
 		printf("INSERT RIGHT SPLIT FOUND FAIL\n");
 		return 1;
 	}
-	if (res.pos) {
+	if (res.position.index) {
 		printf("INSERT RIGHT SPLIT POS FAIL\n");
 		return 1;
 	}
@@ -198,7 +207,7 @@ int main(){
 		key[2] = 126;
 		key[3] = 0;
 		res = CBAssociativeArrayFind(&array, key);
-		if (res.node != array.root->children[0]) {
+		if (res.position.node != array.root->children[0]) {
 			printf("RIGHT SPLIT LEFT CHILD NODE FAIL\n");
 			return 1;
 		}
@@ -206,7 +215,7 @@ int main(){
 			printf("RIGHT SPLIT LEFT CHILD FOUND FAIL\n");
 			return 1;
 		}
-		if (res.pos != x) {
+		if (res.position.index != x) {
 			printf("RIGHT SPLIT LEFT CHILD POS FAIL\n");
 			return 1;
 		}
@@ -217,7 +226,7 @@ int main(){
 		key[2] = 128 + x + 1 - ((x >= CB_BTREE_HALF_ORDER/2) ? 1 : 0);
 		key[3] = (x == CB_BTREE_HALF_ORDER/2) ? 127 : 0;
 		res = CBAssociativeArrayFind(&array, key);
-		if (res.node != array.root->children[1]) {
+		if (res.position.node != array.root->children[1]) {
 			printf("RIGHT SPLIT MID CHILD NODE FAIL\n");
 			return 1;
 		}
@@ -225,7 +234,7 @@ int main(){
 			printf("RIGHT SPLIT MID CHILD FOUND FAIL\n");
 			return 1;
 		}
-		if (res.pos != x) {
+		if (res.position.index != x) {
 			printf("RIGHT SPLIT MID CHILD POS FAIL\n");
 			return 1;
 		}
@@ -237,20 +246,20 @@ int main(){
 		keys4[x][1] = CB_BTREE_ORDER;
 		keys4[x][2] = x;
 		keys4[x][3] = 0;
-		CBAssociativeArrayInsert(&array, keys4[x], CBAssociativeArrayFind(&array, keys4[x]), NULL);
+		CBAssociativeArrayInsert(&array, keys4[x], CBAssociativeArrayFind(&array, keys4[x]).position, NULL);
 	}
 	// Add value to left side of right child
 	keys4[CB_BTREE_HALF_ORDER][0] = 3;
 	keys4[CB_BTREE_HALF_ORDER][1] = (CB_BTREE_ORDER*3)/4;
 	keys4[CB_BTREE_HALF_ORDER][2] = 125;
 	keys4[CB_BTREE_HALF_ORDER][3] = 0;
-	CBAssociativeArrayInsert(&array, keys4[CB_BTREE_HALF_ORDER], CBAssociativeArrayFind(&array, keys4[CB_BTREE_HALF_ORDER]), NULL);
+	CBAssociativeArrayInsert(&array, keys4[CB_BTREE_HALF_ORDER], CBAssociativeArrayFind(&array, keys4[CB_BTREE_HALF_ORDER]).position, NULL);
 	// Check root
 	key[1] = CB_BTREE_ORDER - 1;
 	key[2] = 126;
 	key[3] = 0;
 	res = CBAssociativeArrayFind(&array, key);
-	if (res.node != array.root) {
+	if (res.position.node != array.root) {
 		printf("INSERT LEFT SPLIT NODE FAIL\n");
 		return 1;
 	}
@@ -258,7 +267,7 @@ int main(){
 		printf("INSERT LEFT SPLIT FOUND FAIL\n");
 		return 1;
 	}
-	if (res.pos != 2) {
+	if (res.position.index != 2) {
 		printf("INSERT LEFT SPLIT POS FAIL\n");
 		return 1;
 	}
@@ -268,7 +277,7 @@ int main(){
 		key[2] = 126 - ((x == CB_BTREE_HALF_ORDER/2) ? 1 : 0);
 		key[3] = 0;
 		res = CBAssociativeArrayFind(&array, key);
-		if (res.node != array.root->children[2]) {
+		if (res.position.node != array.root->children[2]) {
 			printf("LEFT SPLIT 3RD CHILD NODE FAIL\n");
 			return 1;
 		}
@@ -276,7 +285,7 @@ int main(){
 			printf("LEFT SPLIT 3RD CHILD FOUND FAIL\n");
 			return 1;
 		}
-		if (res.pos != x) {
+		if (res.position.index != x) {
 			printf("LEFT SPLIT 3RD CHILD POS FAIL\n");
 			return 1;
 		}
@@ -287,7 +296,7 @@ int main(){
 		key[2] = x;
 		key[3] = 0;
 		res = CBAssociativeArrayFind(&array, key);
-		if (res.node != array.root->children[3]) {
+		if (res.position.node != array.root->children[3]) {
 			printf("LEFT SPLIT 4TH CHILD NODE FAIL\n");
 			return 1;
 		}
@@ -295,7 +304,7 @@ int main(){
 			printf("LEFT SPLIT 4TH CHILD FOUND FAIL\n");
 			return 1;
 		}
-		if (res.pos != x) {
+		if (res.position.index != x) {
 			printf("LEFT SPLIT 4TH CHILD POS FAIL\n");
 			return 1;
 		}
@@ -317,7 +326,7 @@ int main(){
 	key[1] = 1;
 	key[2] = 126;
 	key[3] = 0;
-	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key));
+	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	// Child 0 should be merged with child 1. Check new root.
 	if (array.root->numElements != 2) {
 		printf("REMOVE [1, 126, 0] ROOT NUM ELEMENTS FAIL\n");
@@ -373,7 +382,7 @@ int main(){
 	key[1] = 32;
 	key[2] = 15;
 	key[3] = 0;
-	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key));
+	CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	// Check root
 	if (array.root->numElements != 1) {
 		printf("REMOVE [32, 15, 0] ROOT NUM ELEMENTS FAIL\n");
@@ -429,7 +438,7 @@ int main(){
 		key[1] = CB_BTREE_HALF_ORDER + x - ((x > 8)? 1 : 0);
 		key[2] = 126 - ((x == 8)? 1 : 0);
 		key[3] = 0;
-		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key));
+		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	}
 	// Check child 0
 	if (child0->numElements != CB_BTREE_ORDER - 1) {
@@ -509,13 +518,13 @@ int main(){
 	key2[1] = 15;
 	key2[2] = 144;
 	key2[3] = 0;
-	CBAssociativeArrayInsert(&array, key2, CBAssociativeArrayFind(&array, key2), NULL);
+	CBAssociativeArrayInsert(&array, key2, CBAssociativeArrayFind(&array, key2).position, NULL);
 	// Remove 16 elements from child0 to test taking element from right.
 	for (uint8_t x = 0; x < CB_BTREE_HALF_ORDER; x++) {
 		key[1] = 15;
 		key[2] = 128 + x - ((x > 8) ? 1 : 0);
 		key[3] = (x == 8) ? 127 : 0;
-		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key));
+		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, key).position, false);
 	}
 	// Check root
 	if (array.root->numElements != 1) {
@@ -574,9 +583,9 @@ int main(){
 		printf("TAKE FROM RIGHT CHILD 1 DATA FAIL\n");
 		return 1;
 	}
-	CBFreeAssociativeArray(&array, false);
+	CBFreeAssociativeArray(&array);
 	// Test lots of random keys
-	CBInitAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
 	// Generate keys
 	int size = CB_BTREE_ORDER * (CB_BTREE_ORDER + 2) * 20;
 	uint8_t * keys5 = malloc(size);
@@ -587,16 +596,22 @@ int main(){
 			keys5[x] = 9;
 	}
 	for (int x = 0; x < size; x += 10) {
-		CBAssociativeArrayInsert(&array, keys5 + x, CBAssociativeArrayFind(&array, keys5 + x), NULL);
+		CBAssociativeArrayInsert(&array, keys5 + x, CBAssociativeArrayFind(&array, keys5 + x).position, NULL);
 		for (int y = 0; y <= x; y += 10) {
 			if (NOT CBAssociativeArrayFind(&array, keys5 + y).found) {
 				printf("RANDOM FIND FAIL %u - %u\n", y, x);
 				return 1;
 			}
 		}
+		// Check length
+		if (getLen(array.root) != x/10 + 1) {
+			printf("INSERT LENGTH FAIL");
+			return 1;
+		}
 	}
 	// Test iteration
-	CBIterator it;
+	CBPosition it;
+	CBPosition it2;
 	CBAssociativeArrayGetFirst(&array, &it);
 	uint8_t * lastKey;
 	bool end = false;
@@ -605,13 +620,31 @@ int main(){
 			printf("ITERATOR END FALSE FAIL\n");
 			return 1;
 		}
-		if (NOT CBAssociativeArrayFind(&array, it.node->elements[it.pos]).found) {
+		if (NOT CBAssociativeArrayFind(&array, it.node->elements[it.index]).found) {
 			printf("ITERATE FIND FAIL %u\n", x);
 			return 1;
 		}
-		lastKey = it.node->elements[it.pos];
+		if (NOT CBAssociativeArrayGetElement(&array, &it2, x/10)) {
+			printf("GET ELEMENT FAIL %u\n", x);
+			return 1;
+		}
+		if (it.node != it2.node || it.index != it2.index) {
+			printf("GET ELEMENT AND ITERATOR CONSISTENCY FAIL %u\n", x);
+			return 1;
+		}
+		lastKey = it.node->elements[it.index];
+		if (x + 10 == size) {
+			if (NOT CBAssociativeArrayGetLast(&array, &it2)){
+				printf("GET LAST FAIL");
+				return 1;
+			}
+			if (it.node != it2.node || it.index != it2.index) {
+				printf("GET LAST AND ITERATOR CONSISTENCY FAIL %u\n", x);
+				return 1;
+			}
+		}
 		end = CBAssociativeArrayIterate(&array, &it);
-		if (NOT end && memcmp(it.node->elements[it.pos], lastKey, 10) <= 0) {
+		if (NOT end && memcmp(it.node->elements[it.index], lastKey, 10) <= 0) {
 			printf("ITERATE ORDER FAIL %u\n", x);
 			return 1;
 		}
@@ -621,9 +654,8 @@ int main(){
 		return 1;
 	}
 	// Try removing half of elements
-	for (int x = 0; x < size/2; x += 10) {
-		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, keys5 + x));
-	}
+	for (int x = 0; x < size/2; x += 10)
+		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, keys5 + x).position, false);
 	// Now ensure the rest can be found
 	for (int x = size/2; x < size; x += 10) {
 		CBFindResult res = CBAssociativeArrayFind(&array, keys5 + x);

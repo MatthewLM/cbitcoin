@@ -34,10 +34,158 @@
 #include "CBDependencies.h"
 #include <stdbool.h>
 
+// Constants
+
+typedef enum{
+	CB_SIGHASH_ALL = 0x00000001,
+	CB_SIGHASH_NONE = 0x00000002,
+	CB_SIGHASH_SINGLE = 0x00000003,
+	CB_SIGHASH_ANYONECANPAY = 0x00000080,
+}CBSignType;
+
+/*
+ @brief The return values for CBTransactionGetInputHashForSignature.
+ */
+typedef enum{
+	CB_TX_HASH_OK, /**< Transaction hash was made OK */
+	CB_TX_HASH_BAD, /**< The transaction is invalid and a hash cannot be made. */
+	CB_TX_HASH_ERR /**< An error occured while making the hash. */
+} CBGetHashReturn;
+
+/*
+ @brief The return values for CBScriptExecute. @see CBScript.h
+ */
+typedef enum{
+	CB_SCRIPT_TRUE, /**< Script validates as true. */
+	CB_SCRIPT_FALSE, /**< Script validates as true. */
+	CB_SCRIPT_INVALID, /**< Script does not validate */
+	CB_SCRIPT_ERR /**< An error occured, do not assume validatity and handle the error. */
+} CBScriptExecuteReturn;
+
+typedef enum{
+	CB_SCRIPT_OP_0 = 0x00,
+    CB_SCRIPT_OP_FALSE = CB_SCRIPT_OP_0,
+    CB_SCRIPT_OP_PUSHDATA1 = 0x4c,
+    CB_SCRIPT_OP_PUSHDATA2 = 0x4d,
+    CB_SCRIPT_OP_PUSHDATA4 = 0x4e,
+    CB_SCRIPT_OP_1NEGATE = 0x4f,
+    CB_SCRIPT_OP_RESERVED = 0x50,
+    CB_SCRIPT_OP_1 = 0x51,
+    CB_SCRIPT_OP_TRUE = CB_SCRIPT_OP_1,
+    CB_SCRIPT_OP_2 = 0x52,
+    CB_SCRIPT_OP_3 = 0x53,
+    CB_SCRIPT_OP_4 = 0x54,
+    CB_SCRIPT_OP_5 = 0x55,
+    CB_SCRIPT_OP_6 = 0x56,
+    CB_SCRIPT_OP_7 = 0x57,
+    CB_SCRIPT_OP_8 = 0x58,
+    CB_SCRIPT_OP_9 = 0x59,
+    CB_SCRIPT_OP_10 = 0x5a,
+    CB_SCRIPT_OP_11 = 0x5b,
+    CB_SCRIPT_OP_12 = 0x5c,
+    CB_SCRIPT_OP_13 = 0x5d,
+    CB_SCRIPT_OP_14 = 0x5e,
+    CB_SCRIPT_OP_15 = 0x5f,
+    CB_SCRIPT_OP_16 = 0x60,
+    CB_SCRIPT_OP_NOP = 0x61,
+    CB_SCRIPT_OP_VER = 0x62,
+    CB_SCRIPT_OP_IF = 0x63,
+    CB_SCRIPT_OP_NOTIF = 0x64,
+    CB_SCRIPT_OP_VERIF = 0x65,
+    CB_SCRIPT_OP_VERNOTIF = 0x66,
+    CB_SCRIPT_OP_ELSE = 0x67,
+    CB_SCRIPT_OP_ENDIF = 0x68,
+    CB_SCRIPT_OP_VERIFY = 0x69,
+    CB_SCRIPT_OP_RETURN = 0x6a,
+    CB_SCRIPT_OP_TOALTSTACK = 0x6b,
+    CB_SCRIPT_OP_FROMALTSTACK = 0x6c,
+    CB_SCRIPT_OP_2DROP = 0x6d,
+    CB_SCRIPT_OP_2DUP = 0x6e,
+    CB_SCRIPT_OP_3DUP = 0x6f,
+    CB_SCRIPT_OP_2OVER = 0x70,
+    CB_SCRIPT_OP_2ROT = 0x71,
+    CB_SCRIPT_OP_2SWAP = 0x72,
+    CB_SCRIPT_OP_IFDUP = 0x73,
+    CB_SCRIPT_OP_DEPTH = 0x74,
+    CB_SCRIPT_OP_DROP = 0x75,
+    CB_SCRIPT_OP_DUP = 0x76,
+    CB_SCRIPT_OP_NIP = 0x77,
+    CB_SCRIPT_OP_OVER = 0x78,
+    CB_SCRIPT_OP_PICK = 0x79,
+    CB_SCRIPT_OP_ROLL = 0x7a,
+    CB_SCRIPT_OP_ROT = 0x7b,
+    CB_SCRIPT_OP_SWAP = 0x7c,
+    CB_SCRIPT_OP_TUCK = 0x7d,
+    CB_SCRIPT_OP_CAT = 0x7e, // Disabled
+    CB_SCRIPT_OP_SUBSTR = 0x7f, // Disabled
+    CB_SCRIPT_OP_LEFT = 0x80, // Disabled
+    CB_SCRIPT_OP_RIGHT = 0x81, // Disabled
+    CB_SCRIPT_OP_SIZE = 0x82,
+    CB_SCRIPT_OP_INVERT = 0x83, // Disabled
+    CB_SCRIPT_OP_AND = 0x84, // Disabled
+    CB_SCRIPT_OP_OR = 0x85, // Disabled
+    CB_SCRIPT_OP_XOR = 0x86, // Disabled
+    CB_SCRIPT_OP_EQUAL = 0x87,
+    CB_SCRIPT_OP_EQUALVERIFY = 0x88,
+    CB_SCRIPT_OP_RESERVED1 = 0x89,
+    CB_SCRIPT_OP_RESERVED2 = 0x8a,
+    CB_SCRIPT_OP_1ADD = 0x8b,
+    CB_SCRIPT_OP_1SUB = 0x8c,
+    CB_SCRIPT_OP_2MUL = 0x8d, // Disabled
+    CB_SCRIPT_OP_2DIV = 0x8e, // Disabled
+    CB_SCRIPT_OP_NEGATE = 0x8f,
+    CB_SCRIPT_OP_ABS = 0x90,
+    CB_SCRIPT_OP_NOT = 0x91,
+    CB_SCRIPT_OP_0NOTEQUAL = 0x92,
+    CB_SCRIPT_OP_ADD = 0x93,
+    CB_SCRIPT_OP_SUB = 0x94,
+    CB_SCRIPT_OP_MUL = 0x95, // Disabled
+    CB_SCRIPT_OP_DIV = 0x96, // Disabled
+    CB_SCRIPT_OP_MOD = 0x97, // Disabled
+    CB_SCRIPT_OP_LSHIFT = 0x98, // Disabled
+    CB_SCRIPT_OP_RSHIFT = 0x99, // Disabled
+    CB_SCRIPT_OP_BOOLAND = 0x9a,
+    CB_SCRIPT_OP_BOOLOR = 0x9b,
+    CB_SCRIPT_OP_NUMEQUAL = 0x9c,
+    CB_SCRIPT_OP_NUMEQUALVERIFY = 0x9d,
+    CB_SCRIPT_OP_NUMNOTEQUAL = 0x9e,
+    CB_SCRIPT_OP_LESSTHAN = 0x9f,
+    CB_SCRIPT_OP_GREATERTHAN = 0xa0,
+    CB_SCRIPT_OP_LESSTHANOREQUAL = 0xa1,
+    CB_SCRIPT_OP_GREATERTHANOREQUAL = 0xa2,
+    CB_SCRIPT_OP_MIN = 0xa3,
+    CB_SCRIPT_OP_MAX = 0xa4,
+    CB_SCRIPT_OP_WITHIN = 0xa5,
+    CB_SCRIPT_OP_RIPEMD160 = 0xa6,
+    CB_SCRIPT_OP_SHA1 = 0xa7,
+    CB_SCRIPT_OP_SHA256 = 0xa8,
+    CB_SCRIPT_OP_HASH160 = 0xa9,
+    CB_SCRIPT_OP_HASH256 = 0xaa,
+    CB_SCRIPT_OP_CODESEPARATOR = 0xab,
+    CB_SCRIPT_OP_CHECKSIG = 0xac,
+    CB_SCRIPT_OP_CHECKSIGVERIFY = 0xad,
+    CB_SCRIPT_OP_CHECKMULTISIG = 0xae,
+    CB_SCRIPT_OP_CHECKMULTISIGVERIFY = 0xaf,
+    CB_SCRIPT_OP_NOP1 = 0xb0,
+    CB_SCRIPT_OP_NOP2 = 0xb1,
+    CB_SCRIPT_OP_NOP3 = 0xb2,
+    CB_SCRIPT_OP_NOP4 = 0xb3,
+    CB_SCRIPT_OP_NOP5 = 0xb4,
+    CB_SCRIPT_OP_NOP6 = 0xb5,
+    CB_SCRIPT_OP_NOP7 = 0xb6,
+    CB_SCRIPT_OP_NOP8 = 0xb7,
+    CB_SCRIPT_OP_NOP9 = 0xb8,
+    CB_SCRIPT_OP_NOP10 = 0xb9,
+    CB_SCRIPT_OP_SMALLINTEGER = 0xfa,
+    CB_SCRIPT_OP_PUBKEYS = 0xfb,
+    CB_SCRIPT_OP_PUBKEYHASH = 0xfd,
+    CB_SCRIPT_OP_PUBKEY = 0xfe,
+    CB_SCRIPT_OP_INVALIDOPCODE = 0xff,
+}CBScriptOp;
+
 /**
  @brief Structure for a stack item
  */
-
 typedef struct{
 	uint8_t * data; /**< Data for this stack item */
 	uint16_t length; /**< Length of this item */
@@ -46,7 +194,6 @@ typedef struct{
 /**
  @brief Structure that holds byte data in a stack.
  */
-
 typedef struct{
 	CBScriptStackItem * elements; /**< Elements in the stack */
 	uint16_t length; /**< Length of the stack */

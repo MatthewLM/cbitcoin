@@ -26,15 +26,14 @@
 
 //  Constructor
 
-CBPeer * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
-	CBPeer * self = CBGetNode(addr);
+CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr){
+	CBPeer * self = CBGetPeer(addr);
 	self = realloc(self, sizeof(*self));
 	if (NOT self) {
 		CBLogError("Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n", sizeof(*self));
 		return NULL;
 	}
-	CBGetObject(self)->free = CBFreeNode;
-	if(CBInitNodeByTakingNetworkAddress(self))
+	if(CBInitPeerByTakingNetworkAddress(self))
 		return self;
 	free(self);
 	return NULL;
@@ -42,13 +41,13 @@ CBPeer * CBNewNodeByTakingNetworkAddress(CBNetworkAddress * addr){
 
 //  Object Getter
 
-CBPeer * CBGetNode(void * self){
+CBPeer * CBGetPeer(void * self){
 	return self;
 }
 
 //  Initialiser
 
-bool CBInitNodeByTakingNetworkAddress(CBPeer * self){
+bool CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->receive = NULL;
 	self->receivedHeader = false;
 	self->versionSent = false;
@@ -72,12 +71,3 @@ bool CBInitNodeByTakingNetworkAddress(CBPeer * self){
 	self->messageReceived = false;
 	return true;
 }
-
-//  Destructor
-
-void CBFreeNode(void * self){
-	CBFreeNetworkAddress(self);
-}
-
-//  Functions
-

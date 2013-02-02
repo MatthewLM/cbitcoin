@@ -59,6 +59,7 @@ typedef struct{
  */
 typedef struct{
 	char * dataDir; /**< The data directory. */
+	char * prefix; /**< The file prefix. */
 	CBAssociativeArray index; /**< Index of all key/value pairs */
 	uint32_t numValues; /**< Number of values in the index */
 	uint16_t lastFile; /**< The last file ID. */
@@ -82,10 +83,18 @@ typedef struct{
 /**
  @brief Returns a new database object.
  @param dataDir The directory where the data files should be stored.
- @param CBLogError The error log function pointer.
+ @param prefix A prefix for the data files to prevent conflicts.
  @returns The database object or 0 on failure.
  */
-CBDatabase * CBNewDatabase(char * dataDir);
+CBDatabase * CBNewDatabase(char * dataDir, char * prefix);
+/**
+ @brief Initialises a database object.
+ @param self The CBDatabase object to initialise.
+ @param dataDir The directory where the data files should be stored.
+ @param prefix A prefix for the data files to prevent conflicts.
+ @returns true on success and false on failure.
+ */
+bool CBInitDatabase(CBDatabase * self, char * dataDir, char * prefix);
 /**
  @brief Reads and opens the index during initialisation
  @param self The storage object.
@@ -114,6 +123,13 @@ bool CBDatabaseReadAndOpenDeletionIndex(CBDatabase * self, char * filename);
  @returns true on success or false on failure.
  */
 bool CBDatabaseCreateDeletionIndex(CBDatabase * self, char * filename);
+
+/**
+ @brief Gets a CBDatabase from another object. Use this to avoid casts.
+ @param self The object to obtain the CBDatabase from.
+ @returns The CBDatabase object.
+ */
+CBDatabase * CBGetDatabase(void * self);
 
 // Destructor
 

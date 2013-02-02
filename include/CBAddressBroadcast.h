@@ -32,6 +32,10 @@
 
 #include "CBNetworkAddress.h"
 
+// Constants
+
+#define CB_ADDRESS_BROADCAST_MAX_SIZE 1000
+
 /**
  @brief Structure for CBAddressBroadcast objects. @see CBAddressBroadcast.h
 */

@@ -127,7 +127,7 @@ Structures should be documented like this:
 	/**
 	 @brief Brief decription of structure.
 	 */
-	typedef struct CBSomeStruct{
+	typedef struct {
 		int someInt; /**< Description of data field. */
 	} CBSomeStruct;
 

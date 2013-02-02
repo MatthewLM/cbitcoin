@@ -32,6 +32,14 @@
 
 #include "CBMessage.h"
 #include "CBNetworkAddress.h"
+#include <assert.h>
+
+// Constants
+
+#define CB_VERSION_MAX_SIZE 492 // Includes 400 characters for the user-agent and the 9 byte var int.
+#define CB_MIN_PROTO_VERSION 209
+#define CB_ADDR_TIME_VERSION 31402 // Version where times are included in addr messages.
+#define CB_PONG_VERSION 60000 // Version where pings are responded with pongs.
 
 /**
  @brief Structure for CBVersion objects. @see CBVersion.h

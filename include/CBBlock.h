@@ -34,6 +34,10 @@
 #include "CBBigInt.h"
 #include "CBValidationFunctions.h"
 
+// Constants
+
+#define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
+
 /**
  @brief Structure for CBBlock objects. @see CBBlock.h
 */
@@ -44,7 +48,7 @@ typedef struct{
 	uint32_t version;
 	CBByteArray * prevBlockHash; /**< The previous block hash. */
 	CBByteArray * merkleRoot; /**< The merkle tree root hash. */
-	uint32_t time; /**< Timestamp for the block. The network uses 32 bits. The protocol can be future proofed by detecting overflows when going through the blocks. So if a block's time overflows such that the time is less than the median of the last 10 blocks, the block can be seen by adding the first 32 bits of the network time and finally the timestamp can be tested against the network time. The overflow problem can therefore be fixed by a workaround but it is a shame Satoshi did not use 64 bits. */
+	uint32_t time; /**< Timestamp for the block. The network uses 32 bits. ??? Add overflow detection. If previous block timestamps are above some threshold, assume an overflow. But this will possibly be fixed in the future in the protocol, so will have to be changed anyway. */
 	uint32_t target; /**< The compact target representation. */
 	uint32_t nonce; /**< Nounce used in generating the block. */
 	uint32_t transactionNum; /**< Number of transactions in the block. */

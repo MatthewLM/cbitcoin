@@ -346,14 +346,14 @@ int main(){
 	for (int x = 0; x < 4; x++) {
 		CBTransactionGetInputHashForSignature(tx, subScriptByteArray, x, hashTypes[x], hash);
 		uint8_t * signature = malloc(sigSizes[x] + 1);
-		ECDSA_sign(0, hash, 32, signature, &sigSizes[0], keys[0]);
-		sigSizes[0]++;
-		signature[sigSizes[0] - 1] = hashTypes[x];
-		CBScript * inputScript = CBNewScriptOfSize(sigSizes[0] + pubSizes[0] + 2);
-		CBByteArraySetByte(CBGetByteArray(inputScript), 0, sigSizes[0]);
-		CBByteArraySetBytes(CBGetByteArray(inputScript), 1, signature, sigSizes[0]);
-		CBByteArraySetByte(CBGetByteArray(inputScript), 1 + sigSizes[0], pubSizes[0]);
-		CBByteArraySetBytes(CBGetByteArray(inputScript), 2 + sigSizes[0], pubKeys[0], pubSizes[0]);
+		ECDSA_sign(0, hash, 32, signature, &sigSizes[x], keys[x]);
+		sigSizes[x]++;
+		signature[sigSizes[x] - 1] = hashTypes[x];
+		CBScript * inputScript = CBNewScriptOfSize(sigSizes[x] + pubSizes[x] + 2);
+		CBByteArraySetByte(CBGetByteArray(inputScript), 0, sigSizes[x]);
+		CBByteArraySetBytes(CBGetByteArray(inputScript), 1, signature, sigSizes[x]);
+		CBByteArraySetByte(CBGetByteArray(inputScript), 1 + sigSizes[x], pubSizes[x]);
+		CBByteArraySetBytes(CBGetByteArray(inputScript), 2 + sigSizes[x], pubKeys[x], pubSizes[x]);
 		tx->inputs[x]->scriptObject = inputScript; // No need to release script.
 		free(signature);
 	}
@@ -443,7 +443,8 @@ int main(){
 	CBByteArrayReverseBytes(tempBytes);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	CBScriptExecuteReturn res = CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false);
+	if (res != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND FALSE SIGNATURE FAIL\n");
 		return 1;
 	}
@@ -454,7 +455,8 @@ int main(){
 	CBByteArrayReverseBytes(tempBytes);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	res = CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false);
+	if (res != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND FALSE PUBLIC KEY FAIL\n");
 		return 1;
 	}

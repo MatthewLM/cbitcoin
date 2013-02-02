@@ -41,7 +41,8 @@ typedef enum{
 	GOTACK = 2, 
 	GOTPING = 4, 
 	GOTPONG = 8, 
-	GOTGETADDR = 16, 
+	GOTGETADDR = 16,
+	COMPLETE = 32,
 }TesterProgress;
 
 typedef struct{
@@ -53,6 +54,12 @@ typedef struct{
 	CBNetworkCommunicator * comms[3];
 	pthread_mutex_t testingMutex;
 }Tester;
+
+uint64_t CBGetMilliseconds(void){
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
 
 void onTimeOut(void * tester, void * comm, void * peer, CBTimeOutType type);
 void onTimeOut(void * tester, void * comm, void * peer, CBTimeOutType type){
@@ -75,10 +82,12 @@ void onTimeOut(void * tester, void * comm, void * peer, CBTimeOutType type){
 	}
 	CBNetworkCommunicatorStop((CBNetworkCommunicator *)comm);
 }
+
 void stop(void * comm);
 void stop(void * comm){
 	CBNetworkCommunicatorStop(comm);
 }
+
 CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void * vpeer);
 CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void * vpeer){
 	Tester * tester = vtester;
@@ -170,11 +179,11 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 			break;
 	}
 	if (*prog == (GOTVERSION | GOTACK | GOTPING | GOTPONG | GOTGETADDR)) {
-		*prog = 0;
+		*prog |= COMPLETE;
 		tester->complete++;
 	}
 	printf("COMPLETION: %i - %i\n", tester->addrComplete, tester->complete);
-	if (tester->addrComplete == 6 && tester->complete == 6) { // Connector sends other peer twice (2). Listeners send self to connector (2). Listeners send selves to each other (2). 2 + 2 + 2 = 6
+	if (tester->addrComplete == 6 && tester->complete == 6) {
 		// Completed testing
 		printf("DONE\n");
 		printf("STOPPING COMM L1\n");
@@ -207,13 +216,11 @@ int main(){
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
 	CBByteArray * loopBack2 = CBByteArrayCopy(loopBack); // Do not use in more than one thread.
-	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0);
-	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0); // Use in connector thread.
-	addrListenB->public = true; // Ensure addresses are relayed.
-	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, loopBack, 45563, 0);
-	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0); // Use in connector thread.
-	addrListen2B->public = true; // Ensure addresses are relayed.
-	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0); // Different port over loopback to seperate the CBNetworkCommunicators.
+	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0, false);
+	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0, true); // Use in connector thread.
+	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, loopBack, 45563, 0, false);
+	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0, true); // Use in connector thread.
+	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0, false); // Different port over loopback to seperate the CBNetworkCommunicators.
 	CBReleaseObject(loopBack);
 	CBReleaseObject(loopBack2);
 	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
@@ -222,8 +229,8 @@ int main(){
 	// First listening CBNetworkCommunicator setup.
 	CBAddressManager * addrManListen = CBNewAddressManager(onBadTime);
 	addrManListen->maxAddressesInBucket = 2;
-	CBAddressManagerSetReachability(addrManListen, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator();
+	CBNetworkCommunicatorSetReachability(commListen, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManListen->callbackHandler = commListen;
 	commListen->onMessageReceived = onMessageReceived;
 	commListen->onNetworkError = onNetworkError;
@@ -235,10 +242,6 @@ int main(){
 	commListen->maxIncommingConnections = 3; // One for connector, one for the other listener and an extra so that we continue to share our address.
 	commListen->heartBeat = 1000;
 	commListen->timeOut = 2000;
-	commListen->sendTimeOut = 1000;
-	commListen->recvTimeOut = 1000;
-	commListen->responseTimeOut = 1000;
-	commListen->connectionTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen, NULL, NULL);
 	CBNetworkCommunicatorSetAddressManager(commListen, addrManListen);
 	CBNetworkCommunicatorSetUserAgent(commListen, userAgent);
@@ -247,8 +250,8 @@ int main(){
 	// Second listening CBNetworkCommunicator setup.
 	CBAddressManager * addrManListen2 = CBNewAddressManager(onBadTime);
 	addrManListen2->maxAddressesInBucket = 2;
-	CBAddressManagerSetReachability(addrManListen2, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator();
+	CBNetworkCommunicatorSetReachability(commListen2, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManListen2->callbackHandler = commListen2;
 	commListen2->onMessageReceived = onMessageReceived;
 	commListen2->onNetworkError = onNetworkError;
@@ -260,10 +263,6 @@ int main(){
 	commListen2->maxIncommingConnections = 3;
 	commListen2->heartBeat = 1000;
 	commListen2->timeOut = 2000;
-	commListen2->sendTimeOut = 1000;
-	commListen2->recvTimeOut = 1000;
-	commListen2->responseTimeOut = 1000;
-	commListen2->connectionTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen2, NULL, NULL);
 	CBNetworkCommunicatorSetAddressManager(commListen2, addrManListen2);
 	CBNetworkCommunicatorSetUserAgent(commListen2, userAgent2);
@@ -272,11 +271,11 @@ int main(){
 	// Connecting CBNetworkCommunicator setup.
 	CBAddressManager * addrManConnect = CBNewAddressManager(onBadTime);
 	addrManConnect->maxAddressesInBucket = 2;
-	CBAddressManagerSetReachability(addrManConnect, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	// We are going to connect to both listing CBNetworkCommunicators.
 	CBAddressManagerAddAddress(addrManConnect, addrListenB);
 	CBAddressManagerAddAddress(addrManConnect, addrListen2B);
 	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator();
+	CBNetworkCommunicatorSetReachability(commConnect, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManConnect->callbackHandler = commConnect;
 	commConnect->onMessageReceived = onMessageReceived;
 	commConnect->onNetworkError = onNetworkError;
@@ -288,10 +287,6 @@ int main(){
 	commConnect->maxIncommingConnections = 0;
 	commConnect->heartBeat = 1000;
 	commConnect->timeOut = 2000;
-	commConnect->sendTimeOut = 1000;
-	commConnect->recvTimeOut = 1000;
-	commConnect->responseTimeOut = 1000;
-	commConnect->connectionTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commConnect, NULL, NULL);
 	CBNetworkCommunicatorSetAddressManager(commConnect, addrManConnect);
 	CBNetworkCommunicatorSetUserAgent(commConnect, userAgent3);
@@ -328,51 +323,35 @@ int main(){
 	pthread_join(listen2Thread, NULL);
 	pthread_join(connectThread, NULL);
 	// Check addresses in the first listening CBNetworkCommunicator
-	uint8_t i = CBAddressManagerGetBucketIndex(commListen->addresses, addrListen2);
-	CBBucket * bucket = commListen->addresses->buckets + i;
-	if (bucket->addrNum != 1) { // Only L2 should go back to addresses. CN is private
-		printf("ADDRESS DISCOVERY LISTEN ONE ADDR NUM FAIL %i != 1\n", bucket->addrNum);
+	if (commListen->addresses->addrNum != 1) { // Only L2 should go back to addresses. CN is private
+		printf("ADDRESS DISCOVERY LISTEN ONE ADDR NUM FAIL %i != 1\n", commListen->addresses->addrNum);
 		exit(EXIT_FAILURE);
 	}
-	if (i != CBAddressManagerGetBucketIndex(commListen->addresses, addrConnect)) {
-		printf("ADDRESS DISCOVERY LISTEN ONE SAME BUCKET FAIL\n");
-		exit(EXIT_FAILURE);
-	}
-	if(!CBAddressManagerGotNetworkAddress(commListen->addresses, addrListen2)){
+	if(NOT CBAddressManagerGotNetworkAddress(commListen->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY LISTEN ONE LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	// Check the addresses in the second.
-	i = CBAddressManagerGetBucketIndex(commListen2->addresses, addrListen);
-	bucket = commListen2->addresses->buckets + i;
-	if (bucket->addrNum != 1) {
+	if (commListen->addresses->addrNum != 1) {
 		printf("ADDRESS DISCOVERY LISTEN TWO ADDR NUM FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if (i != CBAddressManagerGetBucketIndex(commListen2->addresses, addrConnect)) {
-		printf("ADDRESS DISCOVERY LISTEN TWO SAME BUCKET FAIL\n");
-		exit(EXIT_FAILURE);
-	}
-	if(!CBAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
+	if (NOT CBAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY LISTEN TWO LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	// And lastly the connecting CBNetworkCommunicator
-	i = CBAddressManagerGetBucketIndex(commConnect->addresses, addrListen);
-	bucket = commConnect->addresses->buckets + i;
-	if (bucket->addrNum != 2) {
+	if (commConnect->addresses->addrNum != 2) {
 		printf("ADDRESS DISCOVERY CONNECT ADDR NUM FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if (i != CBAddressManagerGetBucketIndex(commConnect->addresses, addrListen2)) {
-		printf("ADDRESS DISCOVERY CONNECT SAME BUCKET FAIL\n");
-		exit(EXIT_FAILURE);
-	}
-	if(!CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
+	addrListen->bucketSet = false;
+	if (NOT CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if(!CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
+	addrListen2->bucketSet = false;
+	if (NOT CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}
