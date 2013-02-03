@@ -237,7 +237,7 @@ int main(){
 	}
 	for (uint8_t x = 0; x < 2; x++) {
 		if (tx->outputs[x]->value != randInt64) {
-			printf("TRANSACTION CBTransactionOutput %i DESERIALISED value INCORRECT: %llu != %llu\n", x, tx->outputs[x]->value, randInt64);
+			printf("TRANSACTION CBTransactionOutput %i DESERIALISED value INCORRECT: %" PRIu64 " != %" PRIu64 "\n", x, tx->outputs[x]->value, randInt64);
 			return 1;
 		}
 		stack = CBNewEmptyScriptStack();
