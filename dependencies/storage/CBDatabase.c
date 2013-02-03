@@ -43,6 +43,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * prefix){
 	self->prefix = prefix;
 	self->lastUsedFileObject = 0; // No stored file yet.
 	self->numChangeKeys = 0;
+	self->changeKeys = NULL;
 	// Check data consistency
 	if (NOT CBDatabaseEnsureConsistent(self)){
 		CBLogError("The database is inconsistent and could not be recovered in CBNewDatabase");
@@ -191,6 +192,8 @@ bool CBDatabaseCreateIndex(CBDatabase * self, char * filename){
 	// Else empty index
 	self->nextIndexPos = 10; // First index starts after 10 bytes
 	self->lastFile = 2;
+	self->lastSize = 0;
+	self->numValues = 0;
 	// Open new index file.
 	self->indexFile = CBFileOpen(filename, true);
 	if (NOT self->indexFile) {
@@ -258,6 +261,7 @@ bool CBDatabaseReadAndOpenDeletionIndex(CBDatabase * self, char * filename){
 }
 bool CBDatabaseCreateDeletionIndex(CBDatabase * self, char * filename){
 	self->deletionIndexFile = CBFileOpen(filename, true);
+	self->numDeletionValues = 0;
 	if (NOT self->deletionIndexFile) {
 		CBLogError("Could not create the database deletion index.");
 		return true;
