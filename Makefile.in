@@ -16,7 +16,7 @@ else # Assuming Linux for now
 	LFLAGS += -shared
 	LIBRARY_EXTENSION=.$(LIBRARY_VERSION).so
 	ADDITIONAL_OPENSSL_FLAGS = -ldl -L/lib/x86_64-linux-gnu/
-	LD_LIBRARY_PATH = :$(BINDIR)
+	export LD_LIBRARY_PATH = $(BINDIR)
 endif
 LIBCFLAGS = @LIB_COMPILE_CONFIG_FLAGS@
 
