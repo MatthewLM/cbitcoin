@@ -213,7 +213,7 @@ int main(){
 	block->time = 1231006505;
 	block->nonce = 2083236893;
 	block->transactionNum = 2;
-	block->transactions = malloc(sizeof(*block->transactions));
+	block->transactions = malloc(sizeof(*block->transactions) * 2);
 	block->transactions[0] = CBNewTransaction(0, 1);
 	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TRANSACTION_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
 	for (uint8_t x = 0; x < 2; x++) {
