@@ -84,6 +84,7 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self){
 	self->heartBeat = 1800000;
 	self->flags = 0;
 	self->connectionTimeOut = 5000;
+	self->services = 0;
 	return true;
 }
 
@@ -113,6 +114,7 @@ void CBNetworkCommunicatorAcceptConnection(void * vself, uint64_t socket){
 	// Connected, add CBNetworkAddress. Use a special placeholder ip identifier for the address, so that it is unique.
 	CBByteArray * ip = CBNewByteArrayOfSize(16);
 	CBByteArraySetInt64(ip, 0, self->pendingIP);
+	CBByteArraySetInt64(ip, 8, 0);
 	CBPeer * peer = CBNewPeerByTakingNetworkAddress(CBNewNetworkAddress(0, ip, 0, 0, false));
 	CBReleaseObject(ip);
 	if (NOT peer)
@@ -451,7 +453,6 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 				CBInt32ToArray(peer->sendingHeader, 16, toSend->bytes->length);
 			}else
 				memset(peer->sendingHeader + 16, 0, 4);
-			assert(peer->sendingHeader[16] != 27 || peer->sendingHeader[4] != 'a');
 			// Checksum
 			memcpy(peer->sendingHeader + 20, toSend->checksum, 4);
 		}

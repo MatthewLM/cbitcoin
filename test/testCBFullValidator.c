@@ -545,6 +545,7 @@ int main(){
 	testBlock->transactions[0]->lockTime = 0;
 	CBReleaseObject(testBlock->transactions[0]->inputs[0]->scriptObject);
 	testBlock->transactions[0]->inputs[0]->scriptObject = CBNewByteArrayOfSize(1);
+	CBByteArraySetByte(testBlock->transactions[0]->inputs[0]->scriptObject, 0, 0);
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	memcpy(CBByteArrayGetData(testBlock->merkleRoot), CBTransactionGetHash(testBlock->transactions[0]), 32);
 	CBBlockSerialise(testBlock, true, false);
