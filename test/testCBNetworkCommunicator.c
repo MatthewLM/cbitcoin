@@ -183,16 +183,25 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 		tester->complete++;
 	}
 	printf("COMPLETION: %i - %i\n", tester->addrComplete, tester->complete);
-	if (tester->addrComplete == 6 && tester->complete == 6) {
-		// Completed testing
-		printf("DONE\n");
-		printf("STOPPING COMM L1\n");
-		CBRunOnNetworkThread(tester->comms[0]->eventLoop, stop, tester->comms[0]);
-		printf("STOPPING COMM L2\n");
-		CBRunOnNetworkThread(tester->comms[1]->eventLoop, stop, tester->comms[1]);
-		printf("STOPPING COMM CN\n");
-		CBRunOnNetworkThread(tester->comms[2]->eventLoop, stop, tester->comms[2]);
-		return CB_MESSAGE_ACTION_RETURN;
+	if (tester->addrComplete > 6) {
+		printf("ADDR COMPLETE FAIL\n");
+		exit(EXIT_FAILURE);
+	}
+	if (tester->complete == 6) {
+		if (tester->addrComplete == 6) {
+			// Completed testing
+			printf("DONE\n");
+			printf("STOPPING COMM L1\n");
+			CBRunOnNetworkThread(tester->comms[0]->eventLoop, stop, tester->comms[0]);
+			printf("STOPPING COMM L2\n");
+			CBRunOnNetworkThread(tester->comms[1]->eventLoop, stop, tester->comms[1]);
+			printf("STOPPING COMM CN\n");
+			CBRunOnNetworkThread(tester->comms[2]->eventLoop, stop, tester->comms[2]);
+			return CB_MESSAGE_ACTION_RETURN;
+		}else{
+			printf("ADDR COMPLETE DURING COMPLETE FAIL\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 	pthread_mutex_unlock(&tester->testingMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;

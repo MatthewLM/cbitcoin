@@ -125,9 +125,8 @@ int main(){
 		return 1;
 	}
 	// Test basic transaction validation
-	bool err;
 	uint64_t value;
-	if (NOT CBTransactionValidateBasic(tx, false, &value, &err)) {
+	if (NOT CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION FAIL\n");
 		return 1;
 	}
@@ -137,25 +136,25 @@ int main(){
 	}
 	CBByteArraySetByte(tx->inputs[1]->prevOut.hash, 26, 0xFF);
 	tx->inputs[1]->prevOut.index = 3;
-	if (CBTransactionValidateBasic(tx, false, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION DUPLICATE PREV OUT FAIL\n");
 		return 1;
 	}
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 27, 0x00);
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 26, 0x00);
-	if (CBTransactionValidateBasic(tx, false, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION NULL HASH FAIL\n");
 		return 1;
 	}
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 31, 0x01);
 	tx->outputs[0]->value = CB_MAX_MONEY - 39959;
-	if (CBTransactionValidateBasic(tx, false, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION OVER MAX MONEY FAIL\n");
 		return 1;
 	}
 	tx->outputs[0]->value = 0xFFFFFFFFFFFFFFFF;
 	tx->outputs[1]->value = 2;
-	if (CBTransactionValidateBasic(tx, false, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION OVERFLOW FAIL\n");
 		return 1;
 	}
@@ -171,32 +170,32 @@ int main(){
 	script = CBNewScriptWithDataCopy((uint8_t [1]){0}, 1);
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(50, script));
 	CBReleaseObject(script);
-	if (NOT CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx), &value, &err)) {
+	if (NOT CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx), &value)) {
 		printf("BASIC VALIDATION COINBASE FAIL\n");
 		return 1;
 	}
-	if (CBTransactionValidateBasic(tx, false, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION COINBASE FALSE FAIL\n");
 		return 1;
 	}
 	tx->inputs[0]->scriptObject->length = 1;
-	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, true, &value)) {
 		printf("BASIC VALIDATION COINBASE SCRIPT LOW FAIL\n");
 		return 1;
 	}
 	tx->inputs[0]->scriptObject->length = 101;
-	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, true, &value)) {
 		printf("BASIC VALIDATION COINBASE SCRIPT HIGH FAIL\n");
 		return 1;
 	}
 	tx->inputNum = 0;
-	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, true, &value)) {
 		printf("BASIC VALIDATION NO INPUTS FAIL\n");
 		return 1;
 	}
 	tx->inputNum = 1;
 	tx->outputNum = 0;
-	if (CBTransactionValidateBasic(tx, true, &value, &err)) {
+	if (CBTransactionValidateBasic(tx, true, &value)) {
 		printf("BASIC VALIDATION NO OUTPUTS FAIL\n");
 		return 1;
 	}

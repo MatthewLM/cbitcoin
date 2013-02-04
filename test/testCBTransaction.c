@@ -330,22 +330,21 @@ int main(){
 		CBTransactionTakeInput(tx, CBNewUnsignedTransactionInput(0, bytes, 0));
 	}
 	CBReleaseObject(bytes);
-	// Make standard output script.
-	uint8_t * subScript = malloc(25);
-	subScript[0] = CB_SCRIPT_OP_DUP;
-	subScript[1] = CB_SCRIPT_OP_HASH160;
-	subScript[2] = 20;
 	uint8_t keyHash[32];
-	CBSha256(pubKeys[0], pubSizes[0], keyHash);
-	CBRipemd160(keyHash, 32, hash);
-	memmove(subScript + 3, hash, 20);
-	subScript[23] = CB_SCRIPT_OP_EQUALVERIFY;
-	subScript[24] = CB_SCRIPT_OP_CHECKSIG;
-	CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, 25);
+	CBScript * outputScripts[4];
 	// Make input signatures for testing different hash types
 	CBSignType hashTypes[4] = {CB_SIGHASH_ALL, CB_SIGHASH_SINGLE, CB_SIGHASH_NONE, CB_SIGHASH_ALL | CB_SIGHASH_ANYONECANPAY};
 	for (int x = 0; x < 4; x++) {
-		CBTransactionGetInputHashForSignature(tx, subScriptByteArray, x, hashTypes[x], hash);
+		outputScripts[x] = CBNewByteArrayOfSize(25);
+		CBByteArraySetByte(outputScripts[x], 0, CB_SCRIPT_OP_DUP);
+		CBByteArraySetByte(outputScripts[x], 1, CB_SCRIPT_OP_HASH160);
+		CBByteArraySetByte(outputScripts[x], 2, 20);
+		CBSha256(pubKeys[x], pubSizes[x], keyHash);
+		CBRipemd160(keyHash, 32, hash);
+		CBByteArraySetBytes(outputScripts[x], 3, hash, 20);
+		CBByteArraySetByte(outputScripts[x], 23, CB_SCRIPT_OP_EQUALVERIFY);
+		CBByteArraySetByte(outputScripts[x], 24, CB_SCRIPT_OP_CHECKSIG);
+		CBTransactionGetInputHashForSignature(tx, outputScripts[x], x, hashTypes[x], hash);
 		uint8_t * signature = malloc(sigSizes[x] + 1);
 		ECDSA_sign(0, hash, 32, signature, &sigSizes[x], keys[x]);
 		sigSizes[x]++;
@@ -358,12 +357,11 @@ int main(){
 		tx->inputs[x]->scriptObject = inputScript; // No need to release script.
 		free(signature);
 	}
-	CBScript * outputScript = CBNewScriptFromReference(subScriptByteArray, 0, subScriptByteArray->length);
 	// Test SIGHASH_ALL
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_ALL FAIL\n");
 		return 1;
 	}
@@ -371,7 +369,7 @@ int main(){
 	tx->outputs[0]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -380,7 +378,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED FIRST OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -389,7 +387,7 @@ int main(){
 	tx->outputs[1]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -398,7 +396,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[1]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[1]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED SECOND OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -407,7 +405,7 @@ int main(){
 	tx->lockTime++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED LOCK TIME FAIL\n");
 		return 1;
 	}
@@ -416,7 +414,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[0]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -425,7 +423,7 @@ int main(){
 	tx->inputs[0]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -434,7 +432,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND MODIFIED INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -444,8 +442,7 @@ int main(){
 	CBByteArrayReverseBytes(tempBytes);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	CBScriptExecuteReturn res = CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false);
-	if (res != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ALL AND FALSE SIGNATURE FAIL\n");
 		return 1;
 	}
@@ -456,8 +453,7 @@ int main(){
 	CBByteArrayReverseBytes(tempBytes);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	res = CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false);
-	if (res != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_INVALID) {
 		printf("SIGHASH_ALL AND FALSE PUBLIC KEY FAIL\n");
 		return 1;
 	}
@@ -467,7 +463,7 @@ int main(){
 	CBGetByteArray(tx->inputs[0]->scriptObject)->length = sigSizes[0] + 1;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[0], &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_INVALID) {
 		printf("OP_CHECKSIG AND TOO FEW ITEMS FAIL\n");
 		return 1;
 	}
@@ -475,7 +471,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_SINGLE FAIL\n");
 		return 1;
 	}
@@ -483,7 +479,7 @@ int main(){
 	tx->outputs[0]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -492,7 +488,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -501,7 +497,7 @@ int main(){
 	tx->outputs[1]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -510,7 +506,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[1]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[1]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED SECOND OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -519,7 +515,7 @@ int main(){
 	tx->outputs[2]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -528,7 +524,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_SINGLE AND MODIFIED SECOND OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -537,7 +533,7 @@ int main(){
 	tx->lockTime++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED LOCK TIME FAIL\n");
 		return 1;
 	}
@@ -546,7 +542,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[0]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -555,7 +551,7 @@ int main(){
 	tx->inputs[0]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -564,7 +560,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_SINGLE AND MODIFIED FIRST INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -573,7 +569,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[1]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[1]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED SECOND INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -582,7 +578,7 @@ int main(){
 	tx->inputs[1]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED SECOND INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -591,7 +587,7 @@ int main(){
 	tx->inputs[1]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[1]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[1], &stack, CBTransactionGetInputHashForSignature, tx, 1, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_SINGLE AND MODIFIED SECOND INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -600,7 +596,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_NONE FAIL\n");
 		return 1;
 	}
@@ -608,7 +604,7 @@ int main(){
 	tx->outputs[0]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -617,7 +613,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -626,7 +622,7 @@ int main(){
 	tx->outputs[2]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD OUTPUT VALUE FAIL\n");
 		return 1;
 	}
@@ -635,7 +631,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[2]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -644,7 +640,7 @@ int main(){
 	tx->lockTime++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_NONE AND MODIFIED LOCK TIME FAIL\n");
 		return 1;
 	}
@@ -653,7 +649,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[0]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -662,7 +658,7 @@ int main(){
 	tx->inputs[0]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -671,7 +667,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_NONE AND MODIFIED FIRST INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -680,7 +676,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[2]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[2]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -689,7 +685,7 @@ int main(){
 	tx->inputs[2]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -698,7 +694,7 @@ int main(){
 	tx->inputs[2]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[2]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[2], &stack, CBTransactionGetInputHashForSignature, tx, 2, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_NONE AND MODIFIED THIRD INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -707,7 +703,7 @@ int main(){
 	// Execute the transaction scripts to verify correctness.
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_ANYONECANPAY FAIL\n");
 		return 1;
 	}
@@ -715,7 +711,7 @@ int main(){
 	tx->outputs[0]->value++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST OUTPUT VALUE FAIL\n");
 		return 1;
 	}else if (stack.elements[0].data){
@@ -727,7 +723,7 @@ int main(){
 	CBByteArraySetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0, CBByteArrayGetByte(CBGetByteArray(tx->outputs[0]->scriptObject), 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST OUTPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -736,7 +732,7 @@ int main(){
 	tx->lockTime++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED LOCK TIME FAIL\n");
 		return 1;
 	}
@@ -745,7 +741,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[0]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[0]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -754,7 +750,7 @@ int main(){
 	tx->inputs[0]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -763,7 +759,7 @@ int main(){
 	tx->inputs[0]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_TRUE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FIRST INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
@@ -772,7 +768,7 @@ int main(){
 	CBByteArraySetByte(tx->inputs[3]->prevOut.hash, 0, CBByteArrayGetByte(tx->inputs[3]->prevOut.hash, 0) + 1);
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FORTH INPUT OUT POINTER HASH FAIL\n");
 		return 1;
 	}
@@ -781,7 +777,7 @@ int main(){
 	tx->inputs[3]->prevOut.index++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FORTH INPUT OUT POINTER INDEX FAIL\n");
 		return 1;
 	}
@@ -790,13 +786,13 @@ int main(){
 	tx->inputs[3]->sequence++;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[3]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScripts[3], &stack, CBTransactionGetInputHashForSignature, tx, 3, false) != CB_SCRIPT_FALSE) {
 		printf("SIGHASH_ANYONECANPAY AND MODIFIED FORTH INPUT SEQUENCE FAIL\n");
 		return 1;
 	}
 	// Free objects
-	CBReleaseObject(subScriptByteArray);
-	CBReleaseObject(outputScript);
+	for (uint8_t x = 0; x < 4; x++)
+		CBReleaseObject(outputScripts[x]);
 	CBReleaseObject(tx);
 	// Test OP_CHECKMULTISIG
 	// Lower signature sizes that were incremented above for SIGHASH
@@ -813,7 +809,7 @@ int main(){
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(80, scriptObj));
 	CBReleaseObject(scriptObj);
 	// Make previous output script with OP_CHECKMULTISIG
-	outputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_CHECKMULTISIG}, 1);
+	CBScript * outputScript = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_CHECKMULTISIG}, 1);
 	// Make signatures
 	uint8_t * signatures[21];
 	/* (gdb) p/x *signature->data @ signature->length
@@ -1088,7 +1084,7 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_INVALID) {
 		printf("OP_CHECKMULTISIG - TWENTY ONE SIGS - TWENTY ONE OK KEYS - ZERO BAD KEYS FAIL\n");
 		return 1;
 	}
@@ -1167,7 +1163,7 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_INVALID) {
 		printf("OP_CHECKMULTISIG - LOW KEY NUMBER FAIL\n");
 		return 1;
 	}
@@ -1221,7 +1217,7 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_INVALID) {
 		printf("OP_CHECKMULTISIG - HIGH KEY NUMBER FAIL\n");
 		return 1;
 	}
@@ -1248,7 +1244,7 @@ int main(){
 	tx->inputs[0]->scriptObject = scriptObj;
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
-	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_FALSE) {
+	if (CBScriptExecute(outputScript, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_INVALID) {
 		printf("OP_CHECKMULTISIG - HIGH SIG NUMBER FAIL\n");
 		return 1;
 	}
