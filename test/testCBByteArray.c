@@ -41,7 +41,7 @@ int main(){
 	srand(s);
 	// Test string
 	char * string = "Hello World!";
-	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string));
+	CBByteArray * ba = CBNewByteArrayWithDataCopy((uint8_t *)string, (uint32_t)strlen(string) + 1);
 	if (strcmp(string, (char *)CBByteArrayGetData(ba))) {
 		printf("STRING COPY FAIL\n");
 		return 1;

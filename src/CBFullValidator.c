@@ -548,6 +548,7 @@ CBBlockStatus CBFullValidatorProcessBlock(CBFullValidator * self, CBBlock * bloc
 			free(tempWork.data); 
 		}
 		// Set the remaining data
+		self->branches[branch].working = false;
 		self->branches[branch].numBlocks = 0;
 		self->branches[branch].lastValidation = CB_NO_VALIDATION;
 		self->branches[branch].startHeight = self->branches[prevBranch].startHeight + prevBlockIndex + 1;

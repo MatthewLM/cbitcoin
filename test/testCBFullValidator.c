@@ -556,6 +556,7 @@ int main(){
 	// Bad coinbase script size 101
 	CBReleaseObject(testBlock->transactions[0]->inputs[0]->scriptObject);
 	testBlock->transactions[0]->inputs[0]->scriptObject = CBNewByteArrayOfSize(101);
+	memset(CBByteArrayGetData(testBlock->transactions[0]->inputs[0]->scriptObject), 0, 101);
 	CBReleaseObject(CBGetMessage(testBlock->transactions[0])->bytes);
 	CBGetMessage(testBlock->transactions[0])->bytes = CBNewByteArrayOfSize(228);
 	CBTransactionSerialise(testBlock->transactions[0], true);
