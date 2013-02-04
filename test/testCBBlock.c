@@ -208,6 +208,7 @@ int main(){
 	// Test serailisation of a block, and then move a transaction. Then reserialise without forcing full serialisation
 	block = CBNewBlock();
 	block->prevBlockHash = CBNewByteArrayOfSize(32);
+	memset(CBByteArrayGetData(block->prevBlockHash), 0, 32);
 	block->merkleRoot = CBNewByteArrayOfSize(32);
 	block->target = 0x1D00FFFF;
 	block->time = 1231006505;
