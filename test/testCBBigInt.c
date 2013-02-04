@@ -49,10 +49,9 @@ int main(){
 	// Full test
 	uint8_t temp[255];
 	CBBigInt bi;
-	bi.length = 32;
-	bi.data = malloc(32);
 	CBBigInt bi2;
-	bi2.data = malloc(32);
+	CBBigIntAlloc(&bi, 32);
+	CBBigIntAlloc(&bi2, 32);
 	for (int x = 0; x < 100; x++) {
 		// Div
 		memset(temp, 0, 32);
