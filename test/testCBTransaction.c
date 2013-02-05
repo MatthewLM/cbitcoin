@@ -795,6 +795,9 @@ int main(){
 		CBReleaseObject(outputScripts[x]);
 	CBReleaseObject(tx);
 	// Test OP_CHECKMULTISIG
+	// Lower signature sizes that were incremented above for SIGHASH
+	for (int x = 0; x < 4; x++)
+		sigSizes[x]--;
 	// Make transaction
 	tx = CBNewTransaction(0, 2);
 	CBSha256((uint8_t []){0x56, 0x21, 0xF2}, 3, hash);

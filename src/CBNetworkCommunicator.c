@@ -168,7 +168,7 @@ CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPee
 			self->onNetworkError(self->callbackHandler, self);
 		return CB_CONNECT_NO_SUPPORT;
 	}else if (res == CB_SOCKET_BAD) {
-		if (NOT self->addresses->peersNum)
+		if (self->addresses->peersNum == 0)
 			self->onNetworkError(self->callbackHandler, self);
 		return CB_CONNECT_ERROR;
 	}
@@ -233,7 +233,7 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 	// Close socket on failure
 	CBCloseSocket(peer->socketID);
 	self->attemptingOrWorkingConnections--;
-	if (NOT self->attemptingOrWorkingConnections) {
+	if (self->attemptingOrWorkingConnections == 0) {
 		self->onNetworkError(self->callbackHandler, self);
 	}
 	// Add the address back to the addresses listwith no penalty here since it was definitely our fault.
@@ -290,7 +290,7 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 	if (self->addresses->peersNum == 0 && self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING)
 		// No more peers so stop pings
 		CBNetworkCommunicatorStopPings(self);
-	if (NOT self->attemptingOrWorkingConnections && NOT stopping)
+	if (self->attemptingOrWorkingConnections == 0 && NOT stopping)
 		// No more connections so give a network error
 		self->onNetworkError(self->callbackHandler, self);
 }
@@ -389,7 +389,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 	// Can now send data
 	if (NOT peer->sentHeader) {
 		// Need to send the header
-		if (NOT peer->messageSent) {
+		if (peer->messageSent == 0) {
 			// Create header
 			peer->sendingHeader = malloc(24);
 			if (NOT peer->sendingHeader) {
@@ -502,7 +502,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 			peer->typesExpected[peer->typesExpectedNum] = peer->sendQueue[peer->sendQueueFront]->expectResponse;
 			peer->typesExpectedNum++;
 			// Start timer for latency measurement, if not already waiting.
-			if (NOT peer->latencyTimerStart){
+			if (peer->latencyTimerStart == 0){
 				peer->latencyTimerStart = CBGetMilliseconds();
 				peer->latencyExpected = peer->sendQueue[peer->sendQueueFront]->expectResponse;
 			}
@@ -930,7 +930,7 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 void CBNetworkCommunicatorOnTimeOut(void * vself, void * vpeer, CBTimeOutType type){
 	CBNetworkCommunicator * self = vself;
 	CBPeer * peer = vpeer;
-	if (type == CB_TIMEOUT_RECEIVE && NOT peer->messageReceived && NOT peer->receivedHeader) {
+	if (type == CB_TIMEOUT_RECEIVE && peer->messageReceived == 0 && NOT peer->receivedHeader) {
 		// Not responded
 		if (peer->typesExpectedNum)
 			type = CB_TIMEOUT_RESPONSE;
@@ -1065,7 +1065,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 					if (peerToRelay != peer && NOT inBroadcast) {
 						// Relay the broadcast
 						CBNetworkCommunicatorSendMessage(self, peerToRelay, CBGetMessage(addrs));
-						if (NOT --peersToBeGiven)
+						if (--peersToBeGiven == 0)
 							break;
 					}
 					// Move to the next peer if possible
@@ -1302,7 +1302,7 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * pee
 		switch (message->type) {
 			case CB_MESSAGE_TYPE_VERSION:
 				len = CBVersionCalculateLength(CBGetVersion(message));
-				if (NOT len)
+				if (len == 0)
 					return false;
 				message->bytes = CBNewByteArrayOfSize(len);
 				if (NOT message->bytes)
@@ -1334,7 +1334,7 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * pee
 				break;
 			case CB_MESSAGE_TYPE_TX:
 				len = CBTransactionCalculateLength(CBGetTransaction(message));
-				if (NOT len)
+				if (len == 0)
 					return false;
 				message->bytes = CBNewByteArrayOfSize(len);
 				if (NOT message->bytes)
@@ -1343,7 +1343,7 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * pee
 				break;
 			case CB_MESSAGE_TYPE_BLOCK:
 				len = CBBlockCalculateLength(CBGetBlock(message), true);
-				if (NOT len)
+				if (len == 0)
 					return false;
 				message->bytes = CBNewByteArrayOfSize(len);
 				if (NOT message->bytes)
