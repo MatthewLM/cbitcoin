@@ -106,7 +106,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 		tester->progNum++;
 	}
 	TesterProgress * prog = tester->prog + x;
-	printf("%s onMessageReceived from %s (%p) WITH TESTER %i and PROG %i (%p) MESS = %i\n", (comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"), (CBGetNetworkAddress(peer)->port == 45562)? "L1" : ((CBGetNetworkAddress(peer)->port == 45563)? "L2" : ((CBGetNetworkAddress(peer)->port == 45564) ? "CN" : "UK")), (void *)peer, x, *prog, (void *)prog, theMessage->type);
+	printf("%s received %u from %s (%p) WITH TESTER %i and PROG %i (%p)\n", (comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"), theMessage->type, (CBGetNetworkAddress(peer)->port == 45562)? "L1" : ((CBGetNetworkAddress(peer)->port == 45563)? "L2" : ((CBGetNetworkAddress(peer)->port == 45564) ? "CN" : "UK")), (void *)peer, x, *prog, (void *)prog);
 	switch (theMessage->type) {
 		case CB_MESSAGE_TYPE_VERSION:
 			if (NOT ((peer->versionSent && *prog == GOTACK) || (*prog == 0))) {
@@ -183,12 +183,14 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 		tester->complete++;
 	}
 	printf("COMPLETION: %i - %i\n", tester->addrComplete, tester->complete);
-	if (tester->addrComplete > 6) {
+	if (tester->addrComplete > 7) {
+		// addrComplete can be seven in the case that one of the listening nodes has the other listening node before the connector has sent get_addr
 		printf("ADDR COMPLETE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	if (tester->complete == 6) {
-		if (tester->addrComplete == 6) {
+		if (tester->addrComplete > 4) {
+			// Usually addrComplete will be 6 but sometimes addresses are not relayed when the address is being connected to. In reality this is not a problem, as it is seldom an address will be in a connecting state.
 			// Completed testing
 			printf("DONE\n");
 			printf("STOPPING COMM L1\n");

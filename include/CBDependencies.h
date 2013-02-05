@@ -301,7 +301,7 @@ int32_t CBSocketReceive(uint64_t socketID, uint8_t * data, uint32_t len);
 bool CBStartTimer(uint64_t loopID, uint64_t * timer, uint16_t time, void (*callback)(void *), void * arg);
 /**
  @brief Ends a timer.
- @param timer The timer sent by reference to be set.
+ @param timer The timer.
  */
 void CBEndTimer(uint64_t timer);
 /**

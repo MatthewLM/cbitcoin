@@ -68,7 +68,17 @@ typedef enum{
 	CB_MESSAGE_ACTION_DISCONNECT, /**< Disconnect the peer */
 	CB_MESSAGE_ACTION_STOP, /**< Stop the CBNetworkCommunicator */
 	CB_MESSAGE_ACTION_RETURN /**< Return from the message handler with no further action. */
-}CBOnMessageReceivedAction;
+} CBOnMessageReceivedAction;
+
+/*
+ @brief The offsets for the message header data.
+ */
+typedef enum{
+	CB_MESSAGE_HEADER_NETWORK_ID = 0, /**< The network identidier bytes */
+	CB_MESSAGE_HEADER_TYPE = 4, /**< The 12 character string for the message type */
+	CB_MESSAGE_HEADER_LENGTH = 16, /**< The length of the message */
+	CB_MESSAGE_HEADER_CHECKSUM = 20, /**< The checksum of the message */
+} CBMessageHeaderOffsets;
 
 /**
  @brief Structure for CBNetworkCommunicator objects. @see CBNetworkCommunicator.h
