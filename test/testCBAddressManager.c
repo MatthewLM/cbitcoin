@@ -1,27 +1,19 @@
 //
-//  testCBAddressManager.c
+//  testCBNetworkAddressManager.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 07/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
-#include "CBAddressManager.h"
+#include "CBNetworkAddressManager.h"
 #include "CBDependencies.h"
 #include <time.h>
 #include "stdarg.h"
@@ -52,7 +44,7 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
-	CBAddressManager * addrMan = CBNewAddressManager(onBadTime);
+	CBNetworkAddressManager * addrMan = CBNewNetworkAddressManager(onBadTime);
 	if (NOT addrMan) {
 		printf("NEW ADDR MAN FAIL\n");
 		return 1;
@@ -62,7 +54,7 @@ int main(){
 		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x/2}, 16);
 		CBNetworkAddress * addr = CBNewNetworkAddress(1358856884 + rand() % 15, ip, 45562 + (rand() % 5) + 6 * (x % 2), CB_SERVICE_FULL_BLOCKS, true);
 		addr->penalty = rand() % 20;
-		CBAddressManagerTakeAddress(addrMan, addr);
+		CBNetworkAddressManagerTakeAddress(addrMan, addr);
 		CBReleaseObject(ip);
 		// Check length
 		uint8_t len = 0;
@@ -102,7 +94,7 @@ int main(){
 					}
 				}
 				// Test getting addresses
-				CBNetworkAddress * addr2 = CBAddressManagerGotNetworkAddress(addrMan, addr);
+				CBNetworkAddress * addr2 = CBNetworkAddressManagerGotNetworkAddress(addrMan, addr);
 				if (NOT addr2 || addr2 != addr) {
 					printf("GOT NETWORK ADDR FAIL");
 					return 1;
@@ -115,30 +107,30 @@ int main(){
 	}
 	// Test removing an address
 	CBNetworkAddress * addr[1];
-	if (CBAddressManagerGetAddresses(addrMan, 1, addr) != 1) {
+	if (CBNetworkAddressManagerGetAddresses(addrMan, 1, addr) != 1) {
 		printf("GET SINGLE ADDR FAIL\n");
 		return 1;
 	}
 	CBRetainObject(*addr);
-	CBAddressManagerRemoveAddress(addrMan, *addr);
-	*addr = CBAddressManagerGotNetworkAddress(addrMan, *addr);
+	CBNetworkAddressManagerRemoveAddress(addrMan, *addr);
+	*addr = CBNetworkAddressManagerGotNetworkAddress(addrMan, *addr);
 	if (*addr) {
 		printf("REMOVE NETWORK ADDR FAIL");
 		return 1;
 	}
 	// Test getting addresses under number
 	CBNetworkAddress * addrs[255];
-	if (CBAddressManagerGetAddresses(addrMan, 253, addrs) != 253) {
+	if (CBNetworkAddressManagerGetAddresses(addrMan, 253, addrs) != 253) {
 		printf("GET ADDRS BELOW FAIL\n");
 		return 1;
 	}
 	// Test getting addresses at number
-	if (CBAddressManagerGetAddresses(addrMan, 254, addrs) != 254) {
+	if (CBNetworkAddressManagerGetAddresses(addrMan, 254, addrs) != 254) {
 		printf("GET ADDRS AT FAIL\n");
 		return 1;
 	}
 	// Test getting addresses over number
-	if (CBAddressManagerGetAddresses(addrMan, 255, addrs) != 254) {
+	if (CBNetworkAddressManagerGetAddresses(addrMan, 255, addrs) != 254) {
 		printf("GET ADDRS OVER FAIL\n");
 		return 1;
 	}
@@ -159,7 +151,7 @@ int main(){
 	CBPeer * peers[254];
 	for (uint8_t x = 0; x < 254; x++) {
 		peers[x] = CBNewPeerByTakingNetworkAddress(addrs[x]);
-		if (NOT CBAddressManagerAddPeer(addrMan, peers[x])) {
+		if (NOT CBNetworkAddressManagerAddPeer(addrMan, peers[x])) {
 			printf("ADD PEER FAIL\n");
 			return 1;
 		}
@@ -169,15 +161,15 @@ int main(){
 		return 1;
 	}
 	// Test removing peers and looking for peers
-	CBAddressManagerRemovePeer(addrMan, peers[0]);
-	CBAddressManagerRemovePeer(addrMan, peers[34]);
-	CBAddressManagerRemovePeer(addrMan, peers[253]);
+	CBNetworkAddressManagerRemovePeer(addrMan, peers[0]);
+	CBNetworkAddressManagerRemovePeer(addrMan, peers[34]);
+	CBNetworkAddressManagerRemovePeer(addrMan, peers[253]);
 	if (addrMan->peersNum != 251) {
 		printf("REMOVE PEERS NUM FAIL\n");
 		return 1;
 	}
 	for (uint8_t x = 0; x < 254; x++) {
-		CBPeer * peer = CBAddressManagerGotPeer(addrMan, CBGetNetworkAddress(peers[x]));
+		CBPeer * peer = CBNetworkAddressManagerGotPeer(addrMan, CBGetNetworkAddress(peers[x]));
 		if (x == 0 || x == 34 || x == 253) {
 			if (peer) {
 				printf("REMOVE PEER FAIL\n");
@@ -189,7 +181,7 @@ int main(){
 		}
 	}
 	// Test clear peers and then network time.
-	CBAddressManagerClearPeers(addrMan);
+	CBNetworkAddressManagerClearPeers(addrMan);
 	if (addrMan->peersNum) {
 		printf("CLEAR PEERS NUM FAIL\n");
 		return 1;
@@ -205,8 +197,8 @@ int main(){
 	peers[4]->timeOffset = 4603;
 	peers[5]->timeOffset = 72787;
 	for (uint8_t x = 0; x < 6; x++){
-		CBAddressManagerAddPeer(addrMan, peers[x]);
-		CBAddressManagerTakePeerTimeOffset(addrMan, peers[x]);
+		CBNetworkAddressManagerAddPeer(addrMan, peers[x]);
+		CBNetworkAddressManagerTakePeerTimeOffset(addrMan, peers[x]);
 	}
 	// Median is 4199
 	if (addrMan->peersNum != 6) {
@@ -247,7 +239,7 @@ int main(){
 		}
 	}
 	// Test loading addresses
-	addrMan = CBNewAddressManager(onBadTime);
+	addrMan = CBNewNetworkAddressManager(onBadTime);
 	if (NOT CBAddressStorageLoadAddresses(storage, addrMan)) {
 		printf("LOAD ADDRESSES FAIL\n");
 		return 1;
@@ -257,7 +249,7 @@ int main(){
 		return 1;
 	}
 	// Test select and remove
-	CBNetworkAddress * removed = CBAddressManagerSelectAndRemoveAddress(addrMan);
+	CBNetworkAddress * removed = CBNetworkAddressManagerSelectAndRemoveAddress(addrMan);
 	if (removed->penalty != 9) {
 		printf("REMOVE PENALTY FAIL\n");
 		return 1;
@@ -268,7 +260,7 @@ int main(){
 	}
 	CBReleaseObject(removed);
 	// Check each remaining address.
-	if (CBAddressManagerGetAddresses(addrMan, 5, addrs) != 4) {
+	if (CBNetworkAddressManagerGetAddresses(addrMan, 5, addrs) != 4) {
 		printf("STORAGE GET ADDRS FAIL\n");
 		return 1;
 	}

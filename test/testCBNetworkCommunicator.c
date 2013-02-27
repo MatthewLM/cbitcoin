@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 10/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
 #include "CBNetworkCommunicator.h"
@@ -238,7 +230,7 @@ int main(){
 	CBByteArray * userAgent2 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
 	CBByteArray * userAgent3 = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
 	// First listening CBNetworkCommunicator setup.
-	CBAddressManager * addrManListen = CBNewAddressManager(onBadTime);
+	CBNetworkAddressManager * addrManListen = CBNewNetworkAddressManager(onBadTime);
 	addrManListen->maxAddressesInBucket = 2;
 	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator();
 	CBNetworkCommunicatorSetReachability(commListen, CB_IP_IPv4 | CB_IP_LOCAL, true);
@@ -254,12 +246,12 @@ int main(){
 	commListen->heartBeat = 1000;
 	commListen->timeOut = 2000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen, NULL, NULL);
-	CBNetworkCommunicatorSetAddressManager(commListen, addrManListen);
+	CBNetworkCommunicatorSetNetworkAddressManager(commListen, addrManListen);
 	CBNetworkCommunicatorSetUserAgent(commListen, userAgent);
 	CBNetworkCommunicatorSetOurIPv4(commListen, addrListen);
 	commListen->callbackHandler = &tester;
 	// Second listening CBNetworkCommunicator setup.
-	CBAddressManager * addrManListen2 = CBNewAddressManager(onBadTime);
+	CBNetworkAddressManager * addrManListen2 = CBNewNetworkAddressManager(onBadTime);
 	addrManListen2->maxAddressesInBucket = 2;
 	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator();
 	CBNetworkCommunicatorSetReachability(commListen2, CB_IP_IPv4 | CB_IP_LOCAL, true);
@@ -275,16 +267,16 @@ int main(){
 	commListen2->heartBeat = 1000;
 	commListen2->timeOut = 2000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen2, NULL, NULL);
-	CBNetworkCommunicatorSetAddressManager(commListen2, addrManListen2);
+	CBNetworkCommunicatorSetNetworkAddressManager(commListen2, addrManListen2);
 	CBNetworkCommunicatorSetUserAgent(commListen2, userAgent2);
 	CBNetworkCommunicatorSetOurIPv4(commListen2, addrListen2);
 	commListen2->callbackHandler = &tester;
 	// Connecting CBNetworkCommunicator setup.
-	CBAddressManager * addrManConnect = CBNewAddressManager(onBadTime);
+	CBNetworkAddressManager * addrManConnect = CBNewNetworkAddressManager(onBadTime);
 	addrManConnect->maxAddressesInBucket = 2;
 	// We are going to connect to both listing CBNetworkCommunicators.
-	CBAddressManagerAddAddress(addrManConnect, addrListenB);
-	CBAddressManagerAddAddress(addrManConnect, addrListen2B);
+	CBNetworkAddressManagerAddAddress(addrManConnect, addrListenB);
+	CBNetworkAddressManagerAddAddress(addrManConnect, addrListen2B);
 	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator();
 	CBNetworkCommunicatorSetReachability(commConnect, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManConnect->callbackHandler = commConnect;
@@ -299,7 +291,7 @@ int main(){
 	commConnect->heartBeat = 1000;
 	commConnect->timeOut = 2000;
 	CBNetworkCommunicatorSetAlternativeMessages(commConnect, NULL, NULL);
-	CBNetworkCommunicatorSetAddressManager(commConnect, addrManConnect);
+	CBNetworkCommunicatorSetNetworkAddressManager(commConnect, addrManConnect);
 	CBNetworkCommunicatorSetUserAgent(commConnect, userAgent3);
 	CBNetworkCommunicatorSetOurIPv4(commConnect, addrConnect);
 	commConnect->callbackHandler = &tester;
@@ -338,7 +330,7 @@ int main(){
 		printf("ADDRESS DISCOVERY LISTEN ONE ADDR NUM FAIL %i != 1\n", commListen->addresses->addrNum);
 		exit(EXIT_FAILURE);
 	}
-	if(NOT CBAddressManagerGotNetworkAddress(commListen->addresses, addrListen2)){
+	if(NOT CBNetworkAddressManagerGotNetworkAddress(commListen->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY LISTEN ONE LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -347,7 +339,7 @@ int main(){
 		printf("ADDRESS DISCOVERY LISTEN TWO ADDR NUM FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if (NOT CBAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
+	if (NOT CBNetworkAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY LISTEN TWO LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -357,12 +349,12 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 	addrListen->bucketSet = false;
-	if (NOT CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
+	if (NOT CBNetworkAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	addrListen2->bucketSet = false;
-	if (NOT CBAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
+	if (NOT CBNetworkAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}

@@ -5,28 +5,20 @@
 //  Created by Matthew Mitchell on 03/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
  @brief Describes how the bitcoins can be spent from the output. Inherits CBObject
 */
 
-#ifndef CBTRANSACTIONOUTPUTH
-#define CBTRANSACTIONOUTPUTH
+#ifndef CBTXOUTPUTH
+#define CBTXOUTPUTH
 
 //  Includes
 
@@ -36,6 +28,16 @@
 // Constants
 
 #define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
+
+/**
+ @brief The types of output recognised by cbitcoin. IP transaction types are not recognised by cbitcoin because they are insecure and pointless.
+ */
+typedef enum{
+	CB_TX_OUTPUT_TYPE_UNKNOWN, /**< The output is not recognised. */
+	CB_TX_OUTPUT_TYPE_KEYHASH, /**< OP_DUP OP_HASH160 <hash of public key (20 bytes)> OP_EQUALVERIFY OP_CHECKSIG */
+	CB_TX_OUTPUT_TYPE_P2SH, /**< OP_HASH160 <hash of script> OP_EQUAL */
+	CB_TX_OUTPUT_TYPE_MULTISIG, /**< <number of signatures required> <public keys> <number of public keys supplied> OP_CHECKMULTISIG */
+} CBTransactionOutputType;
 
 /**
  @brief Structure for CBTransactionOutput objects. @see CBTransactionOutput.h
@@ -78,7 +80,12 @@ bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScrip
 bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data);
 
 /**
- @brief Frees a CBTransactionOutput object.
+ @brief Release and free all of the objects stored by the CBTransactionOutput object.
+ @param self The CBTransactionOutput object to destroy.
+ */
+void CBDestroyTransactionOutput(void * self);
+/**
+ @brief Frees a CBTransactionOutput object and also calls CBDestroyTransactionOutput.
  @param self The CBTransactionOutput object to free.
  */
 void CBFreeTransactionOutput(void * self);
@@ -97,6 +104,12 @@ uint32_t CBTransactionOutputCalculateLength(CBTransactionOutput * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self);
+/**
+ @brief Determines the type of this output.
+ @param self The CBTransactionOutput object
+ @returns The transaction output type.
+ */
+CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self);
 /**
  @brief Serialises a CBTransactionOutput to the byte data.
  @param self The CBTransactionOutput object

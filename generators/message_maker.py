@@ -6,20 +6,12 @@
 #  Created by Matthew Mitchell on 03/07/2012.
 #  Copyright (c) 2012 Matthew Mitchell
 #  
-#  This file is part of cbitcoin.
-#
-#  cbitcoin is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#  
-#  cbitcoin is distributed in the hope that it will be useful, 
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+#  This file is part of cbitcoin. It is subject to the license terms
+#  in the LICENSE file found in the top-level directory of this
+#  distribution and at http://www.cbitcoin.com/license.html. No part of
+#  cbitcoin, including this file, may be copied, modified, propagated,
+#  or distributed except according to the terms contained in the
+#  LICENSE file.
 
 #  This file makes a structure inheriting CBMessage.
 
@@ -30,17 +22,9 @@ name = raw_input("Enter the name of the new message structure (Do not include CB
 author = raw_input("Enter your first and last name: ")
 desc = raw_input("Enter a description for the structure: ")
 d = datetime.utcnow()
-# Make directory
-dir = os.path.dirname(sys.argv[0]) + "/../src/structures/CBObject/CBMessage/CB" + name
-if os.path.exists(dir):
-	input = raw_input("This name conflicts with a previous name. Overwrite? (Y/N): ")
-	if input != "Y":
-		sys.exit()
-else:
-	os.makedirs(dir)
 # Make files
-header = open(dir + "/CB" + name + ".h", "w")
-source = open(dir + "/CB" + name + ".c", "w")
+header = open(os.path.dirname(sys.argv[0]) + "/../includes/CB" + name + ".h", "w")
+source = open(os.path.dirname(sys.argv[0]) + "/../src/CB" + name + ".c", "w")
 # Header
 header.write("//\n\
 //  CB"+name+".h\n\
@@ -49,20 +33,12 @@ header.write("//\n\
 //  Created by "+author+" on "+d.strftime("%d/%m/%Y")+".\n\
 //  Copyright (c) 2012 Matthew Mitchell\n\
 //  \n\
-//  This file is part of cbitcoin.\n\
-//\n\
-//  cbitcoin is free software: you can redistribute it and/or modify\n\
-//  it under the terms of the GNU General Public License as published by\n\
-//  the Free Software Foundation, either version 3 of the License, or\n\
-//  (at your option) any later version.\n\
-//  \n\
-//  cbitcoin is distributed in the hope that it will be useful, \n\
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
-//  GNU General Public License for more details.\n\
-//  \n\
-//  You should have received a copy of the GNU General Public License\n\
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.\n\
+//  This file is part of cbitcoin. It is subject to the license terms\n\
+//  in the LICENSE file found in the top-level directory of this\n\
+//  distribution and at http://www.cbitcoin.com/license.html. No part of\n\
+//  cbitcoin, including this file, may be copied, modified, propagated,\n\
+//  or distributed except according to the terms contained in the\n\
+//  LICENSE file.\n\
 \n\
 /**\n\
  @file\n\
@@ -117,7 +93,13 @@ bool CBInit"+name+"(CB"+name+" * self);\n\
 bool CBInit"+name+"FromData(CB"+name+" * self, CBByteArray * data);\n\
 \n\
 /**\n\
- @brief Frees a CB"+name+" object.\n\
+@brief Release and free the objects stored by the CB"+name+" object.\n\
+@param self The CB"+name+" object to destroy.\n\
+*/\n\
+void CBDestroy"+name+"(void * self);\n\
+\n\
+/**\n\
+ @brief Frees a CB"+name+" object and also calls CBDestroy"+name+".\n\
  @param self The CB"+name+" object to free.\n\
  */\n\
 void CBFree"+name+"(void * self);\n\
@@ -146,20 +128,12 @@ source.write("//\n\
 //  Created by "+author+" on "+d.strftime("%d/%m/%Y")+".\n\
 //  Copyright (c) 2012 Matthew Mitchell\n\
 //  \n\
-//  This file is part of cbitcoin.\n\
-//\n\
-//  cbitcoin is free software: you can redistribute it and/or modify\n\
-//  it under the terms of the GNU General Public License as published by\n\
-//  the Free Software Foundation, either version 3 of the License, or\n\
-//  (at your option) any later version.\n\
-//  \n\
-//  cbitcoin is distributed in the hope that it will be useful, \n\
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
-//  GNU General Public License for more details.\n\
-//  \n\
-//  You should have received a copy of the GNU General Public License\n\
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.\n\
+//  This file is part of cbitcoin. It is subject to the license terms\n\
+//  in the LICENSE file found in the top-level directory of this\n\
+//  distribution and at http://www.cbitcoin.com/license.html. No part of\n\
+//  cbitcoin, including this file, may be copied, modified, propagated,\n\
+//  or distributed except according to the terms contained in the\n\
+//  LICENSE file.\n\
 \n\
 //  SEE HEADER FILE FOR DOCUMENTATION \n\
 \n\
@@ -212,9 +186,14 @@ bool CBInit"+name+"FromData(CB"+name+" * self, CBByteArray * data){\n\
 }\n\
 \n\
 //  Destructor\n\
+ \n\
+ void CBDestroy"+name+"(void * self){\n\
+ \tCBDestroyMessage(self);\n\
+ }\n\
 \n\
 void CBFree"+name+"(void * self){\n\
-\tCBFreeMessage(self);\n\
+\tCBDestroy"+name+"(self);\n\
+\tfree(self);\n\
 }\n\
 \n\
 //  Functions\n\

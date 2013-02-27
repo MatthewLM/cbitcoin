@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 02/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -35,6 +27,9 @@
 #include <stdbool.h>
 
 // Constants
+
+#define CB_NOT_A_NUMBER_OP UINT8_MAX
+#define CB_NOT_A_PUSH_OP UINT32_MAX
 
 typedef enum{
 	CB_SIGHASH_ALL = 0x00000001,
@@ -266,10 +261,15 @@ CBScript * CBGetScript(void * self);
 bool CBInitScriptFromString(CBScript * self, char * string);
 
 /**
- @brief Does the processing to free a CBScript object. Should be called by the children when freeing objects.
+ @brief Release and free all of the objects stored by the CBScript object.
+ @param self The CBScript object to destroy.
+ */
+void CBDestroyScript(void * self);
+/**
+ @brief Frees a CBScript object and also calls CBDestroyScript.
  @param self The CBScript object to free.
  */
-void CBFreeProcessScript(CBScript * self);
+void CBFreeScript(void * self);
  
 //  Functions
 
@@ -295,12 +295,31 @@ CBScriptStack CBNewEmptyScriptStack(void);
  */
 CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh);
 /**
+ @brief Gets the amount being pushed from a script op at a given offset.
+ @param self The script object.
+ @param offset A pointer to the offset of the push operation. The offset will be moved past the end of the push operation.
+ @retuns The push amount or CB_NOT_A_PUSH_OP (inc. when invalid).
+ */
+uint32_t CBScriptGetPushAmount(CBScript * self, uint32_t * offset);
+/**
  @brief Returns the number of sigops.
  @param self The CBScript object.
  @param inP2SH true when getting sigops for a P2SH script.
  @retuns the number of sigops as used for validation.
  */
 uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH);
+/**
+ @brief Determines if a script object matches the public-key hash verification template. 
+ @param self The CBScript object.
+ @retuns true if the script matches the template, false otherwise.
+ */
+bool CBScriptIsKeyHash(CBScript * self);
+/**
+ @brief Determines if a script object matches the multisignature template.
+ @param self The CBScript object.
+ @retuns true if the script matches the template, false otherwise.
+ */
+bool CBScriptIsMultisig(CBScript * self);
 /**
  @brief Determines if a script object matches the P2SH template.
  @param self The CBScript object.
@@ -313,6 +332,12 @@ bool CBScriptIsP2SH(CBScript * self);
  @retuns true if the script has only push operations, false otherwise. Also returns false when an invalid push operation if found.
  */
 bool CBScriptIsPushOnly(CBScript * self);
+/**
+ @brief Gets the number of a script operation number, which can be OP_0 or OP_1 to OP_16.
+ @param op The operation.
+ @retuns The number or CB_NOT_A_NUMBER_OP.
+ */
+uint8_t CBScriptOpGetNumber(CBScriptOp op);
 /**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.

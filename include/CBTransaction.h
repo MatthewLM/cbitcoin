@@ -5,28 +5,20 @@
 //  Created by Matthew Mitchell on 02/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
  @brief A CBTransaction represents a movement of bitcoins and newly mined bitcoins. Inherits CBMessage
 */
 
-#ifndef CBTRANSACTIONH
-#define CBTRANSACTIONH
+#ifndef CBTXH
+#define CBTXH
 
 //  Includes
 
@@ -36,7 +28,7 @@
 
 // Constants
 
-#define CB_TRANSACTION_MAX_SIZE 999915 // Block size minus the header
+#define CB_TX_MAX_SIZE 999915 // Block size minus the header
 
 /**
  @brief Structure for CBTransaction objects. @see CBTransaction.h
@@ -86,7 +78,12 @@ bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version
 bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data);
 
 /**
- @brief Frees a CBTransaction object.
+ @brief Release and free the objects stored by the CBTransaction object.
+ @param self The CBTransaction object to destroy.
+ */
+void CBDestroyTransaction(void * self);
+/**
+ @brief Frees a CBTransaction object and also calls CBDestroyTransaction.
  @param self The CBTransaction object to free.
  */
 void CBFreeTransaction(void * self);

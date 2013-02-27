@@ -1,27 +1,19 @@
 //
-//  testCBAddressBroadcast.c
+//  testCBNetworkAddressBroadcast.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 04/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
-#include "CBAddressBroadcast.h"
+#include "CBNetworkAddressBroadcast.h"
 #include <time.h>
 #include "stdarg.h"
 
@@ -52,8 +44,8 @@ int main(){
 		0x5F, 0x2E, // Port 24366
 	};
 	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 61);
-	CBAddressBroadcast * addBroadcast = CBNewAddressBroadcastFromData(bytes, true);
-	if(CBAddressBroadcastDeserialise(addBroadcast) != 61){
+	CBNetworkAddressBroadcast * addBroadcast = CBNewNetworkAddressBroadcastFromData(bytes, true);
+	if(CBNetworkAddressBroadcastDeserialise(addBroadcast) != 61){
 		printf("DESERIALISATION LEN FAIL\n");
 		return 1;
 	}
@@ -117,7 +109,7 @@ int main(){
 	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
 	CBReleaseObject(addBroadcast->addresses[1]->ip);
 	addBroadcast->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
-	if (CBAddressBroadcastSerialise(addBroadcast, true) != 61){
+	if (CBNetworkAddressBroadcastSerialise(addBroadcast, true) != 61){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
 	}
@@ -146,8 +138,8 @@ int main(){
 		0x5F, 0x2E, // Port 24366
 	};
 	bytes = CBNewByteArrayWithDataCopy(data2, 53);
-	addBroadcast = CBNewAddressBroadcastFromData(bytes, false);
-	if(CBAddressBroadcastDeserialise(addBroadcast) != 53){
+	addBroadcast = CBNewNetworkAddressBroadcastFromData(bytes, false);
+	if(CBNetworkAddressBroadcastDeserialise(addBroadcast) != 53){
 		printf("DESERIALISATION NO TIME LEN FAIL\n");
 		return 1;
 	}
@@ -203,7 +195,7 @@ int main(){
 	addBroadcast->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
 	CBReleaseObject(addBroadcast->addresses[1]->ip);
 	addBroadcast->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
-	if(CBAddressBroadcastSerialise(addBroadcast, true) != 53){
+	if(CBNetworkAddressBroadcastSerialise(addBroadcast, true) != 53){
 		printf("SERIALISATION NO TIME LEN FAIL\n");
 		return 1;
 	}

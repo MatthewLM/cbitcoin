@@ -5,22 +5,14 @@
 //  Created by Matthew Mitchell on 02/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
-//  SEE HEADER FILE FOR DOCUMENTATION ??? This code should validate or invalidate scripts exactly the same as the C++ client. That introduces some difficultly. Needs good testing.
+//  SEE HEADER FILE FOR DOCUMENTATION
 
 #include "CBScript.h"
 
@@ -560,6 +552,13 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 	if (NOT CBInitByteArrayWithData(self, data, dataLast))
 		return false;
 	return true;
+}
+
+void CBDestroyScript(void * self){
+	CBDestroyByteArray(self);
+}
+void CBFreeScript(void * self){
+	CBFreeByteArray(self);
 }
 
 //  Functions
@@ -1408,6 +1407,43 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 		return CB_SCRIPT_TRUE;
 	}else return CB_SCRIPT_FALSE;
 }
+uint32_t CBScriptGetPushAmount(CBScript * self, uint32_t * offset){
+	CBScriptOp op = CBByteArrayGetByte(self, *offset);
+	if (op == CB_SCRIPT_OP_0 || op > CB_SCRIPT_OP_PUSHDATA4)
+		return CB_NOT_A_PUSH_OP;
+	if (op < CB_SCRIPT_OP_PUSHDATA1){
+		*offset += 1 + op;
+		return op;
+	}
+	(*offset)++;
+	uint32_t pushAmount;
+	switch (op) {
+		case CB_SCRIPT_OP_PUSHDATA1:
+			if (self->length <= *offset)
+				return false;
+			pushAmount = CBByteArrayGetByte(self, *offset);
+			(*offset)++;
+			break;
+		case CB_SCRIPT_OP_PUSHDATA2:
+			if (self->length < *offset + 2)
+				return false;
+			pushAmount = CBByteArrayReadInt16(self, *offset);
+			*offset += 2;
+			break;
+		case CB_SCRIPT_OP_PUSHDATA4:
+			if (self->length < *offset + 4)
+				return false;
+			pushAmount = CBByteArrayReadInt32(self, *offset);
+			*offset += 4;
+			break;
+		default:
+			break;
+	}
+	if (*offset + pushAmount >= self->length)
+		return false;
+	*offset += pushAmount;
+	return pushAmount;
+}
 uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH){
 	uint32_t sigOps = 0;
 	CBScriptOp lastOp = CB_SCRIPT_OP_INVALIDOPCODE;
@@ -1443,6 +1479,38 @@ uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH){
 		lastOp = op;
 	}
 	return sigOps;
+}
+bool CBScriptIsKeyHash(CBScript * self){
+	uint32_t cursor = 2;
+	return (self->length == 25
+		&& CBByteArrayGetByte(self, 0) == CB_SCRIPT_OP_DUP
+		&& CBByteArrayGetByte(self, 1) == CB_SCRIPT_OP_HASH160
+		&& CBScriptGetPushAmount(self, &cursor) == 0x14
+		&& CBByteArrayGetByte(self, cursor) == CB_SCRIPT_OP_EQUALVERIFY
+		&& CBByteArrayGetByte(self, cursor + 1) == CB_SCRIPT_OP_CHECKSIG);
+}
+bool CBScriptIsMultisig(CBScript * self){
+	if (self->length < 37)
+		return false;
+	if (CBByteArrayGetByte(self, self->length - 1) != CB_SCRIPT_OP_CHECKMULTISIG)
+		return false;
+	uint8_t sigNum = CBScriptOpGetNumber(CBByteArrayGetByte(self, 0));
+	if (sigNum == CB_NOT_A_NUMBER_OP || sigNum == 0)
+		return false;
+	uint8_t pubKeyNum = CBScriptOpGetNumber(CBByteArrayGetByte(self, self->length - 2));
+	if (pubKeyNum == CB_NOT_A_NUMBER_OP
+		|| pubKeyNum < sigNum)
+		return false;
+	// Check public keys
+	uint32_t cursor = 1;
+	for (uint8_t x = 0; x < pubKeyNum; x++) {
+		uint32_t pushAmount = CBScriptGetPushAmount(self, &cursor);
+		if (pushAmount < 33 || pushAmount > 120)
+			return false;
+	}
+	if (cursor != self->length - 2)
+		return false;
+	return true;
 }
 bool CBScriptIsP2SH(CBScript * self){
 	return (self->length == 23
@@ -1482,6 +1550,13 @@ bool CBScriptIsPushOnly(CBScript * self){
 		}else return false;
 	}
 	return x == self->length;
+}
+uint8_t CBScriptOpGetNumber(CBScriptOp op){
+	if (op == CB_SCRIPT_OP_0)
+		return 0;
+	if (op <= CB_SCRIPT_OP_16 && op >= CB_SCRIPT_OP_1)
+		return op - CB_SCRIPT_OP_1 + 1;
+	return CB_NOT_A_NUMBER_OP;
 }
 void CBSubScriptRemoveSignature(uint8_t * subScript, uint32_t * subScriptLen, CBScriptStackItem signature){
 	if (signature.data == NULL) return; // Signature zero

@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 27/04/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -43,7 +35,7 @@
 typedef enum{
 	CB_MESSAGE_TYPE_VERSION = 1, /**< @see CBVersion.h */
 	CB_MESSAGE_TYPE_VERACK = 2, /**< Acknowledgement and acceptance of a peer's version and connection. */
-	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBAddressBroadcast.h */
+	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBNetworkAddressBroadcast.h */
 	CB_MESSAGE_TYPE_INV = 8, /**< @see CBInventoryBroadcast.h */
 	CB_MESSAGE_TYPE_GETDATA = 16, /**< @see CBInventoryBroadcast.h */
 	CB_MESSAGE_TYPE_GETBLOCKS = 32, /**< @see CBGetBlocks.h */
@@ -56,7 +48,7 @@ typedef enum{
 	CB_MESSAGE_TYPE_PONG = 4096, /**< @see CBPingPong.h */
 	CB_MESSAGE_TYPE_ALERT = 8192, /**< @see CBAlert.h */
 	CB_MESSAGE_TYPE_ALT = 16384, /**< The message was defined by "alternativeMessages" in a CBNetworkCommunicator */
-	CB_MESSAGE_TYPE_ADDRMAN = 32768, /**< @see CBAddressManager.h */
+	CB_MESSAGE_TYPE_ADDRMAN = 32768, /**< @see CBNetworkAddressManager.h */
 	CB_MESSAGE_TYPE_CHAINDESC = 65536, /**< @see CBChainDescriptor.h */
 }CBMessageType;
 
@@ -102,7 +94,12 @@ bool CBInitMessageByObject(CBMessage * self);
 bool CBInitMessageByData(CBMessage * self, CBByteArray * data);
 
 /**
- @brief Frees a CBMessage object.
+ @brief Release and free all of the objects stored by the CBMessage object.
+ @param self The CBMessage object to free.
+ */
+void CBDestroyMessage(void * self);
+/**
+ @brief Frees a CBMessage object and also calles CBDestroyMessage.
  @param self The CBMessage object to free.
  */
 void CBFreeMessage(void * self);

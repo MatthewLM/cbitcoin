@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 20/12/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -29,7 +21,7 @@
 #define CBBLOCKCHAINSTORAGEH
 
 #include "CBDatabase.h"
-#include "CBFullValidator.h"
+#include "CBValidator.h"
 
 /**
  @brief The data storage components.
@@ -42,7 +34,7 @@ typedef enum{
 	CB_STORAGE_BLOCK_HASH_INDEX, /**< [CB_STORAGE_BLOCK_HASH_INDEX, hash * 20] Links to the block branch id and position. */
 	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK, branchID] */
 	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS, hash * 32, outputID * 4] */
-	CB_STORAGE_TRANSACTION_INDEX, /**< key = [CB_STORAGE_TRANSACTION_INDEX, hash * 32] */
+	CB_STORAGE_TX_INDEX, /**< key = [CB_STORAGE_TX_INDEX, hash * 32] */
 } CBStorageParts;
 
 /**
@@ -81,13 +73,13 @@ typedef enum{
  @brief The offsets to parts of the unspent output reference data
  */
 typedef enum{
-	CB_TRANSACTION_REF_BLOCK_INDEX = 0, /**< The block index in the branch where the transaction exists. */
-	CB_TRANSACTION_REF_BRANCH = 4, /**< The branch where the transaction exists. */
-	CB_TRANSACTION_REF_POSITION_OUPTUTS = 5, /**< The byte position in the block where the first transaction output exists. */
-	CB_TRANSACTION_REF_LENGTH_OUTPUTS = 9, /**< The length in bytes of the transaction outputs. */
-	CB_TRANSACTION_REF_IS_COINBASE = 13, /**< 1 if the transaction is a coinbase, else 0 */
-	CB_TRANSACTION_REF_NUM_UNSPENT_OUTPUTS = 14, /**< The number of unspent outputs for a transaction. */
-	CB_TRANSACTION_REF_INSTANCE_COUNT = 18, /**< The number of times this transaction has appeared on the block-chain. */
+	CB_TX_REF_BLOCK_INDEX = 0, /**< The block index in the branch where the transaction exists. */
+	CB_TX_REF_BRANCH = 4, /**< The branch where the transaction exists. */
+	CB_TX_REF_POSITION_OUPTUTS = 5, /**< The byte position in the block where the first transaction output exists. */
+	CB_TX_REF_LENGTH_OUTPUTS = 9, /**< The length in bytes of the transaction outputs. */
+	CB_TX_REF_IS_COINBASE = 13, /**< 1 if the transaction is a coinbase, else 0 */
+	CB_TX_REF_NUM_UNSPENT_OUTPUTS = 14, /**< The number of unspent outputs for a transaction. */
+	CB_TX_REF_INSTANCE_COUNT = 18, /**< The number of times this transaction has appeared on the block-chain. */
 } CBTransactionReferenceOffsets;
 
 /**

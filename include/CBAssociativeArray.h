@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 12/11/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -68,6 +60,15 @@ typedef struct{
 } CBFindResult;
 
 /**
+ @brief Allows iteration between a min element and max element in the array.
+ */
+typedef struct{
+	void * minElement;
+	void * maxElement;
+	CBPosition pos;
+} CBRangeIterator;
+
+/**
  @brief @see CBAssociativeArray.h
  */
 typedef struct{
@@ -76,6 +77,22 @@ typedef struct{
 	void (*onFree)(void *); /**< Called for each element in the array when CBFreeAssociativeArray is called. The arguement is the element. If assigned to NULL, instead nothing will happen. */
 } CBAssociativeArray;
 
+/**
+ @brief Starts the iteration between two elements
+ @param self The array object
+ @param minElement The minimum element in the range.
+ @param maxElement The maximum element in the range.
+ @param it The iterator object.
+ @returns true if an initial element has been found, or false if there are no elements to be found.
+ */
+bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, void * minElement, void * maxElement, CBRangeIterator * it);
+/**
+ @brief Iterates to the next element.
+ @param self The array object
+ @param it The iterator object.
+ @returns false if an element has been found during iteration, or true if there are no more elements to be found.
+ */
+bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeIterator * it);
 /**
  @brief Clears an array of all elements.
  @param self The array object
@@ -118,6 +135,13 @@ bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it);
  */
 bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it);
 /**
+ @brief Gets the last element (highest key) in the array.
+ @param self The array object
+ @param it The CBPosition object to be set to the last element.
+ @returns true if there is at least one element, or false.
+ */
+bool CBAssociativeArrayGet(CBAssociativeArray * self, CBPosition * it);
+/**
  @brief Inserts an element into an array.
  @param self The array object.
  @param element The key-value pair to insert.
@@ -134,6 +158,11 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
  */
 bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it);
 /**
+ @brief Determines if an associative array is empty or not.
+ @returns true if not empty and false if empty.
+ */
+bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self);
+/**
  @brief Does a binary search on a B-tree node.
  @param self The node
  @param key Key to search for.
@@ -141,6 +170,12 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it);
  @returns The position and wether or not the key exists at this position.
  */
 CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, void * key, CBCompare (*compareFunc)(void *, void *));
+/**
+ @brief Gets the pointer to an element from a CBFindResult
+ @param res The CBFindResult.
+ @returns The element pointer.
+ */
+void * CBFindResultToPointer(CBFindResult res);
 /**
  @brief Frees an associative array and calls onFree for each element, unless onFree is NULL
  @param self The array object.
@@ -169,5 +204,11 @@ bool CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(
  @returns If the first key is longer than the second key, or if the first key has data which is higher than the second key then CB_COMPARE_MORE_THAN is returned. If the keys are entirely equal thrn CB_COMPARE_EQUAL is returned. If the first key is shorter or has lower data than the second key CB_COMPARE_LESS_THAN is returned.
  */
 CBCompare CBKeyCompare(void * key1, void * key2);
+/**
+ @brief Gets the element pointer from a CBRangeIterator
+ @param it The iterator object.
+ @returns The element pointer.
+ */
+void * CBRangeIteratorGetPointer(CBRangeIterator * it);
 
 #endif

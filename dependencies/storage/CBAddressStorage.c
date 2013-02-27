@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 18/01/2013.
 //  Copyright (c) 2013 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
@@ -39,7 +31,7 @@ uint64_t CBNewAddressStorage(char * dataDir){
 		free(self);
 		return 0;
 	}
-	if (CBDatabaseGetLength(CBGetDatabase(self), CB_ADDR_NUM_KEY)) {
+	if (CBDatabaseGetLength(CBGetDatabase(self), CB_ADDR_NUM_KEY) != CB_DOESNT_EXIST) {
 		// Get the number of addresses
 		if (NOT CBDatabaseReadValue(CBGetDatabase(self), CB_ADDR_NUM_KEY, CB_DATA_ARRAY, 4, 0)) {
 			CBLogError("Could not read the number of addresses from storage.");
@@ -96,7 +88,7 @@ uint64_t CBAddressStorageGetNumberOfAddresses(uint64_t iself){
 }
 bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan){
 	CBDatabase * database = (CBDatabase *)iself;
-	CBAddressManager * addrManObj = addrMan;
+	CBNetworkAddressManager * addrManObj = addrMan;
 	CBPosition it;
 	// The first element shoudl be the number of addresses so get second element to begin with.
 	if (CBAssociativeArrayGetElement(&database->index, &it, 1)) for(;;) {
@@ -126,7 +118,7 @@ bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan){
 														  (CBVersionServices) CBArrayToInt64(CB_DATA_ARRAY, 8),
 														  true);
 			addr->penalty = CBArrayToInt32(CB_DATA_ARRAY, 16);
-			if (NOT CBAddressManagerTakeAddress(addrManObj, addr)) {
+			if (NOT CBNetworkAddressManagerTakeAddress(addrManObj, addr)) {
 				CBLogError("Could not create and add a network address to the address manager.");
 				return false;
 			}

@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 15/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -81,6 +73,8 @@
 #pragma weak CBBlockChainStorageDeleteUnspentOutput
 #pragma weak CBBlockChainStorageDeleteTransactionRef
 #pragma weak CBBlockChainStorageExists
+#pragma weak CBBlockChainStorageGetBlockHash
+#pragma weak CBBlockChainStorageGetBlockHeader
 #pragma weak CBBlockChainStorageGetBlockLocation
 #pragma weak CBBlockChainStorageGetBlockTime
 #pragma weak CBBlockChainStorageGetBlockTarget
@@ -95,9 +89,11 @@
 #pragma weak CBBlockChainStorageReset
 #pragma weak CBBlockChainStorageSaveBasicValidator
 #pragma weak CBBlockChainStorageSaveBlock
+#pragma weak CBBlockChainStorageSaveBlockHeader
 #pragma weak CBBlockChainStorageSaveBranch
 #pragma weak CBBlockChainStorageSaveBranchWork
 #pragma weak CBBlockChainStorageSaveOrphan
+#pragma weak CBBlockChainStorageSaveOrphanHeader
 #pragma weak CBBlockChainStorageSaveTransactionRef
 #pragma weak CBBlockChainStorageSaveUnspentOutput
 #pragma weak CBBlockChainStorageUnspentOutputExists
@@ -362,7 +358,7 @@ uint64_t CBNewBlockChainStorage(char * dataDir);
 void CBFreeBlockChainStorage(uint64_t iself);
 /**
  @brief Determines if the block is already in the storage.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param blockHash The 20 bytes of the hash of the block
  @returns true if the block is in the storage or false otherwise.
  */
@@ -375,7 +371,7 @@ bool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
 bool CBBlockChainStorageCommitData(uint64_t iself);
 /**
  @brief Deletes a block.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branch The branch where the block exists.
  @param blockIndex The index of the block.
  @returns true on sucess or false on failure.
@@ -383,7 +379,7 @@ bool CBBlockChainStorageCommitData(uint64_t iself);
 bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t blockIndex);
 /**
  @brief Deletes an unspent output reference. The ouput should still be in the block. The number of unspent outputs for the transaction should be decremented.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
  @param outputIndex The index of the output in the transaction.
  @param decrement If true decrement the number of unspent outputs for the transaction.
@@ -392,7 +388,7 @@ bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t b
 bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, bool decrement);
 /**
  @brief Deletes a transaction reference once all instances have been removed. Decrement the instance count and remove if zero. The transaction should still be in the block. Reset the unspent output count to 0.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction's hash.
  @returns true on sucess or false on failure.
  */
@@ -404,8 +400,25 @@ bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash)
  */
 bool CBBlockChainStorageExists(uint64_t iself);
 /**
+ @brief Obtains the hash for a block.
+ @param validator A CBValidator object. The storage object can be found within this.
+ @param branch The branch where the block exists.
+ @param blockIndex The index of the block.
+ @param hash The hash to set.
+ @returns true on sucess or false on failure.
+ */
+bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t hash[]);
+/**
+ @brief Obtains the header for a block, which has not be deserialised.
+ @param validator A CBValidator object. The storage object can be found within this.
+ @param branch The branch where the block exists.
+ @param blockIndex The index of the block.
+ @returns The block header on sucess or NULL on failure.
+ */
+void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint32_t blockIndex);
+/**
  @brief Gets the location of a block.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param blockHash The 20 bytes of the hash of the block
  @param branch Will be set to the branch of the block.
  @param index Will be set to the index of the block.
@@ -414,7 +427,7 @@ bool CBBlockChainStorageExists(uint64_t iself);
 bool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index);
 /**
  @brief Obtains the timestamp for a block.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branch The branch where the block exists.
  @param blockIndex The index of the block.
  @returns The time on sucess or 0 on failure.
@@ -422,7 +435,7 @@ bool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, 
 uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint32_t blockIndex);
 /**
  @brief Obtains the target for a block.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branch The branch where the block exists.
  @param blockIndex The index of the block.
  @returns The target on sucess or 0 on failure.
@@ -430,7 +443,7 @@ uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint3
 uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uint32_t blockIndex);
 /**
  @brief Determines if a transaction exists in the index, which has more than zero unspent outputs.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The hash of the transaction to search for.
  @param exists To be set to true if the transaction exists and has unspent outputs, else set to false.
  @param true on success or false on failure.
@@ -438,13 +451,13 @@ uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uin
 bool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_t * txHash, bool * exists);
 /**
  @brief Loads the basic validator information, not any branches or orphans.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageLoadBasicValidator(void * validator);
 /**
  @brief Loads a block from storage.
- @param validator The CBFullValidator object.
+ @param validator The CBValidator object.
  @param blockID The index of the block int he branch.
  @param branch The branch the block belongs to.
  @returns A new CBBlock object with serailised block data which has not been deserialised or NULL on failure.
@@ -452,28 +465,28 @@ bool CBBlockChainStorageLoadBasicValidator(void * validator);
 void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t branch);
 /**
  @brief Loads a branch
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branchNum The number of the branch to load.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageLoadBranch(void * validator, uint8_t branchNum);
 /**
  @brief Loads a branch's work
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branchNum The number of the branch to load the work for.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageLoadBranchWork(void * validator, uint8_t branchNum);
 /**
  @brief Loads an orphan.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param orphanNum The number of the orphan to load.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum);
 /**
  @brief Obtains the outputs for a transaction
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash to load the output data for.
  @param data A pointer to the buffer to set to the data.
  @param dataAllocSize If the size of the outputs is beyond this number, data will be reallocated to the size of the outputs and the number will be increased to the size of the outputs.
@@ -483,7 +496,7 @@ bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum);
 bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t ** data, uint32_t * dataAllocSize, uint32_t * position);
 /**
  @brief Obtains an unspent output.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
  @param outputIndex The index of the output in the transaction.
  @param coinbase Will be set to true if the output exists in a coinbase transaction or false otherwise.
@@ -493,7 +506,7 @@ bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t 
 void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, bool * coinbase, uint32_t * outputHeight);
 /**
  @brief Moves a block to a new location.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branch The branch where the block exists.
  @param blockIndex The index of the block.
  @param newBranch The branch where the block will be moved into.
@@ -508,13 +521,13 @@ bool CBBlockChainStorageMoveBlock(void * validator, uint8_t branch, uint32_t blo
 void CBBlockChainStorageReset(uint64_t iself);
 /**
  @brief Saves the basic validator information, not any branches or orphans.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageSaveBasicValidator(void * validator);
 /**
  @brief Saves a block.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param block The block to save.
  @param branch The branch of this block
  @param blockIndex The index of this block.
@@ -522,30 +535,47 @@ bool CBBlockChainStorageSaveBasicValidator(void * validator);
  */
 bool CBBlockChainStorageSaveBlock(void * validator, void * block, uint8_t branch, uint32_t blockIndex);
 /**
+ @brief Saves a block, with it's header only.
+ @param validator A CBValidator object. The storage object can be found within this.
+ @param block The block to save.
+ @param branch The branch of this block
+ @param blockIndex The index of this block.
+ @returns true on sucess or false on failure.
+ */
+bool CBBlockChainStorageSaveBlockHeader(void * validator, void * block, uint8_t branch, uint32_t blockIndex);
+/**
  @brief Saves the branch information without commiting to disk.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branch The branch number to save.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branch);
 /**
  @brief Saves the work for a branch without commiting to disk.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param branch The branch number with the work to save.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branch);
 /**
  @brief Saves a block as an orphan
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param block The block to save.
  @param orphanNum The number of the orphan.
  @returns true on sucess or false on failure.
  */
 bool CBBlockChainStorageSaveOrphan(void * validator, void * block, uint8_t orphanNum);
 /**
+ @brief Saves a block as an orphan, with only the header.
+ @param validator A CBValidator object. The storage object can be found within this.
+ @param block The block to save.
+ @param orphanNum The number of the orphan.
+ @returns true on sucess or false on failure.
+ */
+bool CBBlockChainStorageSaveOrphanHeader(void * validator, void * block, uint8_t orphanNum);
+/**
  @brief Saves a transaction reference. If the transaction exists in the block chain already, increment a counter. Else add a new reference.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction's hash.
  @param branch The branch where the transaction exists.
  @param blockIndex The index of the block which contains the transaction.
@@ -558,7 +588,7 @@ bool CBBlockChainStorageSaveOrphan(void * validator, void * block, uint8_t orpha
 bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, uint8_t branch, uint32_t blockIndex, uint32_t outputPos, uint32_t outputsLen, bool coinbase, uint32_t numOutputs);
 /**
  @brief Saves an output as unspent.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
  @param outputIndex The index of the output in the transaction.
  @param position The position of the unspent output in the block.
@@ -569,7 +599,7 @@ bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, u
 bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, uint32_t position, uint32_t length, bool increment);
 /**
  @brief Determines if an unspent output exists.
- @param validator A CBFullValidator object. The storage object can be found within this.
+ @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
  @param outputIndex The index of the output in the transaction.
  @returns true if exists or false if it doesn't.
@@ -605,7 +635,7 @@ uint64_t CBAddressStorageGetNumberOfAddresses(uint64_t iself);
 /**
  @brief Loads all of the addresses from storage into an address manager.
  @param iself The address storage object.
- @param addrMan A CBAddressManager object.
+ @param addrMan A CBNetworkAddressManager object.
  @returns true on success or false on failure.
  */
 bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan);
@@ -616,6 +646,34 @@ bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan);
  @returns true on success or false on failure.
  */
 bool CBAddressStorageSaveAddress(uint64_t iself, void * address);
+
+// ACCOUNTER DEPENDENCIES
+
+// Cosntants
+
+#define CB_TX_UNCONFIRMED 0
+#define CB_NO_BRANCH UINT8_MAX
+
+// Functions
+
+/**
+ @brief Creates a new account storage object.
+ @param dataDir The directory where the data files should be stored.
+ @returns The address storage object.
+ */
+uint64_t CBNewAccounter(char * dataDir);
+/**
+ @brief Frees the account storage object.
+ @param iself The account storage object.
+ */
+void CBFreeAccounter(uint64_t self);
+/**
+ @brief Commits data to the disk.
+ @param self The accounter object.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterCommit(uint64_t self);
+
 
 // LOGGING DEPENDENCIES
 

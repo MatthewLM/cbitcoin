@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 28/04/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #ifndef CBCONSTANTSH
 #define CBCONSTANTSH
@@ -34,17 +26,19 @@
 #define CB_TEST_NETWORK_BYTES 0xDAB5BFFA // The network for testing
 #define CB_ONE_BITCOIN 100000000LL // Each bitcoin has 100 million satoshis (individual units).
 #define CB_24_HOURS 86400
+#define CB_SCAN_START ((CB_NETWORK_TIME_ALLOWED_TIME_DRIFT + CB_BLOCK_ALLOWED_TIME_DRIFT)*2)
+#define CB_NO_SCAN 0xFFFFFFFFFFFFFFFF
 #define NOT ! // Better readability than !
-#define CBInt16ToArray(arr, offset, i) arr[offset] = i; \
-									 arr[offset + 1] = (i) >> 8;
+#define CBInt16ToArray(arr, offset, i) arr[offset] = (uint8_t)i; \
+									 arr[offset + 1] = (uint8_t)((i) >> 8);
 #define CBInt32ToArray(arr, offset, i) CBInt16ToArray(arr, offset, i) \
-									 arr[offset + 2] = (i) >> 16; \
-							         arr[offset + 3] = (i) >> 24;
+									 arr[offset + 2] = (uint8_t)((i) >> 16); \
+							         arr[offset + 3] = (uint8_t)((i) >> 24);
 #define CBInt64ToArray(arr, offset, i) CBInt32ToArray(arr, offset, i) \
-									 arr[offset + 4] = (i) >> 32; \
-									 arr[offset + 5] = (i) >> 40; \
-									 arr[offset + 6] = (i) >> 48; \
-									 arr[offset + 7] = (i) >> 56;
+									 arr[offset + 4] = (uint8_t)((i) >> 32); \
+									 arr[offset + 5] = (uint8_t)((i) >> 40); \
+									 arr[offset + 6] = (uint8_t)((i) >> 48); \
+									 arr[offset + 7] = (uint8_t)((i) >> 56);
 #define CBArrayToInt16(arr, offset) (arr[offset] \
                                      | (uint16_t)arr[offset + 1] << 8)
 #define CBArrayToInt32(arr, offset) (CBArrayToInt16(arr, offset) \

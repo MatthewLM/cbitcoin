@@ -3,8 +3,8 @@
 Refer to the following list of files for cbitcoin features:
 
 CBAddress.h - An extension on CBVersionChecksumBytes for bitcoin addresses.\n
-CBAddressBroadcast.h - This is the "addr" message structure with functions.\n
-CBAddressManager.h - A structure with functions for managing CBNetworkAddress objects and CBPeer objects.\n
+CBNetworkAddressBroadcast.h - This is the "addr" message structure with functions.\n
+CBNetworkAddressManager.h - A structure with functions for managing CBNetworkAddress objects and CBPeer objects.\n
 CBAlert.h - This is the "alert" message structure with functions.\n
 CBBase58.h - Base-58 encoding and decoding, used for bitcoin addresses.\n
 CBBigInt.h - Basic bignum functionality required by the library and also exposed by the library.\n

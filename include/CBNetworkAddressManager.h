@@ -1,24 +1,16 @@
 //
-//  CBAddressManager.h
+//  CBNetworkAddressManager.h
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 31/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -31,7 +23,6 @@
 //  Includes
 
 #include "CBPeer.h"
-#include "CBAddressBroadcast.h"
 #include "CBNetworkFunctions.h"
 #include "CBAssociativeArray.h"
 #include <time.h>
@@ -42,7 +33,7 @@
 #define CB_NETWORK_TIME_ALLOWED_TIME_DRIFT 4200 // 70 minutes from system time
 
 /**
- @brief Structure for CBAddressManager objects. @see CBAddressManager.h
+ @brief Structure for CBNetworkAddressManager objects. @see CBNetworkAddressManager.h
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
@@ -60,149 +51,160 @@ typedef struct{
 	uint64_t rndGenForBucketIndices; /**< Random number generator used for generating bucket indices. */
 	void * callbackHandler; /**< Sent to onBadTime callback */
 	void (*onBadTime)(void *); /**< Called when cbitcoin detects a divergence between the network time and system time which suggests the system time may be wrong, in the same way bitcoin-qt detects it. Has an argument for the callback handler. */
-} CBAddressManager;
+} CBNetworkAddressManager;
 
 /**
- @brief Creates a new CBAddressManager object. After doing this you can load addresses from storage using CBAddressStorageLoadAddresses.
+ @brief Creates a new CBNetworkAddressManager object. After doing this you can load addresses from storage using CBAddressStorageLoadAddresses.
  @param onBadTime The callback for when cbitcoin detects a divergence between the network time and system time which suggests the system time may be wrong, in the same way bitcoin-qt detects it. Has an argument for the callback handler.
  @param storage The address storage object made with CBNewAddressStorage.
- @returns A new CBAddressManager object.
+ @returns A new CBNetworkAddressManager object.
 */
-CBAddressManager * CBNewAddressManager(void (*onBadTime)(void *));
+CBNetworkAddressManager * CBNewNetworkAddressManager(void (*onBadTime)(void *));
 
 /**
- @brief Gets a CBAddressManager from another object. Use this to avoid casts.
- @param self The object to obtain the CBAddressManager from.
- @returns The CBAddressManager object.
+ @brief Gets a CBNetworkAddressManager from another object. Use this to avoid casts.
+ @param self The object to obtain the CBNetworkAddressManager from.
+ @returns The CBNetworkAddressManager object.
 */
-CBAddressManager * CBGetAddressManager(void * self);
+CBNetworkAddressManager * CBGetNetworkAddressManager(void * self);
 
 /**
- @brief Initialises a CBAddressManager object
- @param self The CBAddressManager object to initialise
+ @brief Initialises a CBNetworkAddressManager object
+ @param self The CBNetworkAddressManager object to initialise
  @param onBadTime The callback for when cbitcoin detects a divergence between the network time and system time which suggests the system time may be wrong, in the same way bitcoin-qt detects it. Has an argument for the callback handler.
  @returns true on success, false on failure.
 */
-bool CBInitAddressManager(CBAddressManager * self, void (*onBadTime)(void *));
+bool CBInitNetworkAddressManager(CBNetworkAddressManager * self, void (*onBadTime)(void *));
 
 /**
- @brief Frees a CBAddressManager object.
- @param self The CBAddressManager object to free.
+ @brief Releases and frees all of the objects stored by the CBNetworkAddressManager object.
+ @param self The CBNetworkAddressManager object to destroy.
  */
-void CBFreeAddressManager(void * vself);
+void CBDestroyNetworkAddressManager(void * vself);
+/**
+ @brief Frees a CBNetworkAddressManager object and also calls CBDestroyNetworkAddressManager.
+ @param self The CBNetworkAddressManager object to free.
+ */
+void CBFreeNetworkAddressManager(void * vself);
 
 //  Functions
 
 /**
- @brief Adds a CBNetworkAddress an places it into the CBAddressManager with a retain, but not permenent storage.
- @param self The CBAddressManager object.
+ @brief Adds a CBNetworkAddress an places it into the CBNetworkAddressManager with a retain, but not permenent storage.
+ @param self The CBNetworkAddressManager object.
  @param addr The CBNetworkAddress to take.
  @returns true if the address was taken successfully, false if an error occured.
  */
-bool CBAddressManagerAddAddress(CBAddressManager * self, CBNetworkAddress * addr);
+bool CBNetworkAddressManagerAddAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
- @brief Adds a CBPeer an places it into the CBAddressManager with a retain.
- @param self The CBAddressManager object.
+ @brief Adds a CBPeer an places it into the CBNetworkAddressManager with a retain.
+ @param self The CBNetworkAddressManager object.
  @param peer The CBPeer to take.
  @returns true if the peer was taken successfully, false if an error occured.
  */
-bool CBAddressManagerAddPeer(CBAddressManager * self, CBPeer * peer);
+bool CBNetworkAddressManagerAddPeer(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Adjust the network time offset with a peer's time.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param time Time to adjust network time with.
  */
-void CBAddressManagerAdjustTime(CBAddressManager * self);
+void CBNetworkAddressManagerAdjustTime(CBNetworkAddressManager * self);
 /**
  @brief Removes all the peers from the peers list but does not release them.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  */
-void CBAddressManagerClearPeers(CBAddressManager * self);
+void CBNetworkAddressManagerClearPeers(CBNetworkAddressManager * self);
 /**
  @brief Gets a number of addresses.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param num The maximum number of addresses to get.
  @param addresses A pointer to CBNetworkAddress objects to be set.
  @returns Actual number of addresses which have been obtained.
  */
-uint32_t CBAddressManagerGetAddresses(CBAddressManager * self, uint32_t num, CBNetworkAddress ** addresses);
+uint32_t CBNetworkAddressManagerGetAddresses(CBNetworkAddressManager * self, uint32_t num, CBNetworkAddress ** addresses);
+/**
+ @brief Gets the network time.
+ @param self The CBNetworkAddressManager object.
+ @returns The network time.
+ */
+uint64_t CBNetworkAddressManagerGetNetworkTime(CBNetworkAddressManager * self);
 /**
  @brief Sets the bucket index for an address, if it has not already (ie. "bucketSet" is false).
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param addr The CBNetworkAddress.
  */
-void CBAddressManagerSetBucketIndex(CBAddressManager * self, CBNetworkAddress * addr);
+void CBNetworkAddressManagerSetBucketIndex(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Gets the group number for an address. It is seperated such as to make it difficult to use an IP in many different groups. This is done such as the original bitcoin client.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param addr The address.
  @returns The address group number.
  */
-uint64_t CBAddressManagerGetGroup(CBAddressManager * self, CBNetworkAddress * addr);
+uint64_t CBNetworkAddressManagerGetGroup(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Returns the peer at the index "x".
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param x The index of the peer.
  @returns A retained peer at this index, or NULL if the index is out of range.
  */
-CBPeer * CBAddressManagerGetPeer(CBAddressManager * self, uint32_t x);
+CBPeer * CBNetworkAddressManagerGetPeer(CBNetworkAddressManager * self, uint32_t x);
 /**
- @brief Determines if a CBNetworkAddress already exists in the CBAddressManager. Compares the IP address and port.
- @param self The CBAddressManager object.
+ @brief Determines if a CBNetworkAddress already exists in the CBNetworkAddressManager. Compares the IP address and port.
+ @param self The CBNetworkAddressManager object.
  @param addr The address.
  @returns If the address already exists, returns the existing object. Else returns NULL.
  */
-CBNetworkAddress * CBAddressManagerGotNetworkAddress(CBAddressManager * self, CBNetworkAddress * addr);
+CBNetworkAddress * CBNetworkAddressManagerGotNetworkAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Determines if a CBNetworkAddress is in the "peers" array. Compares the IP address and port.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param addr The address.
  @returns If the address already exists as a connected peer, returns the existing object. Else returns NULL.
  */
-CBPeer * CBAddressManagerGotPeer(CBAddressManager * self, CBNetworkAddress * peer);
+CBPeer * CBNetworkAddressManagerGotPeer(CBNetworkAddressManager * self, CBNetworkAddress * peer);
 /**
- @brief Removes a CBNetworkAddress if the CBAddressManager has it. This does not remove it from the permenent storage.
- @param self The CBAddressManager object.
+ @brief Removes a CBNetworkAddress if the CBNetworkAddressManager has it. This does not remove it from the permenent storage.
+ @param self The CBNetworkAddressManager object.
  @param addr The CBNetworkAddress to remove
  */
-void CBAddressManagerRemoveAddress(CBAddressManager * self, CBNetworkAddress * addr);
+void CBNetworkAddressManagerRemoveAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Remove a CBPeer from the peers list and also the peer's time offset, if it exists int he time offsets array.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param peer The CBPeer to remove
  */
-void CBAddressManagerRemovePeer(CBAddressManager * self, CBPeer * peer);
+void CBNetworkAddressManagerRemovePeer(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Remove a CBPeer from the peer time offset list.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param peer The CBPeer to remove
  */
-void CBAddressManagerRemovePeerTimeOffset(CBAddressManager * self, CBPeer * peer);
+void CBNetworkAddressManagerRemovePeerTimeOffset(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Removes an address from the address manager. It will remove the address from a random bucket which has the lowest score in that bucket.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @returns The network address which was removed from the address manager.
  */
-CBNetworkAddress * CBAddressManagerSelectAndRemoveAddress(CBAddressManager * self);
+CBNetworkAddress * CBNetworkAddressManagerSelectAndRemoveAddress(CBNetworkAddressManager * self);
 /**
- @brief Takes a CBPeer an places it into the CBAddressManager, but not permenent storage.
- @param self The CBAddressManager object.
+ @brief Takes a CBPeer an places it into the CBNetworkAddressManager, but not permenent storage.
+ @param self The CBNetworkAddressManager object.
  @param peer The CBNetworkAddress to take.
  @returns true if the address was taken successfully, false if an error occured.
  */
-bool CBAddressManagerTakeAddress(CBAddressManager * self, CBNetworkAddress * addr);
+bool CBNetworkAddressManagerTakeAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Takes a CBPeer an places it into the peers list.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param peer The CBPeer to take.
  */
-bool CBAddressManagerTakePeer(CBAddressManager * self, CBPeer * peer);
+bool CBNetworkAddressManagerTakePeer(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Records a peers time offset for dtemining the median time.
- @param self The CBAddressManager object.
+ @param self The CBNetworkAddressManager object.
  @param peer The peer with the time offset.
  */
-bool CBAddressManagerTakePeerTimeOffset(CBAddressManager * self, CBPeer * peer);
+bool CBNetworkAddressManagerTakePeerTimeOffset(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Compares two peers for ordering by the time offset.
  @param peer1 The first CBPeer.

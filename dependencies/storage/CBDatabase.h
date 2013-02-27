@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 03/11/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -36,6 +28,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#define CB_OVERWRITE_DATA 0xFFFFFFFF
+#define CB_DELETED_VALUE 0xFFFFFFFF
+#define CB_DOESNT_EXIST CB_DELETED_VALUE
+
 /**
  @brief An index value which references the value's data position with a key. This should occur in memory after a key. A key is one byte for the length and then the key bytes.
  */
@@ -43,7 +39,7 @@ typedef struct{
 	uint32_t indexPos; /**< The position in the index file where this value exists */
 	uint16_t fileID; /**< The file ID for the data */
 	uint32_t pos; /**< The position of the data in the file. */
-	uint32_t length; /**< The length of the data or 0 if deleted. */
+	uint32_t length; /**< The length of the data or CB_DELETED_VALUE if deleted. */
 } CBIndexValue;
 
 /**
@@ -231,10 +227,10 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length);
  */
 uint64_t CBDatabaseGetFile(CBDatabase * self, uint16_t fileID);
 /**
- @brief Gets the length of a value in the database or zero if it does not exist.
+ @brief Gets the length of a value in the database or CB_DOESNT_EXIST if it does not exist.
  @param self The database object.
  @param key The key. The first byte is the length.
- @returns The total length of the value or 0 if the value does not exist in the database.
+ @returns The total length of the value or CB_DOESNT_EXIST if the value does not exist in the database.
  */
 uint32_t CBDatabaseGetLength(CBDatabase * self, uint8_t * key);
 /**
@@ -273,5 +269,15 @@ bool CBDatabaseWriteConcatenatedValue(CBDatabase * self, uint8_t * key, uint8_t 
  @returns true on success and false on failure.
  */
 bool CBDatabaseWriteValue(CBDatabase * self, uint8_t * key, uint8_t * data, uint32_t size);
+/**
+ @brief Queues a key-value write operation for a sub-section of existing data.
+ @param self The database object.
+ @param key The key for this data. The first byte is the length.
+ @param data The data to store.
+ @param size The size of the data to write.
+ @param offset The offset to start writing. CB_OVERWRITE_DATA to remove the old data and write anew.
+ @returns true on success and false on failure.
+ */
+bool CBDatabaseWriteValueSubSection(CBDatabase * self, uint8_t * key, uint8_t * data, uint32_t size, uint32_t offset);
 
 #endif

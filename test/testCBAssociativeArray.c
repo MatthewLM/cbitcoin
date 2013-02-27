@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 12/11/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include "CBAssociativeArray.h"
 #include <stdarg.h>
@@ -615,7 +607,13 @@ int main(){
 	CBAssociativeArrayGetFirst(&array, &it);
 	uint8_t * lastKey;
 	bool end = false;
+	uint8_t * minKey;
+	uint8_t * maxKey;
 	for (int x = 0; x < size; x += 10) {
+		if (x == 40)
+			minKey = it.node->elements[it.index];
+		if (x == 130)
+			maxKey = it.node->elements[it.index];
 		if (end) {
 			printf("ITERATOR END FALSE FAIL\n");
 			return 1;
@@ -647,6 +645,33 @@ int main(){
 		if (NOT end && memcmp(it.node->elements[it.index], lastKey, 10) <= 0) {
 			printf("ITERATE ORDER FAIL %u\n", x);
 			return 1;
+		}
+	}
+	// Test range interation
+	CBRangeIterator rit;
+	if (NOT CBAssociativeArrayRangeIteratorStart(&array, minKey, maxKey, &rit)){
+		printf("RANGER INTERATOR START FAIL\n");
+		return 1;
+	}
+	uint8_t * itKey = CBRangeIteratorGetPointer(&rit);
+	if (memcmp(minKey, itKey, 10)) {
+		printf("RANGE ITERATOR START COMPARE FAIL\n");
+		return 1;
+	}
+	for (uint8_t x = 0;; x++) {
+		if (x == 9) {
+			uint8_t * itKey = CBRangeIteratorGetPointer(&rit);
+			if (memcmp(maxKey, itKey, 10)) {
+				printf("RANGE ITERATOR END COMPARE FAIL\n");
+				return 1;
+			}
+		}
+		if (CBAssociativeArrayRangeIteratorNext(&array, &rit)) {
+			if (x != 9) {
+				printf("RANGE ITERATOR END NUM FAIL\n");
+				return 1;
+			}
+			break;
 		}
 	}
 	if (NOT end) {

@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 10/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -36,7 +28,7 @@
 
 typedef enum{
 	CB_INVENTORY_ITEM_ERROR = 0,
-	CB_INVENTORY_ITEM_TRANSACTION = 1,
+	CB_INVENTORY_ITEM_TX = 1,
 	CB_INVENTORY_ITEM_BLOCK = 2,
 }CBInventoryItemType;
 
@@ -83,7 +75,12 @@ bool CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByt
 bool CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data);
 
 /**
- @brief Frees a CBInventoryItem object.
+ @brief Releases and frees all of the objects stored by the CBInventoryItem object.
+ @param self The CBInventoryItem object to free.
+ */
+void CBDestroyInventoryItem(void * self);
+/**
+ @brief Frees a CBInventoryItem object and also calls CBDestroyInventoryItem.
  @param self The CBInventoryItem object to free.
  */
 void CBFreeInventoryItem(void * self);

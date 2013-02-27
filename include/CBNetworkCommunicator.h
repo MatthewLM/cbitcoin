@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 13/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
@@ -32,7 +24,8 @@
 
 #include "CBPeer.h"
 #include "CBDependencies.h"
-#include "CBAddressManager.h"
+#include "CBNetworkAddressManager.h"
+#include "CBNetworkAddressBroadcast.h"
 #include "CBInventoryBroadcast.h"
 #include "CBGetBlocks.h"
 #include "CBTransaction.h"
@@ -90,14 +83,14 @@ typedef struct {
 	int32_t version; /**< Used for automatic handshaking. This version will be advertised to peers. */
 	CBVersionServices services; /**< Used for automatic handshaking. These services will be advertised */
 	CBByteArray * userAgent; /**< Used for automatic handshaking. This user agent will be advertised. */
-	int32_t blockHeight; /** Set to the current block height for advertising to peers during the automated handshake. */
+	uint32_t blockHeight; /** Set to the current block height for advertising to peers during the automated handshake. */
 	CBNetworkAddress * ourIPv4; /**< IPv4 network address for us. */
 	CBNetworkAddress * ourIPv6; /**< IPv6 network address for us. */
 	uint32_t attemptingOrWorkingConnections; /**< All connections being attempted or sucessful */
 	uint32_t maxConnections; /**< Maximum number of peers allowed to connect to. */
 	uint32_t numIncommingConnections; /**< Number of incomming connections made */
 	uint32_t maxIncommingConnections; /**< Maximum number of incomming connections. */
-	CBAddressManager * addresses; /**< All addresses both connected and unconnected */
+	CBNetworkAddressManager * addresses; /**< All addresses both connected and unconnected */
 	uint64_t maxAddresses; /**< The maximum number of addresses to store */
 	uint32_t heartBeat; /**< If the CB_NETWORK_COMMUNICATOR_AUTO_PING flag is set, the CBNetworkCommunicator will send a "ping" message to all peers after this interval. The default is 1800000 (30 minutes) */
 	uint32_t timeOut; /**< Time of zero contact from a peer before timeout. The default is 5400000 (90 minutes) */
@@ -123,10 +116,11 @@ typedef struct {
 	uint64_t addrStorage; /**< The object for address storage. If not 0 and if the CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY flag is given, broadcast addresses will be recorded into the storage. */
 	CBAssociativeArray relayedAddrs; /**< An array of the relayed addresses in a 24 hour period, in which the array is cleared. */
 	uint64_t relayedAddrsLastClear; /**< The time relayedAddrs was last cleared */
-	void * callbackHandler; /**< Sent to event callbacks */
-	void (*onTimeOut)(void *, void *, void *, CBTimeOutType); /**< Timeout event callback with a void pointer argument for the callback handler followed by a CBNetworkCommunicator and CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The second argument is the CBNetworkCommunicator responsible for the timeout. The third argument is the peer with the timeout. Lastly there is the CBTimeOutType */
-	CBOnMessageReceivedAction (*onMessageReceived)(void *, void *, void *); /**< The callback for when a message has been received from a peer. The first argument in the void pointer for the callback handler. The second argument is the CBNetworkCommunicator responsible for receiving the message. The third argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
-	void (*onNetworkError)(void *, void *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the callback handler and then the CBNetworkCommunicator. */
+	void (*onPeerConnection)(void *, void *); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
+	void (*onPeerDisconnection)(void *, void *); /**< Callback for when a peer has been disconnected. The first argument is the CBNetworkCommunicator and the second is the peer. */
+	void (*onTimeOut)(void *, void *, CBTimeOutType); /**< Timeout event callback with a void pointer argument for the CBNetworkCommunicator and then CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The first argument is the CBNetworkCommunicator responsible for the timeout. The second argument is the peer with the timeout. Lastly there is the CBTimeOutType */
+	CBOnMessageReceivedAction (*onMessageReceived)(void *, void *); /**< The callback for when a message has been received from a peer. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
+	void (*onNetworkError)(void *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the network communicator. */
 } CBNetworkCommunicator;
 
 /**
@@ -150,7 +144,12 @@ CBNetworkCommunicator * CBGetNetworkCommunicator(void * self);
 bool CBInitNetworkCommunicator(CBNetworkCommunicator * self);
 
 /**
- @brief Frees a CBNetworkCommunicator object.
+ @brief Release and free all of the objects stored by a CBNetworkCommunicator object.
+ @param self The CBNetworkCommunicator object to destroy.
+ */
+void CBDestroyNetworkCommunicator(void * self);
+/**
+ @brief Frees a CBNetworkCommunicator object and also calls CBDestroyNetworkCommunicator.
  @param self The CBNetworkCommunicator object to free.
  */
 void CBFreeNetworkCommunicator(void * self);
@@ -266,25 +265,26 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetw
  @param self The CBNetworkCommunicator object.
  @param peer The CBPeer.
  @param message The CBMessage to send.
+ @param callback The callback for when the send has complete. If NULL, no call is made.
  @returns true if successful, false otherwise.
  */
-bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
+bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *));
 /**
  @brief Sends pings to all connected peers.
  @param self The CBNetworkCommunicator object.
  */
 void CBNetworkCommunicatorSendPings(void * vself);
 /**
- @brief Sets the CBAddressManager.
+ @brief Sets the CBNetworkAddressManager.
  @param self The CBNetworkCommunicator object.
- @param addr The CBAddressManager
+ @param addr The CBNetworkAddressManager
  */
-void CBNetworkCommunicatorSetAddressManager(CBNetworkCommunicator * self, CBAddressManager * addrMan);
+void CBNetworkCommunicatorSetNetworkAddressManager(CBNetworkCommunicator * self, CBNetworkAddressManager * addrMan);
 /**
  @brief Sets the alternative messages
  @param self The alternative messages as a CBByteArray with 12 characters per message command, one after the other.
  @param altMaxSizes An allocated memory block of 32 bit integers with the max sizes for the alternative messages.
- @param addr The CBAddressManager
+ @param addr The CBNetworkAddressManager
  */
 void CBNetworkCommunicatorSetAlternativeMessages(CBNetworkCommunicator * self, CBByteArray * altMessages, uint32_t * altMaxSizes);
 /**

@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 30/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
 #include "CBTransaction.h"
@@ -193,24 +185,24 @@ int main(){
 	CBTransaction * tx = CBNewTransactionFromData(bytes);
 	CBTransactionDeserialise(tx);
 	if (tx->version != 2) {
-		printf("TRANSACTION DESERIALISATION VERSION FAIL. %u != 2\n", tx->version);
+		printf("TX DESERIALISATION VERSION FAIL. %u != 2\n", tx->version);
 		return 1;
 	}
 	if (tx->inputNum != 3) {
-		printf("TRANSACTION DESERIALISATION INPUT NUM FAIL. %u != 3\n", tx->inputNum);
+		printf("TX DESERIALISATION INPUT NUM FAIL. %u != 3\n", tx->inputNum);
 		return 1;
 	}
 	if (tx->outputNum != 2) {
-		printf("TRANSACTION DESERIALISATION OUTPUT NUM FAIL. %u != 2\n", tx->outputNum);
+		printf("TX DESERIALISATION OUTPUT NUM FAIL. %u != 2\n", tx->outputNum);
 		return 1;
 	}
 	if (tx->lockTime != randInt) {
-		printf("TRANSACTION DESERIALISATION LOCK TIME FAIL. %u != %u\n", tx->lockTime, randInt);
+		printf("TX DESERIALISATION LOCK TIME FAIL. %u != %u\n", tx->lockTime, randInt);
 		return 1;
 	}
 	for (uint8_t x = 0; x < 3; x++) {
 		if(memcmp(hash, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), 32)){
-			printf("TRANSACTION CBTransactionInput %i DESERIALISED outPointerHash INCORRECT: 0x\n", x);
+			printf("TX CBTransactionInput %i DESERIALISED outPointerHash INCORRECT: 0x\n", x);
 			for (int x = 0; x < 32; x++) {
 				printf("%.2x", hash[x]);
 			}
@@ -222,27 +214,27 @@ int main(){
 			return 1;
 		}
 		if (tx->inputs[x]->prevOut.index != randInt) {
-			printf("TRANSACTION CBTransactionInput %i DESERIALISED outPointerIndex INCORRECT: %u != %u\n", x, tx->inputs[x]->prevOut.index, randInt);
+			printf("TX CBTransactionInput %i DESERIALISED outPointerIndex INCORRECT: %u != %u\n", x, tx->inputs[x]->prevOut.index, randInt);
 			return 1;
 		}
 		CBScriptStack stack = CBNewEmptyScriptStack();
 		if(CBScriptExecute(tx->inputs[x]->scriptObject, &stack, NULL, NULL, 0, false) != CB_SCRIPT_TRUE){
-			printf("TRANSACTION CBTransactionInput %i DESERIALISED SCRIPT FAILURE\n", x);
+			printf("TX CBTransactionInput %i DESERIALISED SCRIPT FAILURE\n", x);
 			return 1;
 		}
 		if (tx->inputs[x]->sequence != randInt) {
-			printf("TRANSACTION CBTransactionInput %i DESERIALISED sequence INCORRECT: %i != %i\n", x, tx->inputs[x]->sequence, randInt);
+			printf("TX CBTransactionInput %i DESERIALISED sequence INCORRECT: %i != %i\n", x, tx->inputs[x]->sequence, randInt);
 			return 1;
 		}
 	}
 	for (uint8_t x = 0; x < 2; x++) {
 		if (tx->outputs[x]->value != randInt64) {
-			printf("TRANSACTION CBTransactionOutput %i DESERIALISED value INCORRECT: %" PRIu64 " != %" PRIu64 "\n", x, tx->outputs[x]->value, randInt64);
+			printf("TX CBTransactionOutput %i DESERIALISED value INCORRECT: %" PRIu64 " != %" PRIu64 "\n", x, tx->outputs[x]->value, randInt64);
 			return 1;
 		}
 		stack = CBNewEmptyScriptStack();
 		if(CBScriptExecute(tx->outputs[x]->scriptObject, &stack, NULL, NULL, 0, false) != CB_SCRIPT_TRUE){
-			printf("TRANSACTION CBTransactionOutput %i DESERIALISED SCRIPT FAILURE\n", x);
+			printf("TX CBTransactionOutput %i DESERIALISED SCRIPT FAILURE\n", x);
 			return 1;
 		}
 	}
@@ -279,7 +271,7 @@ int main(){
 		return 1;
 	}
 	if (CBTransactionCalculateLength(tx) != 187) {
-		printf("TRANSACTION LENGTH CALC FAILURE\n");
+		printf("TX LENGTH CALC FAILURE\n");
 		return 1;
 	}
 	CBReleaseObject(tx);
@@ -1253,7 +1245,7 @@ int main(){
 	bytes = CBNewByteArrayWithDataCopy((uint8_t []){0x1, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x7, 0x4, 0xff, 0xff, 0x0, 0x1d, 0x1, 0x4, 0xff, 0xff, 0xff, 0xff, 0x1, 0x0, 0xf2, 0x5, 0x2a, 0x1, 0x0, 0x0, 0x0, 0x43, 0x41, 0x4, 0x96, 0xb5, 0x38, 0xe8, 0x53, 0x51, 0x9c, 0x72, 0x6a, 0x2c, 0x91, 0xe6, 0x1e, 0xc1, 0x16, 0x0, 0xae, 0x13, 0x90, 0x81, 0x3a, 0x62, 0x7c, 0x66, 0xfb, 0x8b, 0xe7, 0x94, 0x7b, 0xe6, 0x3c, 0x52, 0xda, 0x75, 0x89, 0x37, 0x95, 0x15, 0xd4, 0xe0, 0xa6, 0x4, 0xf8, 0x14, 0x17, 0x81, 0xe6, 0x22, 0x94, 0x72, 0x11, 0x66, 0xbf, 0x62, 0x1e, 0x73, 0xa8, 0x2c, 0xbf, 0x23, 0x42, 0xc8, 0x58, 0xee, 0xac, 0x0, 0x0, 0x0, 0x0}, 134);
 	tx = CBNewTransactionFromData(bytes);
 	if (memcmp(CBTransactionGetHash(tx), (uint8_t []){0x98, 0x20, 0x51, 0xfD, 0x1E, 0x4B, 0xA7, 0x44, 0xBB, 0xBE, 0x68, 0x0E, 0x1F, 0xEE, 0x14, 0x67, 0x7B, 0xA1, 0xA3, 0xC3, 0x54, 0x0B, 0xF7, 0xB1, 0xCD, 0xB6, 0x06, 0xE8, 0x57, 0x23, 0x3E, 0x0E}, 32)) {
-		printf("TRANSACTION GET HASH FAIL\n");
+		printf("TX GET HASH FAIL\n");
 		return 1;
 	}
 	// Test hash change after reserailisation
@@ -1261,20 +1253,20 @@ int main(){
 	tx->lockTime = 50;
 	CBTransactionSerialise(tx, false);
 	if (NOT memcmp(CBTransactionGetHash(tx), (uint8_t []){0x98, 0x20, 0x51, 0xfD, 0x1E, 0x4B, 0xA7, 0x44, 0xBB, 0xBE, 0x68, 0x0E, 0x1F, 0xEE, 0x14, 0x67, 0x7B, 0xA1, 0xA3, 0xC3, 0x54, 0x0B, 0xF7, 0xB1, 0xCD, 0xB6, 0x06, 0xE8, 0x57, 0x23, 0x3E, 0x0E}, 32)) {
-		printf("TRANSACTION CHANGE HASH FAIL\n");
+		printf("TX CHANGE HASH FAIL\n");
 		return 1;
 	}
 	// Test zero inputs serialisation
 	tx->inputNum = 0;
 	if (CBTransactionSerialise(tx, false)) {
-		printf("TRANSACTION ZERO INPUTS SERAILISE FAIL\n");
+		printf("TX ZERO INPUTS SERAILISE FAIL\n");
 		return 1;
 	}
 	tx->inputNum = 1;
 	// Test zero outputs serialisation
 	tx->outputNum = 0;
 	if (CBTransactionSerialise(tx, false)) {
-		printf("TRANSACTION ZERO OUTPUTS SERAILISE FAIL\n");
+		printf("TX ZERO OUTPUTS SERAILISE FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(bytes);
@@ -1283,7 +1275,7 @@ int main(){
 	bytes = CBNewByteArrayWithDataCopy((uint8_t [86]){0x1, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0xf2, 0x5, 0x2a, 0x1, 0x0, 0x0, 0x0, 0x43, 0x41, 0x4, 0x96, 0xb5, 0x38, 0xe8, 0x53, 0x51, 0x9c, 0x72, 0x6a, 0x2c, 0x91, 0xe6, 0x1e, 0xc1, 0x16, 0x0, 0xae, 0x13, 0x90, 0x81, 0x3a, 0x62, 0x7c, 0x66, 0xfb, 0x8b, 0xe7, 0x94, 0x7b, 0xe6, 0x3c, 0x52, 0xda, 0x75, 0x89, 0x37, 0x95, 0x15, 0xd4, 0xe0, 0xa6, 0x4, 0xf8, 0x14, 0x17, 0x81, 0xe6, 0x22, 0x94, 0x72, 0x11, 0x66, 0xbf, 0x62, 0x1e, 0x73, 0xa8, 0x2c, 0xbf, 0x23, 0x42, 0xc8, 0x58, 0xee, 0xac, 0x0, 0x0, 0x0, 0x0}, 86);
 	tx = CBNewTransactionFromData(bytes);
 	if (CBTransactionDeserialise(tx)) {
-		printf("TRANSACTION ZERO INPUTS DESERAILISE FAIL\n");
+		printf("TX ZERO INPUTS DESERAILISE FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(bytes);
@@ -1292,10 +1284,61 @@ int main(){
 	bytes = CBNewByteArrayWithDataCopy((uint8_t [58]){0x1, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x7, 0x4, 0xff, 0xff, 0x0, 0x1d, 0x1, 0x4, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0}, 58);
 	tx = CBNewTransactionFromData(bytes);
 	if (CBTransactionDeserialise(tx)) {
-		printf("TRANSACTION ZERO INPUTS DESERAILISE FAIL\n");
+		printf("TX ZERO INPUTS DESERAILISE FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(bytes);
 	CBReleaseObject(tx);
+	// Test output type recognition.
+	// First standard to bitcoin address
+	CBScript * script = CBNewScriptOfSize(25);
+	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_DUP);
+	CBByteArraySetByte(script, 1, CB_SCRIPT_OP_HASH160);
+	CBByteArraySetByte(script, 2, 0x14);
+	memset(CBByteArrayGetData(script) + 3, 0, 20);
+	CBByteArraySetByte(script, 23, CB_SCRIPT_OP_EQUALVERIFY);
+	CBByteArraySetByte(script, 24, CB_SCRIPT_OP_CHECKSIG);
+	output = CBNewTransactionOutput(5003, script);
+	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_KEYHASH) {
+		printf("TX OUTPUT KEYHASH RECOGNITION FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(script);
+	// Now test P2SH
+	script = CBNewScriptOfSize(23);
+	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_HASH160);
+	CBByteArraySetByte(script, 1, 0x14);
+	memset(CBByteArrayGetData(script) + 2, 0, 20);
+	CBByteArraySetByte(script, 22, CB_SCRIPT_OP_EQUAL);
+	output->scriptObject = script;
+	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_P2SH) {
+		printf("TX OUTPUT P2SH RECOGNITION FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(script);
+	// Finally Multisig
+	script = CBNewScriptOfSize(37);
+	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_1);
+	CBByteArraySetByte(script, 1, 0x21);
+	memset(CBByteArrayGetData(script) + 2, 0, 33);
+	CBByteArraySetByte(script, 35, CB_SCRIPT_OP_1);
+	CBByteArraySetByte(script, 36, CB_SCRIPT_OP_CHECKMULTISIG);
+	output->scriptObject = script;
+	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_MULTISIG) {
+		printf("TX OUTPUT MULTISIG RECOGNITION FAIL\n");
+		return 1;
+	}
+	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_0);
+	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_UNKNOWN) {
+		printf("TX OUTPUT MULTISIG RECOGNITION ZERO SIGNUM FAIL\n");
+		return 1;
+	}
+	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_2);
+	CBByteArraySetByte(script, 35, CB_SCRIPT_OP_1);
+	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_UNKNOWN) {
+		printf("TX OUTPUT MULTISIG RECOGNITION TOO MANY SIGS NUM FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(output);
 	return 0;
 }

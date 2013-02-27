@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 03/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
@@ -45,7 +37,7 @@ CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data){
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeTransactionOutput;
-	if(CBInitTransactionOutputFromData(self, data))
+	if (CBInitTransactionOutputFromData(self, data))
 		return self;
 	free(self);
 	return NULL;
@@ -79,10 +71,14 @@ bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * d
 
 //  Destructor
 
-void CBFreeTransactionOutput(void * vself){
+void CBDestroyTransactionOutput(void * vself){
 	CBTransactionOutput * self = vself;
 	if (self->scriptObject) CBReleaseObject(self->scriptObject);
-	CBFreeMessage(self);
+	CBDestroyMessage(self);
+}
+void CBFreeTransactionOutput(void * self){
+	CBDestroyTransactionOutput(self);
+	free(self);
 }
 
 //  Functions
@@ -135,6 +131,15 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 		return 0;
 	}
 	return reqLen;
+}
+CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self){
+	if (CBScriptIsKeyHash(self->scriptObject))
+		return CB_TX_OUTPUT_TYPE_KEYHASH;
+	if (CBScriptIsMultisig(self->scriptObject))
+		return CB_TX_OUTPUT_TYPE_MULTISIG;
+	if (CBScriptIsP2SH(self->scriptObject))
+		return CB_TX_OUTPUT_TYPE_P2SH;
+	return CB_TX_OUTPUT_TYPE_UNKNOWN;
 }
 uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;

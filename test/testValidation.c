@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 27/08/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
 #include "CBValidationFunctions.h"
@@ -106,13 +98,13 @@ int main(){
 	CBTransaction * tx = CBNewTransaction(0, 1);
 	CBScript * script = CBNewScriptWithDataCopy((uint8_t [14]){CB_SCRIPT_OP_PUSHDATA1, 0x02, 0x00, 0x0F, CB_SCRIPT_OP_CHECKSIG, CB_SCRIPT_OP_CHECKSIG, 0x4, 0xAB, 0x40, 0xBE, 0x29, CB_SCRIPT_OP_CHECKSIGVERIFY, CB_SCRIPT_OP_CHECKMULTISIGVERIFY, CB_SCRIPT_OP_CHECKMULTISIG}, 14);
 	CBByteArray * hash = CBNewByteArrayWithDataCopy(hashData, 32);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 3));
+	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TX_INPUT_FINAL, hash, 3));
 	CBReleaseObject(script);
 	CBReleaseObject(hash);
 	script = CBNewScriptWithDataCopy((uint8_t [7]){CB_SCRIPT_OP_CHECKMULTISIG, CB_SCRIPT_OP_PUSHDATA2, 0x02, 0x00, 0x20, 0x10, CB_SCRIPT_OP_CHECKSIGVERIFY}, 7);
 	hashData[26] = 0xFE;
 	hash = CBNewByteArrayWithDataCopy(hashData, 32);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 1));
+	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TX_INPUT_FINAL, hash, 1));
 	CBReleaseObject(script);
 	script = CBNewScriptWithDataCopy((uint8_t [17]){CB_SCRIPT_OP_PUSHDATA4, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0F, CB_SCRIPT_OP_CHECKSIG, CB_SCRIPT_OP_CHECKSIG, 0x4, 0xAB, 0x40, 0xBE, 0x29, CB_SCRIPT_OP_CHECKSIGVERIFY, CB_SCRIPT_OP_CHECKMULTISIGVERIFY, CB_SCRIPT_OP_CHECKMULTISIG}, 17);
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(4500, script));
@@ -164,7 +156,7 @@ int main(){
 	hashData[27] = 0;
 	hashData[26] = 0;
 	hash = CBNewByteArrayWithDataCopy(hashData, 32);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TRANSACTION_INPUT_FINAL, hash, 0xFFFFFFFF));
+	CBTransactionTakeInput(tx, CBNewTransactionInput(script, CB_TX_INPUT_FINAL, hash, 0xFFFFFFFF));
 	CBReleaseObject(script);
 	CBReleaseObject(hash);
 	script = CBNewScriptWithDataCopy((uint8_t [1]){0}, 1);
@@ -371,12 +363,12 @@ int main(){
 	// Test transaction lock
 	tx = CBNewTransaction(0, 1);
 	CBScript * nullScript = CBNewScriptOfSize(0);
-	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TRANSACTION_INPUT_FINAL, nullScript, 0));
+	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TX_INPUT_FINAL, nullScript, 0));
 	if (NOT CBTransactionIsFinal(tx, 0, 0)) {
 		printf("TX FINAL INPUT FAIL\n");
 		return 1;
 	}
-	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TRANSACTION_INPUT_FINAL - 1, nullScript, 0));
+	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TX_INPUT_FINAL - 1, nullScript, 0));
 	if (NOT CBTransactionIsFinal(tx, 0, 0)) {
 		printf("TX NOT FINAL INPUT NO LOCKTIME FAIL\n");
 		return 1;

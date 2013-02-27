@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 01/07/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
 #include "CBBlock.h"
@@ -100,46 +92,46 @@ int main(){
 		return 1;
 	}
 	if (genesisBlock->transactionNum != 1) {
-		printf("GENESIS BLOCK TRANSACTION NUM FAIL\n0x");
+		printf("GENESIS BLOCK TX NUM FAIL\n0x");
 		return 1;
 	}
 	CBTransaction * genesisCoinBase = genesisBlock->transactions[0];
 	if (genesisCoinBase->inputNum != 1) {
-		printf("GENESIS BLOCK TRANSACTION INPUT NUM FAIL\n0x");
+		printf("GENESIS BLOCK TX INPUT NUM FAIL\n0x");
 		return 1;
 	}
 	if (genesisCoinBase->outputNum != 1) {
-		printf("GENESIS BLOCK TRANSACTION OUTPUT NUM FAIL\n0x");
+		printf("GENESIS BLOCK TX OUTPUT NUM FAIL\n0x");
 		return 1;
 	}
 	if (genesisCoinBase->version != 1) {
-		printf("GENESIS BLOCK TRANSACTION VERSION FAIL\n0x");
+		printf("GENESIS BLOCK TX VERSION FAIL\n0x");
 		return 1;
 	}
 	if (genesisCoinBase->lockTime != 0) {
-		printf("GENESIS BLOCK TRANSACTION LOCK TIME FAIL\n0x");
+		printf("GENESIS BLOCK TX LOCK TIME FAIL\n0x");
 		return 1;
 	}
 	if (genesisCoinBase->inputs[0]->scriptObject->length != 0x4D) {
-		printf("GENESIS BLOCK TRANSACTION INPUT SCRIPT LENGTH FAIL\n0x");
+		printf("GENESIS BLOCK TX INPUT SCRIPT LENGTH FAIL\n0x");
 		return 1;
 	}
 	if (genesisCoinBase->outputs[0]->scriptObject->length != 0x43) {
-		printf("GENESIS BLOCK TRANSACTION OUTPUT SCRIPT LENGTH FAIL\n0x");
+		printf("GENESIS BLOCK TX OUTPUT SCRIPT LENGTH FAIL\n0x");
 		return 1;
 	}
 	for (int x = 0; x < 32; x++) {
 		if(CBByteArrayGetByte(genesisCoinBase->inputs[0]->prevOut.hash, x) != 0){
-			printf("GENESIS BLOCK TRANSACTION INPUT OUT POINTER HASH FAIL\n");
+			printf("GENESIS BLOCK TX INPUT OUT POINTER HASH FAIL\n");
 			return 1;
 		}
 	}
 	if (genesisCoinBase->inputs[0]->prevOut.index != 0xFFFFFFFF) {
-		printf("GENESIS BLOCK TRANSACTION INPUT OUT POINTER INDEX FAIL\n0x");
+		printf("GENESIS BLOCK TX INPUT OUT POINTER INDEX FAIL\n0x");
 		return 1;
 	}
-	if (genesisCoinBase->inputs[0]->sequence != CB_TRANSACTION_INPUT_FINAL) {
-		printf("GENESIS BLOCK TRANSACTION INPUT SEQUENCE FAIL\n0x");
+	if (genesisCoinBase->inputs[0]->sequence != CB_TX_INPUT_FINAL) {
+		printf("GENESIS BLOCK TX INPUT SEQUENCE FAIL\n0x");
 		return 1;
 	}
 	if (CBByteArrayCompare(genesisCoinBase->inputs[0]->scriptObject, genesisInScript)) {
@@ -156,7 +148,7 @@ int main(){
 		return 1;
 	}
 	if (genesisCoinBase->outputs[0]->value != 5000000000) {
-		printf("GENESIS BLOCK TRANSACTION OUTPUT VALUE FAIL\n0x");
+		printf("GENESIS BLOCK TX OUTPUT VALUE FAIL\n0x");
 		return 1;
 	}
 	if (CBByteArrayCompare(genesisCoinBase->outputs[0]->scriptObject, genesisOutScript)) {
@@ -186,7 +178,7 @@ int main(){
 	block->transactions = malloc(sizeof(*block->transactions));
 	block->transactions[0] = CBNewTransaction(0, 1);
 	CBRetainObject(block->prevBlockHash); // Retain for the zero hash in the input
-	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TRANSACTION_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
+	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TX_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(5000000000, genesisOutScript));
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBGetMessage(genesisBlock)->bytes->length);
 	CBBlockSerialise(block, true, true);
@@ -216,12 +208,12 @@ int main(){
 	block->transactionNum = 2;
 	block->transactions = malloc(sizeof(*block->transactions) * 2);
 	block->transactions[0] = CBNewTransaction(0, 1);
-	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TRANSACTION_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
+	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TX_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
 	for (uint8_t x = 0; x < 2; x++) {
 		CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(5000000000, genesisOutScript));
 	}
 	block->transactions[1] = CBNewTransaction(0, 1);
-	CBTransactionTakeInput(block->transactions[1], CBNewTransactionInput(genesisInScript, CB_TRANSACTION_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
+	CBTransactionTakeInput(block->transactions[1], CBNewTransactionInput(genesisInScript, CB_TX_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
 	CBTransactionTakeOutput(block->transactions[1], CBNewTransactionOutput(5000000000, genesisOutScript));
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
 	if (CBBlockSerialise(block, true, true) != CBBlockCalculateLength(block, true)){

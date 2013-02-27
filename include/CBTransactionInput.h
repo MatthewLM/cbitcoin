@@ -5,28 +5,20 @@
 //  Created by Matthew Mitchell on 02/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 /**
  @file
  @brief Represents an input into a bitcoin transaction. Inherits CBMessage
 */
 
-#ifndef CBTRANSACTIONINPUTH
-#define CBTRANSACTIONINPUTH
+#ifndef CBTXINPUTH
+#define CBTXINPUTH
 
 //  Includes
 
@@ -36,7 +28,7 @@
 
 // Constants
 
-#define CB_TRANSACTION_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
+#define CB_TX_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
 
 /**
  @brief Structure for previous outputs that are being spent by an input.
@@ -51,7 +43,7 @@ typedef struct{
 */
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
-	uint32_t sequence; /**< The version of this transaction input. Not used in protocol v0.3.18.00. Set to 0 for transactions that may somday be open to change after broadcast, set to CB_TRANSACTION_INPUT_FINAL if this input never needs to be changed after broadcast. */
+	uint32_t sequence; /**< The version of this transaction input. Not used in protocol v0.3.18.00. Set to 0 for transactions that may somday be open to change after broadcast, set to CB_TX_INPUT_FINAL if this input never needs to be changed after broadcast. */
 	CBScript * scriptObject; /**< Contains script information as a CBScript. */
 	CBPrevOut prevOut; /**< A locator for a previous output being spent. */
 } CBTransactionInput;
@@ -101,7 +93,12 @@ bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * dat
 bool CBInitUnsignedTransactionInput(CBTransactionInput * self, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 
 /**
- @brief Frees a CBTransactionInput object.
+ @brief Release and free the objects stored by the CBTransactionInput object.
+ @param self The CBTransactionInput object to free.
+ */
+void CBDestroyTransactionInput(void * self);
+/**
+ @brief Frees a CBTransactionInput object and also calls CBDestroyTransactionInput.
  @param self The CBTransactionInput object to free.
  */
 void CBFreeTransactionInput(void * self);

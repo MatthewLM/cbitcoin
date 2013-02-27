@@ -5,27 +5,49 @@
 //  Created by Matthew Mitchell on 12/11/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
-//
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 //  SEE HEADER FILE FOR DOCUMENTATION ??? Many optimisations can be done here.
 
 #include "CBAssociativeArray.h"
 #include <assert.h>
 
+bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, void * minElement, void * maxElement, CBRangeIterator * it){
+	// Assign the range to the iterator object
+	it->minElement = minElement;
+	it->maxElement = maxElement;
+	// Try to find the minimum element
+	CBFindResult res = CBAssociativeArrayFind(self, minElement);
+	if (NOT res.found) {
+		// If we are past the end of the node's elements, go back onto the previous element, and then iterate.
+		if (res.position.index == res.position.node->numElements) {
+			res.position.index--;
+			if (CBAssociativeArrayIterate(self, &res.position))
+				// Couldn't iterate, meaning there is no higher element than the minimum element.
+				return false;
+			// Iterated to the element in the array after the minimum element, so use it
+		}
+		// Else we have landed on the element after the minimum element.
+	}
+	it->pos = res.position;
+	return true;
+}
+bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeIterator * it){
+	// Try iterating
+	if (CBAssociativeArrayIterate(self, &it->pos))
+		// Couldn't iterate, meaning we have reach the end of the array already
+		return true;
+	// Check the range
+	if (self->compareFunc(it->pos.node->elements[it->pos.index], it->maxElement) == CB_COMPARE_MORE_THAN)
+		// The next element goes out of range.
+		return true;
+	return false;
+}
 void CBAssociativeArrayClear(CBAssociativeArray * self){
 	CBFreeBTreeNode(self->root, self->onFree, true);
 }
@@ -411,6 +433,9 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it){
 	}
 	return false;
 }
+bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self){
+	return self->root->numElements != 0;
+}
 CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, void * key, CBCompare (*compareFunc)(void *, void *)){
 	CBFindResult res;
 	res.found = false;
@@ -437,6 +462,9 @@ CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, void * key, CBCompare (
 	if (cmp == CB_COMPARE_MORE_THAN)
 		res.position.index++;
 	return res;
+}
+void * CBFindResultToPointer(CBFindResult res){
+	return res.position.node->elements[res.position.index];
 }
 void CBFreeAssociativeArray(CBAssociativeArray * self){
 	CBFreeBTreeNode(self->root, self->onFree, false);
@@ -479,4 +507,7 @@ CBCompare CBKeyCompare(void * key1, void * key2){
 	if (NOT cmp)
 		return CB_COMPARE_EQUAL;
 	return CB_COMPARE_LESS_THAN;
+}
+void * CBRangeIteratorGetPointer(CBRangeIterator * it){
+	return it->pos.node->elements[it->pos.index];
 }

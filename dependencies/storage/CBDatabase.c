@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 03/11/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
@@ -359,22 +351,23 @@ bool CBDatabaseCommit(CBDatabase * self){
 		uint8_t * keyPtr = it.node->elements[it.index];
 		uint32_t dataSize = *(uint32_t *)(keyPtr + *keyPtr + 1);
 		uint8_t * dataPtr = keyPtr + *keyPtr + 5;
+		uint32_t offset = *(uint32_t *)(dataPtr + dataSize);
 		// Check for key in index
 		CBFindResult res = CBAssociativeArrayFind(&self->index, keyPtr);
 		if (res.found) {
 			// Exists in index so we are overwriting data.
 			// See if the data can be overwritten.
-			uint8_t * indexKey = res.position.node->elements[res.position.index];
+			uint8_t * indexKey = CBFindResultToPointer(res);
 			CBIndexValue * indexValue = (CBIndexValue *)(indexKey + *indexKey + 1);
-			if (indexValue->length >= dataSize){
+			if (indexValue->length >= dataSize && indexValue->length != CB_DELETED_VALUE){
 				// We are going to overwrite the previous data.
-				if (NOT CBDatabaseAddOverwrite(self, indexValue->fileID, dataPtr, indexValue->pos, dataSize, logFile)){
+				if (NOT CBDatabaseAddOverwrite(self, indexValue->fileID, dataPtr, indexValue->pos + ((offset == CB_OVERWRITE_DATA) ? 0 : offset), dataSize, logFile)){
 					CBLogError("Failed to add an overwrite operation to overwrite a previous value.");
 					CBFileClose(logFile);
 					CBDatabaseClearPending(self);
 					return false;
 				}
-				if (indexValue->length > dataSize) {
+				if (indexValue->length > dataSize && offset == CB_OVERWRITE_DATA) {
 					// Change indexed length and mark the remaining length as deleted
 					if (NOT CBDatabaseAddDeletionEntry(self, indexValue->fileID, indexValue->pos + dataSize, indexValue->length - dataSize, logFile)){
 						CBLogError("Failed to add a deletion entry when overwriting a previous value with a smaller one.");
@@ -393,8 +386,8 @@ bool CBDatabaseCommit(CBDatabase * self){
 					}
 				}
 			}else{
-				// We will mark the previous data as deleted and store data elsewhere, unless the data has been marked as deleted already (by having zero length in the index).
-				if (indexValue->length && NOT CBDatabaseAddDeletionEntry(self, indexValue->fileID, indexValue->pos, indexValue->length, logFile)){
+				// We will mark the previous data as deleted and store data elsewhere, unless the data has been marked as deleted already (by CB_DELETED_VALUE length).
+				if (indexValue->length != CB_DELETED_VALUE && NOT CBDatabaseAddDeletionEntry(self, indexValue->fileID, indexValue->pos, indexValue->length, logFile)){
 					CBLogError("Failed to add a deletion entry for an old value when replacing it with a larger one.");
 					CBFileClose(logFile);
 					CBDatabaseClearPending(self);
@@ -489,7 +482,7 @@ bool CBDatabaseCommit(CBDatabase * self){
 			CBDatabaseClearPending(self);
 			return false;
 		}
-		uint8_t * indexKey = res.position.node->elements[res.position.index];
+		uint8_t * indexKey = CBFindResultToPointer(res);
 		CBIndexValue * indexVal = (CBIndexValue *)(indexKey + *indexKey + 1);
 		// Create deletion entry for the data
 		if (NOT CBDatabaseAddDeletionEntry(self, indexVal->fileID, indexVal->pos, indexVal->length, logFile)) {
@@ -498,9 +491,9 @@ bool CBDatabaseCommit(CBDatabase * self){
 			CBDatabaseClearPending(self);
 			return false;
 		}
-		// Make the length 0, signifying deletion of the data
-		indexVal->length = 0;
-		CBInt32ToArray(data, 0, 0);
+		// Make the length CB_DELETED_VALUE, signifying deletion of the data
+		indexVal->length = CB_DELETED_VALUE;
+		CBInt32ToArray(data, 0, CB_DELETED_VALUE);
 		if (NOT CBDatabaseAddOverwrite(self, 0, data, indexVal->indexPos + 7 + *indexKey, 4, logFile)) {
 			CBLogError("Failed to overwrite the index entry's length with 0 to signify deletion.");
 			CBFileClose(logFile);
@@ -532,7 +525,7 @@ bool CBDatabaseCommit(CBDatabase * self){
 			return false;
 		}
 		// Obtain index entry
-		uint8_t * indexKey = res.position.node->elements[res.position.index];
+		uint8_t * indexKey = CBFindResultToPointer(res);
 		// Delete key
 		CBAssociativeArrayDelete(&self->index, res.position, false);
 		// Change key
@@ -689,11 +682,14 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, uint16_t fileID, uint8_t * data, 
 }
 bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CBIndexValue * indexValue, uint64_t logFile){
 	// Look for a deleted section to use
+	if (dataSize == 0)
+		// Null value
+		return true;
 	CBFindResult res = CBDatabaseGetDeletedSection(self, dataSize);
 	if (res.found) {
 		// ??? Is there a more effecient method for changing the key of the associative array than deleting and re-inserting with new key?
 		// Found a deleted section we can use for the data
-		CBDeletedSection * section = (CBDeletedSection *)res.position.node->elements[res.position.index];
+		CBDeletedSection * section = (CBDeletedSection *)CBFindResultToPointer(res);
 		uint32_t sectionLen = CBArrayToInt32BigEndian(section->key, 2);
 		uint16_t sectionFileID = CBArrayToInt16(section->key, 6);
 		uint32_t sectionOffset = CBArrayToInt32(section->key, 8);
@@ -752,7 +748,7 @@ bool CBDatabaseAddWriteValue(CBDatabase * self, uint8_t * writeValue){
 	res = CBAssociativeArrayFind(&self->valueWrites, writeValue);
 	if (res.found) {
 		// Found so replace the element
-		free(res.position.node->elements[res.position.index]);
+		free(CBFindResultToPointer(res));
 		res.position.node->elements[res.position.index] = writeValue;
 	}else{
 		// Insert into array
@@ -948,8 +944,8 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length){
 	CBFindResult res;
 	if (CBAssociativeArrayGetLast(&self->deletionIndex, &res.position)) {
 		// Found when there are elements, the deleted section is active and the deleted section length is equal or greater to "length".
-		res.found = ((uint8_t *)res.position.node->elements[res.position.index])[1]
-		&& CBArrayToInt32BigEndian(((uint8_t *)res.position.node->elements[res.position.index]), 2) >= length;
+		res.found = ((uint8_t *)CBFindResultToPointer(res))[1]
+		&& CBArrayToInt32BigEndian(((uint8_t *)CBFindResultToPointer(res)), 2) >= length;
 	}else
 		res.found = false;
 	return res;
@@ -991,44 +987,44 @@ uint32_t CBDatabaseGetLength(CBDatabase * self, uint8_t * key) {
 		// Look for value in valueWrites array
 		res = CBAssociativeArrayFind(&self->valueWrites, key);
 		if (NOT res.found)
-			return 0;
-		return CBArrayToInt32(((uint8_t *)res.position.node->elements[res.position.index]), *key + 1);
+			return CB_DOESNT_EXIST;
+		return CBArrayToInt32(((uint8_t *)CBFindResultToPointer(res)), *key + 1);
 	}
-	return ((CBIndexValue *)((uint8_t *)res.position.node->elements[res.position.index] + *key + 1))->length;
+	return ((CBIndexValue *)((uint8_t *)CBFindResultToPointer(res) + *key + 1))->length;
 }
 bool CBDatabaseReadValue(CBDatabase * self, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset){
-	// Look in index for value
-	CBFindResult res = CBAssociativeArrayFind(&self->index, key);
-	if (NOT res.found){
-		// Look for value in valueWrites array
-		res = CBAssociativeArrayFind(&self->valueWrites, key);
-		if (NOT res.found) {
+	// First check for value writes
+	CBFindResult res = CBAssociativeArrayFind(&self->valueWrites, key);
+	if (NOT res.found) {
+		// Look in index for value
+		CBFindResult res = CBAssociativeArrayFind(&self->index, key);
+		if (NOT res.found){
 			CBLogError("Could not find a value for a key.");
 			return false;
 		}
-		// Get the data, existing, yet to be written.
-		uint8_t * existingData = res.position.node->elements[res.position.index];
-		// Move along key size and 5 for the key and data size information
-		existingData += *existingData + 5;
-		// Copy the data into the buffer supplied to the function
-		memcpy(data, existingData + offset, dataSize);
+		CBIndexValue * val = (CBIndexValue *)((uint8_t *)CBFindResultToPointer(res) + *key + 1);
+		// Get file
+		uint64_t file = CBDatabaseGetFile(self, val->fileID);
+		if (NOT file) {
+			CBLogError("Could not open file for a value.");
+			return false;
+		}
+		if (NOT CBFileSeek(file, val->pos + offset)){
+			CBLogError("Could not read seek file for value.");
+			return false;
+		}
+		if (NOT CBFileRead(file, data, dataSize)) {
+			CBLogError("Could not read from file for value.");
+			return false;
+		}
 		return true;
 	}
-	CBIndexValue * val = (CBIndexValue *)((uint8_t *)res.position.node->elements[res.position.index] + *key + 1);
-	// Get file
-	uint64_t file = CBDatabaseGetFile(self, val->fileID);
-	if (NOT file) {
-		CBLogError("Could not open file for a value.");
-		return false;
-	}
-	if (NOT CBFileSeek(file, val->pos + offset)){
-		CBLogError("Could not read seek file for value.");
-		return false;
-	}
-	if (NOT CBFileRead(file, data, dataSize)) {
-		CBLogError("Could not read from file for value.");
-		return false;
-	}
+	// Get the data, existing, yet to be written.
+	uint8_t * existingData = CBFindResultToPointer(res);
+	// Move along key size and 5 for the key and data size information
+	existingData += *existingData + 5;
+	// Copy the data into the buffer supplied to the function
+	memcpy(data, existingData + offset, dataSize);
 	return true;
 }
 bool CBDatabaseRemoveValue(CBDatabase * self, uint8_t * key){
@@ -1067,35 +1063,43 @@ bool CBDatabaseWriteConcatenatedValue(CBDatabase * self, uint8_t * key, uint8_t 
 	uint32_t size = 0;
 	for (uint8_t x = 0; x < numDataParts; x++)
 		size += dataSize[x];
-	uint8_t * keyPtr = malloc(*key + 5 + size);
+	uint8_t * keyPtr = malloc(*key + 9 + size);
 	if (NOT keyPtr) {
 		CBLogError("Failed to allocate memory for a value write element.");
 		CBDatabaseClearPending(self);
 		return false;
 	}
 	memcpy(keyPtr, key, *key + 1);
-	uint32_t * sizePtr = (uint32_t *)(keyPtr + *key + 1);
-	*sizePtr = size;
-	uint8_t * dataPtr = (uint8_t *)(sizePtr + 1);
+	uint32_t * intPtr = (uint32_t *)(keyPtr + *key + 1);
+	*intPtr = size;
+	uint8_t * dataPtr = (uint8_t *)(intPtr + 1);
 	// Add data
 	for (uint8_t x = 0; x < numDataParts; x++){
 		memcpy(dataPtr, data[x], dataSize[x]);
 		dataPtr += dataSize[x];
 	}
+	intPtr = (uint32_t *)dataPtr;
+	*intPtr = CB_OVERWRITE_DATA;
 	return CBDatabaseAddWriteValue(self, keyPtr);
 }
 bool CBDatabaseWriteValue(CBDatabase * self, uint8_t * key, uint8_t * data, uint32_t size){
+	// Write element by overwriting previous data
+	return CBDatabaseWriteValueSubSection(self, key, data, size, CB_OVERWRITE_DATA);
+}
+bool CBDatabaseWriteValueSubSection(CBDatabase * self, uint8_t * key, uint8_t * data, uint32_t size, uint32_t offset){
 	// Create element
-	uint8_t * keyPtr = malloc(*key + 5 + size);
+	uint8_t * keyPtr = malloc(*key + 9 + size);
 	if (NOT keyPtr) {
 		CBLogError("Failed to allocate memory for a value write element.");
 		CBDatabaseClearPending(self);
 		return false;
 	}
 	memcpy(keyPtr, key, *key + 1);
-	uint32_t * sizePtr = (uint32_t *)(keyPtr + *key + 1);
-	*sizePtr = size;
-	uint8_t * dataPtr = (uint8_t *)(sizePtr + 1);
+	uint32_t * intPtr = (uint32_t *)(keyPtr + *key + 1);
+	*intPtr = size;
+	uint8_t * dataPtr = (uint8_t *)(intPtr + 1);
 	memcpy(dataPtr, data, size);
+	intPtr = (uint32_t *)(dataPtr + size);
+	*intPtr = offset;
 	return CBDatabaseAddWriteValue(self, keyPtr);
 }

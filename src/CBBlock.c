@@ -5,20 +5,12 @@
 //  Created by Matthew Mitchell on 01/05/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
@@ -58,6 +50,18 @@ CBBlock * CBNewBlockGenesis(){
 	}
 	CBGetObject(self)->free = CBFreeBlock;
 	if(CBInitBlockGenesis(self))
+		return self;
+	free(self);
+	return NULL;
+}
+CBBlock * CBNewBlockGenesisHeader(){
+	CBBlock * self = malloc(sizeof(*self));
+	if (NOT self) {
+		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockGenesisHeader\n", sizeof(*self));
+		return NULL;
+	}
+	CBGetObject(self)->free = CBFreeBlock;
+	if(CBInitBlockGenesisHeader(self))
 		return self;
 	free(self);
 	return NULL;
@@ -109,10 +113,26 @@ bool CBInitBlockGenesis(CBBlock * self){
 	CBBlockDeserialise(self, true);
 	return true;
 }
+bool CBInitBlockGenesisHeader(CBBlock * self){
+	CBByteArray * data = CBNewByteArrayWithDataCopy((uint8_t [82]){0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3B, 0xA3, 0xED, 0xFD, 0x7A, 0x7B, 0x12, 0xB2, 0x7A, 0xC7, 0x2C, 0x3E, 0x67, 0x76, 0x8F, 0x61, 0x7F, 0xC8, 0x1B, 0xC3, 0x88, 0x8A, 0x51, 0x32, 0x3A, 0x9F, 0xB8, 0xAA, 0x4B, 0x1E, 0x5E, 0x4A, 0x29, 0xAB, 0x5F, 0x49, 0xFF, 0xFF, 0x00, 0x1D, 0x1D, 0xAC, 0x2B, 0x7C, 0x01, 0x00}, 82);
+	if (NOT data)
+		return false;
+	uint8_t genesisHash[32] = {0x6F, 0xE2, 0x8C, 0x0A, 0xB6, 0xF1, 0xB3, 0x72, 0xC1, 0xA6, 0xA2, 0x46, 0xAE, 0x63, 0xF7, 0x4F, 0x93, 0x1E, 0x83, 0x65, 0xE1, 0x5A, 0x08, 0x9C, 0x68, 0xD6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00};
+	memcpy(self->hash, genesisHash, 32);
+	self->hashSet = true;
+	if (NOT CBInitMessageByData(CBGetMessage(self), data)){
+		CBReleaseObject(data);
+		CBReleaseObject(self->hash);
+		return false;
+	}
+	CBReleaseObject(data);
+	CBBlockDeserialise(self, false);
+	return true;
+}
 
 //  Destructor
 
-void CBFreeBlock(void * vself){
+void CBDestroyBlock(void * vself){
 	CBBlock * self = vself;
 	if(self->prevBlockHash) CBReleaseObject(self->prevBlockHash);
 	if(self->merkleRoot) CBReleaseObject(self->merkleRoot);
@@ -122,7 +142,11 @@ void CBFreeBlock(void * vself){
 		free(self->transactions);
 	}
 	if(self->hash) CBReleaseObject(self->hash);
-	CBFreeMessage(CBGetObject(self));
+	CBDestroyMessage(CBGetObject(self));
+}
+void CBFreeBlock(void * self){
+	CBDestroyBlock(self);
+	free(self);
 }
 
 //  Functions
