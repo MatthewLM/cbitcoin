@@ -105,6 +105,13 @@ uint32_t CBTransactionOutputCalculateLength(CBTransactionOutput * self);
  */
 uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self);
 /**
+ @brief Create a hash that identifies this output by the public-key hash, the P2SH hash or twenty bytes of the SHA-256 of a multisig script. Nothing is set, if the output is not supported.
+ @param self The CBTransactionOutput object.
+ @param hash The 20 hash bytes to set.
+ @returns true on success, false on failure.
+ */
+bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash);
+/**
  @brief Determines the type of this output.
  @param self The CBTransactionOutput object
  @returns The transaction output type.

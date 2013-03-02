@@ -132,6 +132,29 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	}
 	return reqLen;
 }
+bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash){
+	switch (CBTransactionOutputGetType(output)) {
+		case CB_TX_OUTPUT_TYPE_KEYHASH:{
+			// See if the public-key hash is one we are watching.
+			uint32_t cursor = 2;
+			CBScriptGetPushAmount(output->scriptObject, &cursor);
+			memcpy(hash, CBByteArrayGetData(output->scriptObject) + cursor, 20);
+			break;
+		}
+		case CB_TX_OUTPUT_TYPE_MULTISIG:
+			// Hash the entire script and then see if we are watching that script.
+			CBSha256(CBByteArrayGetData(output->scriptObject), output->scriptObject->length, hash);
+			break;
+		case CB_TX_OUTPUT_TYPE_P2SH:
+			// See if the script hash is one we are watching.
+			memcpy(hash, CBByteArrayGetData(output->scriptObject) + 2, 20);
+			break;
+		default:
+			// Unsupported
+			return true;
+	}
+	return false;
+}
 CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self){
 	if (CBScriptIsKeyHash(self->scriptObject))
 		return CB_TX_OUTPUT_TYPE_KEYHASH;

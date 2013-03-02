@@ -654,6 +654,24 @@ bool CBAddressStorageSaveAddress(uint64_t iself, void * address);
 #define CB_TX_UNCONFIRMED 0
 #define CB_NO_BRANCH UINT8_MAX
 
+typedef enum{
+	CB_GET_TX_OK,
+	CB_GET_TX_ERROR,
+	CB_GET_TX_NONE
+} CBGetTxResult;
+
+// Structures
+
+/**
+ @brief Details for a transaction on a branch for an account.
+ */
+typedef struct{
+	uint8_t txHash[32];
+	uint8_t addrHash[20];
+	int64_t amount;
+	uint64_t timestamp;
+} CBTransactionDetails;
+
 // Functions
 
 /**
@@ -673,6 +691,80 @@ void CBFreeAccounter(uint64_t self);
  @returns true on success and false on failure.
  */
 bool CBAccounterCommit(uint64_t self);
+/**
+ @brief Adds a watched output hash to an account.
+ @param self The accounter object. 
+ @param hash The hash as created by CBTransactionOuputGetHash.
+ @param accountID The ID of the account to add the hash for.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterAddWatchedOutputToAccount(uint64_t self, uint8_t * hash, uint64_t accountID);
+/**
+ @brief Modifies the information of a transaction which has been added to a branch.
+ @param self The accounter object. 
+ @param tx The transaction object.
+ @param blockHeight The block height at which the transaction is found.
+ @param branch The branch in which the transaction is found.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterBranchlessTransactionToBranch(uint64_t self, void * tx, uint32_t blockHeight, uint8_t branch);
+/**
+ @brief Commits the accounter information.
+ @param self The accounter object.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterCommit(uint64_t self);
+/**
+ @brief Removes information for a branch.
+ @param self The accounter object.
+ @param branch The branch that is removed.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterDeleteBranch(uint64_t self, uint8_t branch);
+/**
+ @brief Processes a found transaction on a branch for all of the accounts
+ @param self The accounter object.
+ @param tx The found transaction.
+ @param blockHeight The height the transaction was found.
+ @param The timestamp for the transaction.
+ @param branch The branch the transaction was found on.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterFoundTransaction(uint32_t self, void * tx, uint32_t blockHeight, uint32_t time, uint8_t branch);
+/**
+ @brief Gets the first transaction between times, equal or greater than the txIDCursor. The txIDCursor will be moved past a found transaction's ID.
+ @param self The accounter object.
+ @param branch The branch to find the first transaction for.
+ @param accountID The ID of the account to find the transaction for.
+ @param timeMin The minimum time of the transaction.
+ @param timeMax The maximum time of the transaction.
+ @param txIDCursor A pointer to the transaction ID cursor to find thw next transaction.
+ @param details A pointer to a CBTransactionDetails object to be set.
+ @returns @see CBGetTxResult.
+ */
+CBGetTxResult CBAccounterGetFirstTransactionBetween(uint64_t self, uint8_t branch, uint64_t accountID, uint64_t timeMin, uint64_t timeMax, uint64_t * txIDCursor, CBTransactionDetails * details);
+/**
+ @brief Processes a transaction being lost for all of the accounts.
+ @param self The accounter object.
+ @param tx The transaction being lost.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterLostBranchlessTransaction(uint64_t self, void * tx);
+/**
+ @brief Gets the ID for a new account.
+ @param self The accounter object.
+ @returns the ID of the account of 0 on error.
+ */
+uint64_t CBAccounterNewAccount(uint64_t self);
+/**
+ @brief Processes a new branch, inheriting a parent branch for all of the accounts.
+ @param self The accounter object.
+ @param newBranch The index of the new branch.
+ @param inherit The index of the parent branch.
+ @returns true on success and false on failure. 
+ */
+bool CBAccounterNewBranch(uint64_t self, uint8_t newBranch, uint8_t inherit);
+
 
 
 // LOGGING DEPENDENCIES
