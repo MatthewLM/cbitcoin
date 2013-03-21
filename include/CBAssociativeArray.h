@@ -30,17 +30,17 @@
 
 // Constants
 
-#define CB_BTREE_ORDER 32 // Algorithm only works with even values. Best with powers of 2. This refers to the number of elements and not children.
-#define CB_BTREE_HALF_ORDER CB_BTREE_ORDER/2
+#define CB_BTREE_ELEMENTS 32 // Algorithm only works with even values. Best with powers of 2. This refers to the number of elements and not children.
+#define CB_BTREE_HALF_ELEMENTS (CB_BTREE_ELEMENTS/2)
 
 /**
  @brief A node for a B-Tree. After this data should come the keys and the data elements.
  */
 typedef struct{
 	void * parent; /**< The parent node */
-	void * children[CB_BTREE_ORDER + 1]; /**< Children nodes */
+	void * children[CB_BTREE_ELEMENTS + 1]; /**< Children nodes */
 	uint8_t numElements; /**< The number of elements */
-	void * elements[CB_BTREE_ORDER]; /**< The elements cointaining the actual data, including the key information to be compared with the compareFunc function. */
+	void * elements[CB_BTREE_ELEMENTS]; /**< The elements cointaining the actual data, including the key information to be compared with the compareFunc function. */
 } CBBTreeNode;
 
 /**

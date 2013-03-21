@@ -45,24 +45,6 @@ typedef enum{
 	CB_TYPE_WATCHED_HASHES,
 } CBKeyTypes;
 
-uint8_t cbKeySizes[] = {
-	0, /**< CB_TYPE_ACCOUNTER_DETAILS : Null - Details for the accounter. */
-	8, /**< CB_TYPE_TX_DETAILS : The 8 byte transaction ID - Details for a transaction independant of the account. */
-	9, /**< CB_TYPE_BRANCH_ACCOUNT_DETAILS : 1 byte branch number and 8 byte account ID (CB_NO_BRANCH for unconfirmed) - Stores the number of transaction in the account and the balance */
-	8, /**< CB_TYPE_OUTPUT_DETAILS : 8 byte output ID - Stores the value. */
-	9, /**< CB_TYPE_BRANCH_OUTPUT_DETAILS : 1 byte branch number and 8 byte output ID - Stores the spent status */
-	16, /**< CB_TYPE_ACCOUNT_TX_DETAILS : 8 byte account ID and 8 byte transaction ID - Transaction details for this account */
-	16, /**< CB_TYPE_BRANCH_ACCOUNT_TIME_TX : 1 byte branch number, 8 byte account ID, 8 byte transaction timestamp and 8 byte transaction ID - Null */
-	9, /**< CB_TYPE_BRANCH_TX_DETAILS : 1 byte branch number and 8 byte transaction ID - Details for a transaction on a branch, no information for unconfirmed transactions. (Not used for CB_NO_BRANCH) */
-	16, /**< CB_TYPE_OUTPUT_ACCOUNTS : 8 byte output ID and 8 byte account ID - Null */
-	17, /**< CB_TYPE_ACCOUNT_UNSPENT_OUTPUTS : 1 byte branch number, 8 byte account ID, 8 byte output ID - Null */
-	16, /**< CB_TYPE_TX_ACCOUNTS : 8 byte transaction ID and 8 byte account ID - Null */
-	32, /**< CB_TYPE_TX_HASH_TO_ID : 32 byte transaction hash - The transaction ID */
-	13, /**< CB_TYPE_TX_HEIGHT_BRANCH_AND_ID : 1 byte branch number, 4 byte block height and 8 byte transaction ID - Null (Not used for CB_NO_BRANCH) */
-	36, /**< CB_TYPE_OUTPUT_HASH_AND_INDEX_TO_ID : 32 byte transaction hash and 4 byte output transaction index - The output reference ID */
-	28, /**< CB_TYPE_WATCHED_HASHES : 20 byte hash and 8 byte account ID - Null */
-};
-
 
 /**
  @brief The offsets of accounter details data

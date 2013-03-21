@@ -54,6 +54,11 @@ typedef struct{
  */
 CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 /**
+ @brief Creates a new CBTransactionInput object and does not retain the prevOutHash and script.
+ @returns A new CBTransactionInput object.
+ */
+CBTransactionInput * CBNewTransactionInputTakeScriptAndHash(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+/**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
  @returns A new CBTransactionInput object.
@@ -78,6 +83,12 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @returns true on success, false on failure.
  */
 bool CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+/**
+ @brief Initialises a CBTransactionInput object and does not retain the prevOutHash and script.
+ @param self The CBTransactionInput object to initialise
+ @returns true on success, false on failure.
+ */
+bool CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise

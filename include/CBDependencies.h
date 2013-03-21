@@ -730,7 +730,7 @@ bool CBAccounterDeleteBranch(uint64_t self, uint8_t branch);
  @param branch The branch the transaction was found on.
  @returns true on success and false on failure.
  */
-bool CBAccounterFoundTransaction(uint32_t self, void * tx, uint32_t blockHeight, uint32_t time, uint8_t branch);
+bool CBAccounterFoundTransaction(uint64_t self, void * tx, uint32_t blockHeight, uint32_t time, uint8_t branch);
 /**
  @brief Gets the first transaction between times, equal or greater than the txIDCursor. The txIDCursor will be moved past a found transaction's ID.
  @param self The accounter object.

@@ -54,6 +54,11 @@ typedef struct{
  */
 CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script);
 /**
+ @brief Creates a new CBTransactionOutput object and does not retain the script object.
+ @returns A new CBTransactionOutput object.
+ */
+CBTransactionOutput * CBNewTransactionOutputTakeScript(uint64_t value, CBScript * script);
+/**
  @brief Creates a new CBTransactionOutput object from byte data. Should be serialised for object data.
  @returns A new CBTransactionOutput object.
  */
@@ -72,6 +77,12 @@ CBTransactionOutput * CBGetTransactionOutput(void * self);
  @returns true on success, false on failure.
  */
 bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script);
+/**
+ @brief Initialises a CBTransactionOutput object and does not retain the script object.
+ @param self The CBTransactionOutput object to initialise.
+ @returns true on success, false on failure.
+ */
+bool CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script);
 /**
  @brief Initialises a CBTransactionOutput object.
  @param self The CBTransactionOutput object to initialise.

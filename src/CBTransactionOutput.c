@@ -30,6 +30,18 @@ CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script){
 	free(self);
 	return NULL;
 }
+CBTransactionOutput * CBNewTransactionOutputTakeScript(uint64_t value, CBScript * script){
+	CBTransactionOutput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionOutputTakeScript\n", sizeof(*self));
+		return NULL;
+	}
+	CBGetObject(self)->free = CBFreeTransactionOutput;
+	if(CBInitTransactionOutputTakeScript(self, value, script))
+		return self;
+	free(self);
+	return NULL;
+}
 CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data){
 	CBTransactionOutput * self = malloc(sizeof(*self));
 	if (NOT self) {
@@ -52,11 +64,14 @@ CBTransactionOutput * CBGetTransactionOutput(void * self){
 //  Initialisers
 
 bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script){
-	if (script){
-		self->scriptObject = script;
+	if (script)
 		CBRetainObject(script);
-	}else
-		self->scriptObject = NULL;
+	if (NOT CBInitTransactionOutputTakeScript(self, value, script))
+		return false;
+	return true;
+}
+bool CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script){
+	self->scriptObject = script;
 	self->value = value;
 	if (NOT CBInitMessageByObject(CBGetMessage(self)))
 		return false;
@@ -133,21 +148,21 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	return reqLen;
 }
 bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash){
-	switch (CBTransactionOutputGetType(output)) {
+	switch (CBTransactionOutputGetType(self)) {
 		case CB_TX_OUTPUT_TYPE_KEYHASH:{
 			// See if the public-key hash is one we are watching.
 			uint32_t cursor = 2;
-			CBScriptGetPushAmount(output->scriptObject, &cursor);
-			memcpy(hash, CBByteArrayGetData(output->scriptObject) + cursor, 20);
+			CBScriptGetPushAmount(self->scriptObject, &cursor);
+			memcpy(hash, CBByteArrayGetData(self->scriptObject) + cursor, 20);
 			break;
 		}
 		case CB_TX_OUTPUT_TYPE_MULTISIG:
 			// Hash the entire script and then see if we are watching that script.
-			CBSha256(CBByteArrayGetData(output->scriptObject), output->scriptObject->length, hash);
+			CBSha256(CBByteArrayGetData(self->scriptObject), self->scriptObject->length, hash);
 			break;
 		case CB_TX_OUTPUT_TYPE_P2SH:
 			// See if the script hash is one we are watching.
-			memcpy(hash, CBByteArrayGetData(output->scriptObject) + 2, 20);
+			memcpy(hash, CBByteArrayGetData(self->scriptObject) + 2, 20);
 			break;
 		default:
 			// Unsupported

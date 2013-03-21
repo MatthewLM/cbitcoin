@@ -14,6 +14,24 @@
 
 #include "CBAccounter.h"
 
+uint8_t cbKeySizes[] = {
+	0, /**< CB_TYPE_ACCOUNTER_DETAILS : Null - Details for the accounter. */
+	8, /**< CB_TYPE_TX_DETAILS : The 8 byte transaction ID - Details for a transaction independant of the account. */
+	9, /**< CB_TYPE_BRANCH_ACCOUNT_DETAILS : 1 byte branch number and 8 byte account ID (CB_NO_BRANCH for unconfirmed) - Stores the number of transaction in the account and the balance */
+	8, /**< CB_TYPE_OUTPUT_DETAILS : 8 byte output ID - Stores the value. */
+	9, /**< CB_TYPE_BRANCH_OUTPUT_DETAILS : 1 byte branch number and 8 byte output ID - Stores the spent status */
+	16, /**< CB_TYPE_ACCOUNT_TX_DETAILS : 8 byte account ID and 8 byte transaction ID - Transaction details for this account */
+	16, /**< CB_TYPE_BRANCH_ACCOUNT_TIME_TX : 1 byte branch number, 8 byte account ID, 8 byte transaction timestamp and 8 byte transaction ID - Null */
+	9, /**< CB_TYPE_BRANCH_TX_DETAILS : 1 byte branch number and 8 byte transaction ID - Details for a transaction on a branch, no information for unconfirmed transactions. (Not used for CB_NO_BRANCH) */
+	16, /**< CB_TYPE_OUTPUT_ACCOUNTS : 8 byte output ID and 8 byte account ID - Null */
+	17, /**< CB_TYPE_ACCOUNT_UNSPENT_OUTPUTS : 1 byte branch number, 8 byte account ID, 8 byte output ID - Null */
+	16, /**< CB_TYPE_TX_ACCOUNTS : 8 byte transaction ID and 8 byte account ID - Null */
+	32, /**< CB_TYPE_TX_HASH_TO_ID : 32 byte transaction hash - The transaction ID */
+	13, /**< CB_TYPE_TX_HEIGHT_BRANCH_AND_ID : 1 byte branch number, 4 byte block height and 8 byte transaction ID - Null (Not used for CB_NO_BRANCH) */
+	36, /**< CB_TYPE_OUTPUT_HASH_AND_INDEX_TO_ID : 32 byte transaction hash and 4 byte output transaction index - The output reference ID */
+	28, /**< CB_TYPE_WATCHED_HASHES : 20 byte hash and 8 byte account ID - Null */
+};
+
 uint64_t CBNewAccounter(char * dataDir){
 	CBAccounter * self = malloc(sizeof(*self));
 	if (NOT self) {
@@ -368,7 +386,7 @@ bool CBAccounterDeleteBranch(uint64_t iself, uint8_t branch){
 			break;
 	}
 }
-bool CBAccounterFoundTransaction(uint32_t iself, void * vtx, uint32_t blockHeight, uint32_t time, uint8_t branch){
+bool CBAccounterFoundTransaction(uint64_t iself, void * vtx, uint32_t blockHeight, uint32_t time, uint8_t branch){
 	CBAccounter * self = (CBAccounter *)iself;
 	CBDatabase * database = (CBDatabase *)iself;
 	CBTransaction * tx = vtx;
@@ -401,7 +419,7 @@ bool CBAccounterFoundTransaction(uint32_t iself, void * vtx, uint32_t blockHeigh
 		// Try to obtain an address (or multisig script hash) from this output
 		// Get the identifying hash of the output of output
 		uint8_t hash[32]; // 32 for mutlisig hashing
-		if (CBAccounterGetOutputHash(tx->outputs[x], hash))
+		if (CBTransactionOuputGetHash(tx->outputs[x], hash))
 			continue;
 		// Now look through accounts for this output.
 		memcpy(minHashKey + CB_WATCHED_HASHES_HASH, hash, 20);
@@ -615,7 +633,7 @@ bool CBAccounterFoundTransaction(uint32_t iself, void * vtx, uint32_t blockHeigh
 					// Find a debit address if there is one we can use.
 					if (NOT info->foundCreditAddr || NOT info->creditAddrIndexIsZero) {
 						// Try index 0.
-						if (CBAccounterGetOutputHash(tx->outputs[0], data + CB_ACCOUNT_TX_DETAILS_ADDR))
+						if (CBTransactionOuputGetHash(tx->outputs[0], data + CB_ACCOUNT_TX_DETAILS_ADDR))
 							// The output is not supported, use zero to represent this.
 							memset(data + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
 					}else{
@@ -624,7 +642,7 @@ bool CBAccounterFoundTransaction(uint32_t iself, void * vtx, uint32_t blockHeigh
 							// No other outputs, must be wasting money to miners.
 							memset(data + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
 						// Try index 1
-						else if (CBAccounterGetOutputHash(tx->outputs[1], data + CB_ACCOUNT_TX_DETAILS_ADDR))
+						else if (CBTransactionOuputGetHash(tx->outputs[1], data + CB_ACCOUNT_TX_DETAILS_ADDR))
 							memset(data + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
 					}
 				}
@@ -1038,7 +1056,7 @@ bool CBAccounterRemoveTransactionFromBranch(CBDatabase * database, uint8_t * txD
 			CBDecKey(accountUnspentOuputKey, CB_TYPE_ACCOUNT_UNSPENT_OUTPUTS);
 			accountUnspentOuputKey[CB_ACCOUNT_UNSPENT_OUTPUTS_BRANCH] = branch;
 			memcpy(accountUnspentOuputKey + CB_ACCOUNT_UNSPENT_OUTPUTS_ACCOUNT_ID, outputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-			CBInt64ToArray(accountUnspentOuputKey, CB_ACCOUNT_UNSPENT_OUTPUTS_OUTPUT_ID, data);
+			memcpy(accountUnspentOuputKey + CB_ACCOUNT_UNSPENT_OUTPUTS_OUTPUT_ID, data, 8);
 			if (CBDatabaseGetLength(database, accountUnspentOuputKey) != CB_DOESNT_EXIST
 				&& NOT CBDatabaseRemoveValue(database, accountUnspentOuputKey)) {
 				CBLogError("Couldn't remove an unconfimed output as unspent for an account.");

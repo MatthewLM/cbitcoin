@@ -25,7 +25,19 @@ CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence,
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	if(CBInitTransactionInput(self, script, sequence, prevOutHash, prevOutIndex))
+	if (CBInitTransactionInput(self, script, sequence, prevOutHash, prevOutIndex))
+		return self;
+	free(self);
+	return NULL;
+}
+CBTransactionInput * CBNewTransactionInputTakeScriptAndHash(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
+	CBTransactionInput * self = malloc(sizeof(*self));
+	if (NOT self) {
+		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionInputTakeScriptAndHash\n", sizeof(*self));
+		return NULL;
+	}
+	CBGetObject(self)->free = CBFreeTransactionInput;
+	if (CBInitTransactionInputTakeScriptAndHash(self, script, sequence, prevOutHash, prevOutIndex))
 		return self;
 	free(self);
 	return NULL;
@@ -37,7 +49,7 @@ CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data){
 		return NULL;
 	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	if(CBInitTransactionInputFromData(self, data))
+	if (CBInitTransactionInputFromData(self, data))
 		return self;
 	free(self);
 	return NULL;
@@ -64,13 +76,16 @@ CBTransactionInput * CBGetTransactionInput(void * self){
 //  Initialisers
 
 bool CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
-	if (script){
-		self->scriptObject = script;
+	if (script)
 		CBRetainObject(script);
-	}else
-		self->scriptObject = NULL;
-	self->prevOut.hash = prevOutHash;
 	CBRetainObject(prevOutHash);
+	if (NOT CBInitTransactionInputTakeScriptAndHash(self, script, sequence, prevOutHash, prevOutIndex))
+		return false;
+	return true;
+}
+bool CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
+	self->scriptObject = script;
+	self->prevOut.hash = prevOutHash;
 	self->prevOut.index = prevOutIndex;
 	self->sequence = sequence;
 	if (NOT CBInitMessageByObject(CBGetMessage(self)))
