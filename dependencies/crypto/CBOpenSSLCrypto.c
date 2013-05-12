@@ -33,6 +33,44 @@
 
 // Implementation
 
+// Generate a private key from just the secret parameter
+int EC_KEY_regenerate_key(EC_KEY *eckey, BIGNUM *priv_key)
+{
+    int ok = 0;
+    BN_CTX *ctx = NULL;
+    EC_POINT *pub_key = NULL;
+
+    if (!eckey) return 0;
+
+    const EC_GROUP *group = EC_KEY_get0_group(eckey);
+
+    if ((ctx = BN_CTX_new()) == NULL)
+        goto err;
+
+    pub_key = EC_POINT_new(group);
+
+    if (pub_key == NULL)
+        goto err;
+
+    if (!EC_POINT_mul(group, pub_key, priv_key, NULL, NULL, ctx))
+        goto err;
+
+    EC_KEY_set_private_key(eckey,priv_key);
+    EC_KEY_set_public_key(eckey,pub_key);
+
+    ok = 1;
+
+err:
+
+    if (pub_key)
+        EC_POINT_free(pub_key);
+    if (ctx != NULL)
+        BN_CTX_free(ctx);
+
+    return(ok);
+}
+
+
 void CBSha160(uint8_t * data, uint16_t len, uint8_t * output){
     SHA1(data, len, output);
 }
@@ -48,4 +86,30 @@ bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const ui
 	int res = ECDSA_verify(0, hash, 32, signature, sigLen, key);
 	EC_KEY_free(key);
 	return res == 1;
+}
+bool CBEcdsaSign(uint8_t * hash, uint8_t * privkey, unsigned int *nSig, uint8_t **sig) {
+    EC_KEY *pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    BIGNUM *bn = BN_bin2bn(privkey,32,BN_new());
+    if (!EC_KEY_regenerate_key(pkey,bn)) {
+        printf("creating failed\n");
+	EC_KEY_free(pkey);
+        BN_clear_free(bn);
+        return 0;        
+    }
+    BN_clear_free(bn);
+    if (!EC_KEY_check_key(pkey)) {
+        printf("checking failed\n");
+	EC_KEY_free(pkey);
+        return 0;
+    }
+    *nSig = ECDSA_size(pkey);
+    *sig = malloc(*nSig + 1);
+    if (!ECDSA_sign(0, hash, 32, *sig, nSig, pkey)) {
+        printf("signing failed\n");
+        EC_KEY_free(pkey);
+        return 0;
+    }
+    EC_KEY_free(pkey);
+    printf("signed: %u\n", *nSig);
+    return 1;
 }
