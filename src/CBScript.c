@@ -1208,10 +1208,12 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 						subScriptLen--; // One less element.
 					}
 					// Move to next operation
-					if(*ptr < 78 && *ptr){ 
+					if(*ptr < 0x4f && *ptr){ 
+                                            /* ops less than 0x4f are pushdata */
 						// If pushing bytes, skip these bytes. 
-						if (*ptr < 78) {
-							ptr += *ptr;
+                                                /* ops less than 0x4c are data */
+						if (*ptr < 0x4c) {
+							ptr += *ptr + 1;
 						}else{ 
 							uint32_t move;
 							if (*ptr == CB_SCRIPT_OP_PUSHDATA1){
