@@ -152,8 +152,6 @@ void CBSha160(uint8_t * data, uint16_t length, uint8_t * output);
  */
 bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const uint8_t * pubKey, uint8_t keyLen);
 
-bool CBEcdsaSign(uint8_t * hash, uint8_t * privKey, unsigned int *nSig, uint8_t **sig);
-
 // NETWORKING DEPENDENCIES
 
 // Constants
