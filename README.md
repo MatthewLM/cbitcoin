@@ -34,7 +34,7 @@ Contributors
 The following list is for all people that have contributed work that has been accepted into cbitcoin. Please consider making your own contribution to be added to the list.
 
 Matthew Mitchell - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
-Christian von Roques
+Christian von Roques  
 Andrew Miller <amiller@dappervision.com>
 
 Installation
