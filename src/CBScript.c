@@ -1197,7 +1197,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 				bool fail = false; // Checks for push failures.
 				for (;;) {
 					if (ptr >= end) {
-						// "That's all" http://www.youtube.com/watch?v=Uhknpo6a_zE
+						// "That's all"
 						memmove(subScriptCopyPointer, lastSeparator, end - lastSeparator);
 						break;
 					}else if (*ptr == CB_SCRIPT_OP_CODESEPARATOR) {
@@ -1209,23 +1209,24 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 					}
 					// Move to next operation
 					if(*ptr < 0x4f && *ptr){ 
-                                            /* ops less than 0x4f are pushdata */
+                        // ops less than 0x4f are pushdata
 						// If pushing bytes, skip these bytes. 
-                                                /* ops less than 0x4c are data */
 						if (*ptr < 0x4c) {
+							// ops less than 0x4c are data
 							ptr += *ptr + 1;
-						}else{ 
+						}else{
+							// Else pushdata1-4 ops
 							uint32_t move;
 							if (*ptr == CB_SCRIPT_OP_PUSHDATA1){
 								move = 2;
-								if (ptr + 1 >= end){ //Failure
+								if (ptr + 1 >= end){ // Failure
 									fail = true;
 									break;
 								}
 								move += ptr[1];
 							}else if (*ptr == CB_SCRIPT_OP_PUSHDATA2){
 								move = 3;
-								if (ptr + 2 >= end){ //Failure
+								if (ptr + 2 >= end){ // Failure
 									fail = true;
 									break;
 								}
@@ -1233,7 +1234,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 								move += ptr[2] << 8;
 							}else{ // PUSHDATA4
 								move = 5;
-								if (ptr + 4 >= end){ //Failure
+								if (ptr + 4 >= end){ // Failure
 									fail = true;
 									break;
 								}
