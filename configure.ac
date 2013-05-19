@@ -16,23 +16,6 @@ AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h sys/socket.h], [], [echo Default 
 AC_CHECK_FUNCS([malloc realloc memmove memset strchr strtol strtoul], [], [AC_MSG_ERROR([Cannot configure core library])])
 AC_CHECK_FUNCS([socket], [], [echo Default dependencies cannot be installed.])
 
-# Determine compile options
-save_cflags="$CFLAGS"
-CFLAGS="-arch i386 -arch x86_64"
-AC_MSG_CHECKING([whether CC supports -arch i386 -arch x86_64])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])], 
-    [AC_MSG_RESULT([yes])]
-    [COMPILE_CONFIG_FLAGS="-arch i386 -arch x86_64"], 
-    [AC_MSG_RESULT([no])]
-	[CFLAGS=-m64]
-	[AC_MSG_CHECKING([whether CC supports -m64])]
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])], 
-		[AC_MSG_RESULT([yes])]
-		[LINKER_CONFIG_FLAGS="-m64"]
-	)
-)
-CFLAGS="$save_cflags"
-
 # Determine additional compile options for libraries
 save_cflags="$CFLAGS"
 CFLAGS="-fPIC"
@@ -46,8 +29,6 @@ CFLAGS="$save_cflags"
 
 # Add substitutions
 
-AC_SUBST([LINKER_CONFIG_FLAGS])
-AC_SUBST([COMPILE_CONFIG_FLAGS])
 AC_SUBST([LIB_COMPILE_CONFIG_FLAGS])
 
 AC_CONFIG_FILES([Makefile])

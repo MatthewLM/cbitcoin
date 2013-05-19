@@ -32,7 +32,6 @@
 #pragma weak CBRipemd160
 #pragma weak CBSha160
 #pragma weak CBEcdsaVerify
-#pragma weak CBEcdsaSign
 
 // Weak linking for networking functions.
 
