@@ -16,12 +16,25 @@
 
 #include "CBFileEC.h"
 
-bool CBFileAppend(uint64_t file, uint8_t * data, uint32_t dataLen){
-	FILE * fileObj = (FILE *)file;
+bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen){
+	FILE * fileObj = file.ptr;
 	long pos = ftell(fileObj);
 	if (fseek(fileObj, 0, SEEK_END)
 		|| fwrite(data, 1, dataLen, fileObj) != dataLen
 		|| fseek(fileObj, pos, SEEK_SET))
+		return false;
+	return true;
+}
+bool CBFileAppendZeros(CBDepObject file, uint32_t amount){
+	FILE * fileObj = file.ptr;
+	long pos = ftell(fileObj);
+	if (fseek(fileObj, 0, SEEK_END))
+		return false;
+	uint8_t zero = 0;
+	for (uint32_t x = 0; x < amount; x++)
+		if (fwrite(&zero, 1, 1, fileObj) != 1)
+			return false;
+	if (fseek(fileObj, pos, SEEK_SET))
 		return false;
 	return true;
 }

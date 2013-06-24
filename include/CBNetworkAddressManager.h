@@ -47,8 +47,8 @@ typedef struct{
 	int16_t networkTimeOffset; /**< Offset to get from system time to network time. */
 	uint16_t maxAddressesInBucket; /**< Maximum number of addresses that can be stored in a single bucket. */
 	uint64_t secret; /**< Securely generated pseudo-random number to generate a secret used to mix-up groups into different buckets. */
-	uint64_t rndGen; /**< Random number generator instance. */
-	uint64_t rndGenForBucketIndices; /**< Random number generator used for generating bucket indices. */
+	CBDepObject rndGen; /**< Random number generator instance. */
+	CBDepObject rndGenForBucketIndices; /**< Random number generator used for generating bucket indices. */
 	void * callbackHandler; /**< Sent to onBadTime callback */
 	void (*onBadTime)(void *); /**< Called when cbitcoin detects a divergence between the network time and system time which suggests the system time may be wrong, in the same way bitcoin-qt detects it. Has an argument for the callback handler. */
 } CBNetworkAddressManager;

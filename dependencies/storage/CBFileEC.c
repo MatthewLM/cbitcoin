@@ -16,9 +16,9 @@
 
 #include "CBFileEC.h"
 
-bool CBFileAppend(uint64_t file, uint8_t * data, uint32_t dataLen){
+bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
-	CBFile * fileObj = (CBFile *)file;
+	CBFile * fileObj = file.ptr;
 	// Look for appending to existing section
 	uint8_t offset = fileObj->dataLength % 8;
 	if (NOT CBFileSeek(file, fileObj->dataLength)) 
@@ -61,17 +61,46 @@ bool CBFileAppend(uint64_t file, uint8_t * data, uint32_t dataLen){
 	rewind(fileObj->rdwr);
 	return fwrite(section, 1, 5, fileObj->rdwr) == 5;
 }
-void CBFileClose(uint64_t file){
-	fclose(((CBFile *)file)->rdwr);
+bool CBFileAppendZeros(CBDepObject file, uint32_t amount){
+	CBFile * fileObj = file.ptr;
+	// Look for appending to existing section
+	uint8_t offset = fileObj->dataLength % 8;
+	if (NOT CBFileSeek(file, fileObj->dataLength))
+		return false;
+	// Increase total data length.
+	fileObj->dataLength += amount;
+	uint8_t section[9] = {0,0,0,0,0,0,0,0,127};
+	uint8_t * wholeSectionPtr = section;
+	if (offset) {
+		// There is an existing section
+		// Write to existing section.
+		if (NOT CBFileWriteMidway(fileObj->rdwr, offset, &wholeSectionPtr, &amount))
+			return false;
+	}
+	// Add whole sections
+	uint32_t numSections = amount/8 + (amount % 8 != 0);
+	for (uint32_t x = 0; x < numSections; x++) {
+		if (fwrite(section, 1, 9, fileObj->rdwr) != 9)
+			return false;
+	}
+	// Change data size. Use the section variable for the data
+	CBInt32ToArray(section, 0, fileObj->dataLength);
+	CBHamming72Encode(section, 4, section + 4);
+	rewind(fileObj->rdwr);
+	return fwrite(section, 1, 5, fileObj->rdwr) == 5;
 }
-bool CBFileGetLength(uint64_t file, uint32_t * length){
-	*length = ((CBFile *)file)->dataLength;
+void CBFileClose(CBDepObject file){
+	fclose(((CBFile *)file.ptr)->rdwr);
+}
+bool CBFileGetLength(CBDepObject file, uint32_t * length){
+	*length = ((CBFile *)file.ptr)->dataLength;
 	return true;
 }
-uint64_t CBFileOpen(char * filename, bool new){
-	CBFile * fileObj = malloc(sizeof(*fileObj));
-	if (NOT fileObj)
-		return 0;
+bool CBFileOpen(CBDepObject * file, char * filename, bool new){
+	file->ptr = malloc(sizeof(CBFile));
+	if (NOT file->ptr)
+		return false;
+	CBFile * fileObj = file->ptr;
 	fileObj->new = new;
 	fileObj->rdwr = fopen(filename, new ? "wb+" : "rb+");
 	if (NOT fileObj->rdwr)
@@ -82,14 +111,14 @@ uint64_t CBFileOpen(char * filename, bool new){
 		CBInt32ToArray(data, 0, 0);
 		CBHamming72Encode(data, 4, data + 4);
 		if (fwrite(data, 1, 5, fileObj->rdwr) != 5) {
-			CBFileClose((uint64_t)fileObj);
+			CBFileClose(*file);
 			return false;
 		}
 		fileObj->dataLength = 0;
 	}else{
 		// Get length
 		if (NOT CBFileReadLength(fileObj->rdwr, &fileObj->dataLength)) {
-			CBFileClose((uint64_t)fileObj);
+			CBFileClose(*file);
 			return false;
 		}
 	}
@@ -104,14 +133,14 @@ uint64_t CBFileOpen(char * filename, bool new){
 	}*/
 #endif
 	if (fseek(fileObj->rdwr, 5, SEEK_SET) == -1) {
-		CBFileClose((uint64_t)fileObj);
+		CBFileClose(*file);
 		return false;
 	}
-	return (uint64_t)fileObj;
+	return true;
 }
-bool CBFileOverwrite(uint64_t file, uint8_t * data, uint32_t dataLen){
+bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
-	CBFile * fileObj = (CBFile *)file;
+	CBFile * fileObj = file.ptr;
 	// Add data into sections or adjust existing sections
 	// First look at inserting the data midway through a section
 	uint8_t offset = fileObj->cursor % 8;
@@ -158,9 +187,9 @@ bool CBFileOverwrite(uint64_t file, uint8_t * data, uint32_t dataLen){
 		return false;
 	return true;
 }
-bool CBFileRead(uint64_t file, uint8_t * data, uint32_t dataLen){
+bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
-	CBFile * fileObj = (CBFile *)file;
+	CBFile * fileObj = file.ptr;
 	while (dataLen) {
 		// Read 9 byte section
 		if (fread(section, 1, 9, fileObj->rdwr) != 9)
@@ -218,13 +247,13 @@ bool CBFileReadLength(FILE * rd, uint32_t * length){
 	*length = CBArrayToInt32(data, 0);
 	return true;
 }
-bool CBFileSeek(uint64_t file, uint32_t pos){
-	CBFile * fileObj = (CBFile *)file;
+bool CBFileSeek(CBDepObject file, uint32_t pos){
+	CBFile * fileObj = file.ptr;
 	fileObj->cursor = pos;
 	return NOT fseek(fileObj->rdwr, 5 + pos / 8 * 9, SEEK_SET);
 }
-bool CBFileSync(uint64_t file){
-	CBFile * fileObj = (CBFile *)file;
+bool CBFileSync(CBDepObject file){
+	CBFile * fileObj = file.ptr;
 	if (fflush(fileObj->rdwr))
 		return false;
 	if (fsync(fileno(fileObj->rdwr)))

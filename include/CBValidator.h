@@ -141,7 +141,7 @@ typedef struct{
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
-	uint64_t storage; /**< The storage component object */
+	CBDepObject storage; /**< The storage component object */
 	CBValidatorFlags flags; /**< Flags for validation options */
 } CBValidator;
 
@@ -152,7 +152,7 @@ typedef struct{
  @returns A new CBValidator object.
  */
 
-CBValidator * CBNewValidator(uint64_t storage, CBValidatorFlags flags);
+CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags);
 
 /**
  @brief Gets a CBValidator from another object. Use this to avoid casts.
@@ -168,7 +168,7 @@ CBValidator * CBGetValidator(void * self);
  @param flags The flags used for validating this block.
  @returns true on success, false on failure.
  */
-bool CBInitValidator(CBValidator * self, uint64_t storage, CBValidatorFlags flags);
+bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags);
 
 /**
  @brief Release a free all of the objects stored by the CBValidator object.

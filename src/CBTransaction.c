@@ -339,6 +339,7 @@ CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray 
 	uint8_t firstHash[32];
 	CBSha256(CBByteArrayGetData(data), sizeOfData, firstHash);
 	CBSha256(firstHash, 32, hash);
+	CBReleaseObject(data);
 	return CB_TX_HASH_OK;
 }
 bool CBTransactionIsCoinBase(CBTransaction * self){

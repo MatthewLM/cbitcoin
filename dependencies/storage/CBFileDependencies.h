@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "CBDependencies.h"
 
 // Weak linking pragmas
 
@@ -43,26 +44,33 @@
  @param dataLen The data length.
  @returns true on success and false on failure.
  */
-bool CBFileAppend(uint64_t file, uint8_t * data, uint32_t dataLen);
+bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen);
+/**
+ @brief Writes to the end of a file a number of zeros. The file should be seeked again, after using this function, as the cursor will be broken otherwise.
+ @param file The file to write to.
+ @param amount The number of zero bytes to append.
+ @returns true on success and false on failure.
+ */
+bool CBFileAppendZeros(CBDepObject file, uint32_t amount);
 /**
  @brief Closes a file.
  @param file The file to close.
  */
-void CBFileClose(uint64_t file);
+void CBFileClose(CBDepObject file);
 /**
  @brief Returns the length of a file.
  @param file The file to get the length for.
  @param length The length to set.
  @returns true on success and false on failure.
  */
-bool CBFileGetLength(uint64_t file, uint32_t * length);
+bool CBFileGetLength(CBDepObject file, uint32_t * length);
 /**
  @brief Opens a file, with read, write and append modes. Several modes are required for error correction.
  @param filename The path of the file.
  @param new If true, a new file will be created and overwrite any existing files.
- @returns The file object as an integer on success and false on failure.
+ @returns true on success and false on failure.
  */
-uint64_t CBFileOpen(char * filename, bool new);
+bool CBFileOpen(CBDepObject * file, char * filename, bool new);
 /**
  @brief Writes to a file, overwriting existing data. The cursor will be moved along "dataLen".
  @param file The file to write to.
@@ -70,7 +78,7 @@ uint64_t CBFileOpen(char * filename, bool new);
  @param dataLen The data length.
  @returns true on success and false on failure.
  */
-bool CBFileOverwrite(uint64_t file, uint8_t * data, uint32_t dataLen);
+bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen);
 /**
  @brief Reads from a file
  @param file The file to read from.
@@ -78,20 +86,20 @@ bool CBFileOverwrite(uint64_t file, uint8_t * data, uint32_t dataLen);
  @param dataLen The length of the read.
  @returns true on success and false on failure.
  */
-bool CBFileRead(uint64_t file, uint8_t * data, uint32_t dataLen);
+bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen);
 /**
  @brief Seeks to a position in the file.
  @param file The file to seek.
  @param pos The data position in the file.
  @returns true on success and false on failure.
  */
-bool CBFileSeek(uint64_t file, uint32_t pos);
+bool CBFileSeek(CBDepObject file, uint32_t pos);
 /**
  @brief Synchronises a file to disk.
  @param file The file to synchronise
  @returns true on success and false on failure.
  */
-bool CBFileSync(uint64_t file);
+bool CBFileSync(CBDepObject file);
 /**
  @brief Synchronises a directory to disk.
  @param dir The path of the directory to synchronise

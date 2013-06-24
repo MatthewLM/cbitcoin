@@ -21,24 +21,24 @@
 
 // Implementation
 
-bool CBNewSecureRandomGenerator(uint64_t * gen){
-	*gen = (uint64_t)malloc(32);
+bool CBNewSecureRandomGenerator(CBDepObject * gen){
+	gen->ptr = malloc(32);
 	return *gen;
 }
-bool CBSecureRandomSeed(uint64_t gen){
+bool CBSecureRandomSeed(CBDepObject gen){
 	FILE * f = fopen("/dev/urandom", "r"); // Using urandom for speed.
-	return fread((void *)gen, 1, 32, f) == 32;
+	return fread(gen.ptr, 1, 32, f) == 32;
 }
-void CBRandomSeed(uint64_t gen, uint64_t seed){
-	memcpy((void *)gen, &seed, 8);
-	memset(((uint8_t *)gen) + 8, 0, 24); // Blank out the rest of the data
+void CBRandomSeed(CBDepObject gen, uint64_t seed){
+	memcpy(gen.ptr, &seed, 8);
+	memset(gen.ptr + 8, 0, 24); // Blank out the rest of the data
 }
-uint64_t CBSecureRandomInteger(uint64_t gen){
-	CBSha256((uint8_t *)gen, 32, (void *)gen);
+uint64_t CBSecureRandomInteger(CBDepObject gen){
+	CBSha256(gen.ptr, 32, gen.ptr);
 	uint64_t i;
-	memcpy(&i, (void *)gen, 8);
+	memcpy(&i, gen.ptr, 8);
 	return i;
 }
-void CBFreeSecureRandomGenerator(uint64_t gen){
-	free((void *)gen);
+void CBFreeSecureRandomGenerator(CBDepObject gen){
+	free(gen.ptr);
 }

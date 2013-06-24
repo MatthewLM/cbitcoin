@@ -24,9 +24,9 @@ bool CBCalculateBlockWork(CBBigInt * work, uint32_t target){
 	// Allocate CBBigInt data
 	work->length = 32;
 	CBBigIntAlloc(work, work->length);
-	memset(work->data, 0, 32);
 	if (NOT work->data)
 		return false;
+	memset(work->data, 0, 32);
 	// Do base-4294967296 long division and adjust for trailing zeros in target.
 	uint64_t temp = 0x01000000;
 	uint32_t workSeg;

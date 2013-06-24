@@ -15,6 +15,10 @@
 #ifndef CBCONSTANTSH
 #define CBCONSTANTSH
 
+#include <setjmp.h>
+#include <stdint.h>
+#include <stdbool.h>
+
 //  Macros
 
 #define CB_LIBRARY_VERSION 5 // Goes up in increments
@@ -58,7 +62,11 @@
                                               | (uint16_t)(arr)[offset + 1] << 16 \
                                               | (uint32_t)(arr)[offset + 2] << 8 \
                                               | (uint32_t)(arr)[offset + 3])
-
+#define try {int jmpret; {static jmp_buf jmpbuf; jmpret = setjmp(jmpbuf); if (jmpret == 0)
+#define throw longjmp(jmpbuf, 1)
+#define catch if (jmpret == 1)
+#define pass } if (jmpret == 1) throw; }
+#define stop }}
 //  Enums
 
 typedef enum{

@@ -72,7 +72,7 @@ typedef struct{
 }CBEventLoop;
 
 union CBOnEvent{
-	void (*i)(void *, uint64_t);
+	void (*i)(void *, CBDepObject);
 	void (*ptr)(void *, void *);
 };
 

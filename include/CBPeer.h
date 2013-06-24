@@ -47,7 +47,7 @@ typedef struct{
 */
 typedef struct{
 	CBNetworkAddress base; /**< CBNetworkAddress base structure */
-	uint64_t socketID; /**< Not used in the bitcoin protocol. This is used by cbitcoin to store a socket ID for a connection to a CBNetworkAddress. The socket here is not closed when the CBNetworkAddress is freed so needs to be closed elsewhere. */
+	CBDepObject socketID; /**< Not used in the bitcoin protocol. This is used by cbitcoin to store a socket ID for a connection to a CBNetworkAddress. The socket here is not closed when the CBNetworkAddress is freed so needs to be closed elsewhere. */
 	CBMessage * receive; /**< Receiving message. NULL if not receiving. This message is exclusive to the peer. */
 	CBSendQueueItem sendQueue[CB_SEND_QUEUE_MAX_SIZE]; /**< Messages to send to this peer. NULL if not sending anything. */
 	uint8_t sendQueueSize; /**< Upto 10 messages in queue */
@@ -56,9 +56,9 @@ typedef struct{
 	bool sentHeader; /**< True if the sending message's header has been sent. */
 	uint8_t * sendingHeader; /**< Stores header to send */
 	bool getAddresses; /* True is asked for addresses, false otherwise. */
-	uint64_t receiveEvent; /**< Event for receving data from this peer */
-	uint64_t sendEvent; /**< Event for sending data from this peer */
-	uint64_t connectEvent; /**< Event for connecting to the peer. */
+	CBDepObject receiveEvent; /**< Event for receving data from this peer */
+	CBDepObject sendEvent; /**< Event for sending data from this peer */
+	CBDepObject connectEvent; /**< Event for connecting to the peer. */
 	bool versionSent; /**< True if the version was sent to this peer */
 	CBVersion * versionMessage; /**< The version message from this peer. */
 	bool versionAck; /**< This peer acknowledged the version message. */

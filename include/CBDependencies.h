@@ -113,6 +113,13 @@
 
 #pragma weak CBGetMilliseconds
 
+// union for dependency objects
+
+typedef union{
+	void * ptr;
+	int i;
+} CBDepObject;
+
 // CRYPTOGRAPHIC DEPENDENCIES
 
 /**
@@ -172,11 +179,11 @@ typedef enum{
 
 /**
  @brief Creates a new TCP/IP socket. The socket should use a non-blocking mode.
- @param socketID Pointer to uint64_t. Can be pointer value.
+ @param socketID Pointer to CBDepObject for the socket
  @param IPv6 true if the socket is used to connect to the IPv6 network.
  @returns CB_SOCKET_OK if the socket was successfully created, CB_SOCKET_NO_SUPPORT and CB_SOCKET_BAD if the socket could not be created for any other reason.
  */
-CBSocketReturn CBNewSocket(uint64_t * socketID, bool IPv6);
+CBSocketReturn CBNewSocket(CBDepObject * socketID, bool IPv6);
 /*
  @brief Binds the host machine and a port number to a new socket.
  @param socketID The socket id to set to the new socket.
@@ -184,7 +191,7 @@ CBSocketReturn CBNewSocket(uint64_t * socketID, bool IPv6);
  @param port The port to bind to.
  @returns true if the bind was sucessful and false otherwise.
  */
-bool CBSocketBind(uint64_t * socketID, bool IPv6, uint16_t port);
+bool CBSocketBind(CBDepObject * socketID, bool IPv6, uint16_t port);
 /**
  @brief Begin connecting to an external host with a socket. This should be non-blocking.
  @param socketID The socket id
@@ -193,83 +200,87 @@ bool CBSocketBind(uint64_t * socketID, bool IPv6, uint16_t port);
  @param port Port to connect to.
  @returns true if the function was sucessful and false otherwise.
  */
-bool CBSocketConnect(uint64_t socketID, uint8_t * IP, bool IPv6, uint16_t port);
+bool CBSocketConnect(CBDepObject socketID, uint8_t * IP, bool IPv6, uint16_t port);
 /**
  @brief Begin listening for incomming connections on a bound socket. This should be non-blocking. 
  @param socketID The socket id
  @param maxConnections The maximum incomming connections to allow.
  @returns true if function was sucessful and false otherwise.
  */
-bool CBSocketListen(uint64_t socketID, uint16_t maxConnections);
+bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections);
 /**
  @brief Accepts an incomming IPv4 connection on a bound socket. This should be non-blocking.
  @param socketID The socket id
  @param connectionSocketID A socket id for a new socket for the connection.
  @returns true if function was sucessful and false otherwise.
  */
-bool CBSocketAccept(uint64_t socketID, uint64_t * connectionSocketID);
+bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID);
 /**
  @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
- @param loopID A uint64_t storing an integer or pointer representation of the new event loop.
+ @param loopID A CBDepObject storing an integer or pointer representation of the new event loop.
  @param onError If the event loop fails during execution of the thread, this function should be called.
  @param onDidTimeout The function to call for timeout event. The second argument is for the peer. The third is for the timeout type. For receiving data, the timeout should be CB_TIMEOUT_RECEIVE. The CBNetworkCommunicator will determine if it should be changed to CB_TIMEOUT_RESPONSE.
  @param communicator A CBNetworkCommunicator to pass to all event functions (first parameter), including "onError" and "onDidTimeout"
  @returns true on success, false on failure.
  */
-bool CBNewEventLoop(uint64_t * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator);
+bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator);
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
+ @param eventID The event object to set.
  @param loopID The loop id.
  @param socketID The socket id.
  @param onCanAccept The function to call for the event. Accepts "onEventArg" and the socket ID.
  @returns true on success, false on failure.
  */
-bool CBSocketCanAcceptEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onCanAccept)(void *, uint64_t));
+bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanAccept)(void *, CBDepObject));
 /**
  @brief Sets a function pointer for the event where a socket has connected. The event only needs to fire once on the successful connection or timeout.
+ @param eventID The event object to set.
  @param loopID The loop id.
  @param socketID The socket id
  @param onDidConnect The function to call for the event.
  @param peer The peer to send to the "onDidConnect" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketDidConnectEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onDidConnect)(void *, void *), void * peer);
+bool CBSocketDidConnectEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onDidConnect)(void *, void *), void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for sending data. This should be persistent.
+ @param eventID The event object to set.
  @param loopID The loop id.
  @param socketID The socket id
  @param onCanSend The function to call for the event.
  @param peer The peer to send to the "onCanSend" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketCanSendEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onCanSend)(void *, void *), void * peer);
+bool CBSocketCanSendEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanSend)(void *, void *), void * peer);
 /**
  @brief Sets a function pointer for the event where a socket is available for receiving data. This should be persistent.
+ @param eventID The event object to set.
  @param loopID The loop id.
  @param socketID The socket id
  @param onCanReceive The function to call for the event.
  @param peer The peer to send to the "onCanReceive" or "onDidTimeout" function.
  @returns true on success, false on failure.
  */
-bool CBSocketCanReceiveEvent(uint64_t * eventID, uint64_t loopID, uint64_t socketID, void (*onCanReceive)(void *, void *), void * peer);
+bool CBSocketCanReceiveEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanReceive)(void *, void *), void * peer);
 /**
  @brief Adds an event to be pending.
  @param eventID The event ID to add.
  @param timeout The time in milliseconds to issue a timeout for the event. 0 for no timeout.
  @returns true if sucessful, false otherwise.
  */
-bool CBSocketAddEvent(uint64_t eventID, uint32_t timeout);
+bool CBSocketAddEvent(CBDepObject eventID, uint32_t timeout);
 /**
  @brief Removes an event so no more events are made.
  @param eventID The event ID to remove
  @returns true if sucessful, false otherwise.
  */
-bool CBSocketRemoveEvent(uint64_t eventID);
+bool CBSocketRemoveEvent(CBDepObject eventID);
 /**
  @brief Makes an event non-pending and frees it.
  @param eventID The event to free.
  */
-void CBSocketFreeEvent(uint64_t eventID);
+void CBSocketFreeEvent(CBDepObject eventID);
 /**
  @brief Sends data to a socket. This should be non-blocking.
  @param socketID The socket id to send to.
@@ -277,7 +288,7 @@ void CBSocketFreeEvent(uint64_t eventID);
  @param len The length of the data to send.
  @returns The number of bytes actually sent, and CB_SOCKET_FAILURE on failure that suggests further data cannot be sent.
  */
-int32_t CBSocketSend(uint64_t socketID, uint8_t * data, uint32_t len);
+int32_t CBSocketSend(CBDepObject socketID, uint8_t * data, uint32_t len);
 /**
  @brief Receives data from a socket. This should be non-blocking.
  @param socketID The socket id to receive data from.
@@ -285,7 +296,7 @@ int32_t CBSocketSend(uint64_t socketID, uint8_t * data, uint32_t len);
  @param len The length of the data.
  @returns The number of bytes actually written into "data", CB_SOCKET_CONNECTION_CLOSE on connection closure, 0 on no bytes received, and CB_SOCKET_FAILURE on failure.
  */
-int32_t CBSocketReceive(uint64_t socketID, uint8_t * data, uint32_t len);
+int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len);
 /**
  @brief Calls a callback every "time" seconds, until the timer is ended.
  @param loopID The loop id.
@@ -294,22 +305,22 @@ int32_t CBSocketReceive(uint64_t socketID, uint8_t * data, uint32_t len);
  @param callback The callback function.
  @param arg The callback argument.
  */
-bool CBStartTimer(uint64_t loopID, uint64_t * timer, uint16_t time, void (*callback)(void *), void * arg);
+bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint16_t time, void (*callback)(void *), void * arg);
 /**
  @brief Ends a timer.
  @param timer The timer.
  */
-void CBEndTimer(uint64_t timer);
+void CBEndTimer(CBDepObject timer);
 /**
  @brief Closes a socket. The id should be freed, as well as any other data relating to this socket.
  @param socketID The socket id to be closed.
  */
-void CBCloseSocket(uint64_t socketID);
+void CBCloseSocket(CBDepObject socketID);
 /**
  @brief Exits an event loop and frees all data relating to it.
  @param loopID The loop ID. If zero, do nothing.
  */
-void CBExitEventLoop(uint64_t loopID);
+void CBExitEventLoop(CBDepObject loopID);
 
 // RANDOM DEPENDENCIES
 
@@ -318,44 +329,45 @@ void CBExitEventLoop(uint64_t loopID);
  @param The generator as a pointer or integer.
  @returns true on success, false on failure.
  */
-bool CBNewSecureRandomGenerator(uint64_t * gen);
+bool CBNewSecureRandomGenerator(CBDepObject * gen);
 /**
  @brief Seeds the random number generator securely.
  @param gen The generator.
  @retruns true if the random number generator was securely seeded, or false otherwise.
  */
-bool CBSecureRandomSeed(uint64_t gen);
+bool CBSecureRandomSeed(CBDepObject gen);
 /**
  @brief Seeds the generator from a 64-bit integer.
  @param gen The generator.
  @param seed The 64-bit integer.
  */
-void CBRandomSeed(uint64_t gen, uint64_t seed);
+void CBRandomSeed(CBDepObject gen, uint64_t seed);
 /**
  @brief Generates a 64 bit integer.
  @param gen The generator.
  @returns The random 64-bit integer integer.
  */
-uint64_t CBSecureRandomInteger(uint64_t gen);
+uint64_t CBSecureRandomInteger(CBDepObject gen);
 /**
  @brief Frees the random number generator.
  @param gen The generator.
  */
-void CBFreeSecureRandomGenerator(uint64_t gen);
+void CBFreeSecureRandomGenerator(CBDepObject gen);
 
 // BLOCK CHAIN STORAGE DEPENDENCES
 
 /**
  @brief Returns the object used for block-chain storage.
+ @param storage The storage object to set.
  @param dataDir The directory where the data files should be stored.
- @returns The block chain storage object or 0 on failure.
+ @returns true on success or false on failure.
  */
-uint64_t CBNewBlockChainStorage(char * dataDir);
+bool CBNewBlockChainStorage(CBDepObject * storage, char * dataDir);
 /**
  @brief Frees the block-chain storage object.
  @param iself The block-chain storage object.
  */
-void CBFreeBlockChainStorage(uint64_t iself);
+void CBFreeBlockChainStorage(CBDepObject iself);
 /**
  @brief Determines if the block is already in the storage.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -368,7 +380,7 @@ bool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
  @param iself The block-chain storage object.
  @returns true on success and false on failure. cbitcoin will reload the storafe contents on failure. Storage systems should use recovery.
  */
-bool CBBlockChainStorageCommitData(uint64_t iself);
+bool CBBlockChainStorageCommitData(CBDepObject iself);
 /**
  @brief Deletes a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -398,7 +410,7 @@ bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash)
  @param iself The block-chain storage object.
  @returns true if there is previous block-chain data or false if initial data is needed.
  */
-bool CBBlockChainStorageExists(uint64_t iself);
+bool CBBlockChainStorageExists(CBDepObject iself);
 /**
  @brief Obtains the hash for a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -518,7 +530,7 @@ bool CBBlockChainStorageMoveBlock(void * validator, uint8_t branch, uint32_t blo
  @brief Removes all of the pending operations.
  @param iself The storage object.
  */
-void CBBlockChainStorageReset(uint64_t iself);
+void CBBlockChainStorageReset(CBDepObject iself);
 /**
  @brief Saves the basic validator information, not any branches or orphans.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -610,42 +622,43 @@ bool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, 
 
 /**
  @brief Creates a new address storage object.
+ @param storage The object to set.
  @param dataDir The directory where the data files should be stored.
- @returns The address storage object.
+ @returns true on success and false on failure.
  */
-uint64_t CBNewAddressStorage(char * dataDir);
+bool CBNewAddressStorage(CBDepObject * storage, char * dataDir);
 /**
  @brief Frees the address storage object.
  @param iself The address storage object.
  */
-void CBFreeAddressStorage(uint64_t iself);
+void CBFreeAddressStorage(CBDepObject iself);
 /**
  @brief Removes an address from storage.
  @param iself The address storage object.
  @param address The address object.
  @returns true on success or false on failure.
  */
-bool CBAddressStorageDeleteAddress(uint64_t iself, void * address);
+bool CBAddressStorageDeleteAddress(CBDepObject iself, void * address);
 /**
  @brief Obtains the number of addresses in storage.
  @param iself The address storage object.
  @returns The number of addresses in storage
  */
-uint64_t CBAddressStorageGetNumberOfAddresses(uint64_t iself);
+uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject iself);
 /**
  @brief Loads all of the addresses from storage into an address manager.
  @param iself The address storage object.
  @param addrMan A CBNetworkAddressManager object.
  @returns true on success or false on failure.
  */
-bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan);
+bool CBAddressStorageLoadAddresses(CBDepObject iself, void * addrMan);
 /**
  @brief Saves an address to storage. If the number of addresses is at "maxAddresses" remove an address to make room.
  @param iself The address storage object.
  @param address The CBNetworkAddress object.
  @returns true on success or false on failure.
  */
-bool CBAddressStorageSaveAddress(uint64_t iself, void * address);
+bool CBAddressStorageSaveAddress(CBDepObject iself, void * address);
 
 // ACCOUNTER DEPENDENCIES
 
@@ -676,21 +689,22 @@ typedef struct{
 
 /**
  @brief Creates a new account storage object.
+ @param accounter The object to set.
  @param dataDir The directory where the data files should be stored.
- @returns The address storage object.
+ @returns true on success and false on failure.
  */
-uint64_t CBNewAccounter(char * dataDir);
+bool CBNewAccounter(CBDepObject * accounter, char * dataDir);
 /**
  @brief Frees the account storage object.
  @param iself The account storage object.
  */
-void CBFreeAccounter(uint64_t self);
+void CBFreeAccounter(CBDepObject self);
 /**
  @brief Commits data to the disk.
  @param self The accounter object.
  @returns true on success and false on failure.
  */
-bool CBAccounterCommit(uint64_t self);
+bool CBAccounterCommit(CBDepObject self);
 /**
  @brief Adds a watched output hash to an account.
  @param self The accounter object. 
@@ -698,7 +712,7 @@ bool CBAccounterCommit(uint64_t self);
  @param accountID The ID of the account to add the hash for.
  @returns true on success and false on failure.
  */
-bool CBAccounterAddWatchedOutputToAccount(uint64_t self, uint8_t * hash, uint64_t accountID);
+bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint64_t accountID);
 /**
  @brief Modifies the information of a transaction which has been added to a branch.
  @param self The accounter object. 
@@ -707,20 +721,20 @@ bool CBAccounterAddWatchedOutputToAccount(uint64_t self, uint8_t * hash, uint64_
  @param branch The branch in which the transaction is found.
  @returns true on success and false on failure.
  */
-bool CBAccounterBranchlessTransactionToBranch(uint64_t self, void * tx, uint32_t blockHeight, uint8_t branch);
+bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * tx, uint32_t blockHeight, uint8_t branch);
 /**
  @brief Commits the accounter information.
  @param self The accounter object.
  @returns true on success and false on failure.
  */
-bool CBAccounterCommit(uint64_t self);
+bool CBAccounterCommit(CBDepObject self);
 /**
  @brief Removes information for a branch.
  @param self The accounter object.
  @param branch The branch that is removed.
  @returns true on success and false on failure.
  */
-bool CBAccounterDeleteBranch(uint64_t self, uint8_t branch);
+bool CBAccounterDeleteBranch(CBDepObject self, uint8_t branch);
 /**
  @brief Processes a found transaction on a branch for all of the accounts
  @param self The accounter object.
@@ -730,7 +744,7 @@ bool CBAccounterDeleteBranch(uint64_t self, uint8_t branch);
  @param branch The branch the transaction was found on.
  @returns true on success and false on failure.
  */
-bool CBAccounterFoundTransaction(uint64_t self, void * tx, uint32_t blockHeight, uint32_t time, uint8_t branch);
+bool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t blockHeight, uint32_t time, uint8_t branch);
 /**
  @brief Gets the first transaction between times, equal or greater than the txIDCursor. The txIDCursor will be moved past a found transaction's ID.
  @param self The accounter object.
@@ -742,20 +756,20 @@ bool CBAccounterFoundTransaction(uint64_t self, void * tx, uint32_t blockHeight,
  @param details A pointer to a CBTransactionDetails object to be set.
  @returns @see CBGetTxResult.
  */
-CBGetTxResult CBAccounterGetFirstTransactionBetween(uint64_t self, uint8_t branch, uint64_t accountID, uint64_t timeMin, uint64_t timeMax, uint64_t * txIDCursor, CBTransactionDetails * details);
+CBGetTxResult CBAccounterGetFirstTransactionBetween(CBDepObject self, uint8_t branch, uint64_t accountID, uint64_t timeMin, uint64_t timeMax, uint64_t * txIDCursor, CBTransactionDetails * details);
 /**
  @brief Processes a transaction being lost for all of the accounts.
  @param self The accounter object.
  @param tx The transaction being lost.
  @returns true on success and false on failure.
  */
-bool CBAccounterLostBranchlessTransaction(uint64_t self, void * tx);
+bool CBAccounterLostBranchlessTransaction(CBDepObject self, void * tx);
 /**
- @brief Gets the ID for a new account.
+ @brief Gets the object for a new account.
  @param self The accounter object.
- @returns the ID of the account of 0 on error.
+ @returns the object of the account of 0 on error.
  */
-uint64_t CBAccounterNewAccount(uint64_t self);
+uint64_t CBAccounterNewAccount(CBDepObject self);
 /**
  @brief Processes a new branch, inheriting a parent branch for all of the accounts.
  @param self The accounter object.
@@ -763,9 +777,7 @@ uint64_t CBAccounterNewAccount(uint64_t self);
  @param inherit The index of the parent branch.
  @returns true on success and false on failure. 
  */
-bool CBAccounterNewBranch(uint64_t self, uint8_t newBranch, uint8_t inherit);
-
-
+bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t inherit);
 
 // LOGGING DEPENDENCIES
 

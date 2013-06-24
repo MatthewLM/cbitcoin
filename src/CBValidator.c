@@ -18,7 +18,7 @@
 
 //  Constructor
 
-CBValidator * CBNewValidator(uint64_t storage, CBValidatorFlags flags){
+CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags){
 	CBValidator * self = malloc(sizeof(*self));
 	if (NOT self) {
 		CBLogError("Cannot allocate %i bytes of memory in CBNewFullNode\n", sizeof(*self));
@@ -40,7 +40,7 @@ CBValidator * CBGetValidator(void * self){
 
 //  Initialiser
 
-bool CBInitValidator(CBValidator * self, uint64_t storage, CBValidatorFlags flags){
+bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags){
 	if (NOT CBInitObject(CBGetObject(self)))
 		return false;
 	self->storage = storage;
@@ -225,6 +225,7 @@ CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock
 			return CB_BLOCK_STATUS_ERROR;
 		// Check merkle root
 		int res = memcmp(txHashes, CBByteArrayGetData(block->merkleRoot), 32);
+		free(txHashes);
 		if (res)
 			return CB_BLOCK_STATUS_BAD;
 	}

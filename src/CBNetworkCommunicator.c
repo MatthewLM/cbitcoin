@@ -51,17 +51,14 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self){
 	self->relayedAddrsLastClear = time(NULL);
 	self->attemptingOrWorkingConnections = 0;
 	self->numIncommingConnections = 0;
-	self->eventLoop = 0;
-	self->acceptEventIPv4 = 0;
-	self->acceptEventIPv6 = 0;
 	self->isListeningIPv4 = false;
 	self->isListeningIPv6 = false;
 	self->ourIPv4 = NULL;
 	self->ourIPv6 = NULL;
-	self->pingTimer = 0;
+	self->isPinging = false;
 	self->nonce = 0;
 	self->stoppedListening = false;
-	self->addrStorage = 0;
+	self->useAddrStorage = false;
 	self->reachability = 0;
 	self->alternativeMessages = NULL;
 	self->pendingIP = 0;
@@ -100,9 +97,9 @@ void CBFreeNetworkCommunicator(void * self){
 
 //  Functions
 
-void CBNetworkCommunicatorAcceptConnection(void * vself, uint64_t socket){
+void CBNetworkCommunicatorAcceptConnection(void * vself, CBDepObject socket){
 	CBNetworkCommunicator * self = vself;
-	uint64_t connectSocketID;
+	CBDepObject connectSocketID;
 	if (NOT CBSocketAccept(socket, &connectSocketID))
 		return;
 	// Connected, add CBNetworkAddress. Use a special placeholder ip identifier for the address, so that it is unique.
@@ -226,14 +223,15 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 			}
 			CBSocketFreeEvent(peer->receiveEvent);
 		}
+		// Close socket on failure
+		CBCloseSocket(peer->socketID);
 		// Add the address back to the addresses listwith no penalty here since it was definitely our fault.
 		// Do not return the address if we have the peer already.
 		CBNetworkAddress * addr = realloc(peer, sizeof(CBNetworkAddress));
 		if (addr)
 			CBNetworkAddressManagerTakeAddress(self->addresses, addr);
-	}
-	// Close socket on failure
-	CBCloseSocket(peer->socketID);
+	}else
+		CBCloseSocket(peer->socketID);
 	self->attemptingOrWorkingConnections--;
 	if (self->attemptingOrWorkingConnections == 0)
 		self->onNetworkError(self);
@@ -241,8 +239,8 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer, uint32_t penalty, bool stopping){
 	self->onPeerDisconnection(self, peer);
 	if (peer->requestedData) CBReleaseObject(peer->requestedData);
-	if (peer->receiveEvent) CBSocketFreeEvent(peer->receiveEvent);
-	if (peer->sendEvent) CBSocketFreeEvent(peer->sendEvent);
+	CBSocketFreeEvent(peer->receiveEvent);
+	CBSocketFreeEvent(peer->sendEvent);
 	// Close the socket
 	CBCloseSocket(peer->socketID);
 	// Release the receiving message object if it exists.
@@ -742,7 +740,6 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer 
 void CBNetworkCommunicatorOnLoopError(void * vself){
 	CBNetworkCommunicator * self = vself;
 	CBLogError("The socket event loop failed. Stoping the CBNetworkCommunicator...");
-	self->eventLoop = 0;
 	CBNetworkCommunicatorStop(self);
 }
 void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer * peer){
@@ -1007,7 +1004,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 							}
 							// Add the address to the address manager and the storage (If the storage object is not NULL).
 							CBNetworkAddressManagerAddAddress(self->addresses, copy);
-							if (self->addrStorage)
+							if (self->useAddrStorage)
 								CBAddressStorageSaveAddress(self->addrStorage, copy);
 							CBReleaseObject(copy);
 							didAdd = true;
@@ -1018,7 +1015,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 				// We have an advertised peer. This means it is public and should return to the address store.
 				CBGetNetworkAddress(peerB)->isPublic = true;
 				// Add the address to storage
-				if (self->addrStorage)
+				if (self->useAddrStorage)
 					CBAddressStorageSaveAddress(self->addrStorage, CBGetNetworkAddress(peerB));
 			}
 		}
@@ -1546,6 +1543,7 @@ void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self){
 	}
 }
 void CBNetworkCommunicatorStartPings(CBNetworkCommunicator * self){
+	self->isPinging = true;
 	CBStartTimer(self->eventLoop, &self->pingTimer, self->heartBeat, CBNetworkCommunicatorSendPings, self);
 }
 void CBNetworkCommunicatorStop(CBNetworkCommunicator * self){
@@ -1579,8 +1577,10 @@ void CBNetworkCommunicatorStopListening(CBNetworkCommunicator * self){
 	}
 }
 void CBNetworkCommunicatorStopPings(CBNetworkCommunicator * self){
-	if (self->pingTimer) CBEndTimer(self->pingTimer);
-	self->pingTimer = 0;
+	if (self->isPinging){
+		CBEndTimer(self->pingTimer);
+		self->isPinging = false;
+	}
 }
 void CBNetworkCommunicatorTryConnections(CBNetworkCommunicator * self){
 	if (self->attemptingOrWorkingConnections >= self->maxConnections)

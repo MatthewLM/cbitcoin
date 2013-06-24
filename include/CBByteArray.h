@@ -48,7 +48,7 @@ typedef struct{
 /**
  @brief Creates a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.
  @param string The string to put into a CBByteArray.
- @param terminator If true, include the termination character.
+ @param terminator If true, the termination character is included in the CBByteArray.
  @returns A new CBByteArray object.
  */
 CBByteArray * CBNewByteArrayFromString(char * string, bool terminator);

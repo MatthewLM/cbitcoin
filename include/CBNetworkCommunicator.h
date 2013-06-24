@@ -100,20 +100,22 @@ typedef struct {
 	uint16_t connectionTimeOut; /**< Time to wait for a socket to connect before timeout. */
 	CBByteArray * alternativeMessages; /**< Alternative messages to accept. This should be the 12 byte command names each after another with nothing between. Pass NULL for no alternative message types. */
 	uint32_t * altMaxSizes; /**< Sizes for the alternative messages. Will be freed by this object, so malloc this and give it to this object. Send in NULL for a default CB_BLOCK_MAX_SIZE. */
-	uint64_t listeningSocketIPv4; /**< The id of a listening socket on the IPv4 network. */
-	uint64_t listeningSocketIPv6; /**< The id of a listening socket on the IPv6 network. */
+	CBDepObject listeningSocketIPv4; /**< The id of a listening socket on the IPv4 network. */
+	CBDepObject listeningSocketIPv6; /**< The id of a listening socket on the IPv6 network. */
 	bool isListeningIPv4; /**< True when listening for incomming connections on the IPv4 network. False when not. */
 	bool isListeningIPv6; /**< True when listening for incomming connections on the IPv6 network. False when not. */
-	uint64_t eventLoop; /**< Socket event loop */
-	uint64_t acceptEventIPv4; /**< Event for accepting connections on IPv4 */
-	uint64_t acceptEventIPv6; /**< Event for accepting connections on IPv6 */
+	CBDepObject eventLoop; /**< Socket event loop */
+	CBDepObject acceptEventIPv4; /**< Event for accepting connections on IPv4 */
+	CBDepObject acceptEventIPv6; /**< Event for accepting connections on IPv6 */
 	uint64_t nonce; /**< Value sent in version messages to check for connections to self */
-	uint64_t pingTimer; /**< Timer for ping event */
+	CBDepObject pingTimer; /**< Timer for ping event */
+	bool isPinging; /**< True when pings are being made. */
 	bool isStarted; /**< True if the CBNetworkCommunicator is running. */
 	bool stoppedListening; /**< True if listening was stopped because there are too many connections */
 	uint64_t pendingIP; /**< A 64 bit integer to create placeholder IPs so that peers which have un-associated addresses are given somehing to make them unique until they get a real IP associated with them. */
 	CBIPType reachability; /**< Bitfield for reachable address types */
-	uint64_t addrStorage; /**< The object for address storage. If not 0 and if the CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY flag is given, broadcast addresses will be recorded into the storage. */
+	CBDepObject addrStorage; /**< The object for address storage. If not 0 and if the CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY flag is given, broadcast addresses will be recorded into the storage. */
+	bool useAddrStorage; /**< Set to true if using addrStorage */
 	CBAssociativeArray relayedAddrs; /**< An array of the relayed addresses in a 24 hour period, in which the array is cleared. */
 	uint64_t relayedAddrsLastClear; /**< The time relayedAddrs was last cleared */
 	void (*onPeerConnection)(void *, void *); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
@@ -161,7 +163,7 @@ void CBFreeNetworkCommunicator(void * self);
  @param vself The CBNetworkCommunicator object.
  @param socket The listening socket for accepting a connection.
  */
-void CBNetworkCommunicatorAcceptConnection(void * vself, uint64_t socket);
+void CBNetworkCommunicatorAcceptConnection(void * vself, CBDepObject socket);
 /**
  @brief Returns true if it is beleived the network address can be connected to, otherwise false.
  @param self The CBNetworkCommunicator object.

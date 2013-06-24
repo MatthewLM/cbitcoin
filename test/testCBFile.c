@@ -35,13 +35,12 @@ int main(){
 	srand(s);
 	remove("./test.dat");
 	// Test newly opening file
-	uint64_t file = CBFileOpen("./test.dat", false);
-	if (file) {
+	CBDepObject file;
+	if (CBFileOpen(&file,"./test.dat", false)) {
 		printf("OPEN NOT EXIST FAIL\n");
 		return 1;
 	}
-	file = CBFileOpen("./test.dat", true);
-	if (NOT file) {
+	if (NOT CBFileOpen(&file, "./test.dat", true)) {
 		printf("OPEN NEW FAIL\n");
 		return 1;
 	}
@@ -122,8 +121,7 @@ int main(){
 	}
 	// Close and then reopen file
 	CBFileClose(file);
-	file = CBFileOpen("./test.dat", false);
-	if (NOT file){
+	if (NOT CBFileOpen(&file, "./test.dat", false)){
 		printf("EXISTING OPEN FAIL\n");
 		return 1;
 	}
@@ -170,13 +168,12 @@ int main(){
 		return 1;
 	}
 	// Test hamming code correction
-	rewind(((CBFile *)file)->rdwr);
-	fwrite((uint8_t []){44}, 1, 1, ((CBFile *)file)->rdwr);
-	fseek(((CBFile *)file)->rdwr, 5, SEEK_SET);
-	fwrite((uint8_t []){74}, 1, 1, ((CBFile *)file)->rdwr);
+	rewind(((CBFile *)file.ptr)->rdwr);
+	fwrite((uint8_t []){44}, 1, 1, ((CBFile *)file.ptr)->rdwr);
+	fseek(((CBFile *)file.ptr)->rdwr, 5, SEEK_SET);
+	fwrite((uint8_t []){74}, 1, 1, ((CBFile *)file.ptr)->rdwr);
 	CBFileClose(file);
-	file = CBFileOpen("./test.dat", false);
-	if (NOT file) {
+	if (NOT CBFileOpen(&file,"./test.dat", false)) {
 		printf("LENGTH BIT ERR OPEN FAIL\n");
 		return 1;
 	}
@@ -223,8 +220,7 @@ int main(){
 		printf("TRUNCATE FAIL\n");
 		return 1;
 	}
-	file = CBFileOpen("./test.dat", false);
-	if (NOT file) {
+	if (NOT CBFileOpen(&file,"./test.dat", false)) {
 		printf("TRUNCATE OPEN FAIL\n");
 		return 1;
 	}
@@ -239,6 +235,50 @@ int main(){
 	}
 	if (memcmp(data, "Hello Super Lands. Very Lovely.", 31)) {
 		printf("TRUNCATE READ DATA FAIL\n");
+		return 1;
+	}
+	// Test append with zeros.
+	if (NOT CBFileAppendZeros(file, 30)) {
+		printf("APPEND ZERO FAIL\n");
+		return 1;
+	}
+	CBFileGetLength(file, &len);
+	if (len != 61) {
+		printf("APPEND ZERO LEN FAIL\n");
+		return 1;
+	}
+	if (NOT CBFileSeek(file, 41)) {
+		printf("APPEND ZERO SEEK FAIL\n");
+		return 1;
+	}
+	if (NOT CBFileRead(file, data, 20)) {
+		printf("APPEND ZERO READ FAIL\n");
+		return 1;
+	}
+	if (memcmp(data, (uint8_t []){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 20)) {
+		printf("APPEND ZERO READ DATA FAIL\n");
+		return 1;
+	}
+	CBFileClose(file);
+	if (NOT CBFileOpen(&file, "./test.dat", false)) {
+		printf("APPEND ZERO REOPEN FAIL");
+		return 1;
+	}
+	CBFileGetLength(file, &len);
+	if (len != 61) {
+		printf("APPEND ZERO REOPEN LEN FAIL\n");
+		return 1;
+	}
+	if (NOT CBFileSeek(file, 41)) {
+		printf("APPEND ZERO REOPEN SEEK FAIL\n");
+		return 1;
+	}
+	if (NOT CBFileRead(file, data, 20)) {
+		printf("APPEND ZERO REOPEN READ FAIL\n");
+		return 1;
+	}
+	if (memcmp(data, (uint8_t []){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 20)) {
+		printf("APPEND ZERO REOPEN READ DATA FAIL\n");
 		return 1;
 	}
 	return 0;
