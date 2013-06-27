@@ -593,6 +593,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+ALLOWED_CFLAGS
 LIB_COMPILE_CONFIG_FLAGS
 EGREP
 GREP
@@ -3435,7 +3436,37 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 CFLAGS="$save_cflags"
 
+# Check -Wno-overflow
+save_cflags="$CFLAGS"
+CFLAGS="-Wno-overflow"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether CC supports -Wno-overflow" >&5
+$as_echo_n "checking whether CC supports -Wno-overflow... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    ALLOWED_CFLAGS="-Wno-overflow"
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$save_cflags"
+
+
 # Add substitutions
+
 
 
 

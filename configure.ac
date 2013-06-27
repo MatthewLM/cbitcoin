@@ -27,6 +27,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
 )
 CFLAGS="$save_cflags"
 
+
 # Add substitutions
 
 AC_SUBST([LIB_COMPILE_CONFIG_FLAGS])
