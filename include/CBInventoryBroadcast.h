@@ -60,16 +60,14 @@ CBInventoryBroadcast * CBGetInventoryBroadcast(void * self);
 /**
  @brief Initialises a CBInventoryBroadcast object
  @param self The CBInventoryBroadcast object to initialise
- @returns true on success, false on failure.
 */
-bool CBInitInventoryBroadcast(CBInventoryBroadcast * self);
+void CBInitInventoryBroadcast(CBInventoryBroadcast * self);
 /**
  @brief Initialises a CBInventoryBroadcast object from serialised data
  @param self The CBInventoryBroadcast object to initialise
  @param data The serialised data.
- @returns true on success, false on failure.
 */
-bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self, CBByteArray * data);
+void CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self, CBByteArray * data);
 
 /**
  @brief Releases and frees all fo the objects stored by the CBInventoryBroadcast object.

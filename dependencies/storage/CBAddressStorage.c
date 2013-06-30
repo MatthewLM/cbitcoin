@@ -22,10 +22,6 @@ uint8_t CB_DATA_ARRAY[20];
 
 uint64_t CBNewAddressStorage(char * dataDir){
 	CBAddressStore * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Could not create the address storage object.");
-		return 0;
-	}
 	if (NOT CBInitDatabase(CBGetDatabase(self), dataDir, "addr")) {
 		CBLogError("Could not create a database object for address storage.");
 		free(self);
@@ -118,10 +114,7 @@ bool CBAddressStorageLoadAddresses(uint64_t iself, void * addrMan){
 														  (CBVersionServices) CBArrayToInt64(CB_DATA_ARRAY, 8),
 														  true);
 			addr->penalty = CBArrayToInt32(CB_DATA_ARRAY, 16);
-			if (NOT CBNetworkAddressManagerTakeAddress(addrManObj, addr)) {
-				CBLogError("Could not create and add a network address to the address manager.");
-				return false;
-			}
+			CBNetworkAddressManagerTakeAddress(addrManObj, addr);
 			CBReleaseObject(ip);
 		}
 		if (CBAssociativeArrayIterate(&database->index, &it))

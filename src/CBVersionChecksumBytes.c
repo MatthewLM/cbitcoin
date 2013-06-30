@@ -20,10 +20,6 @@
 
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string, bool cacheString){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromString\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
 	if(CBInitVersionChecksumBytesFromString(self, string, cacheString))
 		return self;
@@ -32,15 +28,9 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * strin
 }
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString){
 	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewVersionChecksumBytesFromBytes\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	if(CBInitVersionChecksumBytesFromBytes(self, bytes, size, cacheString))
-		return self;
-	free(self);
-	return NULL;
+	CBInitVersionChecksumBytesFromBytes(self, bytes, size, cacheString);
+	return self;
 }
 
 //  Object Getter
@@ -65,17 +55,14 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteA
 	if (NOT CBDecodeBase58Checked(&bytes, (char *)CBByteArrayGetData(string)))
 		return false;
 	// Take over the bytes with the CBByteArray
-	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length))
-		return false;
+	CBInitByteArrayWithData(CBGetByteArray(self), bytes.data, bytes.length);
 	CBByteArrayReverseBytes(CBGetByteArray(self)); // CBBigInt is in little-endian. Conversion needed to make bitcoin address the right way.
 	return true;
 }
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString){
+void CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString){
 	self->cacheString = cacheString;
 	self->cachedString = NULL;
-	if (NOT CBInitByteArrayWithData(CBGetByteArray(self), bytes, size))
-		return false;
-	return true;
+	CBInitByteArrayWithData(CBGetByteArray(self), bytes, size);
 }
 
 //  Destructor
@@ -108,13 +95,7 @@ CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
 		bytes.length = CBGetByteArray(self)->length;
 		memcpy(bytes.data, CBByteArrayGetData(CBGetByteArray(self)), bytes.length);
 		char * string = CBEncodeBase58(&bytes);
-		if (NOT string)
-			return NULL;
 		CBByteArray * str = CBNewByteArrayFromString(string, true);
-		if (NOT str) {
-			free(string);
-			return NULL;
-		}
 		CBByteArrayReverseBytes(CBGetByteArray(self)); // Now the string is got, back to big-endian.
 		if (self->cacheString) {
 			self->cachedString = str;

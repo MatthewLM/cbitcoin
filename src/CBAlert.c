@@ -20,27 +20,15 @@
 
 CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature){
 	CBAlert * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewAlert\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeAlert;
-	if(CBInitAlert(self, version, relayUntil, expiration, ID, cancel, minVer, maxVer, priority, hiddenComment, displayedComment, reserved, signature))
-		return self;
-	free(self);
-	return NULL;
+	CBInitAlert(self, version, relayUntil, expiration, ID, cancel, minVer, maxVer, priority, hiddenComment, displayedComment, reserved, signature);
+	return self;
 }
 CBAlert * CBNewAlertFromData(CBByteArray * data){
 	CBAlert * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewAlertFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeAlert;
-	if(CBInitAlertFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitAlertFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,7 +39,7 @@ CBAlert * CBGetAlert(void * self){
 
 //  Initialisers
 
-bool CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature){
+void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature){
 	self->version = version;
 	self->relayUntil = relayUntil;
 	self->expiration = expiration;
@@ -68,20 +56,16 @@ bool CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t ex
 	if (reserved) CBRetainObject(reserved);
 	self->signature = signature;
 	CBRetainObject(signature);
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitAlertFromData(CBAlert * self, CBByteArray * data){
+void CBInitAlertFromData(CBAlert * self, CBByteArray * data){
 	self->setCancel = NULL;
 	self->userAgents = NULL;
 	self->hiddenComment = NULL;
 	self->displayedComment = NULL;
 	self->reserved = NULL;
 	self->signature = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -106,18 +90,15 @@ void CBFreeAlert(void * self){
 
 //  Functions
 
-bool CBAlertAddCancelID(CBAlert * self, uint32_t ID){
+void CBAlertAddCancelID(CBAlert * self, uint32_t ID){
 	self->setCancelNum++;
 	int32_t * temp = realloc(self->setCancel, sizeof(*self->setCancel) * self->setCancelNum);
-	if (NOT temp)
-		return false;
 	self->setCancel = temp;
 	self->setCancel[self->setCancelNum-1] = ID;
-	return true;
 }
-bool CBAlertAddUserAgent(CBAlert * self, CBByteArray * userAgent){
+void CBAlertAddUserAgent(CBAlert * self, CBByteArray * userAgent){
 	CBRetainObject(userAgent);
-	return CBAlertTakeUserAgent(self, userAgent);
+	CBAlertTakeUserAgent(self, userAgent);
 }
 uint32_t CBAlertCalculateLength(CBAlert * self){
 	uint32_t len = 40 + CBVarIntSizeOf(self->userAgentNum) + CBVarIntSizeOf(self->setCancelNum) + self->setCancelNum * 4;
@@ -182,10 +163,6 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	cursor += setCancelLen.size;
 	if (self->setCancelNum){
 		self->setCancel = malloc(sizeof(*self->setCancel) * self->setCancelNum);
-		if (NOT self->setCancel) {
-			CBLogError("Cannot allocate %i bytes of memory in CBAlertDeserialise for the cancel set.", sizeof(*self->setCancel) * self->setCancelNum);
-			return 0;
-		}
 		for (uint16_t x = 0; x < self->setCancelNum; x++) {
 			CBByteArrayReadInt32(bytes, cursor);
 			cursor += 4;
@@ -205,10 +182,6 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	cursor += userAgentsLen.size;
 	if (self->userAgentNum){
 		self->userAgents = malloc(sizeof(*self->userAgents) * self->userAgentNum);
-		if (NOT self->userAgents) {
-			CBLogError("Cannot allocate %i bytes of memory in CBAlertDeserialise for the user agent set.", sizeof(*self->userAgents) * self->userAgentNum);
-			return 0;
-		}
 		for (uint16_t x = 0; x < self->userAgentNum; x++) {
 			// Add each user agent checking each time for space in the payload.
 			CBVarInt userAgentLen = CBVarIntDecode(bytes, cursor); // No need to check space as there is enough data afterwards for safety.
@@ -218,15 +191,10 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 				return 0;
 			}
 			// Enough space so set user agent
-			if (userAgentLen.val) {
+			if (userAgentLen.val)
 				self->userAgents[x] = CBNewByteArraySubReference(bytes, cursor, (uint32_t)userAgentLen.val);
-				if (NOT self->userAgents[x]) {
-					CBLogError("Cannot create new CBByteArray in CBAlertDeserialise for userAgent %i.\n", x);
-					return 0;
-				}
-			}else{
+			else
 				self->userAgents[x] = NULL;
-			}
 			cursor += userAgentLen.val;
 		}
 	}
@@ -247,15 +215,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 		CBVarInt hiddenCommentLen = CBVarIntDecode(bytes, cursor);
 		cursor += size;
 		if (payloadLen.val >= cursor + hiddenCommentLen.val + 2 - payloadLen.size) { // OK for hidden comment.
-			if (hiddenCommentLen.val) {
-				self->hiddenComment = CBNewByteArraySubReference(bytes, cursor, (uint32_t)hiddenCommentLen.val);
-				if (NOT self->hiddenComment) {
-					CBLogError("Cannot create new CBByteArray in CBAlertDeserialise for the hidden comment.\n");
-					return 0;
-				}
-			}else{
-				self->hiddenComment = NULL;
-			}
+			self->hiddenComment = hiddenCommentLen.val ? CBNewByteArraySubReference(bytes, cursor, (uint32_t)hiddenCommentLen.val) : NULL;
 			cursor += hiddenCommentLen.val;
 			// Displayed string.
 			size = CBByteArrayGetByte(bytes, cursor);
@@ -271,15 +231,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 				CBVarInt displayedCommentLen = CBVarIntDecode(bytes, cursor);
 				cursor += size;
 				if (payloadLen.val >= cursor + displayedCommentLen.val + 1 - payloadLen.size) { // OK for displayed comment.
-					if (displayedCommentLen.val) {
-						self->displayedComment = CBNewByteArraySubReference(bytes, cursor, (uint32_t)displayedCommentLen.val);
-						if (NOT self->displayedComment) {
-							CBLogError("Cannot create new CBByteArray in CBAlertDeserialise for the displayed comment.\n");
-							return 0;
-						}
-					}else{
-						self->displayedComment = NULL;
-					}
+					self->displayedComment = displayedCommentLen.val ? CBNewByteArraySubReference(bytes, cursor, (uint32_t)displayedCommentLen.val) : NULL;
 					cursor += displayedCommentLen.val;
 					// Reserved string
 					size = CBByteArrayGetByte(bytes, cursor);
@@ -295,15 +247,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 						CBVarInt reservedLen = CBVarIntDecode(bytes, cursor);
 						cursor += size;
 						if (payloadLen.val == cursor + reservedLen.val - payloadLen.size) { // OK for all payload. Size is correct.
-							if (reservedLen.val) {
-								self->reserved = CBNewByteArraySubReference(bytes, cursor, (uint32_t)reservedLen.val);
-								if (NOT self->reserved) {
-									CBLogError("Cannot create new CBByteArray in CBAlertDeserialise for the reserved section\n");
-									return 0;
-								}
-							}else{
-								self->reserved = NULL;
-							}
+							self->reserved = reservedLen.val ? CBNewByteArraySubReference(bytes, cursor, (uint32_t)reservedLen.val) : NULL;
 							cursor += reservedLen.val;
 							// Finally do signature
 							size = CBByteArrayGetByte(bytes, cursor);
@@ -483,12 +427,9 @@ uint16_t CBAlertSerialiseSignature(CBAlert * self, uint16_t offset){
 	CBGetMessage(self)->serialised = true;
 	return bytes->length;
 }
-bool CBAlertTakeUserAgent(CBAlert * self, CBByteArray * userAgent){
+void CBAlertTakeUserAgent(CBAlert * self, CBByteArray * userAgent){
 	self->userAgentNum++;
 	CBByteArray ** temp = realloc(self->userAgents, sizeof(*self->userAgents) * self->userAgentNum);
-	if (NOT temp)
-		return false;
 	self->userAgents = temp;
 	self->userAgents[self->userAgentNum-1] = userAgent;
-	return true;
 }

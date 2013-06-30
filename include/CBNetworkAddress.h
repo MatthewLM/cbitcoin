@@ -84,14 +84,14 @@ CBNetworkAddress * CBGetNetworkAddress(void * self);
  @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic);
+void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic);
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
  @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns true on success, false on failure.
  */
-bool CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, bool isPublic);
+void CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, bool isPublic);
 
 /**
  @brief Release and free all of the objects stored by the CBNetworkAddress object.

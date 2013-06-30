@@ -141,9 +141,8 @@ CBNetworkCommunicator * CBGetNetworkCommunicator(void * self);
 /**
  @brief Initialises a CBNetworkCommunicator object
  @param self The CBNetworkCommunicator object to initialise
- @returns true on success, false on failure.
  */
-bool CBInitNetworkCommunicator(CBNetworkCommunicator * self);
+void CBInitNetworkCommunicator(CBNetworkCommunicator * self);
 
 /**
  @brief Release and free all of the objects stored by a CBNetworkCommunicator object.

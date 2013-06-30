@@ -16,11 +16,10 @@
 
 #include "CBBase58.h"
 
-bool CBDecodeBase58(CBBigInt * bi, char * str){
+void CBDecodeBase58(CBBigInt * bi, char * str){
 	// ??? Quite likely these functions can be improved
 	CBBigInt bi2;
-	if (NOT CBBigIntAlloc(&bi2, 1))
-		return false;
+	CBBigIntAlloc(&bi2, 1);
 	bi->data[0] = 0;
 	bi->length = 1;
 	for (uint8_t x = strlen(str) - 1;; x--){ // Working backwards
@@ -40,21 +39,9 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 			}else{ // m-z
 				alphaIndex -= 65;
 			}
-			if (NOT CBBigIntFromPowUInt8(&bi2, 58, strlen(str) - 1 - x)){
-				// Error occured.
-				free(bi2.data);
-				return false;
-			}
-			if (NOT CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex)){
-				// Error occured.
-				free(bi2.data);
-				return false;
-			}
-			if (NOT CBBigIntEqualsAdditionByBigInt(bi, &bi2)){
-				// Error occured.
-				free(bi2.data);
-				return false;
-			}
+			CBBigIntFromPowUInt8(&bi2, 58, strlen(str) - 1 - x);
+			CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex);
+			CBBigIntEqualsAdditionByBigInt(bi, &bi2);
 		}
 		if (NOT x)
 			break;
@@ -69,27 +56,18 @@ bool CBDecodeBase58(CBBigInt * bi, char * str){
 			break;
 	if (zeros) {
 		bi->length += zeros;
-		if (NOT CBBigIntRealloc(bi, bi->length))
-			return false;
+		CBBigIntRealloc(bi, bi->length);
 		memset(bi->data + bi->length - zeros, 0, zeros);
 	}
-	return true;
 }
 bool CBDecodeBase58Checked(CBBigInt * bi, char * str){
-	if(NOT CBDecodeBase58(bi, str)) {
-		CBLogError("Memory failure in CBDecodeBase58.");
-		return false;
-	}
+	CBDecodeBase58(bi, str);
 	if (bi->length < 4){
 		CBLogError("The string passed into CBDecodeBase58Checked decoded into data that was too short.");
 		return false;
 	}
 	// Reverse bytes for checksum generation
 	uint8_t * reversed = malloc(bi->length - 4);
-	if (NOT reversed) {
-		CBLogError("Cannot allocate %i bytes of memory in CBDecodeBase58Checked", bi->length - 4);
-		return false;
-	}
 	for (uint8_t x = 4; x < bi->length; x++)
 		reversed[bi->length - 1 - x] = bi->data[x];
 	// The checksum uses SHA-256, twice, for some reason unknown to man.
@@ -112,8 +90,6 @@ char * CBEncodeBase58(CBBigInt * bi){
 	// ??? Improvements?
 	uint8_t x = 0;
 	char * str = malloc(bi->length);
-	if (NOT str)
-		return NULL;
 	// Zeros
 	for (uint8_t y = bi->length - 1;; y--)
 		if (NOT bi->data[y]){
@@ -126,10 +102,6 @@ char * CBEncodeBase58(CBBigInt * bi){
 	uint8_t zeros = x;
 	// Make temporary data store
 	uint8_t * temp = malloc(bi->length);
-	if (NOT temp) {
-		free(str);
-		return NULL;
-	}
 	// Encode
 	uint8_t mod;
 	size_t size = bi->length;
@@ -139,10 +111,6 @@ char * CBEncodeBase58(CBBigInt * bi){
 			size = x + 3;
 			if (size > bi->length) {
 				char * temp = realloc(str, size);
-				if (NOT temp){
-					free(str);
-					return NULL;
-				}
 				str = temp;
 			}
 		}

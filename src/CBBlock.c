@@ -20,51 +20,27 @@
 
 CBBlock * CBNewBlock(){
 	CBBlock * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewBlock\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlock(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitBlock(self);
+	return self;
 }
 CBBlock * CBNewBlockFromData(CBByteArray * data){
 	CBBlock * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlockFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitBlockFromData(self, data);
+	return self;
 }
 CBBlock * CBNewBlockGenesis(){
 	CBBlock * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockGenesis\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlockGenesis(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitBlockGenesis(self);
+	return self;
 }
 CBBlock * CBNewBlockGenesisHeader(){
 	CBBlock * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockGenesisHeader\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeBlock;
-	if(CBInitBlockGenesisHeader(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitBlockGenesisHeader(self);
+	return self;
 }
 
 //  Object Getter
@@ -75,59 +51,41 @@ CBBlock * CBGetBlock(void * self){
 
 //  Initialiser
 
-bool CBInitBlock(CBBlock * self){
+void CBInitBlock(CBBlock * self){
 	self->prevBlockHash = NULL;
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
 	self->hashSet = false;
 	memset(self->hash, 0, 32);
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitBlockFromData(CBBlock * self, CBByteArray * data){
+void CBInitBlockFromData(CBBlock * self, CBByteArray * data){
 	self->prevBlockHash = NULL;
 	self->merkleRoot = NULL;
 	self->transactions = NULL;
 	self->transactionNum = 0;
 	self->hashSet = false;
 	memset(self->hash, 0, 32);
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
-bool CBInitBlockGenesis(CBBlock * self){
+void CBInitBlockGenesis(CBBlock * self){
 	CBByteArray * data = CBNewByteArrayWithDataCopy((uint8_t [285]){0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3B, 0xA3, 0xED, 0xFD, 0x7A, 0x7B, 0x12, 0xB2, 0x7A, 0xC7, 0x2C, 0x3E, 0x67, 0x76, 0x8F, 0x61, 0x7F, 0xC8, 0x1B, 0xC3, 0x88, 0x8A, 0x51, 0x32, 0x3A, 0x9F, 0xB8, 0xAA, 0x4B, 0x1E, 0x5E, 0x4A, 0x29, 0xAB, 0x5F, 0x49, 0xFF, 0xFF, 0x00, 0x1D, 0x1D, 0xAC, 0x2B, 0x7C, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x4D, 0x04, 0xFF, 0xFF, 0x00, 0x1D, 0x01, 0x04, 0x45, 0x54, 0x68, 0x65, 0x20, 0x54, 0x69, 0x6D, 0x65, 0x73, 0x20, 0x30, 0x33, 0x2F, 0x4A, 0x61, 0x6E, 0x2F, 0x32, 0x30, 0x30, 0x39, 0x20, 0x43, 0x68, 0x61, 0x6E, 0x63, 0x65, 0x6C, 0x6C, 0x6F, 0x72, 0x20, 0x6F, 0x6E, 0x20, 0x62, 0x72, 0x69, 0x6E, 0x6B, 0x20, 0x6F, 0x66, 0x20, 0x73, 0x65, 0x63, 0x6F, 0x6E, 0x64, 0x20, 0x62, 0x61, 0x69, 0x6C, 0x6F, 0x75, 0x74, 0x20, 0x66, 0x6F, 0x72, 0x20, 0x62, 0x61, 0x6E, 0x6B, 0x73, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0xF2, 0x05, 0x2A, 0x01, 0x00, 0x00, 0x00, 0x43, 0x41, 0x04, 0x67, 0x8A, 0xFD, 0xB0, 0xFE, 0x55, 0x48, 0x27, 0x19, 0x67, 0xF1, 0xA6, 0x71, 0x30, 0xB7, 0x10, 0x5C, 0xD6, 0xA8, 0x28, 0xE0, 0x39, 0x09, 0xA6, 0x79, 0x62, 0xE0, 0xEA, 0x1F, 0x61, 0xDE, 0xB6, 0x49, 0xF6, 0xBC, 0x3F, 0x4C, 0xEF, 0x38, 0xC4, 0xF3, 0x55, 0x04, 0xE5, 0x1E, 0xC1, 0x12, 0xDE, 0x5C, 0x38, 0x4D, 0xF7, 0xBA, 0x0B, 0x8D, 0x57, 0x8A, 0x4C, 0x70, 0x2B, 0x6B, 0xF1, 0x1D, 0x5F, 0xAC, 0x00, 0x00, 0x00, 0x00}, 285);
-	if (NOT data)
-		return false;
 	uint8_t genesisHash[32] = {0x6F, 0xE2, 0x8C, 0x0A, 0xB6, 0xF1, 0xB3, 0x72, 0xC1, 0xA6, 0xA2, 0x46, 0xAE, 0x63, 0xF7, 0x4F, 0x93, 0x1E, 0x83, 0x65, 0xE1, 0x5A, 0x08, 0x9C, 0x68, 0xD6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00};
 	memcpy(self->hash, genesisHash, 32);
 	self->hashSet = true;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data)){
-		CBReleaseObject(data);
-		CBReleaseObject(self->hash);
-		return false;
-	}
+	CBInitMessageByData(CBGetMessage(self), data);
 	CBReleaseObject(data);
 	CBBlockDeserialise(self, true);
-	return true;
 }
-bool CBInitBlockGenesisHeader(CBBlock * self){
+void CBInitBlockGenesisHeader(CBBlock * self){
 	CBByteArray * data = CBNewByteArrayWithDataCopy((uint8_t [82]){0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3B, 0xA3, 0xED, 0xFD, 0x7A, 0x7B, 0x12, 0xB2, 0x7A, 0xC7, 0x2C, 0x3E, 0x67, 0x76, 0x8F, 0x61, 0x7F, 0xC8, 0x1B, 0xC3, 0x88, 0x8A, 0x51, 0x32, 0x3A, 0x9F, 0xB8, 0xAA, 0x4B, 0x1E, 0x5E, 0x4A, 0x29, 0xAB, 0x5F, 0x49, 0xFF, 0xFF, 0x00, 0x1D, 0x1D, 0xAC, 0x2B, 0x7C, 0x01, 0x00}, 82);
-	if (NOT data)
-		return false;
 	uint8_t genesisHash[32] = {0x6F, 0xE2, 0x8C, 0x0A, 0xB6, 0xF1, 0xB3, 0x72, 0xC1, 0xA6, 0xA2, 0x46, 0xAE, 0x63, 0xF7, 0x4F, 0x93, 0x1E, 0x83, 0x65, 0xE1, 0x5A, 0x08, 0x9C, 0x68, 0xD6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00};
 	memcpy(self->hash, genesisHash, 32);
 	self->hashSet = true;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data)){
-		CBReleaseObject(data);
-		CBReleaseObject(self->hash);
-		return false;
-	}
+	CBInitMessageByData(CBGetMessage(self), data);
 	CBReleaseObject(data);
 	CBBlockDeserialise(self, false);
-	return true;
 }
 
 //  Destructor
@@ -151,19 +109,12 @@ void CBFreeBlock(void * self){
 
 //  Functions
 
-bool CBBlockCalculateAndSetMerkleRoot(CBBlock * self){
+void CBBlockCalculateAndSetMerkleRoot(CBBlock * self){
 	uint8_t * newRootData = CBBlockCalculateMerkleRoot(self);
-	if (NOT newRootData)
-		return false;
 	CBByteArray * newRoot = CBNewByteArrayWithData(newRootData, 32);
-	if (NOT newRoot) {
-		free(newRootData);
-		return false;
-	}
 	// Release old merkle root, if it has been previously set.
 	if (self->merkleRoot) CBReleaseObject(self->merkleRoot);
 	self->merkleRoot = newRoot;
-	return true;
 }
 void CBBlockCalculateHash(CBBlock * self, uint8_t * hash){
 	uint8_t * headerData = CBByteArrayGetData(CBGetMessage(self)->bytes);
@@ -181,8 +132,6 @@ uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions){
 }
 uint8_t * CBBlockCalculateMerkleRoot(CBBlock * self){
 	uint8_t * txHashes = malloc(32 * self->transactionNum);
-	if (NOT txHashes)
-		return NULL;
 	// Ensure serialisation of transactions and then add their hashes for the calculation
 	for (uint32_t x = 0; x < self->transactionNum; x++)
 		memcpy(txHashes + 32*x, CBTransactionGetHash(self->transactions[x]), 32);
@@ -201,15 +150,7 @@ uint32_t CBBlockDeserialise(CBBlock * self, bool transactions){
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	self->prevBlockHash = CBByteArraySubReference(bytes, 4, 32);
-	if (NOT self->prevBlockHash){
-		CBLogError("Cannot create the previous block hash CBByteArray in CBBlockDeserialise.");
-		return 0;
-	}
 	self->merkleRoot = CBByteArraySubReference(bytes, 36, 32);
-	if (NOT self->merkleRoot){
-		CBLogError("Cannot create the merkle root CBByteArray in CBBlockDeserialise.");
-		return 0;
-	}
 	self->time = CBByteArrayReadInt32(bytes, 68);
 	self->target = CBByteArrayReadInt32(bytes, 72);
 	self->nonce = CBByteArrayReadInt32(bytes, 76);
@@ -228,22 +169,10 @@ uint32_t CBBlockDeserialise(CBBlock * self, bool transactions){
 		}
 		self->transactionNum = (uint32_t)transactionNumVarInt.val;
 		self->transactions = malloc(sizeof(*self->transactions) * self->transactionNum);
-		if (NOT self->transactionNum) {
-			CBLogError("Cannot allocate %i bytes of memory in CBBlockDeserialise\n", sizeof(*self->transactions) * self->transactionNum);
-			return 0;
-		}
 		uint32_t cursor = 80 + transactionNumVarInt.size;
 		for (uint16_t x = 0; x < self->transactionNum; x++) {
 			CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-			if (NOT data) {
-				CBLogError("Could not create a new CBByteArray in CBBlockDeserialise for the transaction number %u.", x);
-			}
 			CBTransaction * transaction = CBNewTransactionFromData(data);
-			if (NOT transaction){
-				CBLogError("Could not create a new CBTransaction in CBBlockDeserialise for the transaction number %u.", x);
-				CBReleaseObject(data);
-				return 0;
-			}
 			uint32_t len = CBTransactionDeserialise(transaction);
 			if (NOT len){
 				CBLogError("CBBlock cannot be deserialised because of an error with the transaction number %u.", x);

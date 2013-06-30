@@ -20,63 +20,33 @@
 
 CBByteArray * CBNewByteArrayFromString(char * string, bool terminator){
 	CBByteArray * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewByteArrayFromString\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if(CBInitByteArrayFromString(self, string, terminator))
-		return self;
-	free(self);
-	return NULL;
+	CBInitByteArrayFromString(self, string, terminator);
+	return self;
 }
 CBByteArray * CBNewByteArrayOfSize(uint32_t size){
 	CBByteArray * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewByteArrayOfSize\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if(CBInitByteArrayOfSize(self, size))
-		return self;
-	free(self);
-	return NULL;
+	CBInitByteArrayOfSize(self, size);
+	return self;
 }
 CBByteArray * CBNewByteArraySubReference(CBByteArray * ref, uint32_t offset, uint32_t length){
 	CBByteArray * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewByteArraySubReference\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if(CBInitByteArraySubReference(self, ref, offset, length))
-		return self;
-	free(self);
-	return NULL;
+	CBInitByteArraySubReference(self, ref, offset, length);
+	return self;
 }
 CBByteArray * CBNewByteArrayWithData(uint8_t * data, uint32_t size){
 	CBByteArray * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewByteArrayWithData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if(CBInitByteArrayWithData(self, data, size))
-		return self;
-	free(self);
-	return NULL;
+	CBInitByteArrayWithData(self, data, size);
+	return self;
 }
 CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data, uint32_t size){
 	CBByteArray * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewByteArrayWithDataCopy\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeByteArray;
-	if(CBInitByteArrayWithDataCopy(self, data, size))
-		return self;
-	free(self);
-	return NULL;
+	CBInitByteArrayWithDataCopy(self, data, size);
+	return self;
 }
 
 //  Object Getter
@@ -88,88 +58,49 @@ CBByteArray * CBGetByteArray(void * self){
 //  Initialisers
 
 
-bool CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator){
+	CBInitObject(CBGetObject(self));
 	self->length = (uint32_t)(strlen(string) + terminator);
 	self->sharedData = malloc(sizeof(*self->sharedData));
-	if (NOT self->sharedData) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayFromString for the sharedData structure.\n", sizeof(*self->sharedData));
-		return false;
-	}
 	self->sharedData->data = malloc(self->length);
-	if (NOT self->sharedData->data) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayFromString for the shared data.\n", self->length);
-		return false;
-	}
 	self->sharedData->references = 1;
 	self->offset = 0;
 	memmove(self->sharedData->data, string, self->length);
-	return true;
 }
-bool CBInitByteArrayOfSize(CBByteArray * self, uint32_t size){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size){
+	CBInitObject(CBGetObject(self));
 	self->length = size;
 	self->offset = 0;
-	if (NOT size){
+	if (size){
+		self->sharedData = malloc(sizeof(*self->sharedData));
+		self->sharedData->references = 1;
+		self->sharedData->data = malloc(size);
+	}else
 		self->sharedData = NULL;
-		return true;
-	}
-	self->sharedData = malloc(sizeof(*self->sharedData));
-	if (NOT self->sharedData) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayOfSize for the sharedData structure.\n", sizeof(*self->sharedData));
-		return false;
-	}
-	self->sharedData->references = 1;
-	self->sharedData->data = malloc(size);
-	if (NOT self->sharedData->data) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayOfSize for the shared data.\n", size);
-		return false;
-	}
-	return true;
 }
-bool CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t offset, uint32_t length){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t offset, uint32_t length){
+	CBInitObject(CBGetObject(self));
 	self->sharedData = ref->sharedData;
 	self->sharedData->references++; // Since a new reference to the shared data is being made, an increase in the reference count must be made.
 	self->length = length;
 	self->offset = ref->offset + offset;
-	return true;
 }
-bool CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size){
+	CBInitObject(CBGetObject(self));
 	self->sharedData = malloc(sizeof(*self->sharedData));
-	if (NOT self->sharedData) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayWithData for the sharedData structure.\n", sizeof(*self->sharedData));
-		return false;
-	}
 	self->sharedData->data = data;
 	self->sharedData->references = 1;
 	self->length = size;
 	self->offset = 0;
-	return true;
 }
-bool CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t size){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t size){
+	CBInitObject(CBGetObject(self));
 	self->sharedData = malloc(sizeof(*self->sharedData));
-	if (NOT self->sharedData) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayWithDataCopy for the sharedData structure.\n", sizeof(*self->sharedData));
-		return false;
-	}
 	self->sharedData->data = malloc(size);
-	if (NOT self->sharedData->data) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInitByteArrayWithDataCopy for the shared data.\n", size);
-		return false;
-	}
 	memmove(self->sharedData->data, data, size);
 	self->sharedData->references = 1;
 	self->length = size;
 	self->offset = 0;
-	return true;
 }
 
 //  Destructor
@@ -208,8 +139,6 @@ CBCompare CBByteArrayCompare(CBByteArray * self, CBByteArray * second){
 }
 CBByteArray * CBByteArrayCopy(CBByteArray * self){
 	CBByteArray * new = CBNewByteArrayOfSize(self->length);
-	if (NOT new)
-		return NULL;
 	memmove(new->sharedData->data, self->sharedData->data + self->offset, self->length);
 	return new;
 }
@@ -286,8 +215,6 @@ void CBByteArrayChangeReference(CBByteArray * self, CBByteArray * ref, uint32_t 
 }
 CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t length){
 	CBByteArray * new = CBNewByteArrayOfSize(length);
-	if (NOT new)
-		return NULL;
 	memcpy(new->sharedData->data, self->sharedData->data + self->offset + offset, length);
 	return new;
 }

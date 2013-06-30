@@ -17,15 +17,13 @@
 uint64_t CBCalculateBlockReward(uint64_t blockHeight){
 	return (50 * CB_ONE_BITCOIN) >> (blockHeight / 210000);
 }
-bool CBCalculateBlockWork(CBBigInt * work, uint32_t target){
+void CBCalculateBlockWork(CBBigInt * work, uint32_t target){
 	// Get the base-256 exponent and the mantissa.
 	uint8_t zeroBytes = target >> 24;
 	target &= 0x00FFFFFF;
 	// Allocate CBBigInt data
 	work->length = 32;
 	CBBigIntAlloc(work, work->length);
-	if (NOT work->data)
-		return false;
 	memset(work->data, 0, 32);
 	// Do base-4294967296 long division and adjust for trailing zeros in target.
 	uint64_t temp = 0x01000000;
@@ -37,7 +35,7 @@ bool CBCalculateBlockWork(CBBigInt * work, uint32_t target){
 			work->data[i] = workSeg >> ((3 - y) * 8);
 			if (NOT i){
 				CBBigIntNormalise(work);
-				return true;
+				return;
 			}
 			i--;
 		}

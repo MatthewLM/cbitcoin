@@ -44,7 +44,6 @@ typedef enum{
 typedef enum{
 	CB_TX_HASH_OK, /**< Transaction hash was made OK */
 	CB_TX_HASH_BAD, /**< The transaction is invalid and a hash cannot be made. */
-	CB_TX_HASH_ERR /**< An error occured while making the hash. */
 } CBGetHashReturn;
 
 /*
@@ -52,9 +51,8 @@ typedef enum{
  */
 typedef enum{
 	CB_SCRIPT_TRUE, /**< Script validates as true. */
-	CB_SCRIPT_FALSE, /**< Script validates as true. */
+	CB_SCRIPT_FALSE, /**< Script validates as false. */
 	CB_SCRIPT_INVALID, /**< Script does not validate */
-	CB_SCRIPT_ERR /**< An error occured, do not assume validatity and handle the error. */
 } CBScriptExecuteReturn;
 
 typedef enum{
@@ -375,7 +373,7 @@ CBScriptStackItem CBScriptStackPopItem(CBScriptStack * stack);
  @param stack A pointer to the stack to push data onto.
  @param data The item to push on the stack.
  */
-bool CBScriptStackPushItem(CBScriptStack * stack, CBScriptStackItem item);
+void CBScriptStackPushItem(CBScriptStack * stack, CBScriptStackItem item);
 /**
  @brief Removes top item from the stack.
  @param stack A pointer to the stack to remove the data.

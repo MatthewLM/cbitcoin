@@ -71,9 +71,8 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteA
  @param bytes The bytes for the CBVersionChecksumBytes object.
  @param size The size of the byte data.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @returns true on success, false on failure.
  */
-bool CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString);
+void CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString);
 
 /**
  @brief Release and free all of the objects stored by the CBVersionChecksumBytes object.

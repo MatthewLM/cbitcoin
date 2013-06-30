@@ -41,9 +41,8 @@ uint64_t CBCalculateBlockReward(uint64_t blockHeight);
  @brief Calculates the block work which is 256^31 divided by the target
  @param work The block work to be created as a CBBigInt.
  @param target The target to calculate the work for.
- @returns true on success, false on failure.
  */
-bool CBCalculateBlockWork(CBBigInt * work, uint32_t target);
+void CBCalculateBlockWork(CBBigInt * work, uint32_t target);
 /**
  @brief Calculates the merkle root from a list of hashes.
  @param hashes The hashes stored as continuous byte data with each 32 byte hash after each other. The data pointed to by "hashes" will be modified and will result in the merkle root as the first 32 bytes.

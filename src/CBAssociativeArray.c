@@ -15,15 +15,16 @@
 //  SEE HEADER FILE FOR DOCUMENTATION ??? Many optimisations can be done here.
 
 #include "CBAssociativeArray.h"
+#include "CBDependencies.h"
 #include <assert.h>
 
-bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, void * minElement, void * maxElement, CBRangeIterator * it){
-	// Assign the range to the iterator object
-	it->minElement = minElement;
-	it->maxElement = maxElement;
+bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it){
 	// Try to find the minimum element
-	CBFindResult res = CBAssociativeArrayFind(self, minElement);
+	CBFindResult res = CBAssociativeArrayFind(self, it->minElement);
 	if (NOT res.found) {
+		if (res.position.node->numElements == 0)
+			// There are no elements
+			return false;
 		// If we are past the end of the node's elements, go back onto the previous element, and then iterate.
 		if (res.position.index == res.position.node->numElements) {
 			res.position.index--;
@@ -34,7 +35,7 @@ bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, void * minE
 		}
 		// Else we have landed on the element after the minimum element.
 		// Check that the element is below or equal to the maximum
-		if (self->compareFunc(CBFindResultToPointer(res), maxElement) == CB_COMPARE_MORE_THAN)
+		if (self->compareFunc(CBFindResultToPointer(res), it->maxElement) == CB_COMPARE_MORE_THAN)
 			// The element is above the maximum so return false
 			return false;
 	}
@@ -73,8 +74,8 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 			for (;;){
 				// We have a parent so we can check siblings.
 				// First find the position of this node in the parent. ??? Worth additional pointers?
-				// Search for second key in case the first has been taken by the parent.
-				uint8_t parentPosition = CBBTreeNodeBinarySearch(parent, pos.node->elements[1], self->compareFunc).position.index;
+				// Search for second key in case the first has been taken by the parent, unless second key is deleted in which case use third.
+				uint8_t parentPosition = CBBTreeNodeBinarySearch(parent, pos.node->elements[(pos.index == 1) ? 2 : 1], self->compareFunc).position.index;
 				CBBTreeNode * left = NULL;
 				CBBTreeNode * right = NULL;
 				if (parentPosition) {
@@ -270,7 +271,7 @@ bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it){
 	it->index = it->node->numElements - 1;
 	return true;
 }
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right){
+void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right){
 	// See if we can insert data in this node
 	if (pos.node->numElements < CB_BTREE_ELEMENTS) {
 		// Yes we can, do that.
@@ -286,12 +287,10 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		// Increase number of elements
 		pos.node->numElements++;
 		// The element has been added, we can stop here.
-		return true;
+		return;
 	}else{
 		// Nope, we need to split this node into two.
 		CBBTreeNode * new = malloc(sizeof(*new));
-		if (NOT new)
-			return false;
 		// Make both sides have half the order.
 		new->numElements = CB_BTREE_HALF_ELEMENTS;
 		pos.node->numElements = CB_BTREE_HALF_ELEMENTS;
@@ -391,8 +390,6 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		if (NOT pos.node->parent) {
 			// Create new root
 			self->root = malloc(sizeof(*self->root));
-			if (NOT self)
-				return false;
 			self->root->numElements = 0;
 			self->root->parent = NULL;
 			pos.node->parent = self->root;
@@ -403,7 +400,7 @@ bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		// Find position of value in parent and then insert.
 		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKeyValue, self->compareFunc);
 		res.position.node = pos.node->parent;
-		return CBAssociativeArrayInsert(self, midKeyValue, res.position, new);
+		CBAssociativeArrayInsert(self, midKeyValue, res.position, new);
 	}
 }
 bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it){
@@ -488,17 +485,14 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
 	}else
 		free(self);
 }
-bool CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *)){
+void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *)){
 	self->root = malloc(sizeof(*self->root));
-	if (NOT self)
-		return false;
 	self->root->parent = NULL;
 	self->root->numElements = 0;
 	for (uint8_t x = 0; x < CB_BTREE_ELEMENTS + 1; x++)
 		self->root->children[x] = NULL;
 	self->compareFunc = compareFunc;
 	self->onFree = onFree;
-	return true;
 }
 CBCompare CBKeyCompare(void * key1, void * key2){
 	if (*(uint8_t *)key1 > *(uint8_t *)key2)

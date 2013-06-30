@@ -57,12 +57,19 @@ void CBLogError(char * format, ...){
 }
 
 int main(){
-	remove("./blk_log.dat");
-	remove("./blk_0.dat");
-	remove("./blk_1.dat");
-	remove("./blk_2.dat");
+	remove("./blk/log.dat");
+	remove("./blk/del.dat");
+	remove("./blk/idx_0_0.dat");
+	remove("./blk/idx_1_0.dat");
+	remove("./blk/idx_2_0.dat");
+	remove("./blk/idx_3_0.dat");
+	remove("./blk/idx_4_0.dat");
+	remove("./blk/idx_5_0.dat");
+	remove("./blk/idx_6_0.dat");
+	remove("./blk/val_0.dat");
 	// Create validator
-	uint64_t storage = CBNewBlockChainStorage("./");
+	CBDepObject storage;
+	CBNewBlockChainStorage(&storage, "./");
 	CBValidator * validator = CBNewValidator(storage, 0);
 	if (NOT validator) {
 		printf("VALIDATOR INIT FAIL\n");
@@ -71,7 +78,7 @@ int main(){
 	CBReleaseObject(validator);
 	CBFreeBlockChainStorage(storage);
 	// Now create it again. It should load the data.
-	storage = CBNewBlockChainStorage("./");
+	CBNewBlockChainStorage(&storage, "./");
 	validator = CBNewValidator(storage, 0);
 	if (NOT validator) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
@@ -238,7 +245,7 @@ int main(){
 	// Check validator data is correct, after closing and loading data
 	CBReleaseObject(validator);
 	CBFreeBlockChainStorage(storage);
-	storage = CBNewBlockChainStorage("./");
+	CBNewBlockChainStorage(&storage, "./");
 	validator = CBNewValidator(storage, 0);
 	if (NOT validator){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
@@ -481,10 +488,6 @@ int main(){
 				printf("REORG FAIL AT %u\n", y);
 				return 1;
 			}
-			if (res.data.reorgData.blockHeight != 1) {
-				printf("REORG BLOCK HEIGHT FAIL AT %u\n", y);
-				return 1;
-			}
 			if (res.data.reorgData.start.chainPathIndex != 0) {
 				printf("REORG START CHAIN PATH INDEX FAIL AT %u\n", y);
 				return 1;
@@ -518,7 +521,7 @@ int main(){
 				printf("MAIN WITH ORPHANS FAIL AT %u\n", y);
 				return 1;
 			}
-			if (res.data.numOrphansAdded != 20) {
+			if (res.data.orphansAdded.numOrphansAdded != 20) {
 				printf("MAIN WITH ORPHANS NUM ADDED FAIL AT %u\n", y);
 				return 1;
 			}
@@ -1243,7 +1246,7 @@ int main(){
 	}
 	CBReleaseObject(validator);
 	CBFreeBlockChainStorage(storage);
-	storage = CBNewBlockChainStorage("./");
+	CBNewBlockChainStorage(&storage, "./");
 	validator = CBNewValidator(storage, 0);
 	if (NOT validator) {
 		printf("LOAD VALIDATOR WITH ORPHAN FAIL\n");

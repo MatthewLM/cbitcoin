@@ -102,8 +102,7 @@ CBPeer * CBGetPeer(void * self);
 /**
  @brief Initialises a CBPeer object
  @param self The CBPeer object to initialise
- @returns true on success, false on failure.
  */
-bool CBInitPeerByTakingNetworkAddress(CBPeer * self);
+void CBInitPeerByTakingNetworkAddress(CBPeer * self);
 
 #endif

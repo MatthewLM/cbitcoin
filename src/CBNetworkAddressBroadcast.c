@@ -20,27 +20,15 @@
 
 CBNetworkAddressBroadcast * CBNewNetworkAddressBroadcast(bool timeStamps){
 	CBNetworkAddressBroadcast * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddressBroadcast\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeNetworkAddressBroadcast;
-	if (CBInitNetworkAddressBroadcast(self, timeStamps))
-		return self;
-	free(self);
-	return NULL;
+	CBInitNetworkAddressBroadcast(self, timeStamps);
+	return self;
 }
 CBNetworkAddressBroadcast * CBNewNetworkAddressBroadcastFromData(CBByteArray * data, bool timeStamps){
 	CBNetworkAddressBroadcast * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewNetworkAddressBroadcast\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeNetworkAddressBroadcast;
-	if (CBInitNetworkAddressBroadcastFromData(self, timeStamps, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitNetworkAddressBroadcastFromData(self, timeStamps, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,21 +39,17 @@ CBNetworkAddressBroadcast * CBGetNetworkAddressBroadcast(void * self){
 
 //  Initialisers
 
-bool CBInitNetworkAddressBroadcast(CBNetworkAddressBroadcast * self, bool timeStamps){
+void CBInitNetworkAddressBroadcast(CBNetworkAddressBroadcast * self, bool timeStamps){
 	self->timeStamps = timeStamps;
 	self->addrNum = 0;
 	self->addresses = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitNetworkAddressBroadcastFromData(CBNetworkAddressBroadcast * self, bool timeStamps, CBByteArray * data){
+void CBInitNetworkAddressBroadcastFromData(CBNetworkAddressBroadcast * self, bool timeStamps, CBByteArray * data){
 	self->timeStamps = timeStamps;
 	self->addrNum = 0;
 	self->addresses = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -83,9 +67,9 @@ void CBFreeNetworkAddressBroadcast(void * self){
 
 //  Functions
 
-bool CBNetworkAddressBroadcastAddNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address){
+void CBNetworkAddressBroadcastAddNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address){
 	CBRetainObject(address);
-	return CBNetworkAddressBroadcastTakeNetworkAddress(self, address);
+	CBNetworkAddressBroadcastTakeNetworkAddress(self, address);
 }
 uint32_t CBNetworkAddressBroadcastDeserialise(CBNetworkAddressBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -103,10 +87,6 @@ uint32_t CBNetworkAddressBroadcastDeserialise(CBNetworkAddressBroadcast * self){
 		return 0;
 	}
 	self->addresses = malloc(sizeof(*self->addresses) * (size_t)num.val);
-	if (NOT self->addresses) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNetworkAddressBroadcastDeserialise\n", sizeof(*self->addresses) * (size_t)num.val);
-		return 0;
-	}
 	self->addrNum = num.val;
 	uint16_t cursor = num.size;
 	for (uint8_t x = 0; x < num.val; x++) {
@@ -188,13 +168,9 @@ uint32_t CBNetworkAddressBroadcastSerialise(CBNetworkAddressBroadcast * self, bo
 	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
-bool CBNetworkAddressBroadcastTakeNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address){
+void CBNetworkAddressBroadcastTakeNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address){
 	self->addrNum++;
 	CBNetworkAddress ** temp = realloc(self->addresses, sizeof(*self->addresses) * self->addrNum);
-	if (NOT temp) {
-		return false;
-	}
 	self->addresses = temp;
 	self->addresses[self->addrNum-1] = address;
-	return true;
 }

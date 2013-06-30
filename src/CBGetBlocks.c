@@ -20,27 +20,15 @@
 
 CBGetBlocks * CBNewGetBlocks(uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash){
 	CBGetBlocks * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewGetBlocks\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeGetBlocks;
-	if(CBInitGetBlocks(self, version, chainDescriptor, stopAtHash))
-		return self;
-	free(self);
-	return NULL;
+	CBInitGetBlocks(self, version, chainDescriptor, stopAtHash);
+	return self;
 }
 CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data){
 	CBGetBlocks * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewGetBlocksFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeGetBlocks;
-	if(CBInitGetBlocksFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitGetBlocksFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,22 +39,18 @@ CBGetBlocks * CBGetGetBlocks(void * self){
 
 //  Initialisers
 
-bool CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash){
+void CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash){
 	self->version = version;
 	self->chainDescriptor = chainDescriptor;
 	CBRetainObject(chainDescriptor);
 	self->stopAtHash = stopAtHash;
 	CBRetainObject(stopAtHash);
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data){
+void CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data){
 	self->chainDescriptor = NULL;
 	self->stopAtHash = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -97,16 +81,7 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	// Deserialise the CBChainDescriptor
 	CBByteArray * data = CBByteArraySubReference(bytes, 4, bytes->length-4);
-	if (NOT data) {
-		CBLogError("Cannot create new CBByteArray in CBGetBlocksDeserialise for the chain descriptor.\n");
-		return 0;
-	}
 	self->chainDescriptor = CBNewChainDescriptorFromData(data);
-	if (NOT self->chainDescriptor){
-		CBLogError("Cannot create new CBChainDescriptor in CBGetBlocksDeserialise\n");
-		CBReleaseObject(data);
-		return 0;
-	}
 	uint16_t len = CBChainDescriptorDeserialise(self->chainDescriptor);
 	if (NOT len){
 		CBLogError("CBGetBlocks cannot be deserialised because of an error with the CBChainDescriptor.");

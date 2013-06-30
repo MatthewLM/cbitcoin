@@ -65,14 +65,14 @@ CBInventoryItem * CBGetInventoryItem(void * self);
  @param self The CBInventoryItem object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash);
+void CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash);
 /**
  @brief Initialises a CBInventoryItem object from serialised data
  @param self The CBInventoryItem object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data);
+void CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data);
 
 /**
  @brief Releases and frees all of the objects stored by the CBInventoryItem object.

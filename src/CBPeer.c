@@ -21,14 +21,8 @@
 CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr){
 	CBPeer * self = CBGetPeer(addr);
 	self = realloc(self, sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot reallocate to %i bytes of memory in CBNewNodeByTakingNetworkAddress\n", sizeof(*self));
-		return NULL;
-	}
-	if (CBInitPeerByTakingNetworkAddress(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitPeerByTakingNetworkAddress(self);
+	return self;
 }
 
 //  Object Getter
@@ -39,7 +33,7 @@ CBPeer * CBGetPeer(void * self){
 
 //  Initialiser
 
-bool CBInitPeerByTakingNetworkAddress(CBPeer * self){
+void CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->receive = NULL;
 	self->receivedHeader = false;
 	self->versionSent = false;
@@ -64,5 +58,4 @@ bool CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->requestedData = NULL;
 	self->advertisedData = 0;
 	self->branchWorkingOn = CB_PEER_NO_WORKING;
-	return true;
 }

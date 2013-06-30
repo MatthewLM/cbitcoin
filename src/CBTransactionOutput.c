@@ -20,39 +20,21 @@
 
 CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script){
 	CBTransactionOutput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionOutput\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeTransactionOutput;
-	if(CBInitTransactionOutput(self, value, script))
-		return self;
-	free(self);
-	return NULL;
+	CBInitTransactionOutput(self, value, script);
+	return self;
 }
 CBTransactionOutput * CBNewTransactionOutputTakeScript(uint64_t value, CBScript * script){
 	CBTransactionOutput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionOutputTakeScript\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeTransactionOutput;
-	if(CBInitTransactionOutputTakeScript(self, value, script))
-		return self;
-	free(self);
-	return NULL;
+	CBInitTransactionOutputTakeScript(self, value, script);
+	return self;
 }
 CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data){
 	CBTransactionOutput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionOutputFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeTransactionOutput;
-	if (CBInitTransactionOutputFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitTransactionOutputFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -63,25 +45,19 @@ CBTransactionOutput * CBGetTransactionOutput(void * self){
 
 //  Initialisers
 
-bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script){
+void CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script){
 	if (script)
 		CBRetainObject(script);
-	if (NOT CBInitTransactionOutputTakeScript(self, value, script))
-		return false;
-	return true;
+	CBInitTransactionOutputTakeScript(self, value, script);
 }
-bool CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script){
+void CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script){
 	self->scriptObject = script;
 	self->value = value;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data){
+void CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data){
 	self->scriptObject = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -141,10 +117,6 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->value = CBByteArrayReadInt64(bytes, 0);
 	self->scriptObject = CBNewScriptFromReference(bytes, 8 + scriptLen.size, (uint32_t) scriptLen.val);
-	if (NOT self->scriptObject){
-		CBLogError("Cannot create a new CBScript in CBTransactionOutputDeserialise");
-		return 0;
-	}
 	return reqLen;
 }
 bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash){

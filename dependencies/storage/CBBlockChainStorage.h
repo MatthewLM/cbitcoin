@@ -24,20 +24,6 @@
 #include "CBValidator.h"
 
 /**
- @brief The data storage components.
- */
-typedef enum{
-	CB_STORAGE_ORPHAN, /**< key = [CB_STORAGE_ORPHANS, orphanID] */
-	CB_STORAGE_VALIDATOR_INFO, /**< key = [CB_STORAGE_VALIDATOR_INFO] */
-	CB_STORAGE_BRANCH_INFO, /**< key = [CB_STORAGE_BRANCH_INFO, branchID] */
-	CB_STORAGE_BLOCK, /**< key = [CB_STORAGE_BLOCK, branchID, blockID * 4] */
-	CB_STORAGE_BLOCK_HASH_INDEX, /**< [CB_STORAGE_BLOCK_HASH_INDEX, hash * 20] Links to the block branch id and position. */
-	CB_STORAGE_WORK, /**< key = [CB_STORAGE_WORK, branchID] */
-	CB_STORAGE_UNSPENT_OUTPUT, /**< key = [CB_STORAGE_NUM_SPENT_OUTPUTS, hash * 32, outputID * 4] */
-	CB_STORAGE_TX_INDEX, /**< key = [CB_STORAGE_TX_INDEX, hash * 32] */
-} CBStorageParts;
-
-/**
  @brief The offsets to parts of the main validation data
  */
 typedef enum{
@@ -98,15 +84,28 @@ typedef enum{
 	CB_BLOCK_HASH_REF_INDEX = 1, 
 } CBBlockHashRefOffsets;
 
+// ??? Optimise smaller indices.
+typedef struct{
+	CBDatabase base;
+	CBDatabaseTransaction tx;
+	CBDatabaseIndex * orphanIndex; /**< key = [orphanID] */
+	CBDatabaseIndex * branchIndex; /**< key = [branchID] Also contains basic validator information  */
+	CBDatabaseIndex * blockIndex; /**< key = [branchID, blockID * 4] */
+	CBDatabaseIndex * blockHashIndex; /**< key = [hash * 20] Links to the block branch id and position. */
+	CBDatabaseIndex * branchWorkIndex; /**< key = [branchID] the work of  branch */
+	CBDatabaseIndex * unspentOutputIndex; /**< key = [hash * 32, outputID * 4] */
+	CBDatabaseIndex * txIndex; /**< key = [hash * 32] */
+} CBBlockChainStorage;
+
 // Other functions
 
 /**
  @brief Changes the number of unspent outputs for a transaction.
- @param database The database object.
+ @param storage The storage object
  @param txHash The hash of the transaction
  @param change This number will be added to the number of unspent outputs.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageChangeUnspentOutputsNum(CBDatabase * database, uint8_t * txHash, int8_t change);
+bool CBBlockChainStorageChangeUnspentOutputsNum(CBBlockChainStorage * storage, uint8_t * txHash, int8_t change);
 
 #endif

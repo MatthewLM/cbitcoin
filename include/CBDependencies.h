@@ -377,10 +377,10 @@ void CBFreeBlockChainStorage(CBDepObject iself);
 bool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
 /**
  @brief The data should be written to the disk atomically.
- @param iself The block-chain storage object.
+ @param self The block-chain storage object.
  @returns true on success and false on failure. cbitcoin will reload the storafe contents on failure. Storage systems should use recovery.
  */
-bool CBBlockChainStorageCommitData(CBDepObject iself);
+bool CBBlockChainStorageCommitData(CBDepObject self);
 /**
  @brief Deletes a block.
  @param validator A CBValidator object. The storage object can be found within this.

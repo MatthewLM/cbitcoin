@@ -56,16 +56,14 @@ CBPingPong * CBGetPingPong(void * self);
  @brief Initialises a CBPingPong object
  @param self The CBPingPong object to initialise
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
- @returns true on success, false on failure.
 */
-bool CBInitPingPong(CBPingPong * self, uint64_t ID);
+void CBInitPingPong(CBPingPong * self, uint64_t ID);
 /**
  @brief Initialises a CBPingPong object from serialised data
  @param self The CBPingPong object to initialise
  @param data The serialised data.
- @returns true on success, false on failure.
 */
-bool CBInitPingPongFromData(CBPingPong * self, CBByteArray * data);
+void CBInitPingPongFromData(CBPingPong * self, CBByteArray * data);
 
 /**
  @brief Release and free all of the objects stored by the CBPingPong object.

@@ -20,10 +20,6 @@
 
 CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags){
 	CBValidator * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewFullNode\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeValidator;
 	if (CBInitValidator(self, storage, flags))
 		return self;
@@ -41,8 +37,7 @@ CBValidator * CBGetValidator(void * self){
 //  Initialiser
 
 bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+	CBInitObject(CBGetObject(self));
 	self->storage = storage;
 	self->flags = flags;
 	// Check whether the database has been created.
@@ -102,19 +97,17 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 		// Create work CBBigInt
 		self->branches[0].work.length = 1;
 		self->branches[0].work.data = malloc(1);
-		if (NOT self->branches[0].work.data) {
-			CBLogError("Could not allocate 1 byte of memory for the initial branch work.");
-			return false;
-		}
 		self->branches[0].work.data[0] = 0;
 		// Write branch work
 		if (NOT CBBlockChainStorageSaveBranchWork(self, 0)) {
 			CBLogError("Could not save the initial work.");
+			free(self->branches[0].work.data);
 			return false;
 		}
 		// Now try to commit the data
 		if (NOT CBBlockChainStorageCommitData(storage)){
 			CBLogError("Could not commit initial block-chain data.");
+			free(self->branches[0].work.data);
 			return false;
 		}
 	}
@@ -221,8 +214,6 @@ CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock
 	if (NOT (self->flags & CB_VALIDATOR_HEADERS_ONLY)) {
 		// Calculate merkle root.
 		uint8_t * txHashes = CBBlockCalculateMerkleRoot(block);
-		if (NOT txHashes)
-			return CB_BLOCK_STATUS_ERROR;
 		// Check merkle root
 		int res = memcmp(txHashes, CBByteArrayGetData(block->merkleRoot), 32);
 		free(txHashes);
@@ -310,28 +301,17 @@ uint32_t CBValidatorGetBlockHeight(CBValidator * self){
 }
 CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self){
 	CBChainDescriptor * chainDesc = CBNewChainDescriptor();
-	if (NOT chainDesc) {
-		CBLogError("Could not create a new chain descriptor for the block chain");
-		return false;
-	}
 	uint32_t blockIndex = self->branches[self->mainBranch].numBlocks - 1;
 	uint8_t branch = self->mainBranch;
 	uint32_t step = 1, start = 0;
 	for (;; start++) {
 		// Add the block hash
 		CBByteArray * hash = CBNewByteArrayOfSize(32);
-		if (NOT hash) {
-			CBLogError("Could not create a new byte array for a hash for a chain descriptor.");
-			return false;
-		}
 		if (NOT CBBlockChainStorageGetBlockHash(self, branch, blockIndex, CBByteArrayGetData(hash))) {
 			CBLogError("Could not get a block hash from the storage for a chain descriptor.");
 			return false;
 		}
-		if (NOT CBChainDescriptorTakeHash(chainDesc, hash)){
-			CBLogError("Could not take a block hash into a chain descriptor.");
-			return false;
-		}
+		CBChainDescriptorTakeHash(chainDesc, hash);
 		// If this is the genesis block, break
 		if (self->branches[branch].startHeight == 0
 			&& blockIndex == 0)
@@ -399,7 +379,7 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 	// Create variable for the previous output reference.
 	CBPrevOut prevOutRef = block->transactions[transactionIndex]->inputs[inputIndex]->prevOut;
 	// Check that the previous output is not already spent by this block.
-	for (uint32_t a = 0; a < transactionIndex; a++)
+	for (uint32_t a = 1; a < transactionIndex; a++)
 		for (uint32_t b = 0; b < block->transactions[a]->inputNum; b++)
 			if (CBByteArrayCompare(prevOutRef.hash, block->transactions[a]->inputs[b]->prevOut.hash) == CB_COMPARE_EQUAL
 				&& prevOutRef.index == block->transactions[a]->inputs[b]->prevOut.index)
@@ -443,11 +423,6 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 	CBScriptStack stack = CBNewEmptyScriptStack();
 	// Execute the input script.
 	CBScriptExecuteReturn res = CBScriptExecute(block->transactions[transactionIndex]->inputs[inputIndex]->scriptObject, &stack, CBTransactionGetInputHashForSignature, block->transactions[transactionIndex], inputIndex, false);
-	if (res == CB_SCRIPT_ERR){
-		CBFreeScriptStack(stack);
-		CBReleaseObject(prevOut);
-		return CB_BLOCK_VALIDATION_ERR;
-	}
 	// Check is script is invalid, but for input scripts, do not care if false.
 	if (res == CB_SCRIPT_INVALID){
 		CBFreeScriptStack(stack);
@@ -466,10 +441,6 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 		}
 		// Since the output is a P2SH we include the serialised script in the signature operations
 		CBScript * p2shScript = CBNewScriptWithDataCopy(stack.elements[stack.length - 1].data, stack.elements[stack.length - 1].length);
-		if (NOT p2shScript) {
-			CBLogError("Could not create a P2SH script for counting sig ops.");
-			return CB_BLOCK_VALIDATION_ERR;
-		}
 		*sigOps += CBScriptGetSigOpCount(p2shScript, true);
 		if (*sigOps > CB_MAX_SIG_OPS){
 			CBFreeScriptStack(stack);
@@ -486,10 +457,7 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 	*value += prevOut->value;
 	CBReleaseObject(prevOut);
 	// Check the result of the output script
-	if (res == CB_SCRIPT_ERR)
-		return CB_BLOCK_VALIDATION_ERR;
-	if (res == CB_SCRIPT_INVALID
-		|| res == CB_SCRIPT_FALSE)
+	if (res != CB_SCRIPT_TRUE)
 		return CB_BLOCK_VALIDATION_BAD;
 	return CB_BLOCK_VALIDATION_OK;
 }
@@ -551,7 +519,7 @@ CBBlockProcessResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block
 					earliestBranch = x;
 				}
 			}
-			if (self->branches[earliestBranch].working == 0 || earliestBranch == self->mainBranch){
+			if (self->branches[earliestBranch].working || earliestBranch == self->mainBranch){
 				// Cannot overwrite branch
 				result.status = CB_BLOCK_STATUS_NO_NEW;
 				return result;
@@ -652,11 +620,7 @@ CBBlockProcessResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block
 		// Remove later block work down to the fork
 		for (uint32_t y = prevBlockIndex + 1; y < self->branches[prevBranch].numBlocks; y++) {
 			CBBigInt tempWork;
-			if (NOT CBCalculateBlockWork(&tempWork, prevBlockTarget)){
-				CBLogError("Could not calculate work.");
-				result.status = CB_BLOCK_STATUS_ERROR;
-				return result;
-			}
+			CBCalculateBlockWork(&tempWork, prevBlockTarget);
 			CBBigIntEqualsSubtractionByBigInt(&self->branches[branch].work, &tempWork);
 			free(tempWork.data); 
 		}
@@ -784,14 +748,8 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 	}
 	// Calculate total work
 	CBBigInt work;
-	if (NOT CBCalculateBlockWork(&work, block->target)){
-		result->status = CB_BLOCK_STATUS_ERROR;
-		return;
-	}
-	if (NOT CBBigIntEqualsAdditionByBigInt(&work, &self->branches[branch].work)){
-		result->status = CB_BLOCK_STATUS_ERROR;
-		return;
-	}
+	CBCalculateBlockWork(&work, block->target);
+	CBBigIntEqualsAdditionByBigInt(&work, &self->branches[branch].work);
 	if (branch != self->mainBranch) {
 		// Check if the block is adding to a side branch without becoming the main branch
 		if (CBBigIntCompareToBigInt(&work, &self->branches[self->mainBranch].work) != CB_COMPARE_MORE_THAN){
@@ -913,11 +871,6 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 				for (;;) {
 					// Get block to validate
 					CBBlock * tempBlock = CBBlockChainStorageLoadBlock(self, tempBlockIndex, tempBranch);
-					if (NOT tempBlock){
-						CBLogError("Could not load a block to validate during reorganisation.");
-						result->status = CB_BLOCK_STATUS_ERROR;
-						return;
-					}
 					if (NOT CBBlockDeserialise(tempBlock, true)){
 						CBLogError("Could not deserailise a block to validate during reorganisation.");
 						result->status = CB_BLOCK_STATUS_ERROR;

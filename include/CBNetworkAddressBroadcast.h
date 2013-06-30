@@ -62,14 +62,14 @@ CBNetworkAddressBroadcast * CBGetNetworkAddressBroadcast(void * self);
  @param self The CBNetworkAddressBroadcast object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitNetworkAddressBroadcast(CBNetworkAddressBroadcast * self, bool timeStamps);
+void CBInitNetworkAddressBroadcast(CBNetworkAddressBroadcast * self, bool timeStamps);
 /**
  @brief Initialises a CBNetworkAddressBroadcast object from serialised data
  @param self The CBNetworkAddressBroadcast object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitNetworkAddressBroadcastFromData(CBNetworkAddressBroadcast * self, bool timeStamps, CBByteArray * data);
+void CBInitNetworkAddressBroadcastFromData(CBNetworkAddressBroadcast * self, bool timeStamps, CBByteArray * data);
 
 /**
  @brief Release and free all of the objects stored by the CBNetworkAddressBroadcast object.
@@ -88,9 +88,8 @@ void CBFreeNetworkAddressBroadcast(void * self);
  @brief Adds a CBNetworkAddress to the list for broadcasting.
  @param self The CBNetworkAddressBroadcast object
  @param address The CBNetworkAddress to add.
- @returns true if the network address was added successfully, false if there was an error in doing so.
  */
-bool CBNetworkAddressBroadcastAddNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address);
+void CBNetworkAddressBroadcastAddNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address);
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBNetworkAddressBroadcast object.
@@ -114,8 +113,7 @@ uint32_t CBNetworkAddressBroadcastSerialise(CBNetworkAddressBroadcast * self, bo
  @brief Takes a CBNetworkAddress to the list for broadcasting. This does not retain the CBNetworkAddress so you can pass an CBNetworkAddress into this while releasing control in the calling function.
  @param self The CBNetworkAddressBroadcast object
  @param address The CBNetworkAddress to take.
- @returns true if the network address was taken successfully, false if there was an error in doing so.
  */
-bool CBNetworkAddressBroadcastTakeNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address);
+void CBNetworkAddressBroadcastTakeNetworkAddress(CBNetworkAddressBroadcast * self, CBNetworkAddress * address);
 
 #endif

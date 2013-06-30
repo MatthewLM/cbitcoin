@@ -648,8 +648,8 @@ int main(){
 		}
 	}
 	// Test range interation
-	CBRangeIterator rit;
-	if (NOT CBAssociativeArrayRangeIteratorStart(&array, minKey, maxKey, &rit)){
+	CBRangeIterator rit = {minKey, maxKey};
+	if (NOT CBAssociativeArrayRangeIteratorStart(&array, &rit)){
 		printf("RANGER INTERATOR START FAIL\n");
 		return 1;
 	}

@@ -70,16 +70,14 @@ CBVersion * CBGetVersion(void * self);
 /**
  @brief Initialises a CBVersion object
  @param self The CBVersion object to initialise
- @returns true on success, false on failure.
  */
-bool CBInitVersion(CBVersion * self, int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight);
+void CBInitVersion(CBVersion * self, int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight);
 /**
  @brief Initialises a new CBVersion object from serialised data.
  @param self The CBVersion object to initialise
  @param data A CBByteArray holding the serialised data.
- @returns true on success, false on failure.
  */
-bool CBInitVersionFromData(CBVersion * self, CBByteArray * data);
+void CBInitVersionFromData(CBVersion * self, CBByteArray * data);
 
 /**
  @brief Release and free the objects stored by the CBVersion object.

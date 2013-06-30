@@ -20,22 +20,12 @@
 
 CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, uint8_t networkCode, bool cacheString){
 	CBAddress * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewAddressFromRIPEMD160Hash\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeAddress;
-	if (CBInitAddressFromRIPEMD160Hash(self, networkCode, hash, cacheString))
-		return self;
-	free(self);
-	return NULL;
+	CBInitAddressFromRIPEMD160Hash(self, networkCode, hash, cacheString);
+	return self;
 }
 CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
 	CBAddress * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewAddressFromString\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeAddress;
 	if (CBInitAddressFromString(self, string, cacheString))
 		return self;
@@ -51,13 +41,9 @@ CBAddress * CBGetAddress(void * self){
 
 //  Initialiser
 
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString){
+void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString){
 	// Build address and then complete intitialisation with CBVersionChecksumBytes
 	uint8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
-	if (NOT data) {
-		CBLogError("Cannot allocate 25 bytes of memory in CBInitAddressFromRIPEMD160Hash\n");
-		return false;
-	}
 	// Set network byte
 	data[0] = networkCode;
 	// Move hash
@@ -69,9 +55,7 @@ bool CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8
 	CBSha256(checksum, 32, checksum2);
 	memmove(data+21, checksum2, 4);
 	// Initialise CBVersionChecksumBytes
-	if (NOT CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25, cacheString))
-		return false;
-	return true;
+	CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25, cacheString);
 }
 bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheString){
 	if (NOT CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, cacheString))

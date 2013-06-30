@@ -118,8 +118,6 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 	event_base_add_virtual(base);
 	// Create arguments for the loop
 	CBEventLoop * loop = malloc(sizeof(*loop));
-	if (NOT loop)
-		return false;
 	loop->base = base;
 	loop->onError = onError;
 	loop->onTimeOut = onDidTimeout;
@@ -134,7 +132,7 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 		// Thread creation failed.
 		pthread_attr_destroy(&attr);
 		event_base_free(base);
-		return 0;
+		return false;
 	}
 	pthread_attr_destroy(&attr);
 	loopID->ptr = loop;
@@ -154,17 +152,11 @@ void * CBStartEventLoop(void * vloop){
 }
 bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanAccept)(void *, CBDepObject)){
 	CBEvent * event = malloc(sizeof(*event));
-	if (NOT event)
-		return false;
 	event->loop = loopID.ptr;
 	event->onEvent.i = onCanAccept;
 	event->event = event_new(event->loop->base, (evutil_socket_t)socketID.i, EV_READ|EV_PERSIST, CBCanAccept, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
 	eventID->ptr = event;
-	return event;
+	return true;
 }
 void CBCanAccept(evutil_socket_t socketID, short eventNum, void * arg){
 	CBEvent * event = arg;
@@ -174,18 +166,12 @@ void CBCanAccept(evutil_socket_t socketID, short eventNum, void * arg){
 }
 bool CBSocketDidConnectEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onDidConnect)(void *, void *), void * peer){
 	CBEvent * event = malloc(sizeof(*event));
-	if (NOT event)
-		return false;
 	event->loop = loopID.ptr;
 	event->onEvent.ptr = onDidConnect;
 	event->peer = peer;
 	event->event = event_new(event->loop->base, (evutil_socket_t)socketID.i, EV_TIMEOUT|EV_WRITE, CBDidConnect, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
 	eventID->ptr = event;
-	return event;
+	return true;
 }
 void CBDidConnect(evutil_socket_t socketID, short eventNum, void * arg){
 	CBEvent * event = arg;
@@ -206,18 +192,12 @@ void CBDidConnect(evutil_socket_t socketID, short eventNum, void * arg){
 }
 bool CBSocketCanSendEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanSend)(void *, void *), void * peer){
 	CBEvent * event = malloc(sizeof(*event));
-	if (NOT event)
-		return false;
 	event->loop = loopID.ptr;
 	event->onEvent.ptr = onCanSend;
 	event->peer = peer;
 	event->event = event_new(event->loop->base, (evutil_socket_t)socketID.i, EV_TIMEOUT|EV_WRITE|EV_PERSIST, CBCanSend, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
 	eventID->ptr = event;
-	return event;
+	return true;
 }
 void CBCanSend(evutil_socket_t socketID, short eventNum, void * arg){
 	CBEvent * event = arg;
@@ -231,18 +211,12 @@ void CBCanSend(evutil_socket_t socketID, short eventNum, void * arg){
 }
 bool CBSocketCanReceiveEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanReceive)(void *, void *), void * peer){
 	CBEvent * event = malloc(sizeof(*event));
-	if (NOT event)
-		return false;
 	event->loop = loopID.ptr;
 	event->onEvent.ptr = onCanReceive;
 	event->peer = peer;
 	event->event = event_new(event->loop->base, (evutil_socket_t)socketID.i, EV_TIMEOUT|EV_READ|EV_PERSIST, CBCanReceive, event);
-	if (NOT event->event) {
-		free(event);
-		event = 0;
-	}
 	eventID->ptr = event;
-	return event;
+	return true;
 }
 void CBCanReceive(evutil_socket_t socketID, short eventNum, void * arg){
 	CBEvent * event = arg;
@@ -297,15 +271,9 @@ int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len){
 }
 bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint16_t time, void (*callback)(void *), void * arg){
 	CBTimer * theTimer = malloc(sizeof(*theTimer));
-	if (NOT theTimer)
-		return false;
 	theTimer->callback = callback;
 	theTimer->arg = arg;
 	theTimer->timer = event_new(((CBEventLoop *)loopID.ptr)->base, -1, EV_PERSIST, CBFireTimer, theTimer);
-	if (NOT theTimer->timer) {
-		free(theTimer);
-		theTimer = 0;
-	}
 	timer->ptr = theTimer;
 	int res;
 	if (time) {

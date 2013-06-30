@@ -64,11 +64,6 @@ CBTransactionInput * CBNewTransactionInputTakeScriptAndHash(CBScript * script, u
  @returns A new CBTransactionInput object.
  */
 CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data);
-/**
- @brief Creates a new unsigned CBTransactionInput object and links it to a given output.
- @returns A new CBTransactionInput object.
- */
-CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 
 /**
  @brief Gets a CBTransactionInput from another object. Use this to avoid casts.
@@ -82,26 +77,20 @@ CBTransactionInput * CBGetTransactionInput(void * self);
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+void CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 /**
  @brief Initialises a CBTransactionInput object and does not retain the prevOutHash and script.
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+void CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise
  @param data The byte data.
  @returns true on success, false on failure.
  */
-bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data);
-/**
- @brief Initialises an unsigned CBTransactionInput object.
- @param self The CBTransactionInput object to initialise
- @returns true on success, false on failure.
- */
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+void CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data);
 
 /**
  @brief Release and free the objects stored by the CBTransactionInput object.

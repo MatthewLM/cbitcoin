@@ -80,12 +80,10 @@ typedef struct{
 /**
  @brief Starts the iteration between two elements
  @param self The array object
- @param minElement The minimum element in the range.
- @param maxElement The maximum element in the range.
  @param it The iterator object.
  @returns true if an initial element has been found, or false if there are no elements to be found.
  */
-bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, void * minElement, void * maxElement, CBRangeIterator * it);
+bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it);
 /**
  @brief Iterates to the next element.
  @param self The array object
@@ -147,9 +145,8 @@ bool CBAssociativeArrayGet(CBAssociativeArray * self, CBPosition * it);
  @param element The key-value pair to insert.
  @param pos The position to insert data.
  @oaram right The child to the right of the value we are inserting, which will be a new child from a split or NULL for a new value.
- @returns true on success and false on failure.
  */
-bool CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right);
+void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right);
 /**
  @brief Iterates to the next element, in order.
  @param self The array object.
@@ -194,9 +191,8 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
  @param self The array object
  @param compareFunc The comparison function to use.
  @param onFree Called for each element in the array when CBFreeAssociativeArray is called. The arguement is the element. If assigned to NULL, instead nothing will happen.
- @returns true on success and false on failure.
  */
-bool CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *));
+void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *));
 /**
  @brief The default key comparison function. Reads the first byte in each key as the length, and then compares both keys fromt he remaining data.
  @param key1 The first key.

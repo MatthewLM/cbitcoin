@@ -92,42 +92,37 @@ CBByteArray * CBGetByteArray(void * self);
  @brief Initialises a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.
  @param self The CBByteArray object to initialise
  @param string The string to put into a CBByteArray.
- @param terminator If tru, include the termination character.
- @returns true on success, false on failure.
+ @param terminator If true, include the termination character.
  */
-bool CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator);
+void CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator);
 /**
  @brief Initialises an empty CBByteArray object
  @param self The CBByteArray object to initialise
  @param size Size in bytes for the new array.
- @returns true on success, false on failure.
  */
-bool CBInitByteArrayOfSize(CBByteArray * self, uint32_t size);
+void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size);
 /**
  @brief Initialises a reference CBByteArray to a subsection of an CBByteArray.
  @param self The CBByteArray object to initialise.
  @param ref The CBByteArray object to reference.
  @param offset The offset to the start of the reference.
  @param length The length of the reference.
- @returns true on success, false on failure.
  */
-bool CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t offset, uint32_t length);
+void CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t offset, uint32_t length);
 /**
  @brief Creates a new CBByteArray using data.
  @param self The CBByteArray object to initialise
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
  @param size Size in bytes for the new array.
- @returns true on success, false on failure.
  */
-bool CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size);
+void CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size);
 /**
  @brief Creates a new CBByteArray using data which is copied.
  @param self The CBByteArray object to initialise
  @param data The data. This data is copied.
  @param size Size in bytes for the new array.
- @returns true on success, false on failure.
  */
-bool CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t size);
+void CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t size);
 
 /**
  @brief Releases and frees all fo the objects stored by the CBByteArray object.

@@ -61,9 +61,8 @@ CBAddress * CBGetAddress(void * self);
  @param network A CBNetworkParameters object with the network information.
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
- @returns true on success, false on failure.
  */
-bool CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString);
+void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString);
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.

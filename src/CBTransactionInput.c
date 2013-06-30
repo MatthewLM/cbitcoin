@@ -20,51 +20,21 @@
 
 CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
 	CBTransactionInput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionInput\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	if (CBInitTransactionInput(self, script, sequence, prevOutHash, prevOutIndex))
-		return self;
-	free(self);
-	return NULL;
+	CBInitTransactionInput(self, script, sequence, prevOutHash, prevOutIndex);
+	return self;
 }
 CBTransactionInput * CBNewTransactionInputTakeScriptAndHash(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
 	CBTransactionInput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionInputTakeScriptAndHash\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	if (CBInitTransactionInputTakeScriptAndHash(self, script, sequence, prevOutHash, prevOutIndex))
-		return self;
-	free(self);
-	return NULL;
+	CBInitTransactionInputTakeScriptAndHash(self, script, sequence, prevOutHash, prevOutIndex);
+	return self;
 }
 CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data){
 	CBTransactionInput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewTransactionInputFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeTransactionInput;
-	if (CBInitTransactionInputFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
-}
-CBTransactionInput * CBNewUnsignedTransactionInput(uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
-	CBTransactionInput * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewUnsignedTransactionInput\n", sizeof(*self));
-		return NULL;
-	}
-	CBGetObject(self)->free = CBFreeTransactionInput;
-	if(CBInitUnsignedTransactionInput(self, sequence, prevOutHash, prevOutIndex))
-		return self;
-	free(self);
-	return NULL;
+	CBInitTransactionInputFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -75,39 +45,23 @@ CBTransactionInput * CBGetTransactionInput(void * self){
 
 //  Initialisers
 
-bool CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
+void CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
 	if (script)
 		CBRetainObject(script);
 	CBRetainObject(prevOutHash);
-	if (NOT CBInitTransactionInputTakeScriptAndHash(self, script, sequence, prevOutHash, prevOutIndex))
-		return false;
-	return true;
+	CBInitTransactionInputTakeScriptAndHash(self, script, sequence, prevOutHash, prevOutIndex);
 }
-bool CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
+void CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
 	self->scriptObject = script;
 	self->prevOut.hash = prevOutHash;
 	self->prevOut.index = prevOutIndex;
 	self->sequence = sequence;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data){
+void CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * data){
 	self->scriptObject = NULL;
 	self->prevOut.hash = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
-}
-bool CBInitUnsignedTransactionInput(CBTransactionInput * self, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){
-	self->scriptObject = NULL;
-	self->prevOut.hash = prevOutHash;
-	CBRetainObject(prevOutHash);
-	self->prevOut.index = prevOutIndex;
-	self->sequence = sequence;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -154,17 +108,8 @@ uint32_t CBTransactionInputDeserialise(CBTransactionInput * self){
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->prevOut.hash = CBByteArraySubReference(bytes, 0, 32);
-	if (NOT self->prevOut.hash){
-		CBLogError("Cannot create a new CBByteArray in CBTransactionInputDeserialise");
-		return 0;
-	}
 	self->prevOut.index = CBByteArrayReadInt32(bytes, 32);
 	self->scriptObject = CBNewScriptFromReference(bytes, 36 + scriptLen.size, (uint32_t) scriptLen.val);
-	if (NOT self->scriptObject) {
-		CBLogError("Cannot create a new CBScript in CBTransactionInputDeserialise");
-		CBReleaseObject(self->prevOut.hash);
-		return 0;
-	}
 	self->sequence = CBByteArrayReadInt32(bytes, (uint32_t) (36 + scriptLen.size + scriptLen.val));
 	return reqLen;
 }

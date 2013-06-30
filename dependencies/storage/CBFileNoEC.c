@@ -17,66 +17,62 @@
 #include "CBFileEC.h"
 
 bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen){
-	FILE * fileObj = file.ptr;
-	long pos = ftell(fileObj);
-	if (fseek(fileObj, 0, SEEK_END)
-		|| fwrite(data, 1, dataLen, fileObj) != dataLen
-		|| fseek(fileObj, pos, SEEK_SET))
+	long pos = ftell(file.ptr);
+	if (fseek(file.ptr, 0, SEEK_END)
+		|| fwrite(data, 1, dataLen, file.ptr) != dataLen
+		|| fseek(file.ptr, pos, SEEK_SET))
 		return false;
 	return true;
 }
 bool CBFileAppendZeros(CBDepObject file, uint32_t amount){
-	FILE * fileObj = file.ptr;
-	long pos = ftell(fileObj);
-	if (fseek(fileObj, 0, SEEK_END))
+	long pos = ftell(file.ptr);
+	if (fseek(file.ptr, 0, SEEK_END))
 		return false;
 	uint8_t zero = 0;
 	for (uint32_t x = 0; x < amount; x++)
-		if (fwrite(&zero, 1, 1, fileObj) != 1)
+		if (fwrite(&zero, 1, 1, file.ptr) != 1)
 			return false;
-	if (fseek(fileObj, pos, SEEK_SET))
+	if (fseek(file.ptr, pos, SEEK_SET))
 		return false;
 	return true;
 }
-void CBFileClose(uint64_t file){
-	fclose((FILE *)file);
+void CBFileClose(CBDepObject file){
+	fclose(file.ptr);
 }
-bool CBFileGetLength(uint64_t file, uint32_t * length){
-	FILE * fileObj = (FILE *)file;
-	long pos = ftell(fileObj);
-	if (fseek(fileObj, 0, SEEK_END))
+bool CBFileGetLength(CBDepObject file, uint32_t * length){
+	long pos = ftell(file.ptr);
+	if (fseek(file.ptr, 0, SEEK_END))
 		return false;
-	*length = (uint32_t)ftell(fileObj);
-	if (fseek(fileObj, pos, SEEK_SET))
+	*length = (uint32_t)ftell(file.ptr);
+	if (fseek(file.ptr, pos, SEEK_SET))
 		return false;
 	return true;
 }
-uint64_t CBFileOpen(char * filename, bool new){
-	FILE * fileObj = fopen(filename, new ? "wb+" : "rb+");
+bool CBFileOpen(CBDepObject * file, char * filename, bool new){
+	file->ptr = fopen(filename, new ? "wb+" : "rb+");
 	// Set F_FULLFSYNC
 	// F_FULLFSYNC will ensure writes are stored on disk in-order. It is not necessarily important that writes are written immediately but they must be written in order to avoid data corruption. Unfortunately this makes IO operations extremely slow. ??? How to ensure in-order disk writes on other systems?
 #ifdef F_FULLFSYNC
-	if (fcntl(fileno(fileObj), F_FULLFSYNC)){
-		CBFileClose((uint64_t)fileObj);
+	/*if (fcntl(fileno(file->ptr), F_FULLFSYNC)){
+		CBFileClose(*file);
 		return false;
-	}
+	} ??? Uncomment this*/
 #endif
-	return (uint64_t)fileObj;
+	return true;
 }
-bool CBFileOverwrite(uint64_t file, uint8_t * data, uint32_t dataLen){
-	return fwrite(data, 1, dataLen, (FILE *)file) == dataLen;
+bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
+	return fwrite(data, 1, dataLen, file.ptr) == dataLen;
 }
-bool CBFileRead(uint64_t file, uint8_t * data, uint32_t dataLen){
-	return fread(data, 1, dataLen, (FILE *)file) == dataLen;
+bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
+	return fread(data, 1, dataLen, file.ptr) == dataLen;
 }
-bool CBFileSeek(uint64_t file, uint32_t pos){
-	return NOT fseek((FILE *)file, pos, SEEK_SET);
+bool CBFileSeek(CBDepObject file, uint32_t pos){
+	return NOT fseek(file.ptr, pos, SEEK_SET);
 }
-bool CBFileSync(uint64_t file){
-	FILE * fileObj = (FILE *)file;
-	if (fflush(fileObj))
+bool CBFileSync(CBDepObject file){
+	if (fflush(file.ptr))
 		return false;
-	if (fsync(fileno(fileObj)))
+	if (fsync(fileno(file.ptr)))
 		return false;
 	return true;
 }

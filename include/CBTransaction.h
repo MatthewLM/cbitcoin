@@ -66,16 +66,14 @@ CBTransaction * CBGetTransaction(void * self);
 /**
  @brief Initialises a CBTransaction object
  @param self The CBTransaction object to initialise
- @returns true on success, false on failure.
  */
-bool CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version);
+void CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version);
 /**
  @brief Initialises a new CBTransaction object from the byte data.
  @param self The CBTransaction object to initialise
  @param data The byte data.
- @returns true on success, false on failure.
  */
-bool CBInitTransactionFromData(CBTransaction * self, CBByteArray * data);
+void CBInitTransactionFromData(CBTransaction * self, CBByteArray * data);
 
 /**
  @brief Release and free the objects stored by the CBTransaction object.
@@ -94,16 +92,14 @@ void CBFreeTransaction(void * self);
  @brief Adds an CBTransactionInput to the CBTransaction.
  @param self The CBTransaction object.
  @param input The CBTransactionInput object.
- @returns true if the transaction input was added successfully and false on error.
  */
-bool CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
+void CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction.
  @param self The CBTransaction object.
  @param input The CBTransactionOutput object.
- @returns true if the transaction output was added successfully and false on error.
  */
-bool CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
+void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
 /**
  @brief Calculates the hash for a transaction.
  @param self The CBTransaction object. This should be serialised.
@@ -155,15 +151,13 @@ uint32_t CBTransactionSerialise(CBTransaction * self, bool force);
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.
  @param input The CBTransactionInput object.
- @returns true if the transaction input was taken successfully and false on error.
  */
-bool CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input);
+void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.
  @param input The CBTransactionOutput object.
- @returns true if the transaction output was taken successfully and false on error.
  */
-bool CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output);
+void CBTransactionTakeOutput(CBTransaction * self, CBTransactionOutput * output);
 
 #endif

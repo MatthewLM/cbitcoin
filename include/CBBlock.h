@@ -79,30 +79,26 @@ CBBlock * CBGetBlock(void * self);
 /**
  @brief Initialises a CBBlock object
  @param self The CBBlock object to initialise
- @returns true on success, false on failure.
  */
-bool CBInitBlock(CBBlock * self);
+void CBInitBlock(CBBlock * self);
 /**
  @brief Initialises a CBBlock object from serialised data
  @param self The CBBlock object to initialise
  @param data The serialised data.
- @returns true on success, false on failure.
  */
-bool CBInitBlockFromData(CBBlock * self, CBByteArray * data);
+void CBInitBlockFromData(CBBlock * self, CBByteArray * data);
 
 /**
  @brief Initialises a CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
  @param self The CBBlock object to initialise.
- @returns A new CBBlock object.
  */
-bool CBInitBlockGenesis(CBBlock * self);
+void CBInitBlockGenesis(CBBlock * self);
 
 /**
  @brief Initialises a CBBlock object with the genesis information for the bitcoin block chain. This function only includes the header. This will have serialised data as well as object data.
  @param self The CBBlock object to initialise.
- @returns A new CBBlock object.
  */
-bool CBInitBlockGenesisHeader(CBBlock * self);
+void CBInitBlockGenesisHeader(CBBlock * self);
 
 /**
  @brief Releases and frees all of the objects stored by the CBBlock object.
@@ -120,9 +116,8 @@ void CBFreeBlock(void * self);
 /**
  @brief Calculates the merkle root from the transactions and sets the merkle root of this block to the result. The transactions should be serialised.
  @param self The CBBlock object.
- @returns true on success, false on failure.
  */
-bool CBBlockCalculateAndSetMerkleRoot(CBBlock * self);
+void CBBlockCalculateAndSetMerkleRoot(CBBlock * self);
 /**
  @brief Calculates the hash for a block.
  @param self The CBBlock object. This should be serialised.

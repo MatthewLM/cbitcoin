@@ -39,11 +39,6 @@ typedef struct CBObject{
 	void (*free)(void *); /**< Pointer to the function to free the object. */
 	uint32_t references; /**< Keeps a count of the references to an object for memory management. */
 } CBObject;
-/**
- @brief Creates a new CBObject.
- @returns A new CBObject.
- */
-CBObject * CBNewObject(void);
 
 /**
  @brief Gets a CBObject from another object. Use this to avoid casts.
@@ -55,9 +50,8 @@ CBObject * CBGetObject(void * self);
 /**
  @brief Initialises a CBObject
  @param self The CBObject to initialise
- @returns This always returns true.
  */
-bool CBInitObject(CBObject * self);
+void CBInitObject(CBObject * self);
 
 //  Functions
 

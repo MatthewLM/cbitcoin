@@ -20,27 +20,15 @@
 
 CBPingPong * CBNewPingPong(uint64_t ID){
 	CBPingPong * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewPingPong\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreePingPong;
-	if(CBInitPingPong(self, ID))
-		return self;
-	free(self);
-	return NULL;
+	CBInitPingPong(self, ID);
+	return self;
 }
 CBPingPong * CBNewPingPongFromData(CBByteArray * data){
 	CBPingPong * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewPingPongFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreePingPong;
-	if(CBInitPingPongFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitPingPongFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,16 +39,12 @@ CBPingPong * CBGetPingPong(void * self){
 
 //  Initialisers
 
-bool CBInitPingPong(CBPingPong * self, uint64_t ID){
+void CBInitPingPong(CBPingPong * self, uint64_t ID){
 	self->ID = ID;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitPingPongFromData(CBPingPong * self, CBByteArray * data){
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+void CBInitPingPongFromData(CBPingPong * self, CBByteArray * data){
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor

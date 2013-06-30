@@ -95,14 +95,14 @@ void CBFreeNetworkAddressManager(void * vself);
  @param addr The CBNetworkAddress to take.
  @returns true if the address was taken successfully, false if an error occured.
  */
-bool CBNetworkAddressManagerAddAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
+void CBNetworkAddressManagerAddAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Adds a CBPeer an places it into the CBNetworkAddressManager with a retain.
  @param self The CBNetworkAddressManager object.
  @param peer The CBPeer to take.
  @returns true if the peer was taken successfully, false if an error occured.
  */
-bool CBNetworkAddressManagerAddPeer(CBNetworkAddressManager * self, CBPeer * peer);
+void CBNetworkAddressManagerAddPeer(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Adjust the network time offset with a peer's time.
  @param self The CBNetworkAddressManager object.
@@ -190,21 +190,20 @@ CBNetworkAddress * CBNetworkAddressManagerSelectAndRemoveAddress(CBNetworkAddres
  @brief Takes a CBPeer an places it into the CBNetworkAddressManager, but not permenent storage.
  @param self The CBNetworkAddressManager object.
  @param peer The CBNetworkAddress to take.
- @returns true if the address was taken successfully, false if an error occured.
  */
-bool CBNetworkAddressManagerTakeAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
+void CBNetworkAddressManagerTakeAddress(CBNetworkAddressManager * self, CBNetworkAddress * addr);
 /**
  @brief Takes a CBPeer an places it into the peers list.
  @param self The CBNetworkAddressManager object.
  @param peer The CBPeer to take.
  */
-bool CBNetworkAddressManagerTakePeer(CBNetworkAddressManager * self, CBPeer * peer);
+void CBNetworkAddressManagerTakePeer(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Records a peers time offset for dtemining the median time.
  @param self The CBNetworkAddressManager object.
  @param peer The peer with the time offset.
  */
-bool CBNetworkAddressManagerTakePeerTimeOffset(CBNetworkAddressManager * self, CBPeer * peer);
+void CBNetworkAddressManagerTakePeerTimeOffset(CBNetworkAddressManager * self, CBPeer * peer);
 /**
  @brief Compares two peers for ordering by the time offset.
  @param peer1 The first CBPeer.

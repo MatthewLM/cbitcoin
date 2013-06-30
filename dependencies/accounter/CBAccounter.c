@@ -34,10 +34,6 @@ uint8_t cbKeySizes[] = {
 
 uint64_t CBNewAccounter(char * dataDir){
 	CBAccounter * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Could not create the accounter object.");
-		return 0;
-	}
 	if (NOT CBInitDatabase(CBGetDatabase(self), dataDir, "acnt")) {
 		CBLogError("Could not create a database object for an accounter.");
 		free(self);
@@ -327,10 +323,6 @@ bool CBAccounterChangeOutputReferenceSpentStatus(CBDatabase * self, CBPrevOut * 
 			}else{
 				// Add new element
 				CBTransactionAccountCreditDebit * info = malloc(sizeof(*info));
-				if (NOT info) {
-					CBLogError("Could not allocate memory for account credit/debit information for a transaction.");
-					return false;
-				}
 				info->accountID = accountID;
 				info->creditAmount = 0;
 				info->debitAmount = value;
@@ -503,10 +495,6 @@ bool CBAccounterFoundTransaction(uint64_t iself, void * vtx, uint32_t blockHeigh
 					details->creditAmount += tx->outputs[x]->value;
 				}else{
 					details = malloc(sizeof(*details));
-					if (NOT details) {
-						CBLogError("Could not allocate memory for credit/debit information for an account's transaction.");
-						return false;
-					}
 					details->accountID = accountID;
 					details->creditAmount = tx->outputs[x]->value;
 					details->debitAmount = 0;

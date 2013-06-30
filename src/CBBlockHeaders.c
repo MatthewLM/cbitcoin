@@ -20,27 +20,15 @@
 
 CBBlockHeaders * CBNewBlockHeaders(){
 	CBBlockHeaders * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockHeaders\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeBlockHeaders;
-	if(CBInitBlockHeaders(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitBlockHeaders(self);
+	return self;
 }
 CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data){
 	CBBlockHeaders * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewBlockHeadersFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeBlockHeaders;
-	if(CBInitBlockHeadersFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitBlockHeadersFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,19 +39,15 @@ CBBlockHeaders * CBGetBlockHeaders(void * self){
 
 //  Initialisers
 
-bool CBInitBlockHeaders(CBBlockHeaders * self){
+void CBInitBlockHeaders(CBBlockHeaders * self){
 	self->headerNum = 0;
 	self->blockHeaders = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitBlockHeadersFromData(CBBlockHeaders * self, CBByteArray * data){
+void CBInitBlockHeadersFromData(CBBlockHeaders * self, CBByteArray * data){
 	self->headerNum = 0;
 	self->blockHeaders = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -83,9 +67,9 @@ void CBFreeBlockHeaders(void * self){
 
 //  Functions
 
-bool CBBlockHeadersAddBlockHeader(CBBlockHeaders * self, CBBlock * header){
+void CBBlockHeadersAddBlockHeader(CBBlockHeaders * self, CBBlock * header){
 	CBRetainObject(header);
-	return CBBlockHeadersTakeBlockHeader(self, header);
+	CBBlockHeadersTakeBlockHeader(self, header);
 }
 uint32_t CBBlockHeadersCalculateLength(CBBlockHeaders * self){
 	return CBVarIntSizeOf(self->headerNum) + self->headerNum * 81;
@@ -107,25 +91,12 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 	}
 	// Deserialise each header
 	self->blockHeaders = malloc(sizeof(*self->blockHeaders) * (size_t)headerNum.val);
-	if (NOT self->blockHeaders) {
-		CBLogError("Cannot allocate %i bytes of memory in CBBlockHeadersDeserialise\n", sizeof(*self->blockHeaders) * (size_t)headerNum.val);
-		return 0;
-	}
 	self->headerNum = headerNum.val;
 	uint16_t cursor = headerNum.size;
 	for (uint16_t x = 0; x < headerNum.val; x++) {
 		// Make new CBBlock from the rest of the data.
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		if (NOT data) {
-			CBLogError("Cannot create a new CBByteArray in CBBlockHeadersDeserialise for the header number %u.", x);
-			return 0;
-		}
 		self->blockHeaders[x] = CBNewBlockFromData(data);
-		if (NOT self->blockHeaders[x]){
-			CBLogError("Cannot create a new CBBlock in CBBlockHeadersDeserialise for the header number %u.", x);
-			CBReleaseObject(data);
-			return 0;
-		}
 		// Deserialise
 		uint8_t len = CBBlockDeserialise(self->blockHeaders[x], false); // false for no transactions. Only the header.
 		if (NOT len){
@@ -187,12 +158,9 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force){
 	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
-bool CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self, CBBlock * header){
+void CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self, CBBlock * header){
 	self->headerNum++;
 	CBBlock ** temp = realloc(self->blockHeaders, sizeof(*self->blockHeaders) * self->headerNum);
-	if (NOT temp)
-		return false;
 	self->blockHeaders = temp;
 	self->blockHeaders[self->headerNum-1] = header;
-	return true;
 }

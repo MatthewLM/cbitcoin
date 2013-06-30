@@ -16,19 +16,6 @@
 
 #include "CBObject.h"
 
-//  Constructor
-
-CBObject * CBNewObject(){
-	CBObject * self = malloc(sizeof(*self));
-	if (NOT self)
-		return NULL;
-	self->free = free;
-	if(CBInitObject(self))
-		return self;
-	free(self);
-	return NULL;
-}
-
 //  Object Getter
 
 CBObject * CBGetObject(void * self){
@@ -37,9 +24,8 @@ CBObject * CBGetObject(void * self){
 
 //  Initialiser
 
-bool CBInitObject(CBObject * self){
+void CBInitObject(CBObject * self){
 	self->references = 1;
-	return true;
 }
 
 //  Functions

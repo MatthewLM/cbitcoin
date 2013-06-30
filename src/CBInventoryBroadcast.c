@@ -20,27 +20,15 @@
 
 CBInventoryBroadcast * CBNewInventoryBroadcast(){
 	CBInventoryBroadcast * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewInventoryBroadcast\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeInventoryBroadcast;
-	if(CBInitInventoryBroadcast(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitInventoryBroadcast(self);
+	return self;
 }
 CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data){
 	CBInventoryBroadcast * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewInventoryBroadcastFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeInventoryBroadcast;
-	if(CBInitInventoryBroadcastFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitInventoryBroadcastFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,19 +39,15 @@ CBInventoryBroadcast * CBGetInventoryBroadcast(void * self){
 
 //  Initialisers
 
-bool CBInitInventoryBroadcast(CBInventoryBroadcast * self){
+void CBInitInventoryBroadcast(CBInventoryBroadcast * self){
 	self->itemNum = 0;
 	self->items = NULL;
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self, CBByteArray * data){
+void CBInitInventoryBroadcastFromData(CBInventoryBroadcast * self, CBByteArray * data){
 	self->itemNum = 0;
 	self->items = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -100,25 +84,12 @@ uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 	}
 	// Run through the items and deserialise each one.
 	self->items = malloc(sizeof(*self->items) * (size_t)itemNum.val);
-	if (NOT self->items) {
-		CBLogError("Cannot allocate %i bytes of memory in CBInventoryBroadcastDeserialise", sizeof(*self->items) * (size_t)itemNum.val);
-		return 0;
-	}
 	self->itemNum = itemNum.val;
 	uint16_t cursor = itemNum.size;
 	for (uint16_t x = 0; x < itemNum.val; x++) {
 		// Make new CBInventoryItem from the rest of the data.
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		if (NOT data) {
-			CBLogError("Could not create a new CBByteArray in CBInventoryBroadcastDeserialise for inventory broadcast number %u.", x);
-			return 0;
-		}
 		self->items[x] = CBNewInventoryItemFromData(data);
-		if (NOT self->items[x]) {
-			CBLogError("Could not create a new CBInventoryItem in CBInventoryBroadcastDeserialise for inventory broadcast number %u.", x);
-			CBReleaseObject(data);
-			return 0;
-		}
 		// Deserialise
 		uint8_t len = CBInventoryItemDeserialise(self->items[x]);
 		if (NOT len){

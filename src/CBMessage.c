@@ -20,15 +20,9 @@
 
 CBMessage * CBNewMessageByObject(){
 	CBMessage * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewMessageByObject\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeMessage;
-	if (CBInitMessageByObject(self))
-		return self;
-	free(self);
-	return NULL;
+	CBInitMessageByObject(self);
+	return self;
 }
 
 //  Object Getter
@@ -39,22 +33,18 @@ CBMessage * CBGetMessage(void * self){
 
 //  Initialiser
 
-bool CBInitMessageByObject(CBMessage * self){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitMessageByObject(CBMessage * self){
+	CBInitObject(CBGetObject(self));
 	self->bytes = NULL;
 	self->expectResponse = false;
 	self->serialised = false;
-	return true;
 }
-bool CBInitMessageByData(CBMessage * self, CBByteArray * data){
-	if (NOT CBInitObject(CBGetObject(self)))
-		return false;
+void CBInitMessageByData(CBMessage * self, CBByteArray * data){
+	CBInitObject(CBGetObject(self));
 	self->bytes = data;
 	CBRetainObject(data); // Retain data for this object.
 	self->expectResponse = false;
 	self->serialised = true;
-	return true;
 }
 
 //  Destructor

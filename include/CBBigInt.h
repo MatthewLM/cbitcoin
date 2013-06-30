@@ -39,9 +39,8 @@ typedef struct{
  @brief Pre-allocates data for a CBBigInt
  @param bi The CBBigInt.
  @param allocLen The length to allocate in bytes.
- @returns true on success, false on failure.
  */
-bool CBBigIntAlloc(CBBigInt * bi, uint8_t allocLen);
+void CBBigIntAlloc(CBBigInt * bi, uint8_t allocLen);
 /**
  @brief Compares a CBBigInt to an 8 bit integer. You can replicate "a op 58" as "CBBigIntCompareToUInt8(a, 58) op 0" replacing "op" with a comparison operator.
  @param a The first CBBigInt
@@ -59,9 +58,8 @@ CBCompare CBBigIntCompareToBigInt(CBBigInt * a, CBBigInt * b);
  @brief Calculates the result of an addition of a CBBigInt structure by another CBBigInt structure and the first CBBigInt becomes this new figure. Like "a += b".
  @param a A pointer to the CBBigInt
  @param b A pointer to the second CBBigInt
- @returns true on success, false on failure.
  */
-bool CBBigIntEqualsAdditionByBigInt(CBBigInt * a, CBBigInt * b);
+void CBBigIntEqualsAdditionByBigInt(CBBigInt * a, CBBigInt * b);
 /**
  @brief Calculates the result of a division of a CBBigInt structure by 58 and the CBBigInt becomes this new figure. Like "a /= 58".
  @param a A pointer to the CBBigInt
@@ -74,7 +72,7 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a, uint8_t * ans);
  @param b An 8 bit integer
  @returns true on success, false on failure
  */
-bool CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a, uint8_t b);
+void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a, uint8_t b);
 /**
  @brief Calculates the result of a subtraction of a CBBigInt structure with another CBBigInt structure and the CBBigInt becomes this new figure. Like "a -= b".
  @param a A pointer to a CBBigInt
@@ -92,9 +90,8 @@ void CBBigIntEqualsSubtractionByUInt8(CBBigInt * a, uint8_t b);
  @param bi The CBBigInt. Preallocate this with at least one byte.
  @param a The base
  @param b The exponent.
- @returns true on success, false on failure.
  */
-bool CBBigIntFromPowUInt8(CBBigInt * bi, uint8_t a, uint8_t b);
+void CBBigIntFromPowUInt8(CBBigInt * bi, uint8_t a, uint8_t b);
 /**
  @brief Returns the result of a modulo of a CBBigInt structure and 58. Like "a % 58".
  @param a The CBBigInt
@@ -110,8 +107,7 @@ void CBBigIntNormalise(CBBigInt * a);
  @brief Reallocates the CBBigInt if it is needed.
  @param bi The CBBigInt.
  @param allocLen The length of allocated data required.
- @returns true on success, false on failure.
  */
-bool CBBigIntRealloc(CBBigInt * bi, uint8_t allocLen);
+void CBBigIntRealloc(CBBigInt * bi, uint8_t allocLen);
 
 #endif

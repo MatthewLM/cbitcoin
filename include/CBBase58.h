@@ -30,9 +30,8 @@ static const char base58Characters[58] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcde
  @brief Decodes base 58 string into byte data as a CBBigInt.
  @param bi The CBBigInt which should be preallocated with at least one byte.
  @param str Base 58 string to decode.
- @returns true on success, false on failure.
  */
-bool CBDecodeBase58(CBBigInt * bi, char * str);
+void CBDecodeBase58(CBBigInt * bi, char * str);
 /**
  @brief Decodes base 58 string into byte data as a CBBigInt and checks a 4 byte checksum.
  @param bi The CBBigInt which should be preallocated with at least one byte.

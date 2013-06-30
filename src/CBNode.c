@@ -20,16 +20,12 @@
 
 /*CBNode * CBNewNode(char * dataDir, CBNodeFlags flags, uint32_t otherTxsSizeLimit){
 	CBNode * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewNode\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeNode;
 	if (CBInitNode(self, dataDir, flags, otherTxsSizeLimit))
 		return self;
 	free(self);
 	return NULL;
-}
+}REMOVE MALLOC CHECKS
 
 //  Object Getter
 

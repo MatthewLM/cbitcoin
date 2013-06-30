@@ -20,27 +20,15 @@
 
 CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type, CBByteArray * hash){
 	CBInventoryItem * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewInventoryItem\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	if(CBInitInventoryItem(self, type, hash))
-		return self;
-	free(self);
-	return NULL;
+	CBInitInventoryItem(self, type, hash);
+	return self;
 }
 CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data){
 	CBInventoryItem * self = malloc(sizeof(*self));
-	if (NOT self) {
-		CBLogError("Cannot allocate %i bytes of memory in CBNewInventoryItemFromData\n", sizeof(*self));
-		return NULL;
-	}
 	CBGetObject(self)->free = CBFreeInventoryItem;
-	if(CBInitInventoryItemFromData(self, data))
-		return self;
-	free(self);
-	return NULL;
+	CBInitInventoryItemFromData(self, data);
+	return self;
 }
 
 //  Object Getter
@@ -51,19 +39,15 @@ CBInventoryItem * CBGetInventoryItem(void * self){
 
 //  Initialisers
 
-bool CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash){
+void CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash){
 	self->type = type;
 	self->hash = hash;
 	CBRetainObject(hash);
-	if (NOT CBInitMessageByObject(CBGetMessage(self)))
-		return false;
-	return true;
+	CBInitMessageByObject(CBGetMessage(self));
 }
-bool CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data){
+void CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data){
 	self->hash = NULL;
-	if (NOT CBInitMessageByData(CBGetMessage(self), data))
-		return false;
-	return true;
+	CBInitMessageByData(CBGetMessage(self), data);
 }
 
 //  Destructor
@@ -92,8 +76,6 @@ uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	}
 	self->type = CBByteArrayReadInt32(bytes, 0);
 	self->hash = CBByteArraySubReference(bytes, 4, 32);
-	if (NOT self->hash)
-		return 0;
 	return 36;
 }
 uint32_t CBInventoryItemSerialise(CBInventoryItem * self){

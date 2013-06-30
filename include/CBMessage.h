@@ -84,14 +84,13 @@ CBMessage * CBGetMessage(void * self);
  @param self The CBMessage object to initialise
  @returns true on success, false on failure.
  */
-bool CBInitMessageByObject(CBMessage * self);
+void CBInitMessageByObject(CBMessage * self);
 /**
  @brief Initialises a CBMessage object from byte data.
  @param self The CBMessage object to initialise
  @param data The byte data for the object. The data will not be copied but retained by this object. 
- @returns true on success, false on failure.
  */
-bool CBInitMessageByData(CBMessage * self, CBByteArray * data);
+void CBInitMessageByData(CBMessage * self, CBByteArray * data);
 
 /**
  @brief Release and free all of the objects stored by the CBMessage object.

@@ -29,7 +29,6 @@ void CBLogError(char * format, ...){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
-	s = 1371754354;
 	printf("Session = %ui\n", s);
 	srand(s);
 	// Test
@@ -130,7 +129,7 @@ int main(){
 	CBDatabaseCommit(storage, tx);
 	CBFreeDatabaseTransaction(tx);
 	// Now check over data
-	char readStr[15];
+	char readStr[18];
 	CBDatabaseReadValue(storage, NULL, index, key, (uint8_t *)readStr, 15, 0);
 	if (memcmp(readStr, "Hi There Mate!", 15)) {
 		printf("READ ALL VALUE FAIL\n");
@@ -548,7 +547,7 @@ int main(){
 	}
 	index = CBLoadIndex(storage, 0, 10, nodeSize*2);
 	// Verify recovery.
-	CBDatabaseReadValue(storage,NULL, index, key2, (uint8_t *)readStr, 15, 0);
+	CBDatabaseReadValue(storage, NULL, index, key2, (uint8_t *)readStr, 15, 0);
 	if (memcmp(readStr, "Annoying code.", 15)) {
 		printf("RECOVERY VALUE 2 FAIL\n");
 		return 1;
@@ -839,11 +838,11 @@ int main(){
 	}
 	CBFileClose(file);
 	// Try reading length of values
-	if (CBDatabaseGetLength(storage, tx, index, key4) != 7) {
+	if (CBDatabaseGetLength(storage, NULL, index, key4) != 7) {
 		printf("READ 1ST VAL LENGTH FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(storage, tx, index, key2) != 15) {
+	if (CBDatabaseGetLength(storage, NULL, index, key2) != 15) {
 		printf("READ 2ND VAL LENGTH FAIL\n");
 		return 1;
 	}
@@ -1067,13 +1066,137 @@ int main(){
 		printf("WRITE VALUE TO TX READ FAIL\n");
 		return 1;
 	}
-	CBDatabaseWriteValue(storage, tx, index, key, (uint8_t *)"replace", 8);
-	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 8, 0);
-	if (memcmp(readStr, "replace", 8)) {
+	if (CBDatabaseGetLength(storage, tx, index, key) != 9){
+		printf("WRITE VALUE TO TX READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"hello", 5, 2);
+	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 9, 0);
+	if (memcmp(readStr, "cbhellon", 9)) {
+		printf("SUBSECTION TO TX READ FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseGetLength(storage, tx, index, key) != 9){
+		printf("SUBSECTION TO TX READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseWriteValue(storage, tx, index, key, (uint8_t *)"replacement value", 18);
+	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 18, 0);
+	if (memcmp(readStr, "replacement value", 18)) {
 		printf("WRITE REPLACEMENT VALUE TO TX READ FAIL\n");
 		return 1;
 	}
+	if (CBDatabaseGetLength(storage, tx, index, key) != 18){
+		printf("WRITE REPLACEMENT VALUE TO TX READ LEN FAIL\n");
+		return 1;
+	}
+	// Test subsections to overwrite value write
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"first", 5, 2);
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"second", 6, 9);
+	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 18, 0);
+	if (memcmp(readStr, "refirstmesecondue", 18)) {
+		printf("SUBSECTIONS TO TX READ FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseGetLength(storage, tx, index, key) != 18){
+		printf("SUBSECTIONS TO TX READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage, tx);
 	CBFreeDatabaseTransaction(tx);
+	CBDatabaseReadValue(storage, NULL, index, key, (uint8_t *)readStr, 18, 0);
+	if (memcmp(readStr, "refirstmesecondue", 18)) {
+		printf("SUBSECTIONS TO DISK READ FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseGetLength(storage, NULL, index, key) != 18){
+		printf("SUBSECTIONS TO DISK READ LEN FAIL\n");
+		return 1;
+	}
+	// Test subsections to disk
+	tx = CBNewDatabaseTransaction();
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"third", 5, 2);
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"forth", 5, 2);
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"fifth", 5, 9);
+	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 18, 0);
+	if (memcmp(readStr, "reforthmefifthdue", 18)) {
+		printf("SUBSECTIONS TO TX NO OVERWRITE READ FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseGetLength(storage, tx, index, key) != 18){
+		printf("SUBSECTIONS TO TX NO OVERWRITE READ LEN FAIL\n");
+		return 1;
+	}
+	// Test reading subsection
+	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 9, 4);
+	if (memcmp(readStr, "rthmefift", 9)) {
+		printf("SUBSECTIONS TO TX NO OVERWRITE SUBSECTION READ FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage, tx);
+	CBFreeDatabaseTransaction(tx);
+	CBDatabaseReadValue(storage, NULL, index, key, (uint8_t *)readStr, 18, 0);
+	if (memcmp(readStr, "reforthmefifthdue", 18)) {
+		printf("SUBSECTIONS TO DISK NO OVERWRITE READ FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseGetLength(storage, NULL, index, key) != 18){
+		printf("SUBSECTIONS TO DISK NO OVERWRITE READ LEN FAIL\n");
+		return 1;
+	}
+	// Test deletion with subsections
+	tx = CBNewDatabaseTransaction();
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"sixth", 5, 2);
+	CBDatabaseWriteValueSubSection(storage, tx, index, key, (uint8_t *)"seventh", 7, 7);
+	CBDatabaseReadValue(storage, tx, index, key, (uint8_t *)readStr, 18, 0);
+	if (memcmp(readStr, "resixthseventhdue", 18)) {
+		printf("SUBSECTIONS TO TX NO OVERWRITE SECOND READ FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseGetLength(storage, tx, index, key) != 18){
+		printf("SUBSECTIONS TO TX NO OVERWRITE SECOND READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseRemoveValue(storage, tx, index, key);
+	CBDatabaseCommit(storage, tx);
+	CBFreeDatabaseTransaction(tx);
+	if (CBDatabaseGetLength(storage, NULL, index, key) != CB_DOESNT_EXIST) {
+		printf("DELETE WITH SUBSECTIONS IN TX LEN FAIL\n");
+		return 1;
+	}
+	// Test deleting value followed by writing value
+	tx = CBNewDatabaseTransaction();
+	CBDatabaseRemoveValue(storage, tx, index, key4);
+	CBDatabaseWriteValue(storage, tx, index, key4, (uint8_t *)"Mr. Bean", 9);
+	CBDatabaseReadValue(storage, tx, index, key4, (uint8_t *)readStr, 9, 0);
+	if (memcmp(readStr, "Mr. Bean", 9)) {
+		printf("TEST WRITE AFTER DELETE IN TX READ TX FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage, tx);
+	CBFreeDatabaseTransaction(tx);
+	CBDatabaseReadValue(storage, NULL, index, key4, (uint8_t *)readStr, 9, 0);
+	if (memcmp(readStr, "Mr. Bean", 9)) {
+		printf("TEST WRITE AFTER DELETE IN TX READ DISK FAIL\n");
+		return 1;
+	}
+	// Test deleting subsection writes with overwrite.
+	tx = CBNewDatabaseTransaction();
+	CBDatabaseWriteValueSubSection(storage, tx, index, key4, (uint8_t *)"D", 1, 0);
+	CBDatabaseWriteValueSubSection(storage, tx, index, key4, (uint8_t *)"Fl", 2, 4);
+	CBDatabaseWriteValue(storage, tx, index, key4, (uint8_t *)"Monkey", 7);
+	CBDatabaseReadValue(storage, tx, index, key4, (uint8_t *)readStr, 7, 0);
+	if (memcmp(readStr, "Monkey", 7)) {
+		printf("TEST WRITE AFTER SUBSECTIONS IN TX READ TX FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage, tx);
+	CBFreeDatabaseTransaction(tx);
+	CBDatabaseReadValue(storage, NULL, index, key4, (uint8_t *)readStr, 9, 0);
+	if (memcmp(readStr, "Monkey", 7)) {
+		printf("TEST WRITE AFTER SUBSECTIONS IN TX READ DISK FAIL\n");
+		return 1;
+	}
 	// Create new index
 	CBDatabaseIndex * index2 = CBLoadIndex(storage, 1, 10, (index->keySize * CB_DATABASE_BTREE_ELEMENTS + sizeof(CBIndexNode))*10);
 	// Generate 2000 key-value pairs

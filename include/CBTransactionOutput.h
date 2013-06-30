@@ -74,21 +74,18 @@ CBTransactionOutput * CBGetTransactionOutput(void * self);
 /**
  @brief Initialises a CBTransactionOutput object.
  @param self The CBTransactionOutput object to initialise.
- @returns true on success, false on failure.
  */
-bool CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script);
+void CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script);
 /**
  @brief Initialises a CBTransactionOutput object and does not retain the script object.
  @param self The CBTransactionOutput object to initialise.
- @returns true on success, false on failure.
  */
-bool CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script);
+void CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script);
 /**
  @brief Initialises a CBTransactionOutput object.
  @param self The CBTransactionOutput object to initialise.
- @returns true on success, false on failure.
  */
-bool CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data);
+void CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data);
 
 /**
  @brief Release and free all of the objects stored by the CBTransactionOutput object.

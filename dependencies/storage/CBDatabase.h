@@ -179,7 +179,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder);
  @param self The CBDatabaseTransaction object to initialise.
  @returns true on success and false on failure.
  */
-bool CBInitDatabaseTransaction(CBDatabaseTransaction * self);
+void CBInitDatabaseTransaction(CBDatabaseTransaction * self);
 /**
  @brief Loads an index or creates it if it doesn't exist.
  @param self The database object.
@@ -289,9 +289,8 @@ bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CB
  @brief Adds a write value to the valueWrites array for the transaction.
  @param self The database transaction object.
  @param writeValue The write value element data.
- @retruns true on success and false on failure
  */
-bool CBDatabaseAddWriteValue(CBDatabaseTransaction * self, void * writeValue);
+void CBDatabaseAddWriteValue(CBDatabaseTransaction * self, uint8_t * writeValue, CBDatabaseIndex * index, uint8_t * key, uint32_t dataLen, uint8_t * dataPtr, uint32_t offset);
 /**
  @brief Add an append operation.
  @param self The database object.
@@ -321,7 +320,7 @@ bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, uint8
  @param newKey The new key for this value. The first byte is the length and should be the same as the first key.
  @returns true on success and false on failure.
  */
-bool CBDatabaseChangeKey(CBDatabaseTransaction * self, CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey);
+void CBDatabaseChangeKey(CBDatabaseTransaction * self, CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey);
 /**
  @brief Removes all of the pending value write, delete and change key operations.
  @param self The database transaction object.
@@ -499,18 +498,16 @@ bool CBDatabaseRemoveValue(CBDatabase * self, CBDatabaseTransaction * transactio
  @param numDataParts The number of data parts.
  @param data A list of the data.
  @param dataSize A list of the data sizes
- @returns true on success and false on failure.
  */
-bool CBDatabaseWriteConcatenatedValue(CBDatabase * self, CBDatabaseTransaction * transaction, CBDatabaseIndex * index, uint8_t * key, uint8_t numDataParts, uint8_t ** data, uint32_t * dataSize);
+void CBDatabaseWriteConcatenatedValue(CBDatabase * self, CBDatabaseTransaction * transaction, CBDatabaseIndex * index, uint8_t * key, uint8_t numDataParts, uint8_t ** data, uint32_t * dataSize);
 /**
  @brief Queues a key-value write operation.
  @param self The database object.
  @param key The key for this data. The first byte is the length.
  @param data The data to store.
  @param size The size of the data to store. A new value replaces the old one.
- @returns true on success and false on failure.
  */
-bool CBDatabaseWriteValue(CBDatabase * self, CBDatabaseTransaction * transaction, CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size);
+void CBDatabaseWriteValue(CBDatabase * self, CBDatabaseTransaction * transaction, CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size);
 /**
  @brief Queues a key-value write operation for a sub-section of existing data.
  @param self The database object.
@@ -518,16 +515,8 @@ bool CBDatabaseWriteValue(CBDatabase * self, CBDatabaseTransaction * transaction
  @param data The data to store.
  @param size The size of the data to write.
  @param offset The offset to start writing. CB_OVERWRITE_DATA to remove the old data and write anew.
- @returns true on success and false on failure.
  */
-bool CBDatabaseWriteValueSubSection(CBDatabase * self, CBDatabaseTransaction * transaction, CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size, uint32_t offset);
-/*
- @brief Compares two deletion entries in a database transaction.
- @param el1 The first to compare.
- @param el2 The second to compare.
- @returns @see CBCompareIndexPtrAndData
- */
-CBCompare CBDeleteKeysCompare(void * el1, void * el2);
+void CBDatabaseWriteValueSubSection(CBDatabase * self, CBDatabaseTransaction * transaction, CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size, uint32_t offset);
 /*
  @brief Compares two CBDatabaseIndex pointers.
  @param el1 Pointer one to compare.
@@ -536,11 +525,18 @@ CBCompare CBDeleteKeysCompare(void * el1, void * el2);
  */
 CBCompare CBIndexCompare(void * el1, void * el2);
 /*
- @brief Compares two value write entries in a database transaction.
+ @brief Compares two deletion or value write entries in a database transaction.
  @param el1 The first to compare.
  @param el2 The second to compare.
  @returns @see CBCompareIndexPtrAndData
  */
-CBCompare CBValueWriteCompare(void * el1, void * el2);
+CBCompare CBTransactionKeysCompare(void * el1, void * el2);
+/*
+ @brief Compares two value write entries in a database transaction including the offset, such that high offsets come first.
+ @param el1 The first to compare.
+ @param el2 The second to compare.
+ @returns @see CBCompareIndexPtrAndData
+ */
+CBCompare CBTransactionKeysAndOffsetCompare(void * el1, void * el2);
 
 #endif

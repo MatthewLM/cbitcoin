@@ -63,14 +63,14 @@ CBGetBlocks * CBGetGetBlocks(void * self);
  @param self The CBGetBlocks object to initialise
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash);
+void CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash);
 /**
  @brief Initialises a CBGetBlocks object from serialised data
  @param self The CBGetBlocks object to initialise
  @param data The serialised data.
  @returns true on success, false on failure.
 */
-bool CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data);
+void CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data);
 
 /**
  @brief Releases and frees all of the objects stored by the CBGetBlocks object.
