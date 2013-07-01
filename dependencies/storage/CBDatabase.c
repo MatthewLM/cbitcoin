@@ -16,22 +16,22 @@
 
 #include "CBDatabase.h"
 
-CBDatabase * CBNewDatabase(char * dataDir, char * folder){
+CBDatabase * CBNewDatabase(char * dataDir, char * folder, uint32_t extraDataSize){
 	// Try to create the object
 	CBDatabase * self = malloc(sizeof(*self));
-	if (NOT CBInitDatabase(self, dataDir, folder)) {
+	if (NOT CBInitDatabase(self, dataDir, folder, extraDataSize)) {
 		free(self);
 		CBLogError("Could not initialise a database object.");
 		return 0;
 	}
 	return self;
 }
-CBDatabaseTransaction * CBNewDatabaseTransaction(){
+CBDatabaseTransaction * CBNewDatabaseTransaction(CBDatabase * database){
 	CBDatabaseTransaction * self = malloc(sizeof(*self));
-	CBInitDatabaseTransaction(self);
+	CBInitDatabaseTransaction(self, database);
 	return self;
 }
-bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder){
+bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t extraDataSize){
 	self->dataDir = dataDir;
 	self->folder = folder;
 	self->lastUsedFileType = CB_DATABASE_FILE_TYPE_NONE; // No stored file yet.
@@ -68,6 +68,8 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder){
 			return false;
 		}
 	}
+	self->extraDataOnDisk = (extraDataSize != 0) ? malloc(extraDataSize) : NULL;
+	self->extraDataSize = extraDataSize;
 	// Get the last file and last file size
 	uint8_t data[6];
 	strcpy(filename + strlen(self->dataDir) + strlen(self->folder) + 2, "val_0.dat");
@@ -75,18 +77,32 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder){
 	if (access(filename, F_OK)) {
 		// The data file does not exist.
 		self->lastFile = 0;
-		self->lastSize = 6;
+		self->lastSize = extraDataSize + 6;
 		CBDepObject file;
 		if (NOT CBFileOpen(&file, filename, true)) {
 			CBLogError("Could not open a new first data file.");
 			CBFreeAssociativeArray(&self->deletionIndex);
+			free(self->extraDataOnDisk);
 			return false;
 		}
-		if (NOT CBFileAppend(file, (uint8_t []){0,0,6,0,0,0}, 6)) {
+		uint8_t initData[6] = {0};
+		CBInt32ToArray(initData, 2, self->lastSize);
+		if (NOT CBFileAppend(file, initData, 6)) {
 			CBFileClose(file);
 			CBLogError("Could not write the initial data for the first data file.");
 			CBFreeAssociativeArray(&self->deletionIndex);
+			free(self->extraDataOnDisk);
 			return false;
+		}
+		if (extraDataSize != 0) {
+			if (NOT CBFileAppendZeros(file, extraDataSize)) {
+				CBFileClose(file);
+				CBLogError("Could not append space for extra data.");
+				CBFreeAssociativeArray(&self->deletionIndex);
+				free(self->extraDataOnDisk);
+				return false;
+			}
+			memset(self->extraDataOnDisk, 0, extraDataSize);
 		}
 		CBFileClose(file);
 	}else{
@@ -95,27 +111,39 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder){
 		if (NOT CBFileOpen(&file, filename, false)) {
 			CBLogError("Could not open the data file.");
 			CBFreeAssociativeArray(&self->deletionIndex);
+			free(self->extraDataOnDisk);
 			return false;
 		}
 		if (NOT CBFileRead(file, data, 6)) {
 			CBFileClose(file);
 			CBLogError("Could not read the last file and last file size from the first data file.");
 			CBFreeAssociativeArray(&self->deletionIndex);
+			free(self->extraDataOnDisk);
+			return false;
+		}
+		self->lastFile = CBArrayToInt16(data, 0);
+		self->lastSize = CBArrayToInt32(data, 2);
+		if (extraDataSize != 0
+			&& NOT CBFileRead(file, self->extraDataOnDisk, extraDataSize)) {
+			CBFileClose(file);
+			CBLogError("Could not read the extra data from a database.");
+			CBFreeAssociativeArray(&self->deletionIndex);
+			free(self->extraDataOnDisk);
 			return false;
 		}
 		CBFileClose(file);
-		self->lastFile = CBArrayToInt16(data, 0);
-		self->lastSize = CBArrayToInt32(data, 2);
 	}
 	return true;
 }
-void CBInitDatabaseTransaction(CBDatabaseTransaction * self){
+void CBInitDatabaseTransaction(CBDatabaseTransaction * self, CBDatabase * database){
 	self->numChangeKeys = 0;
 	self->changeKeys = NULL;
 	self->numIndexes = 0;
 	CBInitAssociativeArray(&self->deleteKeys, CBTransactionKeysCompare, free);
 	CBInitAssociativeArray(&self->valueWrites, CBTransactionKeysAndOffsetCompare, free);
 	CBInitAssociativeArray(&self->indexes, CBIndexCompare, NULL);
+	self->extraData = malloc(database->extraDataSize);
+	memcpy(self->extraData, database->extraDataOnDisk, database->extraDataSize);
 }
 CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySize, uint32_t cacheLimit){
 	// Load index
@@ -374,6 +402,7 @@ void CBFreeDatabase(CBDatabase * self){
 	CBFileClose(self->deletionIndexFile);
 	if (self->lastUsedFileType != CB_DATABASE_FILE_TYPE_NONE)
 		CBFileClose(self->fileObjectCache);
+	free(self->extraDataOnDisk);
 	free(self);
 }
 void CBFreeDatabaseTransaction(CBDatabaseTransaction * self){
@@ -387,6 +416,7 @@ void CBFreeDatabaseTransaction(CBDatabaseTransaction * self){
 	for (uint32_t x = 0; x < self->numChangeKeys; x++)
 		free(self->changeKeys[x]);
 	free(self->changeKeys);
+	free(self->extraData);
 	free(self);
 }
 void CBFreeIndexNode(CBIndexNode * node){
@@ -1006,6 +1036,26 @@ bool CBDatabaseCommit(CBDatabase * self, CBDatabaseTransaction * tx){
 			CBLogError("Failed to update the number of entries for the deletion index file.");
 			CBFileClose(self->logFile);
 			return false;
+		}
+	}
+	// Update extra data
+	uint32_t start = 0xFFFFFFFF;
+	for (uint32_t x = 0; x < self->extraDataSize; x++) {
+		bool same = self->extraDataOnDisk[x] == tx->extraData[x];
+		if (NOT same && start == 0xFFFFFFFF)
+			start = x;
+		if (start != 0xFFFFFFFF
+			&& (same || x == self->extraDataSize - 1)){
+			// Got the section that should be written.
+			uint32_t len = x - start + (x == self->extraDataSize - 1);
+			memcpy(self->extraDataOnDisk + start, tx->extraData + start, len);
+			// Now write to disk
+			if (NOT CBDatabaseAddOverwrite(self, CB_DATABASE_FILE_TYPE_DATA, 0, 0, tx->extraData + start, 6 + start, len)) {
+				CBLogError("Failed to write to the database's extra data.");
+				CBFileClose(self->logFile);
+				return false;
+			}
+			start = 0xFFFFFFFF;
 		}
 	}
 	// Sync last used file and deletion index file.

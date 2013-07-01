@@ -25,26 +25,6 @@
 
 // Constants
 
-#define CBDecKey(name, type) uint8_t name[cbKeySizes[type] + 2]; name[0] = cbKeySizes[type] + 1; name[1] = type;
-
-typedef enum{
-	CB_TYPE_ACCOUNTER_DETAILS,
-	CB_TYPE_TX_DETAILS,
-	CB_TYPE_BRANCH_ACCOUNT_DETAILS,
-	CB_TYPE_OUTPUT_DETAILS,
-	CB_TYPE_BRANCH_OUTPUT_DETAILS,
-	CB_TYPE_ACCOUNT_TX_DETAILS,
-	CB_TYPE_BRANCH_ACCOUNT_TIME_TX,
-	CB_TYPE_BRANCH_TX_DETAILS,
-	CB_TYPE_OUTPUT_ACCOUNTS,
-	CB_TYPE_ACCOUNT_UNSPENT_OUTPUTS,
-	CB_TYPE_TX_ACCOUNTS,
-	CB_TYPE_TX_HASH_TO_ID,
-	CB_TYPE_TX_HEIGHT_BRANCH_AND_ID,
-	CB_TYPE_OUTPUT_HASH_AND_INDEX_TO_ID,
-	CB_TYPE_WATCHED_HASHES,
-} CBKeyTypes;
-
 
 /**
  @brief The offsets of accounter details data
@@ -232,6 +212,21 @@ typedef struct{
 	uint64_t lastAccountID;
 	uint64_t nextTxID;
 	uint64_t nextOutputRefID;
+	CBDatabaseIndex accounterDetails;
+	CBDatabaseIndex txDetails;
+	CBDatabaseIndex accountDetails;
+	CBDatabaseIndex outputDetails;
+	CBDatabaseIndex branchOutputDetails;
+	CBDatabaseIndex accountTxDetails;
+	CBDatabaseIndex branchAccountTimeTx;
+	CBDatabaseIndex branchTxDetails;
+	CBDatabaseIndex outputAccounts;
+	CBDatabaseIndex accountUnspentOutputs;
+	CBDatabaseIndex txAccounts;
+	CBDatabaseIndex txHashToID;
+	CBDatabaseIndex txHeightBranchAndID;
+	CBDatabaseIndex outputHashAndIndexToID;
+	CBDatabaseIndex watchedHashes;
 } CBAccounter;
 
 // Functions

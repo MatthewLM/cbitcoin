@@ -21,53 +21,43 @@ uint8_t CB_DATA_ARRAY[22];
 
 bool CBNewBlockChainStorage(CBDepObject * storage, char * dataDir){
 	CBBlockChainStorage * self = malloc(sizeof(*self));
-	if (NOT CBInitDatabase((CBDatabase *)self, dataDir, "blk")) {
+	if (NOT CBInitDatabase((CBDatabase *)self, dataDir, "blk", CB_EXTRA_SIZE)) { // 20 For branch work
 		CBLogError("Could not initialise the database for a blockchain storage object.");
 		free(self);
 		return false;
 	}
 	// Load indices
-	self->blockHashIndex = CBLoadIndex((CBDatabase *)self, 0, 20, 10000);
+	self->blockHashIndex = CBLoadIndex(CBGetDatabase(self), 0, 20, 10000);
 	if (self->blockHashIndex){
-		self->blockIndex = CBLoadIndex((CBDatabase *)self, 1, 5, 10000);
+		self->blockIndex = CBLoadIndex(CBGetDatabase(self), 1, 5, 10000);
 		if (self->blockIndex){
-			self->branchIndex = CBLoadIndex((CBDatabase *)self, 2, 1, 0);
-			if (self->branchIndex){
-				self->branchWorkIndex = CBLoadIndex((CBDatabase *)self, 3, 1, 0);
-				if (self->branchWorkIndex){
-					self->orphanIndex = CBLoadIndex((CBDatabase *)self, 4, 1, 0);
-					if (self->orphanIndex){
-						self->txIndex = CBLoadIndex((CBDatabase *)self, 5, 32, 10000);
-						if (self->txIndex) {
-							self->unspentOutputIndex = CBLoadIndex((CBDatabase *)self, 6, 36, 10000);
-							if (self->unspentOutputIndex){
-								// Create new transaction
-								CBInitDatabaseTransaction(&self->tx);
-								storage->ptr = self;
-								return true;
-							}
-							CBFreeIndex(self->txIndex);
-						}
-						CBFreeIndex(self->orphanIndex);
+			self->orphanIndex = CBLoadIndex(CBGetDatabase(self), 4, 1, 0);
+			if (self->orphanIndex){
+				self->txIndex = CBLoadIndex(CBGetDatabase(self), 5, 32, 10000);
+				if (self->txIndex) {
+					self->unspentOutputIndex = CBLoadIndex(CBGetDatabase(self), 6, 36, 10000);
+					if (self->unspentOutputIndex){
+						// Create new transaction
+						CBInitDatabaseTransaction(&self->tx, CBGetDatabase(self));
+						storage->ptr = self;
+						return true;
 					}
-					CBFreeIndex(self->branchWorkIndex);
+					CBFreeIndex(self->txIndex);
 				}
-				CBFreeIndex(self->branchIndex);
+				CBFreeIndex(self->orphanIndex);
 			}
 			CBFreeIndex(self->blockIndex);
 		}
 		CBFreeIndex(self->blockHashIndex);
 	}
 	CBLogError("Could not load one of the block chain storage indices.");
-	CBFreeDatabase((CBDatabase *)self);
+	CBFreeDatabase(CBGetDatabase(self));
 	return false;
 }
 void CBFreeBlockChainStorage(CBDepObject self){
 	CBBlockChainStorage * storageObj = self.ptr;
 	CBFreeIndex(storageObj->blockHashIndex);
 	CBFreeIndex(storageObj->blockIndex);
-	CBFreeIndex(storageObj->branchIndex);
-	CBFreeIndex(storageObj->branchWorkIndex);
 	CBFreeIndex(storageObj->orphanIndex);
 	CBFreeIndex(storageObj->txIndex);
 	CBFreeIndex(storageObj->unspentOutputIndex);
@@ -160,8 +150,7 @@ bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash)
 	return true;
 }
 bool CBBlockChainStorageExists(CBDepObject self){
-	CBBlockChainStorage * storageObj = self.ptr;
-	return CBDatabaseGetLength((CBDatabase *)storageObj, NULL, storageObj->branchIndex, (uint8_t []){CB_MAX_BRANCH_CACHE}) != CB_DOESNT_EXIST;
+	return CBGetDatabase(self.ptr)->lastSize != 6 + CB_EXTRA_SIZE;
 }
 bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t hash[]){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
@@ -250,15 +239,11 @@ bool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_
 }
 bool CBBlockChainStorageLoadBasicValidator(void * validator){
 	CBValidator * validatorObj = validator;
-	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	if (CBDatabaseReadValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchIndex, (uint8_t []){CB_MAX_BRANCH_CACHE}, CB_DATA_ARRAY, 4, 0) != CB_DATABASE_INDEX_FOUND){
-		CBLogError("There was an error when reading the validator information from storage.");
-		return false;
-	}
-	validatorObj->firstOrphan = CB_DATA_ARRAY[CB_VALIDATION_FIRST_ORPHAN];
-	validatorObj->numOrphans = CB_DATA_ARRAY[CB_VALIDATION_NUM_ORPHANS];
-	validatorObj->mainBranch = CB_DATA_ARRAY[CB_VALIDATION_MAIN_BRANCH];
-	validatorObj->numBranches = CB_DATA_ARRAY[CB_VALIDATION_NUM_BRANCHES];
+	uint8_t * extraData = ((CBBlockChainStorage *)validatorObj->storage.ptr)->tx.extraData;
+	validatorObj->firstOrphan = extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_FIRST_ORPHAN];
+	validatorObj->numOrphans = extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_NUM_ORPHANS];
+	validatorObj->mainBranch = extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_MAIN_BRANCH];
+	validatorObj->numBranches = extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_NUM_BRANCHES];
 	return true;
 }
 void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t branch){
@@ -283,37 +268,27 @@ void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t
 }
 bool CBBlockChainStorageLoadBranch(void * validator, uint8_t branchNum){
 	CBValidator * validatorObj = validator;
-	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
+	uint8_t * extraData = ((CBBlockChainStorage *)validatorObj->storage.ptr)->tx.extraData;
 	// Get simple information
-	if (CBDatabaseReadValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchIndex, (uint8_t []){branchNum}, CB_DATA_ARRAY, 21, 0) != CB_DATABASE_INDEX_FOUND) {
-		CBLogError("There was an error when reading the data for a branch's information.");
-		return false;
-	}
-	validatorObj->branches[branchNum].lastRetargetTime = CBArrayToInt32(CB_DATA_ARRAY, CB_BRANCH_LAST_RETARGET);
-	validatorObj->branches[branchNum].lastValidation = CBArrayToInt32(CB_DATA_ARRAY, CB_BRANCH_LAST_VALIDATION);
-	validatorObj->branches[branchNum].numBlocks = CBArrayToInt32(CB_DATA_ARRAY, CB_BRANCH_NUM_BLOCKS);
-	validatorObj->branches[branchNum].parentBlockIndex = CBArrayToInt32(CB_DATA_ARRAY, CB_BRANCH_PARENT_BLOCK_INDEX);
-	validatorObj->branches[branchNum].parentBranch = CB_DATA_ARRAY[CB_BRANCH_PARENT_BRANCH];
-	validatorObj->branches[branchNum].startHeight = CBArrayToInt32(CB_DATA_ARRAY, CB_BRANCH_START_HEIGHT);
+	uint16_t branchOffset = CB_EXTRA_BRANCHES + CB_BRANCH_DATA_SIZE * branchNum;
+	validatorObj->branches[branchNum].lastRetargetTime = CBArrayToInt32(extraData, branchOffset + CB_BRANCH_LAST_RETARGET);
+	validatorObj->branches[branchNum].lastValidation = CBArrayToInt32(extraData, branchOffset + CB_BRANCH_LAST_VALIDATION);
+	validatorObj->branches[branchNum].numBlocks = CBArrayToInt32(extraData, branchOffset + CB_BRANCH_NUM_BLOCKS);
+	validatorObj->branches[branchNum].parentBlockIndex = CBArrayToInt32(extraData, branchOffset + CB_BRANCH_PARENT_BLOCK_INDEX);
+	validatorObj->branches[branchNum].parentBranch = extraData[branchOffset + CB_BRANCH_PARENT_BRANCH];
+	validatorObj->branches[branchNum].startHeight = CBArrayToInt32(extraData, branchOffset + CB_BRANCH_START_HEIGHT);
 	validatorObj->branches[branchNum].working = false; // Start off not working on any branch.
 	return true;
 }
 bool CBBlockChainStorageLoadBranchWork(void * validator, uint8_t branchNum){
 	CBValidator * validatorObj = validator;
-	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
+	uint8_t * extraData = ((CBBlockChainStorage *)validatorObj->storage.ptr)->tx.extraData;
 	// Get work
-	uint8_t workLen = CBDatabaseGetLength((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchWorkIndex, (uint8_t []){branchNum});
-	if (workLen == CB_DOESNT_EXIST) {
-		CBLogError("Attempting to load branch work that does not exist.");
-		return false;
-	}
+	uint16_t workOffset = CB_EXTRA_BRANCHES + CB_BRANCH_DATA_SIZE * branchNum + CB_BRANCH_WORK;
+	uint8_t workLen = extraData[workOffset];
 	CBBigIntAlloc(&validatorObj->branches[branchNum].work, workLen);
 	validatorObj->branches[branchNum].work.length = workLen;
-	if (CBDatabaseReadValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchWorkIndex, (uint8_t []){branchNum}, validatorObj->branches[branchNum].work.data, workLen, 0) != CB_DATABASE_INDEX_FOUND) {
-		CBLogError("There was an error when reading the work for a branch.");
-		free(validatorObj->branches[branchNum].work.data);
-		return false;
-	}
+	memcpy(validatorObj->branches[branchNum].work.data, extraData + workOffset + 1, workLen);
 	return true;
 }
 bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum){
@@ -416,12 +391,11 @@ void CBBlockChainStorageReset(CBDepObject self){
 }
 bool CBBlockChainStorageSaveBasicValidator(void * validator){
 	CBValidator * validatorObj = validator;
-	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	CB_DATA_ARRAY[CB_VALIDATION_FIRST_ORPHAN] = validatorObj->firstOrphan;
-	CB_DATA_ARRAY[CB_VALIDATION_NUM_ORPHANS] = validatorObj->numOrphans;
-	CB_DATA_ARRAY[CB_VALIDATION_MAIN_BRANCH] = validatorObj->mainBranch;
-	CB_DATA_ARRAY[CB_VALIDATION_NUM_BRANCHES] = validatorObj->numBranches;
-	CBDatabaseWriteValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchIndex, (uint8_t []){CB_MAX_BRANCH_CACHE}, CB_DATA_ARRAY, 4);
+	uint8_t * extraData = ((CBBlockChainStorage *)validatorObj->storage.ptr)->tx.extraData;
+	extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_FIRST_ORPHAN] = validatorObj->firstOrphan;
+	extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_NUM_ORPHANS] = validatorObj->numOrphans;
+	extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_MAIN_BRANCH] = validatorObj->mainBranch;
+	extraData[CB_EXTRA_BASIC_VALIDATOR_INFO + CB_VALIDATION_NUM_BRANCHES] = validatorObj->numBranches;
 	return true;
 }
 bool CBBlockChainStorageSaveBlock(void * validator, void * block, uint8_t branch, uint32_t blockIndex){
@@ -459,25 +433,25 @@ bool CBBlockChainStorageSaveBlockHeader(void * validator, void * block, uint8_t 
 	CBDatabaseWriteValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->blockHashIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 5);
 	return true;
 }
-bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branch){
+bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branchNum){
 	CBValidator * validatorObj = validator;
-	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
+	uint8_t * extraData = ((CBBlockChainStorage *)validatorObj->storage.ptr)->tx.extraData;
 	// Make data
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BRANCH_LAST_RETARGET, validatorObj->branches[branch].lastRetargetTime);
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BRANCH_LAST_VALIDATION, validatorObj->branches[branch].lastValidation);
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BRANCH_NUM_BLOCKS, validatorObj->branches[branch].numBlocks);
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BRANCH_PARENT_BLOCK_INDEX, validatorObj->branches[branch].parentBlockIndex);
-	CB_DATA_ARRAY[CB_BRANCH_PARENT_BRANCH] = validatorObj->branches[branch].parentBranch;
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BRANCH_START_HEIGHT, validatorObj->branches[branch].startHeight);
-	// Write data
-	CBDatabaseWriteValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 21);
+	uint16_t branchOffset = CB_EXTRA_BRANCHES + CB_BRANCH_DATA_SIZE * branchNum;
+	CBInt32ToArray(extraData, branchOffset + CB_BRANCH_LAST_RETARGET, validatorObj->branches[branchNum].lastRetargetTime);
+	CBInt32ToArray(extraData, branchOffset + CB_BRANCH_LAST_VALIDATION, validatorObj->branches[branchNum].lastValidation);
+	CBInt32ToArray(extraData, branchOffset + CB_BRANCH_NUM_BLOCKS, validatorObj->branches[branchNum].numBlocks);
+	CBInt32ToArray(extraData, branchOffset + CB_BRANCH_PARENT_BLOCK_INDEX, validatorObj->branches[branchNum].parentBlockIndex);
+	extraData[branchOffset + CB_BRANCH_PARENT_BRANCH] = validatorObj->branches[branchNum].parentBranch;
+	CBInt32ToArray(extraData, branchOffset + CB_BRANCH_START_HEIGHT, validatorObj->branches[branchNum].startHeight);
 	return true;
 }
-bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branch){
+bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branchNum){
 	CBValidator * validatorObj = validator;
-	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	CBDatabaseWriteValue((CBDatabase *)storageObj, &storageObj->tx, storageObj->branchWorkIndex, (uint8_t []){branch}, validatorObj->branches[branch].work.data, validatorObj->branches[branch].work.length);
+	uint8_t * extraData = ((CBBlockChainStorage *)validatorObj->storage.ptr)->tx.extraData;
+	uint16_t workOffset = CB_EXTRA_BRANCHES + CB_BRANCH_DATA_SIZE * branchNum + CB_BRANCH_WORK;
+	extraData[workOffset] = validatorObj->branches[branchNum].work.length;
+	memcpy(extraData + workOffset + 1, validatorObj->branches[branchNum].work.data, extraData[workOffset]);
 	return true;
 }
 bool CBBlockChainStorageSaveOrphan(void * validator, void * block, uint8_t orphanNum){

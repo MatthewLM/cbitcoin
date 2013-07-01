@@ -126,6 +126,7 @@ typedef struct{
 
 typedef struct{
 	CBAssociativeArray valueWrites; /**< Values to write. A pointer to the index object followed by the key followed by a 32 bit integer for the data length and then the data, followed by a 32bit integer for the offset. If CB_OVERWRITE_DATA is used then the value in the database is replaced by the new data. */
+	uint8_t * extraData; /**< The version of the extra data for this transaction. Write and read from this. During a commit, any changes will be written to disk. */
 	CBAssociativeArray deleteKeys; /**< An array of keys to delete with the first bytes being the index pointer and the remaining bytes being the key data. */
 	void ** changeKeys; /**< A list of keys to be changed with the last bytes being the new key. The index pointer comes before the old key and then the new key. */
 	uint32_t numChangeKeys;
@@ -150,6 +151,8 @@ typedef struct{
 	CBDatabaseFileType lastUsedFileType; /**< The last used file type. */
 	uint8_t lastUsedFileIndexID; /**< The last used index ID. */
 	CBDepObject logFile;
+	uint32_t extraDataSize; /**< The size of the extra data to store in the database. */
+	uint8_t * extraDataOnDisk; /**< The extra data as it should appear on disk. */
 } CBDatabase;
 
 // Initialisation
@@ -158,28 +161,32 @@ typedef struct{
  @brief Returns a new database object.
  @param dataDir The directory where the data files should be stored.
  @param folder A folder for the data files to prevent conflicts. Will be created if it doesn't exist.
+ @param extraDataSize The size of bytes to put aside for extra data in the database.
  @returns The database object or NULL on failure.
  */
-CBDatabase * CBNewDatabase(char * dataDir, char * folder);
+CBDatabase * CBNewDatabase(char * dataDir, char * folder, uint32_t extraDataSize);
 /**
  @brief Returns a new database transaction object for modifying the database.
+ @param database The database object.
  @returns The database transaction object or NULL on failure.
  */
-CBDatabaseTransaction * CBNewDatabaseTransaction(void);
+CBDatabaseTransaction * CBNewDatabaseTransaction(CBDatabase * database);
 /**
  @brief Initialises a database object.
  @param self The CBDatabase object to initialise.
  @param dataDir The directory where the data files should be stored.
  @param prefix A prefix for the data files to prevent conflicts.
+ @param extraDataSize The size of bytes to put aside for extra data in the database.
  @returns true on success and false on failure.
  */
-bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder);
+bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t extraDataSize);
 /**
  @brief Initialises a database transaction object.
  @param self The CBDatabaseTransaction object to initialise.
+ @param database The database object.
  @returns true on success and false on failure.
  */
-void CBInitDatabaseTransaction(CBDatabaseTransaction * self);
+void CBInitDatabaseTransaction(CBDatabaseTransaction * self, CBDatabase * database);
 /**
  @brief Loads an index or creates it if it doesn't exist.
  @param self The database object.

@@ -32,13 +32,33 @@ uint8_t cbKeySizes[] = {
 	28, /**< CB_TYPE_WATCHED_HASHES : 20 byte hash and 8 byte account ID - Null */
 };
 
-uint64_t CBNewAccounter(char * dataDir){
+bool CBNewAccounter(CBDepObject * accounter, char * dataDir) {
 	CBAccounter * self = malloc(sizeof(*self));
 	if (NOT CBInitDatabase(CBGetDatabase(self), dataDir, "acnt")) {
 		CBLogError("Could not create a database object for an accounter.");
 		free(self);
 		return 0;
 	}
+	CBLoadIndex(CBGetDatabase(self), 0, 1, <#uint32_t cacheLimit#>)
+	if (<#condition#>) {
+		<#statements#>
+	}
+	CBDatabaseIndex accounterDetails;
+	CBDatabaseIndex txDetails;
+	CBDatabaseIndex accountDetails;
+	CBDatabaseIndex outputDetails;
+	CBDatabaseIndex branchOutputDetails;
+	CBDatabaseIndex accountTxDetails;
+	CBDatabaseIndex branchAccountTimeTx;
+	CBDatabaseIndex branchTxDetails;
+	CBDatabaseIndex outputAccounts;
+	CBDatabaseIndex accountUnspentOutputs;
+	CBDatabaseIndex txAccounts;
+	CBDatabaseIndex txHashToID;
+	CBDatabaseIndex txHeightBranchAndID;
+	CBDatabaseIndex outputHashAndIndexToID;
+	CBDatabaseIndex watchedHashes;
+	
 	uint8_t data[24];
 	CBDecKey(key, CB_TYPE_ACCOUNTER_DETAILS);
 	if (CBDatabaseGetLength(CBGetDatabase(self), CB_TYPE_ACCOUNTER_DETAILS) == CB_DOESNT_EXIST) {

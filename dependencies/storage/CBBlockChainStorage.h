@@ -42,7 +42,8 @@ typedef enum{
 	CB_BRANCH_NUM_BLOCKS = 8, 
 	CB_BRANCH_PARENT_BLOCK_INDEX = 12, 
 	CB_BRANCH_PARENT_BRANCH = 16, 
-	CB_BRANCH_START_HEIGHT = 17, 
+	CB_BRANCH_START_HEIGHT = 17,
+	CB_BRANCH_WORK = 21,
 } CBBranchOffsets;
 
 /**
@@ -84,15 +85,24 @@ typedef enum{
 	CB_BLOCK_HASH_REF_INDEX = 1, 
 } CBBlockHashRefOffsets;
 
+/**
+ @brief The offsets to the extra data
+ */
+typedef enum{
+	CB_EXTRA_BASIC_VALIDATOR_INFO = 0,
+	CB_EXTRA_BRANCHES = 4,
+} CBExtraDataOffsets;
+
+#define CB_BRANCH_DATA_SIZE 42 // 20 For branch work and 1 for branch work length
+#define CB_EXTRA_SIZE 4 + CB_BRANCH_DATA_SIZE*CB_MAX_BRANCH_CACHE
+
 // ??? Optimise smaller indices.
 typedef struct{
 	CBDatabase base;
 	CBDatabaseTransaction tx;
 	CBDatabaseIndex * orphanIndex; /**< key = [orphanID] */
-	CBDatabaseIndex * branchIndex; /**< key = [branchID] Also contains basic validator information  */
 	CBDatabaseIndex * blockIndex; /**< key = [branchID, blockID * 4] */
 	CBDatabaseIndex * blockHashIndex; /**< key = [hash * 20] Links to the block branch id and position. */
-	CBDatabaseIndex * branchWorkIndex; /**< key = [branchID] the work of  branch */
 	CBDatabaseIndex * unspentOutputIndex; /**< key = [hash * 32, outputID * 4] */
 	CBDatabaseIndex * txIndex; /**< key = [hash * 32] */
 } CBBlockChainStorage;
