@@ -16,6 +16,7 @@
 #include "CBBlockChainStorage.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 static struct {
     uint8_t extranonce;
@@ -56,6 +57,12 @@ void CBLogError(char * format, ...){
 	printf("\n");
 }
 
+uint64_t CBGetMilliseconds(void){
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 int main(){
 	remove("./blk/log.dat");
 	remove("./blk/del.dat");
@@ -70,7 +77,7 @@ int main(){
 	// Create validator
 	CBDepObject storage;
 	CBNewBlockChainStorage(&storage, "./");
-	CBValidator * validator = CBNewValidator(storage, 0);
+	CBValidator * validator = CBNewValidator(storage, 0, 0);
 	if (NOT validator) {
 		printf("VALIDATOR INIT FAIL\n");
 		return 1;
@@ -79,7 +86,7 @@ int main(){
 	CBFreeBlockChainStorage(storage);
 	// Now create it again. It should load the data.
 	CBNewBlockChainStorage(&storage, "./");
-	validator = CBNewValidator(storage, 0);
+	validator = CBNewValidator(storage, 0, 0);
 	if (NOT validator) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
 		return 1;
@@ -246,7 +253,7 @@ int main(){
 	CBReleaseObject(validator);
 	CBFreeBlockChainStorage(storage);
 	CBNewBlockChainStorage(&storage, "./");
-	validator = CBNewValidator(storage, 0);
+	validator = CBNewValidator(storage, 0, 0);
 	if (NOT validator){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
 		return 1;
@@ -1247,7 +1254,7 @@ int main(){
 	CBReleaseObject(validator);
 	CBFreeBlockChainStorage(storage);
 	CBNewBlockChainStorage(&storage, "./");
-	validator = CBNewValidator(storage, 0);
+	validator = CBNewValidator(storage, 0, 0);
 	if (NOT validator) {
 		printf("LOAD VALIDATOR WITH ORPHAN FAIL\n");
 		return 1;

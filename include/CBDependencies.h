@@ -688,23 +688,23 @@ typedef struct{
 // Functions
 
 /**
- @brief Creates a new account storage object.
- @param accounter The object to set.
+ @brief Creates a new accounter storage object.
+ @param storage The object to set.
  @param dataDir The directory where the data files should be stored.
  @returns true on success and false on failure.
  */
-bool CBNewAccounter(CBDepObject * accounter, char * dataDir);
+bool CBNewAccounterStorage(CBDepObject * storage, char * dataDir);
 /**
- @brief Frees the account storage object.
- @param iself The account storage object.
+ @brief Frees the accounter storage object.
+ @param self The accounter storage object.
  */
-void CBFreeAccounter(CBDepObject self);
+void CBFreeAccounterStorage(CBDepObject self);
 /**
  @brief Commits data to the disk.
  @param self The accounter object.
  @returns true on success and false on failure.
  */
-bool CBAccounterCommit(CBDepObject self);
+bool CBAccounterStorageCommit(CBDepObject self);
 /**
  @brief Adds a watched output hash to an account.
  @param self The accounter object. 

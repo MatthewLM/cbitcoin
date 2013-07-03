@@ -1,5 +1,5 @@
 //
-//  CBAccounter.c
+//  CBAccounterStorage.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 08/02/2013.
@@ -12,86 +12,113 @@
 //  or distributed except according to the terms contained in the
 //  LICENSE file.
 
-#include "CBAccounter.h"
+#include "CBAccounterStorage.h"
 
-uint8_t cbKeySizes[] = {
-	0, /**< CB_TYPE_ACCOUNTER_DETAILS : Null - Details for the accounter. */
-	8, /**< CB_TYPE_TX_DETAILS : The 8 byte transaction ID - Details for a transaction independant of the account. */
-	9, /**< CB_TYPE_BRANCH_ACCOUNT_DETAILS : 1 byte branch number and 8 byte account ID (CB_NO_BRANCH for unconfirmed) - Stores the number of transaction in the account and the balance */
-	8, /**< CB_TYPE_OUTPUT_DETAILS : 8 byte output ID - Stores the value. */
-	9, /**< CB_TYPE_BRANCH_OUTPUT_DETAILS : 1 byte branch number and 8 byte output ID - Stores the spent status */
-	16, /**< CB_TYPE_ACCOUNT_TX_DETAILS : 8 byte account ID and 8 byte transaction ID - Transaction details for this account */
-	16, /**< CB_TYPE_BRANCH_ACCOUNT_TIME_TX : 1 byte branch number, 8 byte account ID, 8 byte transaction timestamp and 8 byte transaction ID - Null */
-	9, /**< CB_TYPE_BRANCH_TX_DETAILS : 1 byte branch number and 8 byte transaction ID - Details for a transaction on a branch, no information for unconfirmed transactions. (Not used for CB_NO_BRANCH) */
-	16, /**< CB_TYPE_OUTPUT_ACCOUNTS : 8 byte output ID and 8 byte account ID - Null */
-	17, /**< CB_TYPE_ACCOUNT_UNSPENT_OUTPUTS : 1 byte branch number, 8 byte account ID, 8 byte output ID - Null */
-	16, /**< CB_TYPE_TX_ACCOUNTS : 8 byte transaction ID and 8 byte account ID - Null */
-	32, /**< CB_TYPE_TX_HASH_TO_ID : 32 byte transaction hash - The transaction ID */
-	13, /**< CB_TYPE_TX_HEIGHT_BRANCH_AND_ID : 1 byte branch number, 4 byte block height and 8 byte transaction ID - Null (Not used for CB_NO_BRANCH) */
-	36, /**< CB_TYPE_OUTPUT_HASH_AND_INDEX_TO_ID : 32 byte transaction hash and 4 byte output transaction index - The output reference ID */
-	28, /**< CB_TYPE_WATCHED_HASHES : 20 byte hash and 8 byte account ID - Null */
-};
+uint8_t CB_KEY_ARRAY[36];
+uint8_t CB_NEW_KEY_ARRAY[36];
+uint8_t CB_DATA_ARRAY[22];
 
-bool CBNewAccounter(CBDepObject * accounter, char * dataDir) {
-	CBAccounter * self = malloc(sizeof(*self));
-	if (NOT CBInitDatabase(CBGetDatabase(self), dataDir, "acnt")) {
+bool CBNewAccounterStorage(CBDepObject * storage, char * dataDir) {
+	CBAccounterStorage * self = malloc(sizeof(*self));
+	if (NOT CBInitDatabase(CBGetDatabase(self), dataDir, "acnt", 24)) {
 		CBLogError("Could not create a database object for an accounter.");
 		free(self);
 		return 0;
 	}
-	CBLoadIndex(CBGetDatabase(self), 0, 1, <#uint32_t cacheLimit#>)
-	if (<#condition#>) {
-		<#statements#>
+	self->accountDetails = CBLoadIndex(CBGetDatabase(self), 0, 9, 10000);
+	if (self->accountDetails) {
+		self->accountTxDetails = CBLoadIndex(CBGetDatabase(self), 1, 16, 10000);
+		if (self->accountTxDetails) {
+			self->accountUnspentOutputs = CBLoadIndex(CBGetDatabase(self), 2, 17, 10000);
+			if (self->accountUnspentOutputs) {
+				self->branchAccountTimeTx = CBLoadIndex(CBGetDatabase(self), 3, 25, 10000);
+				if (self->branchAccountTimeTx) {
+					self->branchOutputDetails = CBLoadIndex(CBGetDatabase(self), 4, 9, 10000);
+					if (self->branchOutputDetails) {
+						self->branchTxDetails = CBLoadIndex(CBGetDatabase(self), 5, 9, 10000);
+						if (self->branchTxDetails) {
+							self->outputAccounts = CBLoadIndex(CBGetDatabase(self), 6, 16, 10000);
+							if (self->outputAccounts) {
+								self->outputDetails = CBLoadIndex(CBGetDatabase(self), 7, 8, 10000);
+								if (self->outputDetails) {
+									self->outputHashAndIndexToID = CBLoadIndex(CBGetDatabase(self), 8, 36, 10000);
+									if (self->outputHashAndIndexToID) {
+										self->txAccounts = CBLoadIndex(CBGetDatabase(self), 9, 16, 10000);
+										if (self->txAccounts) {
+											self->txDetails = CBLoadIndex(CBGetDatabase(self), 10, 8, 10000);
+											if (self->txDetails) {
+												self->txHashToID = CBLoadIndex(CBGetDatabase(self), 11, 32, 10000);
+												if (self->txHashToID) {
+													self->txHeightBranchAndID = CBLoadIndex(CBGetDatabase(self), 12, 13, 10000);
+													if (self->txHeightBranchAndID) {
+														self->watchedHashes = CBLoadIndex(CBGetDatabase(self), 13, 28, 10000);
+														if (self->watchedHashes) {
+															CBInitDatabaseTransaction(&self->tx, CBGetDatabase(self));
+															if (CBGetDatabase(self)->lastSize == 6 + CBGetDatabase(self)->extraDataSize) {
+																// Create initial data
+																self->lastAccountID = 0;
+																self->nextOutputRefID = 0;
+																self->nextTxID = 0;
+																memset(CBGetDatabase(self)->extraDataOnDisk, 0, 24);
+															}else{
+																// Load data
+																self->lastAccountID = CBArrayToInt64(CBGetDatabase(self)->extraDataOnDisk, CB_ACCOUNTER_DETAILS_ACCOUNT_ID);
+																self->nextOutputRefID = CBArrayToInt64(CBGetDatabase(self)->extraDataOnDisk, CB_ACCOUNTER_DETAILS_OUTPUT_ID);
+																self->nextTxID = CBArrayToInt64(CBGetDatabase(self)->extraDataOnDisk, CB_ACCOUNTER_DETAILS_TX_ID);
+															}
+															storage->ptr = self;
+															return true;
+														}
+														CBFreeIndex(self->txHeightBranchAndID);
+													}
+													CBFreeIndex(self->txHashToID);
+												}
+												CBFreeIndex(self->txDetails);
+											}
+											CBFreeIndex(self->txAccounts);
+										}
+										CBFreeIndex(self->outputHashAndIndexToID);
+									}
+									CBFreeIndex(self->outputDetails);
+								}
+								CBFreeIndex(self->outputAccounts);
+							}
+							CBFreeIndex(self->branchTxDetails);
+						}
+						CBFreeIndex(self->branchOutputDetails);
+					}
+					CBFreeIndex(self->branchAccountTimeTx);
+				}
+				CBFreeIndex(self->accountUnspentOutputs);
+			}
+			CBFreeIndex(self->accountTxDetails);
+		}
+		CBFreeIndex(self->accountDetails);
 	}
-	CBDatabaseIndex accounterDetails;
-	CBDatabaseIndex txDetails;
-	CBDatabaseIndex accountDetails;
-	CBDatabaseIndex outputDetails;
-	CBDatabaseIndex branchOutputDetails;
-	CBDatabaseIndex accountTxDetails;
-	CBDatabaseIndex branchAccountTimeTx;
-	CBDatabaseIndex branchTxDetails;
-	CBDatabaseIndex outputAccounts;
-	CBDatabaseIndex accountUnspentOutputs;
-	CBDatabaseIndex txAccounts;
-	CBDatabaseIndex txHashToID;
-	CBDatabaseIndex txHeightBranchAndID;
-	CBDatabaseIndex outputHashAndIndexToID;
-	CBDatabaseIndex watchedHashes;
-	
-	uint8_t data[24];
-	CBDecKey(key, CB_TYPE_ACCOUNTER_DETAILS);
-	if (CBDatabaseGetLength(CBGetDatabase(self), CB_TYPE_ACCOUNTER_DETAILS) == CB_DOESNT_EXIST) {
-		// Write the initial data
-		self->lastAccountID = 0;
-		self->nextOutputRefID = 0;
-		self->nextTxID = 0;
-		memset(data, 0, 24);
-		if (NOT CBDatabaseWriteValue(CBGetDatabase(self), key, data, 24)) {
-			CBLogError("Could not write the initial data for an accounter.");
-			return 0;
-		}
-		if (NOT CBDatabaseCommit(CBGetDatabase(self))) {
-			CBLogError("Could not commit the initial data for an accounter.");
-			return 0;
-		}
-	}else{
-		// Load the ID information
-		if (NOT CBDatabaseReadValue(CBGetDatabase(self), key, data, 24, 0)) {
-			CBLogError("Could not read the next ID information for an accounter.");
-			return 0;
-		}
-		self->lastAccountID = CBArrayToInt64(data, CB_ACCOUNTER_DETAILS_ACCOUNT_ID);
-		self->nextOutputRefID = CBArrayToInt64(data, CB_ACCOUNTER_DETAILS_OUTPUT_ID);
-		self->nextTxID = CBArrayToInt64(data, CB_ACCOUNTER_DETAILS_TX_ID);
-	}
-	return (uint64_t) self;
+	return false;
 }
-void CBFreeAccounter(uint64_t iself){
-	CBFreeDatabase((CBDatabase *)iself);
+void CBFreeAccounterStorage(CBDepObject self){
+	CBAccounterStorage * storage = self.ptr;
+	CBFreeIndex(storage->accountDetails);
+	CBFreeIndex(storage->accountTxDetails);
+	CBFreeIndex(storage->accountUnspentOutputs);
+	CBFreeIndex(storage->branchAccountTimeTx);
+	CBFreeIndex(storage->branchOutputDetails);
+	CBFreeIndex(storage->branchTxDetails);
+	CBFreeIndex(storage->outputAccounts);
+	CBFreeIndex(storage->outputDetails);
+	CBFreeIndex(storage->outputHashAndIndexToID);
+	CBFreeIndex(storage->txAccounts);
+	CBFreeIndex(storage->txDetails);
+	CBFreeIndex(storage->txHashToID);
+	CBFreeIndex(storage->txHeightBranchAndID);
+	CBFreeIndex(storage->watchedHashes);
+	CBFreeDatabase((CBDatabase *)self.ptr);
 }
-bool CBAccounterAdjustAccountBalanceByTx(CBDatabase * database, uint8_t * accountTxDetails, uint8_t * accountDetailsKey){
-	uint8_t data[8];
+/*bool CBAccounterAdjustAccountBalanceByTx(CBAccounterStorage * self, uint8_t * accountTxDetails, uint8_t * accountDetailsKey){
+	CBDatabase * database = CBGetDatabase(self);
+	CBDatabaseTransaction * tx = &self->tx;
+	CBDatabaseReadValue(database, tx, self->accountTxDetails, <#uint8_t *key#>, <#uint8_t *data#>, <#uint32_t dataSize#>, <#uint32_t offset#>)
 	if (NOT CBDatabaseReadValue(database, accountTxDetails, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE)) {
 		CBLogError("Could not read an accounts transaction value.");
 		return false;
@@ -111,43 +138,45 @@ bool CBAccounterAdjustAccountBalanceByTx(CBDatabase * database, uint8_t * accoun
 		return false;
 	}
 	return true;
+}*/
+bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint64_t accountID){
+	CBAccounterStorage * storage = self.ptr;
+	memcpy(CB_KEY_ARRAY + CB_WATCHED_HASHES_HASH, hash, 20);
+	CBInt64ToArray(CB_KEY_ARRAY, CB_WATCHED_HASHES_ACCOUNT_ID, accountID);
+	CBDatabaseWriteValue(CBGetDatabase(storage), &storage->tx, storage->watchedHashes, CB_KEY_ARRAY, NULL, 0);
+	return true;
 }
-bool CBAccounterAddWatchedOutputToAccount(uint64_t iself, uint8_t * hash, uint64_t accountID){
-	CBDatabase * database = (CBDatabase *)iself;
-	CBDecKey(watchedHashesKey, CB_TYPE_WATCHED_HASHES);
-	memcpy(watchedHashesKey + CB_WATCHED_HASHES_HASH, hash, 20);
-	CBInt64ToArray(watchedHashesKey, CB_WATCHED_HASHES_ACCOUNT_ID, accountID);
-	return CBDatabaseWriteValue(database, watchedHashesKey, NULL, 0);
-}
-bool CBAccounterBranchlessTransactionToBranch(uint64_t iself, void * vtx, uint32_t blockHeight, uint8_t branch){
-	CBDatabase * database = (CBDatabase *)iself;
+bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint32_t blockHeight, uint8_t branch){
+	CBAccounterStorage * storage = self.ptr;
 	CBTransaction * tx = vtx;
-	uint8_t data[8];
-	// A branchless transaction is found in a branch.
+	// A previously branchless transaction has been found in a branch.
 	// Loop through outputs and change references to the new branch
-	CBDecKey(outputHashAndIndexToIDKey, CB_TYPE_OUTPUT_HASH_AND_INDEX_TO_ID);
-	CBDecKey(branchOutputDetails, CB_TYPE_BRANCH_OUTPUT_DETAILS);
-	CBDecKey(newBranchOutputDetails, CB_TYPE_BRANCH_OUTPUT_DETAILS);
 	for (uint32_t x = 0; x < tx->outputNum; x++) {
 		// Get the output ID of this output, if it exists.
-		memcpy(outputHashAndIndexToIDKey + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBTransactionGetHash(tx), 32);
-		CBInt32ToArray(outputHashAndIndexToIDKey, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, x);
-		if (CBDatabaseGetLength(database, outputHashAndIndexToIDKey) != CB_DOESNT_EXIST) {
+		memcpy(CB_KEY_ARRAY + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBTransactionGetHash(tx), 32);
+		CBInt32ToArray(CB_KEY_ARRAY, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, x);
+		if (CBDatabaseGetLength(CBGetDatabase(storage), &storage->tx, storage->outputHashAndIndexToID, CB_KEY_ARRAY) != CB_DOESNT_EXIST) {
 			// The output ID exists so get it
-			if (NOT CBDatabaseReadValue(database, outputHashAndIndexToIDKey, data, 8, 0)) {
+			if (NOT CBDatabaseReadValue(CBGetDatabase(storage), &storage->tx, storage->outputHashAndIndexToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0)) {
 				CBLogError("Could not get the ID of a branchless output so we can move the spent status to a branch");
 				return false;
 			}
-			uint64_t outputID = CBArrayToInt64(data, 0);
+			uint64_t outputID = CBArrayToInt64(CB_DATA_ARRAY, 0);
 			// Create key for the output branch information.
-			branchOutputDetails[CB_BRANCH_OUTPUT_DETAILS_BRANCH] = CB_NO_BRANCH;
-			memcpy(branchOutputDetails + CB_BRANCH_OUTPUT_DETAILS_OUPUT_ID, data, 8);
+			CB_KEY_ARRAY[CB_BRANCH_OUTPUT_DETAILS_BRANCH] = CB_NO_BRANCH;
+			memcpy(CB_KEY_ARRAY + CB_BRANCH_OUTPUT_DETAILS_OUPUT_ID, CB_KEY_ARRAY, 8);
+			// Make new key for new branch
+			CB_NEW_KEY_ARRAY[CB_BRANCH_OUTPUT_DETAILS_BRANCH] = branch;
+			memcpy(CB_NEW_KEY_ARRAY + CB_BRANCH_OUTPUT_DETAILS_OUPUT_ID, CB_KEY_ARRAY, 8);
 			// Check the spent status of this output
-			if (NOT CBDatabaseReadValue(database, branchOutputDetails, data, 1, CB_OUTPUT_REF_BRANCH_DATA_SPENT)) {
+			if (NOT CBDatabaseReadValue(CBGetDatabase(storage), &storage->tx, storage->branchOutputDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 1, CB_OUTPUT_REF_BRANCH_DATA_SPENT)) {
 				CBLogError("Could not get the spent status of a branchless output.");
 				return false;
 			}
-			if (NOT data[0]) {
+			// Change the key of the branch output details to have a new branch
+			CBDatabaseChangeKey(&storage->tx, storage->branchOutputDetails, CB_KEY_ARRAY, CB_NEW_KEY_ARRAY);
+			// Check if unspent output
+			if (NOT CB_DATA_ARRAY[0]) {
 				// Unspent
 				// Loop through the output's accounts and change the unspent output references to the branch the output is being added to.
 				CBDecKey(outputAccountsMin, CB_TYPE_OUTPUT_ACCOUNTS);
@@ -179,14 +208,6 @@ bool CBAccounterBranchlessTransactionToBranch(uint64_t iself, void * vtx, uint32
 					if (CBAssociativeArrayRangeIteratorNext(&database->index, &it))
 						break;
 				}
-			}
-			// Create the new key
-			newBranchOutputDetails[CB_BRANCH_OUTPUT_DETAILS_BRANCH] = branch;
-			memcpy(newBranchOutputDetails + CB_BRANCH_OUTPUT_DETAILS_OUPUT_ID, data, 8);
-			// Change the key
-			if (NOT CBDatabaseChangeKey(database, branchOutputDetails, newBranchOutputDetails)) {
-				CBLogError("Could not change the key of a branchless output's branch information to include the branch it is changed to.");
-				return false;
 			}
 		}
 	}

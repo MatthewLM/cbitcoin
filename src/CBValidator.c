@@ -18,10 +18,10 @@
 
 //  Constructor
 
-CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags){
+CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags, uint32_t commitGap){
 	CBValidator * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeValidator;
-	if (CBInitValidator(self, storage, flags))
+	if (CBInitValidator(self, storage, flags, commitGap))
 		return self;
 	// If initialisation failed, free the data that exists.
 	CBFreeValidator(self);
@@ -36,10 +36,13 @@ CBValidator * CBGetValidator(void * self){
 
 //  Initialiser
 
-bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags){
+bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags, uint32_t commitGap){
 	CBInitObject(CBGetObject(self));
 	self->storage = storage;
 	self->flags = flags;
+	self->commitGap = commitGap;
+	self->lastCommit = CBGetMilliseconds();
+	self->commitedLastTime = false;
 	// Check whether the database has been created.
 	if (CBBlockChainStorageExists(self->storage)) {
 		// Found now load information from storage
@@ -104,12 +107,6 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 			free(self->branches[0].work.data);
 			return false;
 		}
-		// Now try to commit the data
-		if (NOT CBBlockChainStorageCommitData(storage)){
-			CBLogError("Could not commit initial block-chain data.");
-			free(self->branches[0].work.data);
-			return false;
-		}
 	}
 	return true;
 }
@@ -118,6 +115,9 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 
 void CBDestroyValidator(void * vself){
 	CBValidator * self = vself;
+	// Commit if there was no commit last time
+	if (NOT self->commitedLastTime)
+		CBBlockChainStorageCommitData(self->storage);
 	// Release orphans
 	for (uint8_t x = 0; x < self->numOrphans; x++)
 		CBReleaseObject(self->orphans[x]);
@@ -184,7 +184,7 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block){
 		return false;
 	}
 	// Commit data
-	if (NOT CBBlockChainStorageCommitData(self->storage)) {
+	if (NOT CBValidatorCommit(self)) {
 		CBLogError("There was commiting data for an orphan.");
 		return false;
 	}
@@ -221,6 +221,14 @@ CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock
 			return CB_BLOCK_STATUS_BAD;
 	}
 	return CB_BLOCK_STATUS_CONTINUE;
+}
+bool CBValidatorCommit(CBValidator * self){
+	if (self->lastCommit < CBGetMilliseconds() - self->commitGap){
+		self->commitedLastTime = true;
+		return CBBlockChainStorageCommitData(self->storage);
+	}else
+		self->commitedLastTime = false;
+	return true;
 }
 CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t height){
 	// Check that the first transaction is a coinbase transaction.
@@ -715,7 +723,7 @@ CBBlockProcessResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block
 			x++;
 	}
 	// Finally commit all data
-	if (NOT CBBlockChainStorageCommitData(self->storage)) {
+	if (NOT CBValidatorCommit(self)) {
 		CBValidatorFreeBlockProcessResultOrphans(&result);
 		CBLogError("Could not commit updated data when adding a new block to the main chain.");
 		result.status = CB_BLOCK_STATUS_ERROR;
@@ -890,7 +898,7 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 								result->status = CB_BLOCK_STATUS_ERROR;
 								return;
 							}
-							if (NOT CBBlockChainStorageCommitData(self->storage)) {
+							if (NOT CBValidatorCommit(self)) {
 								CBLogError("Could not commit the last validated block for a validatation error during reorganisation.");
 								result->status = CB_BLOCK_STATUS_ERROR;
 								return;

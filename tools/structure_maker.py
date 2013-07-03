@@ -23,7 +23,7 @@ author = raw_input("Enter your first and last name: ")
 desc = raw_input("Enter a description for the structure: ")
 d = datetime.utcnow()
 # Make files
-header = open(os.path.dirname(sys.argv[0]) + "/../includes/CB" + name + ".h", "w")
+header = open(os.path.dirname(sys.argv[0]) + "/../include/CB" + name + ".h", "w")
 source = open(os.path.dirname(sys.argv[0]) + "/../src/CB" + name + ".c", "w")
 # Header
 header.write("//\n\

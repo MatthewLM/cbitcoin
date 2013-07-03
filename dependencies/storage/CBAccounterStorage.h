@@ -1,8 +1,8 @@
 //
-//  CBAccounter.h
+//  CBAccounterStorage.h
 //  cbitcoin
 //
-//  Created by Matthew Mitchell on 08/02/2012.
+//  Created by Matthew Mitchell on 08/02/2013.
 //  Copyright (c) 2012 Matthew Mitchell
 //
 //  This file is part of cbitcoin. It is subject to the license terms
@@ -17,8 +17,8 @@
  @brief Implements the account storage dependency with use of the CBDatabase.
  */
 
-#ifndef CBACCOUNTERH
-#define CBACCOUNTERH
+#ifndef CBACCOUNTERSTORAGEH
+#define CBACCOUNTERSTORAGEH
 
 #include "CBDatabase.h"
 #include "CBTransaction.h"
@@ -212,22 +212,22 @@ typedef struct{
 	uint64_t lastAccountID;
 	uint64_t nextTxID;
 	uint64_t nextOutputRefID;
-	CBDatabaseIndex accounterDetails;
-	CBDatabaseIndex txDetails;
-	CBDatabaseIndex accountDetails;
-	CBDatabaseIndex outputDetails;
-	CBDatabaseIndex branchOutputDetails;
-	CBDatabaseIndex accountTxDetails;
-	CBDatabaseIndex branchAccountTimeTx;
-	CBDatabaseIndex branchTxDetails;
-	CBDatabaseIndex outputAccounts;
-	CBDatabaseIndex accountUnspentOutputs;
-	CBDatabaseIndex txAccounts;
-	CBDatabaseIndex txHashToID;
-	CBDatabaseIndex txHeightBranchAndID;
-	CBDatabaseIndex outputHashAndIndexToID;
-	CBDatabaseIndex watchedHashes;
-} CBAccounter;
+	CBDatabaseIndex * txDetails;
+	CBDatabaseIndex * accountDetails;
+	CBDatabaseIndex * outputDetails;
+	CBDatabaseIndex * branchOutputDetails;
+	CBDatabaseIndex * accountTxDetails;
+	CBDatabaseIndex * branchAccountTimeTx;
+	CBDatabaseIndex * branchTxDetails;
+	CBDatabaseIndex * outputAccounts;
+	CBDatabaseIndex * accountUnspentOutputs;
+	CBDatabaseIndex * txAccounts;
+	CBDatabaseIndex * txHashToID;
+	CBDatabaseIndex * txHeightBranchAndID;
+	CBDatabaseIndex * outputHashAndIndexToID;
+	CBDatabaseIndex * watchedHashes;
+	CBDatabaseTransaction tx;
+} CBAccounterStorage;
 
 // Functions
 

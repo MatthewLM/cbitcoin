@@ -22,7 +22,7 @@
 //  Macros
 
 #define CB_LIBRARY_VERSION 5 // Goes up in increments
-#define CB_LIBRARY_VERSION_STRING "2.0 pre-alpha" // Features.Non-features pre-alpha/alpha/beta
+#define CB_LIBRARY_VERSION_STRING "2.0 pre-alpha" // Non-compatible.Compatibile pre-alpha/alpha/beta
 #define CB_USER_AGENT_SEGMENT "/cbitcoin:2.0(pre-alpha)/"
 #define CB_PRODUCTION_NETWORK_BYTE 0 // The normal network for trading
 #define CB_TEST_NETWORK_BYTE 111 // The network for testing
