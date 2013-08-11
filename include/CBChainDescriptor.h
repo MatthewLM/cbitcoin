@@ -24,6 +24,10 @@
 
 #include "CBMessage.h"
 
+// Getter
+
+#define CBGetChainDescriptor(x) ((CBChainDescriptor *)x)
+
 /**
  @brief Structure for CBChainDescriptor objects. @see CBChainDescriptor.h
 */
@@ -44,13 +48,6 @@ CBChainDescriptor * CBNewChainDescriptor(void);
  @returns A new CBChainDescriptor object.
 */
 CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBChainDescriptor from another object. Use this to avoid casts.
- @param self The object to obtain the CBChainDescriptor from.
- @returns The CBChainDescriptor object.
-*/
-CBChainDescriptor * CBGetChainDescriptor(void * self);
 
 /**
  @brief Initialises a CBChainDescriptor object

@@ -31,12 +31,6 @@ CBNetworkAddressBroadcast * CBNewNetworkAddressBroadcastFromData(CBByteArray * d
 	return self;
 }
 
-//  Object Getter
-
-CBNetworkAddressBroadcast * CBGetNetworkAddressBroadcast(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitNetworkAddressBroadcast(CBNetworkAddressBroadcast * self, bool timeStamps){

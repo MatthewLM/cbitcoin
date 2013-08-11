@@ -31,12 +31,6 @@ CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBInventoryBroadcast * CBGetInventoryBroadcast(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitInventoryBroadcast(CBInventoryBroadcast * self){

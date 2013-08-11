@@ -25,9 +25,10 @@
 #include "CBMessage.h"
 #include "CBScript.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_OUTPUT_VALUE_MINUS_ONE 0xFFFFFFFFFFFFFFFF // In twos complement it represents -1. Bitcoin uses twos compliment.
+#define CBGetTransactionOutput(x) ((CBTransactionOutput *)x)
 
 /**
  @brief The types of output recognised by cbitcoin. IP transaction types are not recognised by cbitcoin because they are insecure and pointless.
@@ -63,13 +64,6 @@ CBTransactionOutput * CBNewTransactionOutputTakeScript(uint64_t value, CBScript 
  @returns A new CBTransactionOutput object.
  */
 CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBTransactionOutput from another object. Use this to avoid casts.
- @param self The object to obtain the CBTransactionOutput from.
- @returns The CBTransactionOutput object.
- */
-CBTransactionOutput * CBGetTransactionOutput(void * self);
 
 /**
  @brief Initialises a CBTransactionOutput object.

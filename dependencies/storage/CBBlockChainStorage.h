@@ -21,7 +21,6 @@
 #define CBBLOCKCHAINSTORAGEH
 
 #include "CBDatabase.h"
-#include "CBValidator.h"
 
 /**
  @brief The offsets to parts of the main validation data
@@ -89,17 +88,14 @@ typedef enum{
  @brief The offsets to the extra data
  */
 typedef enum{
-	CB_EXTRA_BASIC_VALIDATOR_INFO = 0,
-	CB_EXTRA_BRANCHES = 4,
+	CB_EXTRA_CREATED_BLOCK_CHAIN_STORAGE = 0,
+	CB_EXTRA_BASIC_VALIDATOR_INFO = 1,
+	CB_EXTRA_BRANCHES = 5,
 } CBExtraDataOffsets;
-
-#define CB_BRANCH_DATA_SIZE 42 // 20 For branch work and 1 for branch work length
-#define CB_EXTRA_SIZE 4 + CB_BRANCH_DATA_SIZE*CB_MAX_BRANCH_CACHE
 
 // ??? Optimise smaller indices.
 typedef struct{
-	CBDatabase base;
-	CBDatabaseTransaction tx;
+	CBDatabase * database;
 	CBDatabaseIndex * orphanIndex; /**< key = [orphanID] */
 	CBDatabaseIndex * blockIndex; /**< key = [branchID, blockID * 4] */
 	CBDatabaseIndex * blockHashIndex; /**< key = [hash * 20] Links to the block branch id and position. */

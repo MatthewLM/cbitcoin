@@ -31,12 +31,6 @@ CBPingPong * CBNewPingPongFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBPingPong * CBGetPingPong(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitPingPong(CBPingPong * self, uint64_t ID){

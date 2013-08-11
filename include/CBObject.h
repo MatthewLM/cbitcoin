@@ -32,6 +32,10 @@
 #include <stdlib.h>
 #include "CBConstants.h"
 
+// Getter
+
+#define CBGetObject(x) ((CBObject *)x)
+
 /**
  @brief Base structure for all other structures. @see CBObject.h
  */
@@ -39,13 +43,6 @@ typedef struct CBObject{
 	void (*free)(void *); /**< Pointer to the function to free the object. */
 	uint32_t references; /**< Keeps a count of the references to an object for memory management. */
 } CBObject;
-
-/**
- @brief Gets a CBObject from another object. Use this to avoid casts.
- @param self The object to obtain the CBObject from.
- @returns The CBObject.
- */
-CBObject * CBGetObject(void * self);
 
 /**
  @brief Initialises a CBObject

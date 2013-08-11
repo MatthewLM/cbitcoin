@@ -27,7 +27,9 @@
 #include "CBVarInt.h"
 #include "CBDependencies.h"
 
-// Constants
+// Constants and Macros
+
+#define CBGetMessage(x) ((CBMessage *)x)
 
 /*
  @brief The type of a CBMessage.
@@ -71,13 +73,6 @@ typedef struct CBMessage{
  @returns A new CBMessage object.
  */
 CBMessage * CBNewMessageByObject(void);
-
-/**
- @brief Gets a CBMessage from another object. Use this to avoid casts.
- @param self The object to obtain the CBMessage from.
- @returns The CBMessage object.
- */
-CBMessage * CBGetMessage(void * self);
 
 /**
  @brief Initialises a CBMessage object

@@ -28,20 +28,21 @@
 #include <stdbool.h>
 #include <string.h>
 
-// Constants
+// Constants and Macros
 
 #define CB_BTREE_ELEMENTS 32 // Algorithm only works with even values. Best with powers of 2. This refers to the number of elements and not children.
 #define CB_BTREE_HALF_ELEMENTS (CB_BTREE_ELEMENTS/2)
 
+typedef struct CBBTreeNode CBBTreeNode;
+
 /**
  @brief A node for a B-Tree. After this data should come the keys and the data elements.
  */
-typedef struct{
-	void * parent; /**< The parent node */
-	void * children[CB_BTREE_ELEMENTS + 1]; /**< Children nodes */
+struct CBBTreeNode{
+	CBBTreeNode * children[CB_BTREE_ELEMENTS + 1]; /**< Children nodes */
 	uint8_t numElements; /**< The number of elements */
 	void * elements[CB_BTREE_ELEMENTS]; /**< The elements cointaining the actual data, including the key information to be compared with the compareFunc function. */
-} CBBTreeNode;
+};
 
 /**
  @brief References an element in an array or a position for insertion.
@@ -49,6 +50,10 @@ typedef struct{
 typedef struct{
 	CBBTreeNode * node; /**< The node for the element */
 	uint8_t index; /**< The element index in the node */
+	CBBTreeNode * parentNodes[7];
+	uint8_t parentPositions[8];
+	uint8_t parentIndex;
+	uint8_t parentCursor;
 } CBPosition;
 
 /**
@@ -68,15 +73,25 @@ typedef struct{
 	CBPosition pos;
 } CBRangeIterator;
 
+typedef struct CBAssociativeArray CBAssociativeArray;
+
 /**
  @brief @see CBAssociativeArray.h
  */
-typedef struct{
+struct CBAssociativeArray{
 	CBBTreeNode * root; /**< The root of the B-tree */
-	CBCompare (*compareFunc)(void *, void *); /**< The function pointer for comparing two keys, to see if the first key is higher, equal or lower to the second. */
+	CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *); /**< The function pointer for comparing two keys, to see if the first key is higher, equal or lower to the second. The first parameter is the array object and the next two are the keys. */
 	void (*onFree)(void *); /**< Called for each element in the array when CBFreeAssociativeArray is called. The arguement is the element. If assigned to NULL, instead nothing will happen. */
-} CBAssociativeArray;
+	void * compareObject; /**< Allows a pointer to be stored for reference in the comparison function. */
+};
 
+/**
+ @brief Places the iterator at the end.
+ @param self The array object
+ @param it The iterator object.
+ @returns true if the final element has been found, or false if there are no elements to be found.
+ */
+bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeIterator * it);
 /**
  @brief Starts the iteration between two elements
  @param self The array object
@@ -161,12 +176,12 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it);
 bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self);
 /**
  @brief Does a binary search on a B-tree node.
- @param self The node
+ @param array The array object.
+ @param node The node
  @param key Key to search for.
- @param compareFunc The comparison function to use.
  @returns The position and wether or not the key exists at this position.
  */
-CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, void * key, CBCompare (*compareFunc)(void *, void *));
+void CBBTreeNodeBinarySearch(CBAssociativeArray * array, CBBTreeNode * node, void * key, CBFindResult * result);
 /**
  @brief Gets the pointer to an element from a CBFindResult
  @param res The CBFindResult.
@@ -190,16 +205,18 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
  @brief Initialises an empty associative array.
  @param self The array object
  @param compareFunc The comparison function to use.
- @param onFree Called for each element in the array when CBFreeAssociativeArray is called. The arguement is the element. If assigned to NULL, instead nothing will happen.
+ @param compareObject The object which is passed into the compare function.
+ @param onFree Called for each element in the array when CBFreeAssociativeArray is called. The argument is the element. If assigned to NULL, instead nothing will happen.
  */
-void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *));
+void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *), void * compareObject, void (*onFree)(void *));
 /**
  @brief The default key comparison function. Reads the first byte in each key as the length, and then compares both keys fromt he remaining data.
+ @param self The array object
  @param key1 The first key.
  @param key2 The second key.
  @returns If the first key is longer than the second key, or if the first key has data which is higher than the second key then CB_COMPARE_MORE_THAN is returned. If the keys are entirely equal thrn CB_COMPARE_EQUAL is returned. If the first key is shorter or has lower data than the second key CB_COMPARE_LESS_THAN is returned.
  */
-CBCompare CBKeyCompare(void * key1, void * key2);
+CBCompare CBKeyCompare(CBAssociativeArray * self, void * key1, void * key2);
 /**
  @brief Gets the element pointer from a CBRangeIterator
  @param it The iterator object.

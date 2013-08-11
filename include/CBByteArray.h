@@ -27,6 +27,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+// Getter
+
+#define CBGetByteArray(x) ((CBByteArray *)x)
+
 /**
  @brief Stores byte data that can be shared amongst many CBByteArrays
  */
@@ -80,13 +84,6 @@ CBByteArray * CBNewByteArrayWithData(uint8_t * data, uint32_t size);
  @returns The new CBByteArray object.
  */
 CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data, uint32_t size);
-
-/**
- @brief Gets a CBByteArray from another object. Use this to avoid casts.
- @param self The object to obtain the CBByteArray from.
- @returns The CBByteArray object.
- */
-CBByteArray * CBGetByteArray(void * self);
 
 /**
  @brief Initialises a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.

@@ -64,29 +64,34 @@ uint64_t CBGetMilliseconds(void){
 }
 
 int main(){
-	remove("./blk/log.dat");
-	remove("./blk/del.dat");
-	remove("./blk/idx_0_0.dat");
-	remove("./blk/idx_1_0.dat");
-	remove("./blk/idx_2_0.dat");
-	remove("./blk/idx_3_0.dat");
-	remove("./blk/idx_4_0.dat");
-	remove("./blk/idx_5_0.dat");
-	remove("./blk/idx_6_0.dat");
-	remove("./blk/val_0.dat");
+	remove("./cbitcoin/log.dat");
+	remove("./cbitcoin/del.dat");
+	remove("./cbitcoin/idx_0_0.dat");
+	remove("./cbitcoin/idx_1_0.dat");
+	remove("./cbitcoin/idx_2_0.dat");
+	remove("./cbitcoin/idx_3_0.dat");
+	remove("./cbitcoin/idx_4_0.dat");
+	remove("./cbitcoin/idx_5_0.dat");
+	remove("./cbitcoin/idx_6_0.dat");
+	remove("./cbitcoin/val_0.dat");
 	// Create validator
 	CBDepObject storage;
-	CBNewBlockChainStorage(&storage, "./");
-	CBValidator * validator = CBNewValidator(storage, 0, 0);
+	CBDepObject database;
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	CBValidator * validator = CBNewValidator(storage, 0);
 	if (NOT validator) {
 		printf("VALIDATOR INIT FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	CBReleaseObject(validator);
+	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
 	// Now create it again. It should load the data.
-	CBNewBlockChainStorage(&storage, "./");
-	validator = CBNewValidator(storage, 0, 0);
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	validator = CBNewValidator(storage, 0);
 	if (NOT validator) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
 		return 1;
@@ -96,7 +101,7 @@ int main(){
 		printf("ORPHAN NUM FAIL\n");
 		return 1;
 	}
-	if(validator->numBranches != 1){
+	if (validator->numBranches != 1){
 		printf("BRANCH NUM FAIL\n");
 		return 1;
 	}
@@ -249,11 +254,14 @@ int main(){
 		printf("MAIN CHAIN ADD FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	// Check validator data is correct, after closing and loading data
 	CBReleaseObject(validator);
+	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
-	CBNewBlockChainStorage(&storage, "./");
-	validator = CBNewValidator(storage, 0, 0);
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	validator = CBNewValidator(storage, 0);
 	if (NOT validator){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
 		return 1;
@@ -476,6 +484,7 @@ int main(){
 			y -= 2;
 		printf("PROCESSING BLOCK %u\n", y);
 		res = CBValidatorProcessBlock(validator, theBlocks[y], 1230999326);
+		CBStorageDatabaseStage(database);
 		if (x < 22){
 			if (res.status != CB_BLOCK_STATUS_ORPHAN) {
 				printf("ORPHAN FAIL AT %u\n", y);
@@ -548,6 +557,7 @@ int main(){
 		printf("POW CHECK DISABLE FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	if (res.data.sideBranch != 2) {
 		printf("POW CHECK DISABLE SIDE BRANCH FAIL\n");
 		return 1;
@@ -662,6 +672,7 @@ int main(){
 			printf("100 TEST BLOCKS NUM %u FAIL\n", x);
 			return 1;
 		}
+		CBStorageDatabaseStage(database);
 		// Change previous block to the one before it
 		memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	}
@@ -703,6 +714,7 @@ int main(){
 		printf("COINBASE IS MATURE FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	// Test non-final normal transaction
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	normal->inputs[0]->prevOut.index = 1;
@@ -751,6 +763,7 @@ int main(){
 		printf("EARLIER SPEND FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	// Transaction spending output already spent in another block
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	testBlock->time++;
@@ -835,6 +848,7 @@ int main(){
 		printf("COINBASE OUTPUT IS OK FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	// Reference to output index that does not exist
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	testBlock->time++;
@@ -970,10 +984,12 @@ int main(){
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
 	CBBlockCalculateLength(testBlock, true);
+	// HERE IS WHERE {79, 109, 172, 232, 178, 152, 46, 55, 23, 237, 134, 90, 234, 38, 105, 201, 227, 244, 29, 120, 144, 175, 216, 198, 88, 86, 248, 68, 206, 145, 17, 209, 59, 0, 0, 0} IS SUPPOSED TO BE MADE TO TXKEYS
 	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_MAIN) {
 		printf("BLOCK SIGOPS OK FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	uint8_t savedHash[32];
 	memcpy(savedHash, CBBlockGetHash(testBlock), 32);
 	// Test reorganisation with spend on other branch.
@@ -993,6 +1009,7 @@ int main(){
 		printf("SPEND ON OTHER BRANCH FIRST FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	if (res.data.sideBranch != 3) {
 		printf("SPEND ON OTHER BRANCH FIRST SIDE BRANCH FAIL\n");
 		return 1;
@@ -1004,6 +1021,7 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], false);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
+	// FAILURE WHEN REMOVING TX REF FOR {79, 109, 172, 232, 178, 152, 46, 55, 23, 237, 134, 90, 234, 38, 105, 201, 227, 244, 29, 120, 144, 175, 216, 198, 88, 86, 248, 68, 206, 145, 17, 209} DURING ATTEMPTED REORG. DOES NOT EXIST IN STAGED OR DISK.
 	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
 		printf("SPEND ON OTHER BRANCH SECOND FAIL\n");
 		return 1;
@@ -1027,6 +1045,7 @@ int main(){
 		printf("ADD TO MAIN BRANCH AFTER FAILED REORG FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	// Test spend on other branch when adding block to new branch
 	testBlock->time++;
 	CBByteArraySetByte(testBlock->transactions[0]->inputs[0]->scriptObject, 0, CBByteArrayGetByte(testBlock->transactions[0]->inputs[0]->scriptObject, 0) + 1);
@@ -1040,6 +1059,7 @@ int main(){
 		printf("SPEND FROM OTHER BRANCH ON LAST BLOCK FIRST FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	CBByteArraySetByte(testBlock->transactions[0]->inputs[0]->scriptObject, 0, CBByteArrayGetByte(testBlock->transactions[0]->inputs[0]->scriptObject, 0) + 1);
 	CBTransactionSerialise(testBlock->transactions[0], true);
@@ -1063,6 +1083,7 @@ int main(){
 		printf("SUCESSFUL REORG WITH TXS FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	if (res.data.reorgData.newChain.numBranches != 3) {
 		printf("SUCESSFUL REORG WITH TXS NUM BRANCHES FAIL\n");
 		return 1;
@@ -1225,6 +1246,8 @@ int main(){
 			printf("REORG OVER BRANCH NUM %u FAIL\n", x);
 			return 1;
 		}
+		// {79, 109, 172, 232, 178, 152, 46, 55, 23, 237, 134, 90, 234, 38, 105, 201, 227, 244, 29, 120, 144, 175, 216, 198, 88, 86, 248, 68, 206, 145, 17, 209, 59, 0, 0, 0} NOT IN TXKEYS
+		CBStorageDatabaseStage(database);
 		// Change previous block to the one before it
 		memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	}
@@ -1235,6 +1258,7 @@ int main(){
 		printf("ADD ON OTHER BRANCH AFTER REORG OVER BRANCH FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	// Test bad orphan ???
 	memset(CBByteArrayGetData(testBlock->prevBlockHash), 1, 32);
 	CBByteArrayGetData(testBlock->merkleRoot)[0]++;
@@ -1251,10 +1275,13 @@ int main(){
 		printf("ADD ORPHAN FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	CBReleaseObject(validator);
+	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
-	CBNewBlockChainStorage(&storage, "./");
-	validator = CBNewValidator(storage, 0, 0);
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	validator = CBNewValidator(storage, 0);
 	if (NOT validator) {
 		printf("LOAD VALIDATOR WITH ORPHAN FAIL\n");
 		return 1;

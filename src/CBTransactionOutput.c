@@ -37,12 +37,6 @@ CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBTransactionOutput * CBGetTransactionOutput(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script){
@@ -122,18 +116,17 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash){
 	switch (CBTransactionOutputGetType(self)) {
 		case CB_TX_OUTPUT_TYPE_KEYHASH:{
-			// See if the public-key hash is one we are watching.
-			uint32_t cursor = 2;
-			CBScriptGetPushAmount(self->scriptObject, &cursor);
-			memcpy(hash, CBByteArrayGetData(self->scriptObject) + cursor, 20);
+			// Copy the bitcoin address (public key hash)
+			CBScriptOp op = CBByteArrayGetByte(self->scriptObject, 2);
+			memcpy(hash, CBByteArrayGetData(self->scriptObject) + 2 + ((op < CB_SCRIPT_OP_PUSHDATA1) ? 1 : (op - CB_SCRIPT_OP_PUSHDATA1 + 2)), 20);
 			break;
 		}
 		case CB_TX_OUTPUT_TYPE_MULTISIG:
-			// Hash the entire script and then see if we are watching that script.
-			CBSha256(CBByteArrayGetData(self->scriptObject), self->scriptObject->length, hash);
+			// Hash the entire script and use that as the hash identifier.
+			CBRipemd160(CBByteArrayGetData(self->scriptObject), self->scriptObject->length, hash);
 			break;
 		case CB_TX_OUTPUT_TYPE_P2SH:
-			// See if the script hash is one we are watching.
+			// Copy the P2SH script hash.
 			memcpy(hash, CBByteArrayGetData(self->scriptObject) + 2, 20);
 			break;
 		default:

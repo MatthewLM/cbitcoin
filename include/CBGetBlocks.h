@@ -24,10 +24,11 @@
 
 #include "CBChainDescriptor.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_GET_BLOCKS_MAX_SIZE 16045
 #define CB_GET_HEADERS_MAX_SIZE 64045
+#define CBGetGetBlocks(x) ((CBGetBlocks *)x)
 
 /**
  @brief Structure for CBGetBlocks objects. @see CBGetBlocks.h
@@ -50,13 +51,6 @@ CBGetBlocks * CBNewGetBlocks(uint32_t version, CBChainDescriptor * chainDescript
  @returns A new CBGetBlocks object.
 */
 CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBGetBlocks from another object. Use this to avoid casts.
- @param self The object to obtain the CBGetBlocks from.
- @returns The CBGetBlocks object.
-*/
-CBGetBlocks * CBGetGetBlocks(void * self);
 
 /**
  @brief Initialises a CBGetBlocks object

@@ -25,18 +25,12 @@ CBNetworkCommunicator * CBNewNetworkCommunicator(){
 	return self;
 }
 
-//  Object Getter
-
-CBNetworkCommunicator * CBGetNetworkCommunicator(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitNetworkCommunicator(CBNetworkCommunicator * self){
 	CBInitObject(CBGetObject(self));
 	// Initialise sentAddrs array
-	CBInitAssociativeArray(&self->relayedAddrs, CBNetworkAddressIPPortCompare, CBReleaseObject);
+	CBInitAssociativeArray(&self->relayedAddrs, CBNetworkAddressIPPortCompare, NULL, CBReleaseObject);
 	// Set fields.
 	self->relayedAddrsLastClear = time(NULL);
 	self->attemptingOrWorkingConnections = 0;
@@ -967,9 +961,8 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 					CBReleaseObject(peerToRelay);
 					// Check that the peer is not the peer that sent us the broadcast and the peer is not contained in the broadcast
 					bool inBroadcast = false;
-					assert(NOT (CBNetworkAddressCompare(addrs->addresses[0], peerToRelay) != CB_COMPARE_EQUAL && CBGetNetworkAddress(peerToRelay)->port == addrs->addresses[0]->port));
 					for (uint8_t x = 0; x < addrs->addrNum; x++)
-						if (CBNetworkAddressCompare(addrs->addresses[x], peerToRelay) == CB_COMPARE_EQUAL)
+						if (CBNetworkAddressCompare(NULL, addrs->addresses[x], peerToRelay) == CB_COMPARE_EQUAL)
 							inBroadcast = true;
 					if (peerToRelay != peer && NOT inBroadcast) {
 						// Relay the broadcast
@@ -1082,7 +1075,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
 				// Release the peer check
 				CBReleaseObject(peerCheck);
 				// Sometimes two peers may try to connect to each other at the same time. Then both peers send a version message at the same time. They will both come to this part of the code. We don't want both peers to disconnect the other in this case. We want to keep one connection between the peers going, so we use a deterministic method for both peers to only disconnect one, by comparing the addresses.
-				CBCompare res = CBNetworkAddressIPPortCompare(CBGetVersion(peer->receive)->addSource,
+				CBCompare res = CBNetworkAddressIPPortCompare(NULL, CBGetVersion(peer->receive)->addSource,
 															  self->ourIPv6 ? self->ourIPv6 : self->ourIPv4);
 				if (res == CB_COMPARE_MORE_THAN)
 					// Disconnect this connection.

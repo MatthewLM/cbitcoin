@@ -20,7 +20,7 @@
 #include <string.h>
 #include "CBConstants.h"
 
-// Constants
+// Constants and Macros
 
 typedef enum{
 	CB_IP_INVALID = 0,

@@ -27,10 +27,11 @@
 #include "CBAssociativeArray.h"
 #include <time.h>
 
-// Constants
+// Constants and Macros
 
 #define CB_BUCKET_NUM 255 // Maximum number of buckets
 #define CB_NETWORK_TIME_ALLOWED_TIME_DRIFT 4200 // 70 minutes from system time
+#define CBGetNetworkAddressManager(x) ((CBNetworkAddressManager *)x)
 
 /**
  @brief Structure for CBNetworkAddressManager objects. @see CBNetworkAddressManager.h
@@ -60,13 +61,6 @@ typedef struct{
  @returns A new CBNetworkAddressManager object.
 */
 CBNetworkAddressManager * CBNewNetworkAddressManager(void (*onBadTime)(void *));
-
-/**
- @brief Gets a CBNetworkAddressManager from another object. Use this to avoid casts.
- @param self The object to obtain the CBNetworkAddressManager from.
- @returns The CBNetworkAddressManager object.
-*/
-CBNetworkAddressManager * CBGetNetworkAddressManager(void * self);
 
 /**
  @brief Initialises a CBNetworkAddressManager object
@@ -210,20 +204,20 @@ void CBNetworkAddressManagerTakePeerTimeOffset(CBNetworkAddressManager * self, C
  @param peer2 The second CBPeer.
  @returns If the first address has a higher time offset then CB_COMPARE_MORE_THAN is returned. If the first address has a lower time offset CB_COMPARE_LESS_THAN is returned. If the time offset are equal then the ip/ports are compared in the same way. If they are equal then CB_COMPARE_EQUAL is returned.
  */
-CBCompare CBPeerCompareByTime(void * peer1, void * peer2);
+CBCompare CBPeerCompareByTime(CBAssociativeArray * array, void * peer1, void * peer2);
 /**
  @brief Compares two network addresses.
  @param address1 The first CBNetworkAddress.
  @param address2 The second CBNetworkAddress.
  @returns If the first address has a higher (-lastSeen + penalty)/IP/port then CB_COMPARE_MORE_THAN is returned. If the (-lastSeen + penalty)/IP/ports are equal thrn CB_COMPARE_EQUAL is returned. If the first address has a lower (-lastSeen + penalty)/IP/port CB_COMPARE_LESS_THAN is returned.
  */
-CBCompare CBNetworkAddressCompare(void * address1, void * address2);
+CBCompare CBNetworkAddressCompare(CBAssociativeArray * array, void * address1, void * address2);
 /**
  @brief Compares the IP and port of two network addresses, used by CBPeerCompareByTime and CBNetworkAddressCompare.
  @param address1 The first CBNetworkAddress.
  @param address2 The second CBNetworkAddress.
  @returns If the first address has a higher IP/port then CB_COMPARE_MORE_THAN is returned. If the IP/ports are equal thrn CB_COMPARE_EQUAL is returned. If the first address has a lower IP/port CB_COMPARE_LESS_THAN is returned.
  */
-CBCompare CBNetworkAddressIPPortCompare(void * address1, void * address2);
+CBCompare CBNetworkAddressIPPortCompare(CBAssociativeArray * array, void * address1, void * address2);
 
 #endif

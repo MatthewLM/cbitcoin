@@ -26,9 +26,10 @@
 #include "CBScript.h"
 #include "CBTransactionOutput.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_TX_INPUT_FINAL 0xFFFFFFFF // Transaction input is final
+#define CBGetTransactionInput(x) ((CBTransactionInput *)x)
 
 /**
  @brief Structure for previous outputs that are being spent by an input.
@@ -64,13 +65,6 @@ CBTransactionInput * CBNewTransactionInputTakeScriptAndHash(CBScript * script, u
  @returns A new CBTransactionInput object.
  */
 CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBTransactionInput from another object. Use this to avoid casts.
- @param self The object to obtain the CBTransactionInput from.
- @returns The CBTransactionInput object.
- */
-CBTransactionInput * CBGetTransactionInput(void * self);
 
 /**
  @brief Initialises a CBTransactionInput object.

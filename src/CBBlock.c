@@ -43,12 +43,6 @@ CBBlock * CBNewBlockGenesisHeader(){
 	return self;
 }
 
-//  Object Getter
-
-CBBlock * CBGetBlock(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitBlock(CBBlock * self){

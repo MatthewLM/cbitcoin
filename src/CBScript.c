@@ -39,12 +39,6 @@ CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size){
 	return CBNewByteArrayWithDataCopy(data, size);
 }
 
-//  Object Getter
-
-CBScript * CBGetScript(void * self){
-	return self;
-}
-
 //  Initialiser
 
 bool CBInitScriptFromString(CBScript * self, char * string){

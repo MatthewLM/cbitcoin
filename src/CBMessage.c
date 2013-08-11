@@ -25,12 +25,6 @@ CBMessage * CBNewMessageByObject(){
 	return self;
 }
 
-//  Object Getter
-
-CBMessage * CBGetMessage(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitMessageByObject(CBMessage * self){

@@ -26,12 +26,13 @@
 #include "CBNetworkAddress.h"
 #include <assert.h>
 
-// Constants
+// Constants and Macros
 
 #define CB_VERSION_MAX_SIZE 492 // Includes 400 characters for the user-agent and the 9 byte var int.
 #define CB_MIN_PROTO_VERSION 209
 #define CB_ADDR_TIME_VERSION 31402 // Version where times are included in addr messages.
 #define CB_PONG_VERSION 60000 // Version where pings are responded with pongs.
+#define CBGetVersion(x) ((CBVersion *)x)
 
 /**
  @brief Structure for CBVersion objects. @see CBVersion.h
@@ -59,13 +60,6 @@ CBVersion * CBNewVersion(int32_t version, CBVersionServices services, int64_t ti
  @returns A new CBVersion object.
  */
 CBVersion * CBNewVersionFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBVersion from another object. Use this to avoid casts.
- @param self The object to obtain the CBVersion from.
- @returns The CBVersion object.
- */
-CBVersion * CBGetVersion(void * self);
 
 /**
  @brief Initialises a CBVersion object

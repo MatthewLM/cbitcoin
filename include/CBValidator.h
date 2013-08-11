@@ -28,7 +28,9 @@
 #include "CBChainDescriptor.h"
 #include <string.h>
 
-// Constants
+// Constants and Macros
+
+#define CBGetValidator(x) ((CBValidator *)x)
 
 typedef enum{
 	CB_VALIDATOR_DISABLE_POW_CHECK = 1, /**< Does not verify the proof of work during validation. Used for testing. */
@@ -143,37 +145,25 @@ typedef struct{
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
 	CBDepObject storage; /**< The storage component object */
 	CBValidatorFlags flags; /**< Flags for validation options */
-	uint32_t commitGap; /**< Time in milliseconds to wait between commits to disk. ??? Determine how to get this to work since changes need to be reverted. Use transaction checkpoints, always commit on reorg? */
-	uint64_t lastCommit; /**< Time in milliseconds of last commit. */
-	bool commitedLastTime; /**< True if a commit was made last time. */
 } CBValidator;
 
 /**
  @brief Creates a new CBValidator object.
  @param storage The block-chain storage component.
  @param flags The flags used for validating this block.
- @param commitGap The time to wait between commits to disk.
  @returns A new CBValidator object.
  */
 
-CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags, uint32_t commitGap);
-
-/**
- @brief Gets a CBValidator from another object. Use this to avoid casts.
- @param self The object to obtain the CBValidator from.
- @returns The CBValidator object.
- */
-CBValidator * CBGetValidator(void * self);
+CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags);
 
 /**
  @brief Initialises a CBValidator object.
  @param self The CBValidator object to initialise.
  @param storage The block-chain storage component.
  @param flags The flags used for validating this block.
- @param commitGap The time to wait between commits to disk.
  @returns true on success, false on failure.
  */
-bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags, uint32_t commitGap);
+bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags);
 
 /**
  @brief Release a free all of the objects stored by the CBValidator object.
@@ -212,12 +202,6 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block);
  @returns The block status.
  */
 CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime);
-/**
- @brief Commits the validator every self->commitGap milliseconds.
- @param self The CBValidator object.
- @returns true on success and false on failure.
- */
-bool CBValidatorCommit(CBValidator * self);
 /**
  @brief Completes the validation for a block during main branch extention or reorganisation.
  @param self The CBValidator object.

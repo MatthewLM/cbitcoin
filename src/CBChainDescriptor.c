@@ -31,12 +31,6 @@ CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBChainDescriptor * CBGetChainDescriptor(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitChainDescriptor(CBChainDescriptor * self){

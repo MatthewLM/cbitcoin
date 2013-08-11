@@ -31,12 +31,6 @@ CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBGetBlocks * CBGetGetBlocks(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash){

@@ -26,9 +26,10 @@
 #include "CBTransactionInput.h"
 #include "CBTransactionOutput.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_TX_MAX_SIZE 999915 // Block size minus the header
+#define CBGetTransaction(x) ((CBTransaction *)x)
 
 /**
  @brief Structure for CBTransaction objects. @see CBTransaction.h
@@ -55,13 +56,6 @@ CBTransaction * CBNewTransaction(uint32_t lockTime, uint32_t version);
  @returns A new CBTransaction object.
  */
 CBTransaction * CBNewTransactionFromData(CBByteArray * bytes);
-
-/**
- @brief Gets a CBTransaction from another object. Use this to avoid casts.
- @param self The object to obtain the CBTransaction from.
- @returns The CBTransaction object.
- */
-CBTransaction * CBGetTransaction(void * self);
 
 /**
  @brief Initialises a CBTransaction object

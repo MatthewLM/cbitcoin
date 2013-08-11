@@ -24,9 +24,10 @@
 
 #include "CBMessage.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_ALERT_MAX_SIZE 2100 // Max size for payload is 2000. Extra 100 for signature though the signature will likely be less.
+#define CBGetAlert(x) ((CBAlert *)x)
 
 /**
  @brief Structure for CBAlert objects. @see CBAlert.h
@@ -62,13 +63,6 @@ CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, in
  @returns A new CBAlert object.
 */
 CBAlert * CBNewAlertFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBAlert from another object. Use this to avoid casts.
- @param self The object to obtain the CBAlert from.
- @returns The CBAlert object.
-*/
-CBAlert * CBGetAlert(void * self);
 
 /**
  @brief Initialises a CBAlert object

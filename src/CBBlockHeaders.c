@@ -31,12 +31,6 @@ CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBBlockHeaders * CBGetBlockHeaders(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitBlockHeaders(CBBlockHeaders * self){

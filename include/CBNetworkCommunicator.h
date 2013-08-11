@@ -35,7 +35,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-// Constants
+// Constants and Macros
+
+#define CBGetNetworkCommunicator(x) ((CBNetworkCommunicator *)x)
 
 typedef enum{
 	CB_CONNECT_OK, /**< The connection is OK. */
@@ -130,13 +132,6 @@ typedef struct {
  @returns A new CBNetworkCommunicator object.
  */
 CBNetworkCommunicator * CBNewNetworkCommunicator(void);
-
-/**
- @brief Gets a CBNetworkCommunicator from another object. Use this to avoid casts.
- @param self The object to obtain the CBNetworkCommunicator from.
- @returns The CBNetworkCommunicator object.
- */
-CBNetworkCommunicator * CBGetNetworkCommunicator(void * self);
 
 /**
  @brief Initialises a CBNetworkCommunicator object

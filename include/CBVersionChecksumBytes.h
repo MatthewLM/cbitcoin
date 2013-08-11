@@ -25,6 +25,10 @@
 #include "CBByteArray.h"
 #include "CBBase58.h"
 
+// Getter
+
+#define CBGetVersionChecksumBytes(x) ((CBVersionChecksumBytes *)x)
+
 /**
  @brief Structure for CBVersionChecksumBytes objects. @see CBVersionChecksumBytes.h
 */
@@ -49,13 +53,6 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * strin
  @returns A new CBVersionChecksumBytes object.
  */
 CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString);
-
-/**
- @brief Gets a CBVersionChecksumBytes from another object. Use this to avoid casts.
- @param self The object to obtain the CBVersionChecksumBytes from.
- @returns The CBVersionChecksumBytes object.
- */
-CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self);
 
 /**
  @brief Initialises a CBVersionChecksumBytes object from a string.

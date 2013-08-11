@@ -24,7 +24,9 @@
 
 #include "CBMessage.h"
 
-// Constants
+// Constants and Macros
+
+#define CBGetInventoryItem(x) ((CBInventoryItem *)x)
 
 typedef enum{
 	CB_INVENTORY_ITEM_ERROR = 0,
@@ -52,13 +54,6 @@ CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type, CBByteArray * has
  @returns A new CBInventoryItem object.
 */
 CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBInventoryItem from another object. Use this to avoid casts.
- @param self The object to obtain the CBInventoryItem from.
- @returns The CBInventoryItem object.
-*/
-CBInventoryItem * CBGetInventoryItem(void * self);
 
 /**
  @brief Initialises a CBInventoryItem object

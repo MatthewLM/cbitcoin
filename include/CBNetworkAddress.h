@@ -27,7 +27,9 @@
 #include "CBNetworkFunctions.h"
 #include <time.h>
 
-// Constants
+// Constants and Macros
+
+#define CBGetNetworkAddress(x) ((CBNetworkAddress *)x)
 
 typedef enum{
 	CB_SERVICE_FULL_BLOCKS = 1, /**< Service for full blocks. Node maintains the entire blockchain. */
@@ -66,13 +68,6 @@ CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint
  @returns A new CBNetworkAddress object.
  */
 CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic);
-
-/**
- @brief Gets a CBNetworkAddress from another object. Use this to avoid casts.
- @param self The object to obtain the CBNetworkAddress from.
- @returns The CBNetworkAddress object.
- */
-CBNetworkAddress * CBGetNetworkAddress(void * self);
 
 /**
  @brief Initialises a CBNetworkAddress object

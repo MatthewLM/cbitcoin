@@ -31,12 +31,6 @@ CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic
 	return self;
 }
 
-//  Object Getter
-
-CBNetworkAddress * CBGetNetworkAddress(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic){

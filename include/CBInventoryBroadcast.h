@@ -24,10 +24,11 @@
 
 #include "CBInventoryItem.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_GET_DATA_MAX_SIZE 50000
 #define CB_INVENTORY_BROADCAST_MAX_SIZE 50000
+#define CBGetInventoryBroadcast(x) ((CBInventoryBroadcast *)x)
 
 /**
  @brief Structure for CBInventoryBroadcast objects. @see CBInventoryBroadcast.h
@@ -49,13 +50,6 @@ CBInventoryBroadcast * CBNewInventoryBroadcast(void);
  @returns A new CBInventoryBroadcast object.
 */
 CBInventoryBroadcast * CBNewInventoryBroadcastFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBInventoryBroadcast from another object. Use this to avoid casts.
- @param self The object to obtain the CBInventoryBroadcast from.
- @returns The CBInventoryBroadcast object.
- */
-CBInventoryBroadcast * CBGetInventoryBroadcast(void * self);
 
 /**
  @brief Initialises a CBInventoryBroadcast object

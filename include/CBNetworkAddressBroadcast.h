@@ -24,9 +24,10 @@
 
 #include "CBNetworkAddress.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_NETWORK_ADDRESS_BROADCAST_MAX_SIZE 1000
+#define CBGetNetworkAddressBroadcast(x) ((CBNetworkAddressBroadcast *)x)
 
 /**
  @brief Structure for CBNetworkAddressBroadcast objects. @see CBNetworkAddressBroadcast.h
@@ -49,13 +50,6 @@ CBNetworkAddressBroadcast * CBNewNetworkAddressBroadcast(bool timeStamps);
  @returns A new CBNetworkAddressBroadcast object.
 */
 CBNetworkAddressBroadcast * CBNewNetworkAddressBroadcastFromData(CBByteArray * data, bool timeStamps);
-
-/**
- @brief Gets a CBNetworkAddressBroadcast from another object. Use this to avoid casts.
- @param self The object to obtain the CBNetworkAddressBroadcast from.
- @returns The CBNetworkAddressBroadcast object.
- */
-CBNetworkAddressBroadcast * CBGetNetworkAddressBroadcast(void * self);
 
 /**
  @brief Initialises a CBNetworkAddressBroadcast object

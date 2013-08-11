@@ -26,9 +26,10 @@
 #include "CBBigInt.h"
 #include "CBValidationFunctions.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
+#define CBGetBlock(x) ((CBBlock *)x)
 
 /**
  @brief Structure for CBBlock objects. @see CBBlock.h
@@ -68,13 +69,6 @@ CBBlock * CBNewBlockGenesis(void);
  @returns A new CBBlock object.
  */
 CBBlock * CBNewBlockGenesisHeader(void);
-
-/**
- @brief Gets a CBBlock from another object. Use this to avoid casts.
- @param self The object to obtain the CBBlock from.
- @returns The CBBlock object.
- */
-CBBlock * CBGetBlock(void * self);
 
 /**
  @brief Initialises a CBBlock object

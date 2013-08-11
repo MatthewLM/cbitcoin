@@ -33,16 +33,16 @@
 #define CB_SCAN_START ((CB_NETWORK_TIME_ALLOWED_TIME_DRIFT + CB_BLOCK_ALLOWED_TIME_DRIFT)*2)
 #define CB_NO_SCAN 0xFFFFFFFFFFFFFFFF
 #define NOT ! // Better readability than !
-#define CBInt16ToArray(arr, offset, i) (arr)[offset] = (uint8_t)i; \
+#define CBInt16ToArray(arr, offset, i) (arr)[offset] = (uint8_t)(i); \
 									 (arr)[offset + 1] = (uint8_t)((i) >> 8);
 #define CBInt32ToArray(arr, offset, i) CBInt16ToArray(arr, offset, i) \
 									 (arr)[offset + 2] = (uint8_t)((i) >> 16); \
 							         (arr)[offset + 3] = (uint8_t)((i) >> 24);
 #define CBInt64ToArray(arr, offset, i) CBInt32ToArray(arr, offset, i) \
-									 (arr)[offset + 4] = (uint8_t)((i) >> 32); \
-									 (arr)[offset + 5] = (uint8_t)((i) >> 40); \
-									 (arr)[offset + 6] = (uint8_t)((i) >> 48); \
-									 (arr)[offset + 7] = (uint8_t)((i) >> 56);
+									 (arr)[offset + 4] = (uint8_t)((uint64_t)(i) >> 32); \
+									 (arr)[offset + 5] = (uint8_t)((uint64_t)(i) >> 40); \
+									 (arr)[offset + 6] = (uint8_t)((uint64_t)(i) >> 48); \
+									 (arr)[offset + 7] = (uint8_t)((uint64_t)(i) >> 56);
 #define CBArrayToInt16(arr, offset) ((arr)[offset] \
                                      | (uint16_t)(arr)[offset + 1] << 8)
 #define CBArrayToInt32(arr, offset) (CBArrayToInt16(arr, offset) \
@@ -55,19 +55,29 @@
                                      | (uint64_t)(arr)[offset + 6] << 48 \
                                      | (uint64_t)(arr)[offset + 7] << 56)
 #define CBInt32ToArrayBigEndian(arr, offset, i) (arr)[offset] = (i) >> 24; \
-										      (arr)[offset + 1] = (i) >> 16;\
-                                              (arr)[offset + 2] = (i) >> 8; \
-                                              (arr)[offset + 3] = (i);
+											    (arr)[offset + 1] = (i) >> 16;\
+											    (arr)[offset + 2] = (i) >> 8; \
+											    (arr)[offset + 3] = (i);
+#define CBInt64ToArrayBigEndian(arr, offset, i) CBInt32ToArrayBigEndian(arr, offset + 4, i) \
+												(arr)[offset + 0] = (uint8_t)((uint64_t)(i) >> 56); \
+												(arr)[offset + 1] = (uint8_t)((uint64_t)(i) >> 48);\
+												(arr)[offset + 2] = (uint8_t)((uint64_t)(i) >> 40); \
+												(arr)[offset + 3] = (uint8_t)((uint64_t)(i) >> 32);
 #define CBArrayToInt32BigEndian(arr, offset) ((arr)[offset] << 24 \
                                               | (uint16_t)(arr)[offset + 1] << 16 \
                                               | (uint32_t)(arr)[offset + 2] << 8 \
                                               | (uint32_t)(arr)[offset + 3])
+#define CBArrayToInt64BigEndian(arr, offset) (CBArrayToInt32BigEndian(arr, offset + 4) \
+											  | (uint64_t)(arr)[offset] << 56 \
+											  | (uint64_t)(arr)[offset + 1] << 48 \
+											  | (uint64_t)(arr)[offset + 2] << 40 \
+											  | (uint64_t)(arr)[offset + 3] << 32)
 //  Enums
 
 typedef enum{
-	CB_COMPARE_MORE_THAN = 1, 
-	CB_COMPARE_EQUAL = 0, 
-	CB_COMPARE_LESS_THAN = -1, 
+	CB_COMPARE_MORE_THAN = 1,
+	CB_COMPARE_EQUAL = 0,
+	CB_COMPARE_LESS_THAN = -1,
 }CBCompare;
 
 #endif

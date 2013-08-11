@@ -22,6 +22,10 @@
 #ifndef CBADDRESSH
 #define CBADDRESSH
 
+// Getter
+
+#define CBGetAddress(x) ((CBAddress *)x)
+
 //  Includes
 
 #include "CBVersionChecksumBytes.h"
@@ -47,13 +51,6 @@ CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, uint8_t networkCode, b
  @returns A new CBAddress object. Returns NULL on failure such as an invalid bitcoin address.
  */
 CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString);
-
-/**
- @brief Gets a CBAddress from another object. Use this to avoid casts.
- @param self The object to obtain the CBAddress from.
- @returns The CBAddress object.
- */
-CBAddress * CBGetAddress(void * self);
 
 /**
  @brief Initialises a CBAddress object from a RIPEMD-160 hash.

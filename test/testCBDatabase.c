@@ -17,6 +17,7 @@
 #include "CBDependencies.h"
 #include <time.h>
 #include "stdarg.h"
+#include <sys/time.h>
 
 void CBLogError(char * format, ...);
 void CBLogError(char * format, ...){
@@ -25,6 +26,12 @@ void CBLogError(char * format, ...){
     vfprintf(stderr, format, argptr);
     va_end(argptr);
 	printf("\n");
+}
+
+uint64_t CBGetMilliseconds(void){
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
 int main(){
@@ -38,8 +45,10 @@ int main(){
 	remove("./testDb/idx_0_0.dat");
 	remove("./testDb/idx_1_0.dat");
 	remove("./testDb/idx_2_0.dat");
+	remove("./testDb/idx_3_0.dat");
+	remove("./testDb/idx_4_0.dat");
 	rmdir("./testDb/");
-	CBDatabase * storage = CBNewDatabase(".", "testDb", 10);
+	CBDatabase * storage = CBNewDatabase(".", "testDb", 10, 10000000, 10000000);
 	if (NOT storage) {
 		printf("NEW STORAGE FAIL\n");
 		return 1;
@@ -109,7 +118,7 @@ int main(){
 	}
 	CBFileClose(file);
 	// Test opening of initial files
-	storage = (CBDatabase *)CBNewDatabase(".", "testDb", 10);
+	storage = (CBDatabase *)CBNewDatabase(".", "testDb", 10, 10000000, 10000000);
 	if (storage->lastFile != 0) {
 		printf("STORAGE NUM FILES FAIL\n");
 		return 1;
@@ -125,15 +134,28 @@ int main(){
 	index = CBLoadIndex(storage, 0, 10, nodeSize*2);
 	// Try inserting a value
 	uint8_t key[10] = {255,9,8,7,6,5,4,3,2,1};
-	CBDatabaseTransaction * tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key, (uint8_t *)"Hi There Mate!", 15);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	// Now check over data
+	CBDatabaseWriteValue(index, key, (uint8_t *)"Hi There Mate!", 15);
 	char readStr[18];
-	CBDatabaseReadValue(NULL, index, key, (uint8_t *)readStr, 15, 0);
+	// Check over current data
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Hi There Mate!", 15)) {
-		printf("READ ALL VALUE FAIL\n");
+		printf("READ ALL VALUE CURRENT FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	// Check over staged data
+	memset(readStr, 0, 15);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
+	if (memcmp(readStr, "Hi There Mate!", 15)) {
+		printf("READ ALL VALUE STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	// Now check over commited data
+	memset(readStr, 0, 15);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
+	if (memcmp(readStr, "Hi There Mate!", 15)) {
+		printf("READ ALL VALUE DISK FAIL\n");
 		return 1;
 	}
 	if (storage->lastFile != 0) {
@@ -217,24 +239,36 @@ int main(){
 	}
 	CBFileClose(file);
 	// Try reding a section of the value
-	CBDatabaseReadValue(NULL, index, key, (uint8_t *)readStr, 5, 3);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 5, 3, false);
 	if (memcmp(readStr, "There", 5)) {
 		printf("READ PART VALUE FAIL\n");
 		return 1;
 	}
 	// Try adding a new value and replacing the previous value together.
 	uint8_t key2[10] = {254,9,8,7,6,5,4,3,2,1};
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key2, (uint8_t *)"Another one", 12);
-	CBDatabaseWriteValue(tx, index, key, (uint8_t *)"Replacement!!!", 15);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	CBDatabaseReadValue(NULL, index, key, (uint8_t *)readStr, 15, 0);
+	CBDatabaseWriteValue(index, key2, (uint8_t *)"Another one", 12);
+	CBDatabaseStage(storage);
+	CBDatabaseWriteValue(index, key, (uint8_t *)"Replacement!!!", 15);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Replacement!!!", 15)) {
-		printf("READ REPLACED VALUE FAIL\n");
+		printf("READ REPLACED VALUE CURRENT FAIL\n");
 		return 1;
 	}
-	CBDatabaseReadValue(NULL, index, key2, (uint8_t *)readStr, 12, 0);
+	CBDatabaseStage(storage);
+	memset(readStr, 0, 15);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
+	if (memcmp(readStr, "Replacement!!!", 15)) {
+		printf("READ REPLACED VALUE STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	memset(readStr, 0, 15);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
+	if (memcmp(readStr, "Replacement!!!", 15)) {
+		printf("READ REPLACED VALUE DISK FAIL\n");
+		return 1;
+	}
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 12, 0, false);
 	if (memcmp(readStr, "Another one", 12)) {
 		printf("READ 2ND VALUE FAIL\n");
 		return 1;
@@ -334,12 +368,11 @@ int main(){
 	}
 	CBFileClose(file);
 	// Remove first value
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseRemoveValue(tx, index, key);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
+	CBDatabaseRemoveValue(index, key, false);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
 	// Check data
-	CBDatabaseReadValue(NULL, index, key2, (uint8_t *)readStr, 12, 0);
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 12, 0, false);
 	if (memcmp(readStr, "Another one", 12)) {
 		printf("DELETE 1ST 2ND VALUE FAIL\n");
 		return 1;
@@ -417,12 +450,11 @@ int main(){
 	}
 	CBFileClose(file);
 	// Increase size of second key-value to 15 to replace deleted section
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key2, (uint8_t *)"Annoying code.", 15);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
+	CBDatabaseWriteValue(index, key2, (uint8_t *)"Annoying code.", 15);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
 	// Look at data
-	CBDatabaseReadValue(NULL, index, key2, (uint8_t *)readStr, 15, 0);
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Annoying code.", 15)) {
 		printf("INCREASE 2ND VALUE FAIL\n");
 		return 1;
@@ -522,12 +554,11 @@ int main(){
 	CBFileClose(file);
 	// Add value and try database recovery.
 	uint8_t key3[10] = {253,9,8,7,6,5,4,3,2,1};
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key3, (uint8_t *)"cbitcoin", 9);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
+	CBDatabaseWriteValue(index, key3, (uint8_t *)"cbitcoin", 9);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
 	// Ensure value is OK
-	CBDatabaseReadValue(NULL, index, key3, (uint8_t *)readStr, 9, 0);
+	CBDatabaseReadValue(index, key3, (uint8_t *)readStr, 9, 0, false);
 	if (memcmp(readStr, "cbitcoin", 9)) {
 		printf("3RD VALUE FAIL\n");
 		return 1;
@@ -541,14 +572,14 @@ int main(){
 	CBFileOverwrite(file, data, 1);
 	CBFileClose(file);
 	// Load database and index
-	storage = CBNewDatabase(".", "testDb", 10);
+	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
 	if (NOT storage) {
 		printf("RECOVERY INIT DATABASE FAIL\n");
 		return 1;
 	}
 	index = CBLoadIndex(storage, 0, 10, nodeSize*2);
 	// Verify recovery.
-	CBDatabaseReadValue(NULL, index, key2, (uint8_t *)readStr, 15, 0);
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Annoying code.", 15)) {
 		printf("RECOVERY VALUE 2 FAIL\n");
 		return 1;
@@ -623,12 +654,11 @@ int main(){
 	}
 	CBFileClose(file);
 	// Add value with smaller length than deleted section
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key, (uint8_t *)"Maniac", 7);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
+	CBDatabaseWriteValue(index, key, (uint8_t *)"Maniac", 7);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
 	// Look at data
-	CBDatabaseReadValue(NULL, index, key, (uint8_t *)readStr, 7, 0);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 7, 0, false);
 	if (memcmp(readStr, "Maniac", 7)) {
 		printf("SMALLER VALUE FAIL\n");
 		return 1;
@@ -725,15 +755,28 @@ int main(){
 	CBFileClose(file);
 	// Change the first key
 	uint8_t key4[10] = {252,9,8,7,6,5,4,3,2,1};
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseChangeKey(tx, index, key, key4);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	// Check data
+	CBDatabaseChangeKey(index, key, key4, false);
+	// Check data in current
 	memset(readStr, 0, 7);
-	CBDatabaseReadValue(NULL, index, key4, (uint8_t *)readStr, 7, 0);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
 	if (memcmp(readStr, "Maniac", 7)) {
-		printf("CHANGE KEY VALUE FAIL\n");
+		printf("CHANGE KEY VALUE CURRENT FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	// Check data in staged
+	memset(readStr, 0, 7);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
+	if (memcmp(readStr, "Maniac", 7)) {
+		printf("CHANGE KEY VALUE STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	// Check data in disk
+	memset(readStr, 0, 7);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
+	if (memcmp(readStr, "Maniac", 7)) {
+		printf("CHANGE KEY VALUE IN DISK FAIL\n");
 		return 1;
 	}
 	if (storage->lastSize != 43) {
@@ -839,23 +882,45 @@ int main(){
 	}
 	CBFileClose(file);
 	// Try reading length of values
-	if (CBDatabaseGetLength(NULL, index, key4) != 7) {
+	uint32_t len;
+	if (NOT CBDatabaseGetLength(index, key4, &len)) {
+		printf("READ 1ST VAL LENGTH OBTAIN FAIL\n");
+		return 1;
+	}
+	if (len != 7) {
 		printf("READ 1ST VAL LENGTH FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(NULL, index, key2) != 15) {
+	if (NOT CBDatabaseGetLength(index, key2, &len)) {
+		printf("READ 2ND VAL LENGTH OBTAIN FAIL\n");
+		return 1;
+	}
+	if (len != 15) {
 		printf("READ 2ND VAL LENGTH FAIL\n");
 		return 1;
 	}
 	// Overwrite value with smaller value
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key4, (uint8_t *)"Hi!", 4);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	// Check data
-	CBDatabaseReadValue(NULL, index, key4, (uint8_t *)readStr, 4, 0);
+	CBDatabaseWriteValue(index, key4, (uint8_t *)"Hi!", 4);
+	// Check data in current
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 4, 0, false);
 	if (memcmp(readStr, "Hi!", 4)) {
-		printf("OVERWRITE WITH SMALLER VALUE FAIL\n");
+		printf("OVERWRITE WITH SMALLER VALUE CURRENT FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	// Check data in staged
+	memset(readStr, 0, 4);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 4, 0, false);
+	if (memcmp(readStr, "Hi!", 4)) {
+		printf("OVERWRITE WITH SMALLER VALUE STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	// Check data in disk
+	memset(readStr, 0, 4);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 4, 0, false);
+	if (memcmp(readStr, "Hi!", 4)) {
+		printf("OVERWRITE WITH SMALLER VALUE DISK FAIL\n");
 		return 1;
 	}
 	if (storage->lastSize != 43) {
@@ -954,14 +1019,27 @@ int main(){
 	}
 	CBFileClose(file);
 	// Try changing key to existing key
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseChangeKey(tx, index, key2, key4);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	// Check data
-	CBDatabaseReadValue(NULL, index, key4, (uint8_t *)readStr, 15, 0);
+	CBDatabaseChangeKey(index, key2, key4, false);
+	// Check data in current
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Annoying code.", 15)) {
-		printf("CHANGE KEY TO EXISTING KEY VALUE FAIL\n");
+		printf("CHANGE KEY TO EXISTING KEY VALUE CURRENT FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	// Check data in staged
+	memset(readStr, 0, 15);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false);
+	if (memcmp(readStr, "Annoying code.", 15)) {
+		printf("CHANGE KEY TO EXISTING KEY VALUE STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	// Check data in disk
+	memset(readStr, 0, 15);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false);
+	if (memcmp(readStr, "Annoying code.", 15)) {
+		printf("CHANGE KEY TO EXISTING KEY VALUE DISK FAIL\n");
 		return 1;
 	}
 	CBFileOpen(&file,"./testDb/idx_0_0.dat", false);
@@ -1059,226 +1137,517 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	// Test reading from transaction object
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValue(tx, index, key, (uint8_t *)"cbitcoin", 9);
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 9, 0);
+	// Test reading from current and staged
+	CBDatabaseWriteValue(index, key, (uint8_t *)"cbitcoin", 9);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 9, 0, false);
 	if (memcmp(readStr, "cbitcoin", 9)) {
-		printf("WRITE VALUE TO TX READ FAIL\n");
+		printf("WRITE VALUE TO CURRENT READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(tx, index, key) != 9){
-		printf("WRITE VALUE TO TX READ LEN FAIL\n");
+	if (NOT CBDatabaseGetLength(index, key, &len)) {
+		printf("WRITE VALUE TO CURRENT READ LEN OBTAIN FAIL\n");
 		return 1;
 	}
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"hello", 5, 2);
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 9, 0);
+	if (len != 9){
+		printf("WRITE VALUE TO CURRENT READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"hello", 5, 2);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 9, 0, false);
 	if (memcmp(readStr, "cbhellon", 9)) {
-		printf("SUBSECTION TO TX READ FAIL\n");
+		printf("SUBSECTION TO CURRENT READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(tx, index, key) != 9){
-		printf("SUBSECTION TO TX READ LEN FAIL\n");
+	if (NOT CBDatabaseGetLength(index, key, &len)) {
+		printf("SUBSECTION TO CURRENT READ LEN OBTAIN FAIL\n");
 		return 1;
 	}
-	CBDatabaseWriteValue(tx, index, key, (uint8_t *)"replacement value", 18);
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 18, 0);
+	if (len != 9){
+		printf("SUBSECTION TO CURRENT READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseWriteValue(index, key, (uint8_t *)"replacement value", 18);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "replacement value", 18)) {
-		printf("WRITE REPLACEMENT VALUE TO TX READ FAIL\n");
+		printf("WRITE REPLACEMENT VALUE TO CURRENT READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(tx, index, key) != 18){
-		printf("WRITE REPLACEMENT VALUE TO TX READ LEN FAIL\n");
+	if (NOT CBDatabaseGetLength(index, key, &len)) {
+		printf("WRITE REPLACEMENT VALUE TO CURRENT READ OBTAIN LEN FAIL\n");
 		return 1;
 	}
-	// Test subsections to overwrite value write
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"first", 5, 2);
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"second", 6, 9);
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 18, 0);
+	if (len != 18){
+		printf("WRITE REPLACEMENT VALUE TO CURRENT READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	// Test subsections to overwrite value write in staged
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"first", 5, 2);
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"second", 6, 9);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "refirstmesecondue", 18)) {
-		printf("SUBSECTIONS TO TX READ FAIL\n");
+		printf("SUBSECTIONS OVER STAGED READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(tx, index, key) != 18){
-		printf("SUBSECTIONS TO TX READ LEN FAIL\n");
+	if (NOT CBDatabaseGetLength(index, key, &len)) {
+		printf("SUBSECTIONS OVER STAGED READ LEN OBTAIN FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	CBDatabaseReadValue(NULL, index, key, (uint8_t *)readStr, 18, 0);
+	if (len != 18){
+		printf("SUBSECTIONS OVER STAGED READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "refirstmesecondue", 18)) {
 		printf("SUBSECTIONS TO DISK READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(NULL, index, key) != 18){
+	if (NOT CBDatabaseGetLength(index, key, &len)) {
+		printf("SUBSECTIONS TO DISK READ LEN OBTAIN FAIL\n");
+		return 1;
+	}
+	if (len != 18){
 		printf("SUBSECTIONS TO DISK READ LEN FAIL\n");
 		return 1;
 	}
-	// Test subsections to disk
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"third", 5, 2);
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"forth", 5, 2);
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"fifth", 5, 9);
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 18, 0);
+	// Test overing subsections
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"third", 5, 2);
+	CBDatabaseStage(storage);
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"forth", 5, 2);
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"newwy", 5, 9);
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"fifth", 5, 9);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "reforthmefifthdue", 18)) {
-		printf("SUBSECTIONS TO TX NO OVERWRITE READ FAIL\n");
+		printf("SUBSECTIONS TO MEM NO OVERWRITE READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(tx, index, key) != 18){
-		printf("SUBSECTIONS TO TX NO OVERWRITE READ LEN FAIL\n");
+	if (NOT CBDatabaseGetLength(index, key, &len)) {
+		printf("SUBSECTIONS TO MEM NO OVERWRITE READ LEN OBTAIN FAIL\n");
+		return 1;
+	}
+	if (len != 18){
+		printf("SUBSECTIONS TO MEM NO OVERWRITE READ LEN FAIL\n");
 		return 1;
 	}
 	// Test reading subsection
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 9, 4);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 9, 4, false);
 	if (memcmp(readStr, "rthmefift", 9)) {
 		printf("SUBSECTIONS TO TX NO OVERWRITE SUBSECTION READ FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	CBDatabaseReadValue(NULL, index, key, (uint8_t *)readStr, 18, 0);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "reforthmefifthdue", 18)) {
 		printf("SUBSECTIONS TO DISK NO OVERWRITE READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(NULL, index, key) != 18){
+	CBDatabaseGetLength(index, key, &len);
+	if (len != 18){
 		printf("SUBSECTIONS TO DISK NO OVERWRITE READ LEN FAIL\n");
 		return 1;
 	}
 	// Test deletion with subsections
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"sixth", 5, 2);
-	CBDatabaseWriteValueSubSection(tx, index, key, (uint8_t *)"seventh", 7, 7);
-	CBDatabaseReadValue(tx, index, key, (uint8_t *)readStr, 18, 0);
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"sixth", 5, 2);
+	CBDatabaseWriteValueSubSection(index, key, (uint8_t *)"seventh", 7, 7);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "resixthseventhdue", 18)) {
-		printf("SUBSECTIONS TO TX NO OVERWRITE SECOND READ FAIL\n");
+		printf("SUBSECTIONS TO CURRENT NO OVERWRITE SECOND READ FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseGetLength(tx, index, key) != 18){
-		printf("SUBSECTIONS TO TX NO OVERWRITE SECOND READ LEN FAIL\n");
+	CBDatabaseGetLength(index, key, &len);
+	if (len != 18){
+		printf("SUBSECTIONS TO CURRENT NO OVERWRITE SECOND READ LEN FAIL\n");
 		return 1;
 	}
-	CBDatabaseRemoveValue(tx, index, key);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	if (CBDatabaseGetLength(NULL, index, key) != CB_DOESNT_EXIST) {
-		printf("DELETE WITH SUBSECTIONS IN TX LEN FAIL\n");
+	CBDatabaseStage(storage);
+	CBDatabaseRemoveValue(index, key, false);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	CBDatabaseGetLength(index, key, &len);
+	if (len != CB_DOESNT_EXIST) {
+		printf("DELETE WITH SUBSECTIONS IN DISK LEN FAIL\n");
 		return 1;
 	}
 	// Test deleting value followed by writing value
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseRemoveValue(tx, index, key4);
-	CBDatabaseWriteValue(tx, index, key4, (uint8_t *)"Mr. Bean", 9);
-	CBDatabaseReadValue(tx, index, key4, (uint8_t *)readStr, 9, 0);
+	CBDatabaseRemoveValue(index, key4, false);
+	CBDatabaseWriteValue(index, key4, (uint8_t *)"Mr. Bean", 9);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 9, 0, false);
 	if (memcmp(readStr, "Mr. Bean", 9)) {
-		printf("TEST WRITE AFTER DELETE IN TX READ TX FAIL\n");
+		printf("TEST WRITE AFTER DELETE IN CURRENT READ TX FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	CBDatabaseReadValue(NULL, index, key4, (uint8_t *)readStr, 9, 0);
+	CBDatabaseStage(storage);
+	memset(readStr, 0, 9);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 9, 0, false);
 	if (memcmp(readStr, "Mr. Bean", 9)) {
-		printf("TEST WRITE AFTER DELETE IN TX READ DISK FAIL\n");
+		printf("TEST WRITE AFTER DELETE IN STAGED READ TX FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 9, 0, false);
+	if (memcmp(readStr, "Mr. Bean", 9)) {
+		printf("TEST WRITE AFTER DELETE IN DISK READ TX FAIL\n");
 		return 1;
 	}
 	// Test deleting subsection writes with overwrite.
-	tx = CBNewDatabaseTransaction(storage);
-	CBDatabaseWriteValueSubSection(tx, index, key4, (uint8_t *)"D", 1, 0);
-	CBDatabaseWriteValueSubSection(tx, index, key4, (uint8_t *)"Fl", 2, 4);
-	CBDatabaseWriteValue(tx, index, key4, (uint8_t *)"Monkey", 7);
-	CBDatabaseReadValue(tx, index, key4, (uint8_t *)readStr, 7, 0);
+	CBDatabaseWriteValueSubSection(index, key4, (uint8_t *)"D", 1, 0);
+	CBDatabaseStage(storage);
+	CBDatabaseWriteValueSubSection(index, key4, (uint8_t *)"Fl", 2, 4);
+	CBDatabaseWriteValueSubSection(index, key4, (uint8_t *)"t", 1, 7);
+	CBDatabaseWriteValue(index, key4, (uint8_t *)"Monkey", 7);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
 	if (memcmp(readStr, "Monkey", 7)) {
-		printf("TEST WRITE AFTER SUBSECTIONS IN TX READ TX FAIL\n");
+		printf("TEST WRITE AFTER SUBSECTIONS IN CURRENT READ TX FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	CBDatabaseReadValue(NULL, index, key4, (uint8_t *)readStr, 9, 0);
+	CBDatabaseStage(storage);
+	memset(readStr, 0, 7);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
 	if (memcmp(readStr, "Monkey", 7)) {
-		printf("TEST WRITE AFTER SUBSECTIONS IN TX READ DISK FAIL\n");
+		printf("TEST WRITE AFTER SUBSECTIONS IN STAGED READ TX FAIL\n");
 		return 1;
 	}
+	CBDatabaseCommit(storage);
+	memset(readStr, 0, 7);
+	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
+	if (memcmp(readStr, "Monkey", 7)) {
+		printf("TEST WRITE AFTER SUBSECTIONS IN DISK READ TX FAIL\n");
+		return 1;
+	}
+	// Test changing key in transaction many times and writing to middle key
+	CBDatabaseWriteValue(index, key4, (uint8_t *)"Change the key", 15);
+	CBDatabaseChangeKey(index, key4, key3, false);
+	CBDatabaseChangeKey(index, key3, key, false);
+	CBDatabaseStage(storage);
+	CBDatabaseChangeKey(index, key, key3, false);
+	CBDatabaseChangeKey(index, key3, key2, false);
+	CBDatabaseWriteValue(index, key3, (uint8_t *)"a value", 8);
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
+	if (strcmp(readStr, "Change the key")) {
+		printf("READ FROM NEW KEY IN CURRENT DATA FAIL\n");
+		return 1;
+	}
+	if (NOT CBDatabaseGetLength(index, key2, &len)) {
+		printf("READ LEN FROM NEW KEY IN CURRENT FAIL\n");
+		return 1;
+	}
+	if (len != 15) {
+		printf("READ LEN FROM NEW KEY IN CURRENT NUM FAIL\n");
+		return 1;
+	}
+	CBDatabaseReadValue(index, key3, (uint8_t *)readStr, 8, 0, false);
+	if (strcmp(readStr, "a value")) {
+		printf("READ FROM NEW KEY IN CURRENT DATA FAIL\n");
+		return 1;
+	}
+	// Test staged with change key
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	if (CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
+		printf("READ FROM OLD KEY IN STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
+	if (strcmp(readStr, "Change the key")) {
+		printf("READ FROM NEW KEY IN STAGED DATA FAIL\n");
+		return 1;
+	}
+	CBDatabaseReadValue(index, key3, (uint8_t *)readStr, 8, 0, false);
+	if (strcmp(readStr, "a value")) {
+		printf("READ FROM NEW KEY IN STAGED DATA FAIL\n");
+		return 1;
+	}
+	// Test commit with change key
+	CBDatabaseCommit(storage);
+	if (CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
+		printf("READ FROM OLD KEY IN DISK FAIL\n");
+		return 1;
+	}
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
+	if (strcmp(readStr, "Change the key")) {
+		printf("READ FROM NEW KEY IN DISK DATA FAIL\n");
+		return 1;
+	}
+	CBDatabaseReadValue(index, key3, (uint8_t *)readStr, 8, 0, false);
+	if (strcmp(readStr, "a value")) {
+		printf("READ FROM NEW KEY IN DISK DATA FAIL\n");
+		return 1;
+	}
+	// Test change key not in index.
+	uint8_t key5[10] = {251,9,8,7,6,5,4,3,2,1};
+	uint8_t key6[10] = {250,9,8,7,6,5,4,3,2,1};
+	CBDatabaseWriteValue(index, key5, (uint8_t *)"ni!", 4);
+	CBDatabaseChangeKey(index, key5, key6, false);
+	if (CBDatabaseReadValue(index, key6, (uint8_t *)readStr, 4, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("NOT IN INDEX READ FROM NEW KEY IN CURRENT FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "ni!")) {
+		printf("NOT IN INDEX READ FROM NEW KEY IN CURRENT DATA FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	memset(readStr, 0, 4);
+	if (CBDatabaseReadValue(index, key6, (uint8_t *)readStr, 4, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("NOT IN INDEX READ FROM NEW KEY IN STAGED FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "ni!")) {
+		printf("NOT IN INDEX READ FROM NEW KEY IN STAGED DATA FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	memset(readStr, 0, 4);
+	if (CBDatabaseReadValue(index, key6, (uint8_t *)readStr, 4, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("NOT IN INDEX READ FROM NEW KEY IN DISK FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "ni!")) {
+		printf("NOT IN INDEX READ FROM NEW KEY IN DISK DATA FAIL\n");
+		return 1;
+	}
+	// Test remove new key of change key afterwards
+	CBDatabaseRemoveValue(index, key6, false);
+	CBDatabaseWriteValue(index, key5, (uint8_t *)":-)", 4);
+	CBDatabaseChangeKey(index, key5, key6, false);
+	if (CBDatabaseReadValue(index, key6, (uint8_t *)readStr, 4, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("REMOVE BEFOREHAND READ FROM NEW KEY IN CURRENT FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, ":-)")) {
+		printf("REMOVE BEFOREHAND READ FROM NEW KEY IN CURRENT DATA FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	memset(readStr, 0, 4);
+	if (CBDatabaseReadValue(index, key6, (uint8_t *)readStr, 4, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("REMOVE BEFOREHAND READ FROM NEW KEY IN STAGED FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, ":-)")) {
+		printf("REMOVE BEFOREHAND READ FROM NEW KEY IN STAGED DATA FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	memset(readStr, 0, 4);
+	if (CBDatabaseReadValue(index, key6, (uint8_t *)readStr, 4, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("REMOVE BEFOREHAND READ FROM NEW KEY IN DISK FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, ":-)")) {
+		printf("REMOVE BEFOREHAND READ FROM NEW KEY IN DISK DATA FAIL\n");
+		return 1;
+	}
+	// Test removing staged change which has key not in disk.
+	uint8_t key7[10] = {249,9,8,7,6,5,4,3,2,1};
+	CBDatabaseWriteValue(index, key7, (uint8_t *)"elvenking", 10);
+	CBDatabaseStage(storage);
+	CBDatabaseRemoveValue(index, key7, false);
+	CBDatabaseStage(storage);
+	if (CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 10, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
+		printf("REMOVE STAGED READ STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	if (CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 10, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
+		printf("REMOVE STAGED READ DISK FAIL\n");
+		return 1;
+	}
+	// Add write value to current over staged and commit value and then clear it
+	CBDatabaseWriteValue(index, key7, (uint8_t *)"one!!one!!one!!", 16);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!one!!one!!")) {
+		printf("WRITE IN CURRENT FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!one!!one!!")) {
+		printf("WRITE IN STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!one!!one!!")) {
+		printf("WRITE IN DISK FAIL\n");
+		return 1;
+	}
+	CBDatabaseWriteValueSubSection(index, key7, (uint8_t *)"two", 3, 5);
+	CBDatabaseStage(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!one!!")) {
+		printf("WRITE IN STAGED AND DISK FAIL\n");
+		return 1;
+	}
+	CBDatabaseWriteValueSubSection(index, key7, (uint8_t *)"three", 5, 10);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!three")) {
+		printf("WRITE IN CURRENT STAGED AND DISK FAIL\n");
+		return 1;
+	}
+	CBDatabaseClearCurrent(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!one!!")) {
+		printf("CLEAR CURRENT WRITE FAIL\n");
+		return 1;
+	}
+	// Add write value to current, delete value and then clear
+	CBDatabaseWriteValueSubSection(index, key7, (uint8_t *)"four!", 5, 10);
+	CBDatabaseRemoveValue(index, key7, false);
+	CBDatabaseClearCurrent(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!one!!")) {
+		printf("CLEAR CURRENT REMOVE CURRENT FAIL\n");
+		return 1;
+	}
+	// Add delete of staged value and then clear.
+	CBDatabaseWriteValueSubSection(index, key7, (uint8_t *)"four!", 5, 10);
+	CBDatabaseStage(storage);
+	CBDatabaseRemoveValue(index, key7, false);
+	CBDatabaseClearCurrent(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!four!")) {
+		printf("CLEAR CURRENT REMOVE STAGED FAIL\n");
+		return 1;
+	}
+	// Add delete of commited value and then clear.
+	CBDatabaseWriteValueSubSection(index, key7, (uint8_t *)"four!", 5, 10);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	CBDatabaseRemoveValue(index, key7, false);
+	CBDatabaseClearCurrent(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!four!")) {
+		printf("CLEAR CURRENT REMOVE DISK FAIL\n");
+		return 1;
+	}
+	// Test clearing change key
+	CBDatabaseChangeKey(index, key7, key, false);
+	CBDatabaseClearCurrent(storage);
+	CBDatabaseReadValue(index, key7, (uint8_t *)readStr, 16, 0, false);
+	if (strcmp(readStr, "one!!two!!four!")) {
+		printf("CLEAR CURRENT REMOVE DISK FAIL\n");
+		return 1;
+	}
+	// Clear with two indexes
+	CBDatabaseIndex * index4 = CBLoadIndex(storage, 3, 10, 0);
+	CBDatabaseWriteValue(index4, key7, (uint8_t *)"sabaton", 8);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	CBDatabaseWriteValue(index, key7, (uint8_t *)"index1", 7);
+	CBDatabaseChangeKey(index, key7, key, false);
+	CBDatabaseWriteValue(index4, key7, (uint8_t *)"index4", 7);
+	CBDatabaseChangeKey(index4, key7, key, false);
+	CBDatabaseWriteValue(index4, key6, (uint8_t *)"index4-6", 9);
+	CBDatabaseChangeKey(index4, key6, key2, false);
+	CBDatabaseClearCurrent(storage);
+	CBDatabaseReadValue(index4, key7, (uint8_t *)readStr, 8, 0, false);
+	if (strcmp(readStr, "sabaton")) {
+		printf("CLEAR CURRENT WITH TWO INDEXES READ FAIL\n");
+		return 1;
+	}
+	CBFreeIndex(index4);
 	// Test extra data
-	tx = CBNewDatabaseTransaction(storage);
-	if (memcmp(tx->extraData, (uint8_t [10]){0}, 10)) {
+	if (memcmp(storage->current.extraData, (uint8_t [10]){0}, 10)) {
 		printf("INITIAL EXTRA DATA FAIL\n");
 		return 1;
 	}
-	memcpy(tx->extraData, "Satoshi!!", 10);
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
+	memcpy(storage->current.extraData, "Satoshi!!", 10);
+	CBDatabaseStage(storage);
+	if (memcmp(storage->staged.extraData, "Satoshi!!", 10)) {
+		printf("COMMIT EXTRA DATA OBJECT STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
 	if (memcmp(storage->extraDataOnDisk, "Satoshi!!", 10)) {
-		printf("COMMIT EXTRA DATA OBJECT FAIL\n");
+		printf("COMMIT EXTRA DATA OBJECT ON DISK FAIL\n");
 		return 1;
 	}
 	CBFreeDatabase(storage);
-	storage = CBNewDatabase(".", "testDb", 10);
+	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
 	if (memcmp(storage->extraDataOnDisk, "Satoshi!!", 10)) {
 		printf("COMMIT EXTRA DATA REOPEN FAIL\n");
 		return 1;
 	}
-	tx = CBNewDatabaseTransaction(storage);
-	if (memcmp(tx->extraData, "Satoshi!!", 10)) {
+	if (memcmp(storage->current.extraData, "Satoshi!!", 10)) {
 		printf("COMMIT EXTRA DATA TX FAIL\n");
 		return 1;
 	}
-	tx->extraData[1] = 'o';
-	tx->extraData[3] = 'a';
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
+	storage->current.extraData[1] = 'o';
+	storage->current.extraData[3] = 'a';
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
 	if (memcmp(storage->extraDataOnDisk, "Sotashi!!", 10)) {
 		printf("SUBSECTION COMMIT EXTRA DATA OBJECT FAIL\n");
 		return 1;
 	}
+	CBFreeIndex(index);
 	CBFreeDatabase(storage);
-	storage = CBNewDatabase(".", "testDb", 10);
+	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
+	index = CBLoadIndex(storage, 0, 10, 10000);
 	if (memcmp(storage->extraDataOnDisk, "Sotashi!!", 10)) {
 		printf("SUBSECTION COMMIT EXTRA DATA REOPEN FAIL\n");
 		return 1;
 	}
-	tx = CBNewDatabaseTransaction(storage);
-	if (memcmp(tx->extraData, "Sotashi!!", 10)) {
+	if (memcmp(storage->current.extraData, "Sotashi!!", 10)) {
 		printf("SUBSECTION COMMIT EXTRA DATA TX FAIL\n");
 		return 1;
 	}
 	// Create new index
-	CBDatabaseIndex * index2 = CBLoadIndex(storage, 1, 2, 1000);
-	tx = CBNewDatabaseTransaction(storage);
-	for (uint16_t x = 0; x <= 500; x += 50){
-		data[0] = x >> 8;
-		data[1] = x;
-		CBDatabaseWriteValue(tx, index2, data, data, 2);
+	CBDatabaseIndex * index2 = CBLoadIndex(storage, 1, 3, 10000);
+	for (uint16_t x = 0; x <= 500; x += 2){
+		data[0] = 1;
+		data[1] = x >> 8;
+		data[2] = x;
+		CBDatabaseWriteValue(index2, data, data, 3);
 	}
-	CBDatabaseCommit(tx);
-	CBFreeDatabaseTransaction(tx);
-	tx = CBNewDatabaseTransaction(storage);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
 	for (uint16_t x = 0; x <= 500; x++){
-		if (x % 50 == 0)
+		if (x % 2 == 0)
 			continue;
-		data[0] = x >> 8;
-		data[1] = x;
-		CBDatabaseWriteValue(tx, index2, data, data, 2);
+		data[0] = 1;
+		data[1] = x >> 8;
+		data[2] = x;
+		CBDatabaseWriteValue(index2, data, data, 3);
+	}
+	// Add change keys
+	for (uint16_t x = 0; x <= 500; x++){
+		data[0] = 1;
+		data[1] = x >> 8;
+		data[2] = x;
+		data[3] = 0;
+		data[4] = x >> 8;
+		data[5] = x;
+		CBDatabaseChangeKey(index2, data, data + 3, false);
 	}
 	// Add deletions
 	for (uint16_t x = 0; x <= 500; x += 3){
-		data[0] = x >> 8;
-		data[1] = x;
-		CBDatabaseRemoveValue(tx, index2, data);
+		data[0] = 0;
+		data[1] = x >> 8;
+		data[2] = x;
+		CBDatabaseRemoveValue(index2, data, false);
 	}
 	// Test iterator
-	CBDatabaseRangeIterator it = {(uint8_t []){0,0}, (uint8_t []){1,244}, tx, index2};
+	CBDatabaseRangeIterator it = {(uint8_t []){0,0,0}, (uint8_t []){1,1,244}, index2};
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		printf("ITERATOR ALL FIRST FAIL\n");
 		return 1;
 	}
-	for (uint16_t x = 0; x < 500; x++) {
+	CBDatabaseIndex * index5 = CBLoadIndex(storage, 4, 1, 0);
+	for (uint16_t x = 0; x <= 500; x++) {
 		if (x % 3 == 0)
 			continue;
-		if (NOT CBDatabaseRangeIteratorRead(&it, data, 2, 0)){
+		// Add other value to another index to insure non-interference with this index
+		CBDatabaseWriteValue(index5, (uint8_t []){x}, (uint8_t []){x}, 1);
+		if (NOT CBDatabaseRangeIteratorRead(&it, data, 3, 0)){
 			printf("ITERATOR ALL READ FAIL AT %i\n", x);
 			return 1;
 		}
-		if ((data[1] | (uint16_t)data[0] << 8) != x) {
+		if ((data[2] | (uint16_t)data[1] << 8) != x) {
 			printf("ITERATOR ALL DATA FAIL AT %i\n", x);
 			return 1;
 		}
@@ -1287,8 +1656,8 @@ int main(){
 			return 1;
 		}
 	}
-	CBFreeDatabaseRangeInterator(&it);
-	it = (CBDatabaseRangeIterator){(uint8_t []){0,50}, (uint8_t []){1,194}, tx, index2};
+	CBFreeDatabaseRangeIterator(&it);
+	it = (CBDatabaseRangeIterator){(uint8_t []){0,0,50}, (uint8_t []){0,1,194}, index2};
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		printf("ITERATOR 50 TO 450 FIRST FAIL\n");
 		return 1;
@@ -1296,11 +1665,11 @@ int main(){
 	for (uint16_t x = 50; x < 450; x++) {
 		if (x % 3 == 0)
 			continue;
-		if (NOT CBDatabaseRangeIteratorRead(&it, data, 2, 0)){
+		if (NOT CBDatabaseRangeIteratorRead(&it, data, 3, 0)){
 			printf("ITERATOR 50 TO 450 READ FAIL AT %i\n", x);
 			return 1;
 		}
-		if ((data[1] | (uint16_t)data[0] << 8) != x) {
+		if ((data[2] | (uint16_t)data[1] << 8) != x) {
 			printf("ITERATOR 50 TO 450 DATA FAIL AT %i\n", x);
 			return 1;
 		}
@@ -1309,14 +1678,93 @@ int main(){
 			return 1;
 		}
 	}
-	CBFreeDatabaseRangeInterator(&it);
-	it = (CBDatabaseRangeIterator){(uint8_t []){1,245}, (uint8_t []){1,250}, tx, index2};
+	CBFreeDatabaseRangeIterator(&it);
+	// Try getting last in iterator
+	it = (CBDatabaseRangeIterator){(uint8_t []){0,0,0}, (uint8_t []){0,0,0}, index2};
+	for (uint16_t x = 50; x < 450; x++) {
+		((uint8_t *)it.maxElement)[1] = x >> 8;
+		((uint8_t *)it.maxElement)[2] = x;
+		((uint8_t *)it.minElement)[1] = (x-x%2) >> 8;
+		((uint8_t *)it.minElement)[2] = x-x%2;
+		bool deletedOnly = x % 2 == 0 && x % 3 == 0;
+		if (CBDatabaseRangeIteratorLast(&it) != (deletedOnly ? CB_DATABASE_INDEX_NOT_FOUND : CB_DATABASE_INDEX_FOUND)) {
+			printf("ITERATOR LAST FAIL %u\n",x);
+			return 1;
+		}
+		if (NOT deletedOnly) {
+			if (NOT CBDatabaseRangeIteratorRead(&it, data, 3, 0)){
+				printf("ITERATOR LAST READ FAIL AT %u\n", x);
+				return 1;
+			}
+			if ((data[2] | (uint16_t)data[1] << 8) != ((x % 3 == 0) ? (x-1) : x)) {
+				printf("ITERATOR LAST READ DATA FAIL AT %u\n", x);
+				return 1;
+			}
+		}
+	}
+	CBFreeDatabaseRangeIterator(&it);
+	it = (CBDatabaseRangeIterator){(uint8_t []){0,1,245}, (uint8_t []){0,1,250}, index2};
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_NOT_FOUND) {
 		printf("ITERATOR OUT OF RANGE FIRST FAIL\n");
 		return 1;
 	}
-	CBFreeDatabaseRangeInterator(&it);
-	CBFreeDatabaseTransaction(tx);
+	CBFreeDatabaseRangeIterator(&it);
+	// Test two indexes at once.
+	CBDatabaseWriteValue(index, (uint8_t []){251,9,8,7,6,5,4,3,2,1}, (uint8_t *)"one1", 5);
+	CBDatabaseWriteValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)"two2", 5);
+	// Check current
+	if (CBDatabaseReadValue(index, (uint8_t []){251,9,8,7,6,5,4,3,2,1}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("TWO INDEXES FIRST INDEX READ CURRENT FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "one1")) {
+		printf("TWO INDEXES FIRST INDEX READ DATA CURRENT FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("TWO INDEXES SECOND INDEX READ CURRENT FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "two2")) {
+		printf("TWO INDEXES SECOND INDEX READ DATA CURRENT FAIL\n");
+		return 1;
+	}
+	CBDatabaseStage(storage);
+	// Check staged
+	if (CBDatabaseReadValue(index, (uint8_t []){251,9,8,7,6,5,4,3,2,1}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("TWO INDEXES FIRST INDEX READ STAGED FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "one1")) {
+		printf("TWO INDEXES FIRST INDEX READ DATA STAGED FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("TWO INDEXES SECOND INDEX READ STAGED FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "two2")) {
+		printf("TWO INDEXES SECOND INDEX READ DATA STAGED FAIL\n");
+		return 1;
+	}
+	CBDatabaseCommit(storage);
+	// Check Disk
+	if (CBDatabaseReadValue(index, (uint8_t []){251,9,8,7,6,5,4,3,2,1}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("TWO INDEXES FIRST INDEX READ DISK FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "one1")) {
+		printf("TWO INDEXES FIRST INDEX READ DATA DISK FAIL\n");
+		return 1;
+	}
+	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		printf("TWO INDEXES SECOND INDEX READ DISK FAIL\n");
+		return 1;
+	}
+	if (strcmp(readStr, "two2")) {
+		printf("TWO INDEXES SECOND INDEX READ DATA DISK FAIL\n");
+		return 1;
+	}
 	CBFreeIndex(index2);
 	// Create new index
 	CBDatabaseIndex * index3 = CBLoadIndex(storage, 2, 10, (10 * CB_DATABASE_BTREE_ELEMENTS + sizeof(CBIndexNode))*10);
@@ -1333,18 +1781,17 @@ int main(){
 	// Insert first 1000, one at a time.
 	uint8_t * valptr = values;
 	for (uint16_t x = 0; x < 1000; x++) {
-		tx = CBNewDatabaseTransaction(storage);
-		CBDatabaseWriteValue(tx, index3, keys + x*10, valptr, (x % 10) + 1);
-		if (NOT CBDatabaseCommit(tx)){
+		CBDatabaseWriteValue(index3, keys + x*10, valptr, (x % 10) + 1);
+		CBDatabaseStage(storage);
+		if (NOT CBDatabaseCommit(storage)){
 			printf("INSERT FIRST 1000 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}
-		CBFreeDatabaseTransaction(tx);
 		if ((x+1) % 100 == 0) {
 			// Verify all of the data
 			uint32_t offset = 0;
 			for (uint16_t y = 0; y <= x; y++) {
-				if (CBDatabaseReadValue(NULL, index3, keys + y*10, dataRead, (y % 10) + 1, 0) != CB_DATABASE_INDEX_FOUND) {
+				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false) != CB_DATABASE_INDEX_FOUND) {
 					printf("INSERT FIRST 1000 FAIL READ AT %u OF %u\n", y, x);
 					return 1;
 				}
@@ -1360,18 +1807,17 @@ int main(){
 	}
 	// Delete first 500 keys
 	for (uint16_t x = 0; x < 500; x++) {
-		tx = CBNewDatabaseTransaction(storage);
-		CBDatabaseRemoveValue(tx, index3, keys + x*10);
-		if (NOT CBDatabaseCommit(tx)){
+		CBDatabaseRemoveValue(index3, keys + x*10, false);
+		CBDatabaseStage(storage);
+		if (NOT CBDatabaseCommit(storage)){
 			printf("DELETE FIRST 500 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}
-		CBFreeDatabaseTransaction(tx);
 		if ((x+1) % 100 == 0) {
 			// Verify all of the data
 			uint32_t offset = 0;
 			for (uint16_t y = 0; y < 1000; y++) {
-				if (CBDatabaseReadValue(NULL, index3, keys + y*10, dataRead, (y % 10) + 1, 0)
+				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false)
 					!= (y > x ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
 					printf("DELETE FIRST 500 FAIL READ AT %u OF %u\n", y, x);
 					return 1;
@@ -1387,18 +1833,17 @@ int main(){
 	}
 	// Add last 1000
 	for (uint16_t x = 1000; x < 2000; x++) {
-		tx = CBNewDatabaseTransaction(storage);
-		CBDatabaseWriteValue(tx, index3, keys + x*10, valptr, (x % 10) + 1);
-		if (NOT CBDatabaseCommit(tx)){
+		CBDatabaseWriteValue(index3, keys + x*10, valptr, (x % 10) + 1);
+		CBDatabaseStage(storage);
+		if (NOT CBDatabaseCommit(storage)){
 			printf("INSERT LAST 1000 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}
-		CBFreeDatabaseTransaction(tx);
 		if ((x+1) % 100 == 0) {
 			// Verify all of the data
 			uint32_t offset = 0;
 			for (uint16_t y = 0; y <= x; y++) {
-				if (CBDatabaseReadValue(NULL, index3, keys + y*10, dataRead, (y % 10) + 1, 0)
+				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false)
 					!= (y >= 500 ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
 					printf("INSERT LAST 1000 FAIL READ AT %u OF %u\n", y, x);
 					return 1;
@@ -1416,7 +1861,7 @@ int main(){
 	// Close, reopen and recheck data
 	CBFreeDatabase(storage);
 	CBFreeIndex(index3);
-	storage = CBNewDatabase(".", "testDb", 10);
+	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
 	if (NOT storage) {
 		printf("REOPEN 2000 NEW DATABASE FAIL\n");
 		return 1;
@@ -1428,7 +1873,7 @@ int main(){
 	}
 	uint32_t offset = 0;
 	for (uint16_t y = 0; y < 2000; y++) {
-		if (CBDatabaseReadValue(NULL, index3, keys + y*10, dataRead, (y % 10) + 1, 0)
+		if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false)
 			!= (y >= 500 ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
 			printf("REOPEN 2000 KEY-VALUES FAIL READ AT %u\n", y);
 			return 1;

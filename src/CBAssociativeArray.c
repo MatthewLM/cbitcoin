@@ -18,6 +18,36 @@
 #include "CBDependencies.h"
 #include <assert.h>
 
+bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeIterator * it){
+	// Try to find the maximum element.
+	CBFindResult res = CBAssociativeArrayFind(self, it->maxElement);
+	if (NOT res.found) {
+		if (res.position.node->numElements == 0)
+			// There are no elements
+			return false;
+		// We need to go backwards (Not found always goes to bottom of tree)
+		if (res.position.index == 0) {
+			// No child (always on bottom), try parent
+			if (res.position.node == self->root)
+				return false;
+			if (res.position.parentIndex)
+				res.position.node = res.position.parentNodes[res.position.parentIndex-1];
+			else
+				res.position.node = self->root;
+			res.position.index = res.position.parentPositions[res.position.parentIndex--];
+			if (res.position.index == 0)
+				return false;
+			res.position.index--;
+		}else
+			// Else we can just go back one in this node
+			res.position.index--;
+		// Check this element is above or equal to the minimum.
+		if (self->compareFunc(self, it->minElement, CBFindResultToPointer(res)) == CB_COMPARE_MORE_THAN)
+			return false;
+	}
+	it->pos = res.position;
+	return true;
+}
 bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it){
 	// Try to find the minimum element
 	CBFindResult res = CBAssociativeArrayFind(self, it->minElement);
@@ -35,7 +65,7 @@ bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIter
 		}
 		// Else we have landed on the element after the minimum element.
 		// Check that the element is below or equal to the maximum
-		if (self->compareFunc(CBFindResultToPointer(res), it->maxElement) == CB_COMPARE_MORE_THAN)
+		if (self->compareFunc(self, it->maxElement, CBFindResultToPointer(res)) == CB_COMPARE_LESS_THAN)
 			// The element is above the maximum so return false
 			return false;
 	}
@@ -48,7 +78,7 @@ bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeItera
 		// Couldn't iterate, meaning we have reach the end of the array already
 		return true;
 	// Check the range
-	if (self->compareFunc(it->pos.node->elements[it->pos.index], it->maxElement) == CB_COMPARE_MORE_THAN)
+	if (self->compareFunc(self, it->maxElement, it->pos.node->elements[it->pos.index]) == CB_COMPARE_LESS_THAN)
 		// The next element goes out of range.
 		return true;
 	return false;
@@ -61,21 +91,17 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 		self->onFree(pos.node->elements[pos.index]);
 	if (NOT pos.node->children[0]) {
 		// Leaf
-		CBBTreeNode * parent = pos.node->parent;
-		if (pos.node->numElements > CB_BTREE_HALF_ELEMENTS || NOT parent) {
+		CBBTreeNode * parent = pos.parentIndex ? pos.parentNodes[pos.parentIndex-1] : self->root;
+		if (pos.node->numElements > CB_BTREE_HALF_ELEMENTS || pos.node == self->root) {
 			// Can simply remove this element. Nice and easy.
-			if (--pos.node->numElements > pos.index){
+			if (--pos.node->numElements > pos.index)
 				// Move everything down to overwrite the removed element.
-				memmove(pos.node->children + pos.index, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index + 1) * sizeof(*pos.node->children));
 				memmove(pos.node->elements + pos.index, pos.node->elements + pos.index + 1, (pos.node->numElements - pos.index) * sizeof(*pos.node->elements));
-			}
 		}else{
 			// Underflow... Where things get complicated. Loop through merges all the way to the root
 			for (;;){
 				// We have a parent so we can check siblings.
-				// First find the position of this node in the parent. ??? Worth additional pointers?
-				// Search for second key in case the first has been taken by the parent, unless second key is deleted in which case use third.
-				uint8_t parentPosition = CBBTreeNodeBinarySearch(parent, pos.node->elements[(pos.index == 1) ? 2 : 1], self->compareFunc).position.index;
+				uint8_t parentPosition = pos.parentPositions[pos.parentIndex];
 				CBBTreeNode * left = NULL;
 				CBBTreeNode * right = NULL;
 				if (parentPosition) {
@@ -85,19 +111,18 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 					if (left->numElements > CB_BTREE_HALF_ELEMENTS) {
 						// Can take from left
 						// Move elements up to overwrite the element we are deleting
-						if (pos.index) { // o 0 ii 1 iii
+						if (pos.index) {
 							memmove(pos.node->elements + 1, pos.node->elements, pos.index * sizeof(*pos.node->elements));
-							memmove(pos.node->children + 1, pos.node->children, (pos.index + 1) * sizeof(*pos.node->children));
+							if (pos.node->children[0])
+								memmove(pos.node->children + 1, pos.node->children, (pos.index + 1) * sizeof(*pos.node->children));
 						}
 						// Lower left parent element to this node
 						pos.node->elements[0] = parent->elements[parentPosition - 1];
 						// Now move left sibling's far right element to parent
 						parent->elements[parentPosition - 1] = left->elements[left->numElements - 1];
-						// Make left sibling's far right child the far left child of this node
-						pos.node->children[0] = left->children[left->numElements];
-						// Make this child's parent this node
-						if (pos.node->children[0])
-							((CBBTreeNode *)(pos.node->children[0]))->parent = pos.node;
+						if (left->children[left->numElements])
+							// Make left sibling's far right child the far left child of this node
+							pos.node->children[0] = left->children[left->numElements];
 						// Now remove left sibling's far right element and be done
 						left->numElements--;
 						return;
@@ -112,19 +137,20 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 						// Move elements down to overwrite the element we are deleting
 						if (pos.node->numElements > pos.index + 1) {
 							memmove(pos.node->elements + pos.index, pos.node->elements + pos.index + 1, (pos.node->numElements - pos.index - 1) * sizeof(*pos.node->elements));
-							memmove(pos.node->children + pos.index, pos.node->children + (pos.index + 1), (pos.node->numElements - pos.index) * sizeof(*pos.node->children));
+							if (pos.node->children[0])
+								memmove(pos.node->children + pos.index, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index) * sizeof(*pos.node->children));
 						}
 						// Lower right parent element to this node
 						pos.node->elements[pos.node->numElements - 1] = parent->elements[parentPosition];
 						// Now move right sibling's far left element to parent
 						parent->elements[parentPosition] = right->elements[0];
-						// Make right sibling's far left child the far right child of this node
-						pos.node->children[pos.node->numElements] = right->children[0];
-						// Make this child's parent this node
-						if (pos.node->children[0])
-							((CBBTreeNode *)(pos.node->children[pos.node->numElements]))->parent = pos.node;
+						if (right->children[0]) {
+							// Make right sibling's far left child the far right child of this node
+							pos.node->children[pos.node->numElements] = right->children[0];
+							// Move right siblings children down
+							memmove(right->children, right->children + 1, right->numElements * sizeof(*right->children));
+						}
 						// Now remove right sibling's far left element and be done
-						memmove(right->children, right->children + 1, right->numElements * sizeof(*right->children));
 						right->numElements--;
 						memmove(right->elements, right->elements + 1, right->numElements * sizeof(*right->elements));
 						return;
@@ -133,28 +159,26 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 				// Take away element num.
 				pos.node->numElements--;
 				// Could not take from siblings... now for the merging. :-(
-				if (NOT parentPosition) {
+				if (parentPosition == 0) {
 					// We are merging right sibling into the node.
 					// First move data down to overwrite deleted data o 0 i 1 ii
 					if (pos.node->numElements > pos.index)
 						memmove(pos.node->elements + pos.index, pos.node->elements + pos.index + 1, (pos.node->numElements - pos.index) * sizeof(*pos.node->elements));
-					memmove(pos.node->children + pos.index, pos.node->children + pos.index + 1, (pos.node->numElements + 1) * sizeof(*pos.node->children));
+					if (pos.node->children[0])
+						memmove(pos.node->children + pos.index, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index + 1) * sizeof(*pos.node->children));
 					// Add parents mid value
 					pos.node->elements[pos.node->numElements] = parent->elements[parentPosition];
 					// Now merge right sibling
 					pos.node->numElements++;
-					memmove(pos.node->elements + pos.node->numElements, right->elements, right->numElements * sizeof(*pos.node->elements));
-					memmove(pos.node->children + pos.node->numElements, right->children, (right->numElements + 1) * sizeof(*right->children));
-					// Change children parent pointers
+					memmove(pos.node->elements + CB_BTREE_HALF_ELEMENTS, right->elements, CB_BTREE_HALF_ELEMENTS * sizeof(*pos.node->elements));
 					if (pos.node->children[0])
-						for (uint8_t x = CB_BTREE_HALF_ELEMENTS; x < CB_BTREE_ELEMENTS + 1; x++)
-							((CBBTreeNode *)(pos.node->children[x]))->parent = pos.node;
-					// Adjust number of elements
-					pos.node->numElements += right->numElements;
+						memmove(pos.node->children + CB_BTREE_HALF_ELEMENTS, right->children, (CB_BTREE_HALF_ELEMENTS + 1) * sizeof(*right->children));
+					// Adjust number of elements to full
+					pos.node->numElements = CB_BTREE_ELEMENTS;
 					// Free right node
 					free(right);
 					// Move node over to where the right sibling was so deleted part is on the left. ??? Change algorithm to merge differently.
-					parent->children[parentPosition + 1] = parent->children[parentPosition];
+					parent->children[1] = parent->children[0];
 				}else{
 					// We are merging the node into the left sibling.
 					// Move over parent middle element
@@ -163,17 +187,15 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 					left->numElements++;
 					if (pos.index){
 						memcpy(left->elements + left->numElements, pos.node->elements, pos.index * sizeof(*left->elements));
-						memcpy(left->children + left->numElements, pos.node->children, pos.index * sizeof(*pos.node->children));
+						if (pos.node->children[0])
+							memcpy(left->children + left->numElements, pos.node->children, pos.index * sizeof(*pos.node->children));
 					}
 					left->numElements += pos.index;
 					// Move over elements after the deleted element to the left node
 					if (pos.node->numElements > pos.index)
 						memcpy(left->elements + left->numElements, pos.node->elements + pos.index + 1, (pos.node->numElements - pos.index) * sizeof(*left->elements));
-					memcpy(left->children + left->numElements, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index + 1) * sizeof(*pos.node->children));
-					// Change children parent pointers
-					if (left->children[0])
-						for (uint8_t x = CB_BTREE_HALF_ELEMENTS; x < CB_BTREE_ELEMENTS + 1; x++)
-							((CBBTreeNode *)(left->children[x]))->parent = left;
+					if (pos.node->children[0])
+						memcpy(left->children + left->numElements, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index + 1) * sizeof(*pos.node->children));
 					// Adjust number of elements
 					left->numElements += pos.node->numElements - pos.index;
 					// Free the node
@@ -182,10 +204,11 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 					parent->children[parentPosition] = parent->children[parentPosition - 1];
 				}
 				// If position is 0 then we are deleting to the right, else to the left.
-				pos.index = parentPosition ? parentPosition - 1 : parentPosition;
+				pos.index = parentPosition ? parentPosition - 1 : 0;
 				// Now delete the parent element and continue merge upto root if neccesary...
-				if ((NOT parent->parent && parent->numElements > 1)
-					|| (parent->parent && parent->numElements > CB_BTREE_HALF_ELEMENTS)) {
+				bool root = parent == self->root;
+				if ((root && parent->numElements > 1)
+					|| (NOT root && parent->numElements > CB_BTREE_HALF_ELEMENTS)) {
 					// Either a root and with more than one element to still remove or not root and more than half the minimum elements.
 					// Therefore remove the element and be done.
 					parent->numElements--;
@@ -194,25 +217,35 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 						memmove(parent->children + pos.index + 1, parent->children + pos.index + 2, (parent->numElements - pos.index) * sizeof(*parent->children));
 					}
 					return;
-				}else if (NOT parent->parent){
+				}else if (root){
 					// The parent is the root and has 1 element. The root is now empty so we make it's newly merged children the root.
 					self->root = parentPosition ? left : pos.node;
-					self->root->parent = NULL;
 					free(parent);
 					return;
 				}else{
 					// The parent is not root and has the minimum allowed elements. Therefore we need to merge again, going around the loop.
 					pos.node = parent;
-					parent = pos.node->parent;
+					pos.parentIndex--;
+					parent = pos.parentIndex ? pos.parentNodes[pos.parentIndex-1] : self->root;
 				}
 			}
 		}
 	}else{
 		// Not leaf data, insert successor then delete successor from/in the right child.
 		CBBTreeNode * child = pos.node->children[pos.index + 1];
+		// Set parent information ??? This repeats a lot: Add to function.
+		if (pos.node != self->root){
+			pos.parentNodes[pos.parentIndex++] = pos.node;
+			pos.parentCursor++;
+		}
+		pos.parentPositions[pos.parentIndex] = pos.index + 1;
 		// Now we have the right child, find left most element in the child.
-		while (child->children[0])
+		while (child->children[0]){
+			pos.parentNodes[pos.parentIndex++] = child;
+			pos.parentCursor++;
+			pos.parentPositions[pos.parentIndex] = 0;
 			child = child->children[0];
+		}
 		// Get left-most element and overwrite the element we are deleting with this left-most element.
 		pos.node->elements[pos.index] = child->elements[0];
 		// Now delete the successive element.
@@ -224,19 +257,41 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element){
 	CBFindResult result;
 	CBBTreeNode * node = self->root;
+	result.position.parentIndex = 0;
+	result.position.parentCursor = 0;
 	for (;;) {
 		// Do binary search on node
-		result = CBBTreeNodeBinarySearch(node, element, self->compareFunc);
+		CBBTreeNodeBinarySearch(self, node, element, &result);
 		if (result.found){
 			// Found the data on this node.
 			result.position.node = node;
+			if (result.position.node != self->root){
+				CBBTreeNode * n = self->root;
+				for (uint8_t x = 0; x < result.position.parentIndex; x++) {
+					n = n->children[result.position.parentPositions[x]];
+					if (n != result.position.parentNodes[x]) {
+						exit(EXIT_FAILURE);
+					}
+				}
+				n = n->children[result.position.parentPositions[result.position.parentIndex]];
+				if (n != node) {
+					exit(EXIT_FAILURE);
+				}
+			}
 			return result;
 		}else{
 			// We have not found the data on this node, if there is a child go to the child.
-			if (node->children[result.position.index])
+			if (node->children[0]){
+				// Set parent information
+				if (node != self->root){
+					result.position.parentNodes[result.position.parentIndex++] = node;
+					result.position.parentCursor++;
+				}
+				result.position.parentPositions[result.position.parentIndex] = result.position.index;
 				// Child exists, move to it
 				node = node->children[result.position.index];
-			else{
+				assert(node != NULL);
+			}else{
 				// The child doesn't exist. Return as not found with position for insertion.
 				result.position.node = node;
 				return result;
@@ -258,16 +313,32 @@ bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it){
 		return false;
 	it->node = self->root;
 	it->index = 0;
-	while (it->node->children[0])
+	it->parentIndex = 0;
+	it->parentCursor = 0;
+	if (it->node->children[0]) for (;;){
 		it->node = it->node->children[0];
+		it->parentPositions[it->parentIndex] = 0;
+		if (it->node->children[0])
+			it->parentNodes[it->parentIndex++] = it->node;
+		else
+			break;
+	}
 	return true;
 }
 bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it){
 	if (NOT self->root->numElements)
 		return false;
 	it->node = self->root;
-	while (it->node->children[0])
+	it->parentIndex = 0;
+	it->parentCursor = 0;
+	if (it->node->children[0]) for (;;){
+		it->parentPositions[it->parentIndex] = it->node->numElements;
 		it->node = it->node->children[it->node->numElements];
+		if (it->node->children[0])
+			it->parentNodes[it->parentIndex++] = it->node;
+		else
+			break;
+	}
 	it->index = it->node->numElements - 1;
 	return true;
 }
@@ -277,13 +348,14 @@ void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		// Yes we can, do that.
 		if (pos.node->numElements > pos.index){
 			// Move up the keys, data and children
-			// . 0 . x . 1 . 2 . 3 .
 			memmove(pos.node->elements + pos.index + 1, pos.node->elements + pos.index, (pos.node->numElements - pos.index) * sizeof(*pos.node->elements));
-			memmove(pos.node->children + pos.index + 2, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index) * sizeof(*pos.node->children));
+			if (right)
+				memmove(pos.node->children + pos.index + 2, pos.node->children + pos.index + 1, (pos.node->numElements - pos.index) * sizeof(*pos.node->children));
 		}
 		// Copy over new key, data and children
 		pos.node->elements[pos.index] = element;
-		pos.node->children[pos.index + 1] = right;
+		if (right)
+			pos.node->children[pos.index + 1] = right;
 		// Increase number of elements
 		pos.node->numElements++;
 		// The element has been added, we can stop here.
@@ -291,6 +363,8 @@ void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 	}else{
 		// Nope, we need to split this node into two.
 		CBBTreeNode * new = malloc(sizeof(*new));
+		// Make the leftmost child NULL so we know this is a leaf, if it is.
+		new->children[0] = NULL;
 		// Make both sides have half the order.
 		new->numElements = CB_BTREE_HALF_ELEMENTS;
 		pos.node->numElements = CB_BTREE_HALF_ELEMENTS;
@@ -298,54 +372,18 @@ void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		if (pos.index >= CB_BTREE_HALF_ELEMENTS) {
 			// Not in first child.
 			if (pos.index == CB_BTREE_HALF_ELEMENTS) {
-				/* New key is median. Visualisation of median insertion:
-				//
-				//      . C  .  G .
-				//     /     |     \
-				//  .A.B.  .D.F.  .H.I.
-				//
-				// . C . E . G . = Too many when order is 2, therefore split again
-				//    /     \
-				//  .D.     .F.
-				//
-				//         . - E - .
-				//        /         \
-				//      .C.         .G.
-				//     /   \       /   \
-				//  .A.B.  .D.   .F.  .H.I.
-				*/
+				// New key is median.
 				memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ELEMENTS, CB_BTREE_HALF_ELEMENTS * sizeof(*new->elements));
-				// Copy children
-				memcpy(new->children + 1, pos.node->children + CB_BTREE_HALF_ELEMENTS + 1, CB_BTREE_HALF_ELEMENTS * sizeof(*new->children));
-				// First child in right of the split becomes the right input node
-				new->children[0] = right;
+				if (right) {
+					// Copy children
+					memcpy(new->children + 1, pos.node->children + CB_BTREE_HALF_ELEMENTS + 1, CB_BTREE_HALF_ELEMENTS * sizeof(*new->children));
+					// First child in right of the split becomes the right input node
+					new->children[0] = right;
+				}
 				// Middle value is the inserted value
 				midKeyValue = element;
 			}else{
-				/* In new child. Visualisation of order of 4:
-				//
-				//        . - E - . -- J -- . -- O -- . - T - .
-				//       /        |         |         |        \
-				//  .A.B.C.D. .F.G.H.I. .K.L.M.N. .P.Q.R.S. .U.V.W.X.
-				//
-				//  Add Y
-				//
-				//        . - E - . -- J -- . -- O -- . - T - .
-				//       /        |         |         |        \
-				//  .A.B.C.D. .F.G.H.I. .K.L.M.N. .P.Q.R.S. .U.V.W.X.Y. == Too many
-				//
-				//        . - E - . -- J -- . -- O -- . - T - . W .     == Too many
-				//       /        |         |         |       |    \
-				//  .A.B.C.D. .F.G.H.I. .K.L.M.N. .P.Q.R.S. .U.V. .X.Y.
-				//
-				//                  . ---------- O -------- .
-				//                 /                         \
-				//        . - E - . -- J -- .         . - T - . W .
-				//       /        |         |         |       |    \
-				//  .A.B.C.D. .F.G.H.I. .K.L.M.N. .P.Q.R.S. .U.V. .X.Y.
-				//
-				// 
-				*/
+				// In new child.
 				// Copy over first part of the new child
 				if (pos.index > CB_BTREE_HALF_ELEMENTS + 1)
 					memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ELEMENTS + 1, (pos.index - CB_BTREE_HALF_ELEMENTS - 1) * sizeof(*new->elements));
@@ -353,76 +391,87 @@ void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 				new->elements[pos.index - CB_BTREE_HALF_ELEMENTS - 1] = element;
 				// Copy over the last part of the new child. It seems so simple to visualise but coding this is very hard...
 				memcpy(new->elements + pos.index - CB_BTREE_HALF_ELEMENTS, pos.node->elements + pos.index, (CB_BTREE_ELEMENTS - pos.index) * sizeof(*new->elements));
-				// Copy children (Can be the confusing part) o 0 i 1 ii 3 iii 4 iv
-				memcpy(new->children, pos.node->children + CB_BTREE_HALF_ELEMENTS + 1, (pos.index - CB_BTREE_HALF_ELEMENTS) * sizeof(*new->children)); // Includes left as previously
-				new->children[pos.index - CB_BTREE_HALF_ELEMENTS] = right;
-				// Rest of the children.
-				if (CB_BTREE_ELEMENTS > pos.index)
-					memcpy(new->children + pos.index - CB_BTREE_HALF_ELEMENTS + 1, pos.node->children + pos.index + 1, (CB_BTREE_ELEMENTS - pos.index) * sizeof(*new->children));
+				// Copy children (Can be the confusing part)
+				if (right){
+					memcpy(new->children, pos.node->children + CB_BTREE_HALF_ELEMENTS + 1, (pos.index - CB_BTREE_HALF_ELEMENTS) * sizeof(*new->children)); // Includes left as previously
+					new->children[pos.index - CB_BTREE_HALF_ELEMENTS] = right;
+					// Rest of the children.
+					if (CB_BTREE_ELEMENTS > pos.index)
+						memcpy(new->children + pos.index - CB_BTREE_HALF_ELEMENTS + 1, pos.node->children + pos.index + 1, (CB_BTREE_ELEMENTS - pos.index) * sizeof(*new->children));
+				}
 				// Middle value
 				midKeyValue = pos.node->elements[CB_BTREE_HALF_ELEMENTS];
 			}
 		}else{
 			// In first child. This is the (supposedly) easy one.
-			// a 0 b 1 c 2 d 3 e
-			// a 0 b I r  c 2 d 3 e
 			// Copy data to new child
 			memcpy(new->elements, pos.node->elements + CB_BTREE_HALF_ELEMENTS, CB_BTREE_HALF_ELEMENTS * sizeof(*new->elements));
 			// Insert key and data
 			memmove(pos.node->elements + pos.index + 1, pos.node->elements + pos.index, (CB_BTREE_HALF_ELEMENTS - pos.index) * sizeof(*pos.node->elements));
 			pos.node->elements[pos.index] = element;
 			// Children...
-			memcpy(new->children, pos.node->children + CB_BTREE_HALF_ELEMENTS, (CB_BTREE_HALF_ELEMENTS + 1) * sizeof(*new->children)); // OK
-			if (CB_BTREE_HALF_ELEMENTS > 1 + pos.index)
-				memmove(pos.node->children + pos.index + 2, pos.node->children + pos.index + 1, (CB_BTREE_HALF_ELEMENTS - pos.index - 1) * sizeof(*new->children));
-			// Insert right to inserted area
-			pos.node->children[pos.index + 1] = right; // OK
+			if (right) {
+				memcpy(new->children, pos.node->children + CB_BTREE_HALF_ELEMENTS, (CB_BTREE_HALF_ELEMENTS + 1) * sizeof(*new->children)); // OK
+				if (CB_BTREE_HALF_ELEMENTS > 1 + pos.index)
+					memmove(pos.node->children + pos.index + 2, pos.node->children + pos.index + 1, (CB_BTREE_HALF_ELEMENTS - pos.index - 1) * sizeof(*new->children));
+				// Insert right to inserted area
+				pos.node->children[pos.index + 1] = right;
+			}
 			// Middle value
 			midKeyValue = pos.node->elements[CB_BTREE_HALF_ELEMENTS];
 		}
-		// Make the new node's children's parents reflect this new node
-		if (new->children[0])
-			for (uint8_t x = 0; x < CB_BTREE_HALF_ELEMENTS + 1; x++) {
-				CBBTreeNode * child = new->children[x];
-				child->parent = new;
-			}
 		// Move middle value to parent, if parent does not exist (ie. root) create new root.
-		if (NOT pos.node->parent) {
+		if (pos.node == self->root) {
 			// Create new root
 			self->root = malloc(sizeof(*self->root));
 			self->root->numElements = 0;
-			self->root->parent = NULL;
-			pos.node->parent = self->root;
 			self->root->children[0] = pos.node; // Make left the left split node.
+			pos.node = self->root;
+			pos.index = 0;
+		}else{
+			// Position to add middle key value in parent is the same position of the old node in the parent children.
+			if (pos.parentCursor)
+				pos.node = pos.parentNodes[pos.parentCursor-1];
+			else
+				pos.node = self->root;
+			pos.index = pos.parentPositions[pos.parentCursor--];
 		}
-		// New node requires that the parent be set
-		new->parent = pos.node->parent;
-		// Find position of value in parent and then insert.
-		CBFindResult res = CBBTreeNodeBinarySearch(pos.node->parent, midKeyValue, self->compareFunc);
-		res.position.node = pos.node->parent;
-		CBAssociativeArrayInsert(self, midKeyValue, res.position, new);
+		CBAssociativeArrayInsert(self, midKeyValue, pos, new);
 	}
 }
 bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it){
 	// Look for child
-	if (it->node->children[it->index + 1]) {
+	if (it->node->children[0]) {
 		// Go to left-most in child
+		if (it->node != self->root){
+			it->parentNodes[it->parentIndex++] = it->node;
+			it->parentCursor++;
+		}
+		it->parentPositions[it->parentIndex] = it->index + 1;
 		it->node = it->node->children[it->index + 1];
-		while (it->node->children[0])
+		while (it->node->children[0]){
+			if (it->node != self->root){
+				it->parentNodes[it->parentIndex++] = it->node;
+				it->parentCursor++;
+			}
+			it->parentPositions[it->parentIndex] = 0;
 			it->node = it->node->children[0];
+		}
 		it->index = 0;
 	}else{
 		if (it->index == it->node->numElements - 1) {
-			// Get key to find next key for
-			uint8_t * key = it->node->elements[it->index];
 			for(;;){
 				// If root then it is the end
-				if (NOT it->node->parent)
+				if (it->node == self->root)
 					return true;
 				// Move to parent
-				it->node = it->node->parent;
-				// Find position in parent
-				it->index = CBBTreeNodeBinarySearch(it->node, key, self->compareFunc).position.index;
+				if (it->parentIndex)
+					it->node = it->parentNodes[it->parentIndex-1];
+				else
+					it->node = self->root;
+				it->index = it->parentPositions[it->parentIndex];
+				if (it->parentIndex)
+					it->parentIndex--;
 				if (it->index < it->node->numElements)
 					// We can use this
 					break;
@@ -437,32 +486,29 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it){
 bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self){
 	return self->root->numElements != 0;
 }
-CBFindResult CBBTreeNodeBinarySearch(CBBTreeNode * self, void * key, CBCompare (*compareFunc)(void *, void *)){
-	CBFindResult res;
-	res.found = false;
-	if (NOT self->numElements){
-		res.position.index = 0;
-		return res;
-	}
-	uint8_t left = 0;
-	uint8_t right = self->numElements - 1;
-	CBCompare cmp;
-	while (left <= right) {
-		res.position.index = (right+left)/2;
-		cmp = compareFunc(key, self->elements[res.position.index]);
-		if (cmp == CB_COMPARE_EQUAL) {
-			res.found = true;
-			break;
-		}else if (cmp == CB_COMPARE_LESS_THAN){
-			if (NOT res.position.index)
+void CBBTreeNodeBinarySearch(CBAssociativeArray * array, CBBTreeNode * node, void * key, CBFindResult * result){
+	result->found = false;
+	if (node->numElements){
+		uint8_t left = 0;
+		uint8_t right = node->numElements - 1;
+		CBCompare cmp;
+		while (left <= right) {
+			result->position.index = (right+left)/2;
+			cmp = array->compareFunc(array, key, node->elements[result->position.index]);
+			if (cmp == CB_COMPARE_EQUAL) {
+				result->found = true;
 				break;
-			right = res.position.index - 1;
-		}else
-			left = res.position.index + 1;
-	}
-	if (cmp == CB_COMPARE_MORE_THAN)
-		res.position.index++;
-	return res;
+			}else if (cmp == CB_COMPARE_LESS_THAN){
+				if (NOT result->position.index)
+					break;
+				right = result->position.index - 1;
+			}else
+				left = result->position.index + 1;
+		}
+		if (cmp == CB_COMPARE_MORE_THAN)
+			result->position.index++;
+	}else
+		result->position.index = 0;
 }
 void * CBFindResultToPointer(CBFindResult res){
 	return res.position.node->elements[res.position.index];
@@ -485,16 +531,16 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
 	}else
 		free(self);
 }
-void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(void *, void *), void (*onFree)(void *)){
+void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *), void * compareObject, void (*onFree)(void *)){
 	self->root = malloc(sizeof(*self->root));
-	self->root->parent = NULL;
 	self->root->numElements = 0;
 	for (uint8_t x = 0; x < CB_BTREE_ELEMENTS + 1; x++)
 		self->root->children[x] = NULL;
 	self->compareFunc = compareFunc;
+	self->compareObject = compareObject;
 	self->onFree = onFree;
 }
-CBCompare CBKeyCompare(void * key1, void * key2){
+CBCompare CBKeyCompare(CBAssociativeArray * self, void * key1, void * key2){
 	if (*(uint8_t *)key1 > *(uint8_t *)key2)
 		return CB_COMPARE_MORE_THAN;
 	if (*(uint8_t *)key1 < *(uint8_t *)key2)

@@ -31,12 +31,6 @@ CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBInventoryItem * CBGetInventoryItem(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash){

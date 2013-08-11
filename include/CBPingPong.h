@@ -24,6 +24,10 @@
 
 #include "CBMessage.h"
 
+// Getter
+
+#define CBGetPingPong(x) ((CBPingPong *)x)
+
 /**
  @brief Structure for CBPingPong objects. @see CBPingPong.h
 */
@@ -44,13 +48,6 @@ CBPingPong * CBNewPingPong(uint64_t ID);
  @returns A new CBPingPong object.
 */
 CBPingPong * CBNewPingPongFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBPingPong from another object. Use this to avoid casts.
- @param self The object to obtain the CBPingPong from.
- @returns The CBPingPong object.
-*/
-CBPingPong * CBGetPingPong(void * self);
 
 /**
  @brief Initialises a CBPingPong object

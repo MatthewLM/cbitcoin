@@ -23,9 +23,10 @@
 #include "CBConstants.h"
 #include "CBNetworkCommunicator.h"
 #include "CBValidator.h"
-#include "CBAccounter.h"
 
-// Constants
+// Constants and Macros
+
+#define CBGetNode(x) ((CBNode *)x)
 
 typedef enum{
 	CB_NODE_SCAN_TXS, /**< Scan blocks for transactions owned by the node. */
@@ -56,13 +57,6 @@ typedef struct{
  @returns A new CBNode object.
  */
 CBNode * CBNewNode(char * dataDir, CBNodeFlags flags, uint32_t otherTxsSizeLimit);
-
-/**
- @brief Gets a CBNode from another object. Use this to avoid casts.
- @param self The object to obtain the CBNode from.
- @returns The CBNode object.
- */
-CBNode * CBGetNode(void * self);
 
 /**
  @brief Initialises a CBNode object

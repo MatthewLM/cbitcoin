@@ -18,31 +18,22 @@
 
 //  Constructor
 
-CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags, uint32_t commitGap){
+CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags){
 	CBValidator * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeValidator;
-	if (CBInitValidator(self, storage, flags, commitGap))
+	if (CBInitValidator(self, storage, flags))
 		return self;
 	// If initialisation failed, free the data that exists.
 	CBFreeValidator(self);
 	return NULL;
 }
 
-//  Object Getter
-
-CBValidator * CBGetValidator(void * self){
-	return self;
-}
-
 //  Initialiser
 
-bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags, uint32_t commitGap){
+bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags){
 	CBInitObject(CBGetObject(self));
 	self->storage = storage;
 	self->flags = flags;
-	self->commitGap = commitGap;
-	self->lastCommit = CBGetMilliseconds();
-	self->commitedLastTime = false;
 	// Check whether the database has been created.
 	if (CBBlockChainStorageExists(self->storage)) {
 		// Found now load information from storage
@@ -115,9 +106,6 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 
 void CBDestroyValidator(void * vself){
 	CBValidator * self = vself;
-	// Commit if there was no commit last time
-	if (NOT self->commitedLastTime)
-		CBBlockChainStorageCommitData(self->storage);
 	// Release orphans
 	for (uint8_t x = 0; x < self->numOrphans; x++)
 		CBReleaseObject(self->orphans[x]);
@@ -183,11 +171,6 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block){
 		CBLogError("Could not save an orphan.");
 		return false;
 	}
-	// Commit data
-	if (NOT CBValidatorCommit(self)) {
-		CBLogError("There was commiting data for an orphan.");
-		return false;
-	}
 	return true;
 }
 CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime){
@@ -222,14 +205,6 @@ CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock
 	}
 	return CB_BLOCK_STATUS_CONTINUE;
 }
-bool CBValidatorCommit(CBValidator * self){
-	if (self->lastCommit < CBGetMilliseconds() - self->commitGap){
-		self->commitedLastTime = true;
-		return CBBlockChainStorageCommitData(self->storage);
-	}else
-		self->commitedLastTime = false;
-	return true;
-}
 CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t height){
 	// Check that the first transaction is a coinbase transaction.
 	if (NOT CBTransactionIsCoinBase(block->transactions[0]))
@@ -243,12 +218,12 @@ CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, u
 		if (memcmp(CBBlockGetHash(block), (uint8_t []){0xec, 0xca, 0xe0, 0x00, 0xe3, 0xc8, 0xe4, 0xe0, 0x93, 0x93, 0x63, 0x60, 0x43, 0x1f, 0x3b, 0x76, 0x03, 0xc5, 0x63, 0xc1, 0xff, 0x61, 0x81, 0x39, 0x0a, 0x4d, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00}, 32)
 			&& memcmp(CBBlockGetHash(block), (uint8_t []){0x21, 0xd7, 0x7c, 0xcb, 0x4c, 0x08, 0x38, 0x6a, 0x04, 0xac, 0x01, 0x96, 0xae, 0x10, 0xf6, 0xa1, 0xd2, 0xc2, 0xa3, 0x77, 0x55, 0x8c, 0xa1, 0x90, 0xf1, 0x43, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00}, 32)) {
 			// Now check for duplicate in previous blocks.
-			bool exists;
-			if (NOT CBBlockChainStorageIsTransactionWithUnspentOutputs(self, CBTransactionGetHash(block->transactions[x]), &exists)) {
+			CBErrBool exists = CBBlockChainStorageIsTransactionWithUnspentOutputs(self, CBTransactionGetHash(block->transactions[x]));
+			if (exists == CB_ERROR) {
 				CBLogError("Could not detemine if a transaction exists with unspent outputs.");
 				return CB_BLOCK_VALIDATION_ERR;
 			}
-			if (exists)
+			if (exists == CB_TRUE)
 				return CB_BLOCK_VALIDATION_BAD;
 		}
 		// Check that the transaction is final.
@@ -413,7 +388,12 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 	}
 	if (NOT found) {
 		// Not found in this block. Look in database for the unspent output.
-		if (NOT CBBlockChainStorageUnspentOutputExists(self, CBByteArrayGetData(prevOutRef.hash), prevOutRef.index))
+		CBErrBool exists = CBBlockChainStorageUnspentOutputExists(self, CBByteArrayGetData(prevOutRef.hash), prevOutRef.index);
+		if (exists == CB_ERROR) {
+			CBLogError("Could not determine if an unspent output exists.");
+			return CB_BLOCK_VALIDATION_ERR;
+		}
+		if (exists == CB_FALSE)
 			return CB_BLOCK_VALIDATION_BAD;
 		// Exists so therefore load the unspent output
 		bool coinbase;
@@ -722,13 +702,6 @@ CBBlockProcessResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block
 			// Try next orphan
 			x++;
 	}
-	// Finally commit all data
-	if (NOT CBValidatorCommit(self)) {
-		CBValidatorFreeBlockProcessResultOrphans(&result);
-		CBLogError("Could not commit updated data when adding a new block to the main chain.");
-		result.status = CB_BLOCK_STATUS_ERROR;
-		return result;
-	}
 	if (result.status == CB_BLOCK_STATUS_REORG)
 		// Update chain path data to include new blocks.
 		result.data.reorgData.newChain.points[0].blockIndex = self->branches[self->mainBranch].numBlocks - 1;
@@ -737,7 +710,7 @@ CBBlockProcessResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block
 void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget, CBBlockProcessResult * result){
 	// Check timestamp
 	if (block->time <= CBValidatorGetMedianTime(self, prevBranch, prevBlockIndex)){
-		CBBlockChainStorageReset(self->storage);
+		CBBlockChainStorageRevert(self->storage);
 		result->status = CB_BLOCK_STATUS_BAD;
 		return;
 	}
@@ -750,7 +723,7 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 		target = prevBlockTarget;
 	// Check target
 	if (block->target != target){
-		CBBlockChainStorageReset(self->storage);
+		CBBlockChainStorageRevert(self->storage);
 		result->status = CB_BLOCK_STATUS_BAD;
 		return;
 	}
@@ -890,16 +863,11 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 						|| res == CB_BLOCK_VALIDATION_ERR){
 						CBReleaseObject(tempBlock);
 						// Clear IO operations, thus reverting to previous main-chain.
-						CBBlockChainStorageReset(self->storage);
+						CBBlockChainStorageRevert(self->storage);
 						if (res == CB_BLOCK_VALIDATION_BAD) {
 							// Save last valided blocks for each branch
 							if (NOT CBValidatorSaveLastValidatedBlocks(self, branches)) {
 								CBLogError("Could not save the last validated blocks for a validatation error during reorganisation");
-								result->status = CB_BLOCK_STATUS_ERROR;
-								return;
-							}
-							if (NOT CBValidatorCommit(self)) {
-								CBLogError("Could not commit the last validated block for a validatation error during reorganisation.");
 								result->status = CB_BLOCK_STATUS_ERROR;
 								return;
 							}
@@ -970,7 +938,7 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 		CBBlockValidationResult res = CBValidatorCompleteBlockValidation(self, branch, block, self->branches[branch].startHeight + self->branches[branch].numBlocks);
 		// If the validation was bad then reset the pending IO and return.
 		if (res == CB_BLOCK_VALIDATION_BAD) {
-			CBBlockChainStorageReset(self->storage);
+			CBBlockChainStorageRevert(self->storage);
 			result->status = CB_BLOCK_STATUS_BAD;
 			return;
 		}
@@ -982,7 +950,7 @@ void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t 
 		// Update the unspent output indicies.
 		if (NOT CBValidatorUpdateUnspentOutputsForward(self, block, branch, self->branches[branch].lastValidation)) {
 			CBLogError("Could not update the unspent outputs when adding a block to the main chain.");
-			result->status = CB_BLOCK_STATUS_ERROR;
+			result->status = CB_BLOCK_STATUS_ERROR;CBBlockChainStorageRevert(self->storage);
 			return;
 		}
 	}

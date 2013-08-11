@@ -27,12 +27,6 @@
 	return NULL;
 }REMOVE MALLOC CHECKS
 
-//  Object Getter
-
-CBNode * CBGetNode(void * self){
-	return self;
-}
-
 //  Initialiser
 
 bool CBInitNode(CBNode * self, char * dataDir, CBNodeFlags flags, uint32_t otherTxsSizeLimit){

@@ -24,7 +24,7 @@
 #include "CBConstants.h"
 #include "CBBlock.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
 #define CB_TARGET_INTERVAL 1209600 // Two week interval

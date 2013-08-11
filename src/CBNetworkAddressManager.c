@@ -27,12 +27,6 @@ CBNetworkAddressManager * CBNewNetworkAddressManager(void (*onBadTime)(void *)){
 	return NULL;
 }
 
-//  Object Getter
-
-CBNetworkAddressManager * CBGetNetworkAddressManager(void * self){
-	return self;
-}
-
 //  Initialiser
 
 bool CBInitNetworkAddressManager(CBNetworkAddressManager * self, void (*onBadTime)(void *)){
@@ -62,11 +56,11 @@ bool CBInitNetworkAddressManager(CBNetworkAddressManager * self, void (*onBadTim
 	// Generate secret
 	self->secret = CBSecureRandomInteger(self->rndGen);
 	// Initialise arrays for addresses and peers.
-	CBInitAssociativeArray(&self->peers, CBNetworkAddressIPPortCompare, CBReleaseObject);
-	CBInitAssociativeArray(&self->peerTimeOffsets, CBPeerCompareByTime, NULL);
+	CBInitAssociativeArray(&self->peers, CBNetworkAddressIPPortCompare, NULL, CBReleaseObject);
+	CBInitAssociativeArray(&self->peerTimeOffsets, CBPeerCompareByTime, NULL, NULL);
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++){
-		CBInitAssociativeArray(&self->addresses[x], CBNetworkAddressIPPortCompare, CBReleaseObject);
-		CBInitAssociativeArray(&self->addressScores[x], CBNetworkAddressCompare, NULL);
+		CBInitAssociativeArray(&self->addresses[x], CBNetworkAddressIPPortCompare, NULL, CBReleaseObject);
+		CBInitAssociativeArray(&self->addressScores[x], CBNetworkAddressCompare, NULL, NULL);
 	}
 	return true;
 }
@@ -338,16 +332,16 @@ void CBNetworkAddressManagerTakePeerTimeOffset(CBNetworkAddressManager * self, C
 	// Adjust time
 	CBNetworkAddressManagerAdjustTime(self);
 }
-CBCompare CBPeerCompareByTime(void * peer1, void * peer2){
+CBCompare CBPeerCompareByTime(CBAssociativeArray * array, void * peer1, void * peer2){
 	CBPeer * peerObj1 = peer1;
 	CBPeer * peerObj2 = peer2;
 	if (peerObj1->timeOffset < peerObj2->timeOffset)
 		return CB_COMPARE_MORE_THAN;
 	if (peerObj1->timeOffset > peerObj2->timeOffset)
 		return CB_COMPARE_LESS_THAN;
-	return CBNetworkAddressIPPortCompare(peer1, peer2);
+	return CBNetworkAddressIPPortCompare(array, peer1, peer2);
 }
-CBCompare CBNetworkAddressCompare(void * address1, void * address2){
+CBCompare CBNetworkAddressCompare(CBAssociativeArray * array, void * address1, void * address2){
 	CBNetworkAddress * addrObj1 = address1;
 	CBNetworkAddress * addrObj2 = address2;
 	uint64_t addrScore1 = addrObj1->lastSeen - addrObj1->penalty;
@@ -356,9 +350,9 @@ CBCompare CBNetworkAddressCompare(void * address1, void * address2){
 		return CB_COMPARE_MORE_THAN;
 	if (addrScore1 > addrScore2)
 		return CB_COMPARE_LESS_THAN;
-	return CBNetworkAddressIPPortCompare(address1, address2);
+	return CBNetworkAddressIPPortCompare(array, address1, address2);
 }
-CBCompare CBNetworkAddressIPPortCompare(void * address1, void * address2){
+CBCompare CBNetworkAddressIPPortCompare(CBAssociativeArray * array, void * address1, void * address2){
 	CBNetworkAddress * addrObj1 = address1;
 	CBNetworkAddress * addrObj2 = address2;
 	CBCompare res = CBByteArrayCompare(addrObj1->ip, addrObj2->ip);

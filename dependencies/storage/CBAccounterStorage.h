@@ -22,41 +22,33 @@
 
 #include "CBDatabase.h"
 #include "CBTransaction.h"
+#include "CBValidator.h"
 
-// Constants
+// Constants and Macros
 
+#define CB_UNUSED_SECTION 0
+#define CBGetAccounterCursor(x) ((CBAccounterStorageCursor *)x)
 
 /**
  @brief The offsets of accounter details data
  */
 typedef enum{
-	CB_ACCOUNTER_DETAILS_OUTPUT_ID = 0, /**< The output ID to next use */
-	CB_ACCOUNTER_DETAILS_TX_ID = 8, /**< The transaction ID to next use */
-	CB_ACCOUNTER_DETAILS_ACCOUNT_ID = 16, /**< The account ID to next use */
+	CB_ACCOUNTER_DETAILS_OUTPUT_ID = CB_BLOCK_CHAIN_EXTRA_SIZE, /**< The output ID to next use */
+	CB_ACCOUNTER_DETAILS_TX_ID = CB_ACCOUNTER_DETAILS_OUTPUT_ID + 8, /**< The transaction ID to next use */
+	CB_ACCOUNTER_DETAILS_ACCOUNT_ID = CB_ACCOUNTER_DETAILS_TX_ID + 8, /**< The account ID to next use */
+	CB_ACCOUNTER_DETAILS_BRANCH_LAST_SECTION_IDS = CB_ACCOUNTER_DETAILS_ACCOUNT_ID + 8, /**< The IDs of the last sections for branches */
+	CB_ACCOUNTER_DETAILS_BRANCH_SECTION_PARENTS = CB_ACCOUNTER_DETAILS_BRANCH_LAST_SECTION_IDS + CB_MAX_BRANCH_CACHE, /**< The parents for the last section IDs with offsets equaling the IDs */
+	CB_ACCOUNTER_DETAILS_BRANCH_SECTION_HEIGHT_START = CB_ACCOUNTER_DETAILS_BRANCH_SECTION_PARENTS + CB_MAX_BRANCH_SECTIONS, /**< The parents for the last section IDs with offsets equaling the IDs */
+	CB_ACCOUNTER_DETAILS_BRANCH_SECTION_NEXT_ORDER_NUM = CB_ACCOUNTER_DETAILS_BRANCH_SECTION_HEIGHT_START + CB_MAX_BRANCH_SECTIONS*4
 } CBAccounterDetailsOffsets;
 
 /**
  @brief The offsets of transactions details data
  */
 typedef enum{
-	CB_TX_DETAILS_TIMESTAMP = 0, /**< The time this transaction was discovered if found unconfirmed or the timestamp of the block. */
-	CB_TX_DETAILS_BRANCH_INSTANCES = 4, /**< The number of branches owning this transaction */
-	CB_TX_DETAILS_HASH = 5, /**< The transaction hash. */
+	CB_TX_DETAILS_BRANCH_INSTANCES = 0, /**< The number of branches owning this transaction or duplicates. */
+	CB_TX_DETAILS_HASH = 1, /**< The transaction hash. */
 } CBTransactionDetailsOffsets;
-
-/**
- @brief The offsets of account details data for a branch.
- */
-typedef enum{
-	CB_ACCOUNT_DETAILS_BALANCE = 0, /**< The balance for the account on this branch. */
-} CBAccountBranchDetailsOffsets;
-
-/**
- @brief The offsets of output reference data.
- */
-typedef enum{
-	CB_OUTPUT_REF_DATA_VALUE = 0, /**< The value of this output */
-} CBOutputRefDataOffsets;
 
 /**
  @brief The offsets of output reference branch data.
@@ -74,196 +66,233 @@ typedef enum{
 } CBTransactionAccountDetailsOffsets;
 
 /**
- @brief The offsets of transactions with branch specific details data
+ @brief The data offsets for outputDetails
  */
 typedef enum{
-	CB_TX_BRANCH_DETAILS_BLOCK_HEIGHT = 0, /**< The block height this transaction was found in or CB_TX_UNCONFIRMED for CB_NO_BRANCH */
-} CBTransactionBranchDetailsOffsets;
+	CB_OUTPUT_DETAILS_VALUE = 0,
+	CB_OUTPUT_DETAILS_TX_HASH = 8,
+	CB_OUTPUT_DETAILS_INDEX = 40,
+	CB_OUTPUT_DETAILS_ID_HASH = 44,
+} CBOutputDetailsOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_OUTPUT_HASH_AND_INDEX_TO_ID
+ @brief The data offsets for branchSectionTxDetails
  */
 typedef enum{
-	CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH = 2,
-	CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX = 34,
+	CB_BRANCH_TX_DETAILS_HEIGHT = 0,
+	CB_BRANCH_TX_DETAILS_TIMESTAMP = 4,
+} CBBranchTxDetailsDataOffsets;
+
+/**
+ @brief The key offsets for outputHashAndIndexToID
+ */
+typedef enum{
+	CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH = 0,
+	CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX = 32,
 } CBOutputHashAndIndexToIDKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_BRANCH_OUTPUT_DETAILS
+ @brief The key offsets for branchSectionAccountOutputs
  */
 typedef enum{
-	CB_BRANCH_OUTPUT_DETAILS_BRANCH = 2,
-	CB_BRANCH_OUTPUT_DETAILS_OUPUT_ID = 3,
-} CBBranchOutputDetailsKeyOffsets;
-
-/**
- @brief The key offsets for CB_TYPE_ACCOUNT_UNSPENT_OUTPUTS
- */
-typedef enum{
-	CB_ACCOUNT_UNSPENT_OUTPUTS_BRANCH = 2,
-	CB_ACCOUNT_UNSPENT_OUTPUTS_ACCOUNT_ID = 3,
-	CB_ACCOUNT_UNSPENT_OUTPUTS_OUTPUT_ID = 11,
+	CB_ACCOUNT_OUTPUTS_BRANCH = 0,
+	CB_ACCOUNT_OUTPUTS_ACCOUNT_ID = 1,
+	CB_ACCOUNT_OUTPUTS_HEIGHT = 9,
+	CB_ACCOUNT_OUTPUTS_OUTPUT_ID = 13,
 } CBAccountUnspentOutputsKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_OUTPUT_ACCOUNTS
+ @brief The key offsets for outputAccounts
  */
 typedef enum{
-	CB_OUTPUT_ACCOUNTS_OUTPUT_ID = 2,
-	CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID = 10,
+	CB_OUTPUT_ACCOUNTS_OUTPUT_ID = 0,
+	CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID = 8,
 } CBOutputAccountsKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_OUTPUT_DETAILS
+ @brief The key offsets for watchedHashes
  */
 typedef enum{
-	CB_OUTPUT_DETAILS_OUTPUT_ID = 2,
-} CBOutputDetailsKeyOffsets;
-
-/**
- @brief The key offsets for CB_TYPE_WATCHED_HASHES
- */
-typedef enum{
-	CB_WATCHED_HASHES_HASH = 2,
-	CB_WATCHED_HASHES_ACCOUNT_ID = 22,
+	CB_WATCHED_HASHES_HASH = 0,
+	CB_WATCHED_HASHES_ACCOUNT_ID = 20,
 } CBWatchedHashesKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_TX_HASH_TO_ID
+ @brief The key offsets for branchSectionTxDetails
  */
 typedef enum{
-	CB_TX_HASH_TO_ID_HASH = 2,
-} CBTxHashToIDKeyOffsets;
-
-/**
- @brief The key offsets for CB_TYPE_TX_DETAILS
- */
-typedef enum{
-	CB_TX_DETAILS_TX_ID = 2,
-} CBTxDetailsKeyOffsets;
-
-/**
- @brief The key offsets for CB_TYPE_BRANCH_TX_DETAILS
- */
-typedef enum{
-	CB_BRANCH_TX_DETAILS_BRANCH = 2,
-	CB_BRANCH_TX_DETAILS_TX_ID = 3,
+	CB_BRANCH_TX_DETAILS_BRANCH = 0,
+	CB_BRANCH_TX_DETAILS_ORDER_NUM = 1,
+	CB_BRANCH_TX_DETAILS_TX_ID = 9,
 } CBBranchTxDetailsKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_TX_HEIGHT_BRANCH_AND_ID
+ @brief The key offsets for txBranchSectionHeightAndID
  */
 typedef enum{
-	CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH = 2,
-	CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT = 3,
-	CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID = 7,
+	CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH = 0,
+	CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT = 1,
+	CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM = 5,
+	CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID = 13,
 } CBTxHeightBranchAndIDKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_TX_ACCOUNTS
+ @brief The key offsets for txAccounts
  */
 typedef enum{
-	CB_TX_ACCOUNTS_TX_ID = 2,
-	CB_TX_ACCOUNTS_ACCOUNT_ID = 10,
+	CB_TX_ACCOUNTS_TX_ID = 0,
+	CB_TX_ACCOUNTS_ACCOUNT_ID = 8,
 } CBTxAccountsKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_ACCOUNT_TX_DETAILS
+ @brief The key offsets for accountTxDetails
  */
 typedef enum{
-	CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID = 2,
-	CB_ACCOUNT_TX_DETAILS_TX_ID = 10,
+	CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID = 0,
+	CB_ACCOUNT_TX_DETAILS_TX_ID = 8,
 } CBAccountTxDetailsKeyOffsets;
 
 /**
- @brief The key offsets for CB_TYPE_BRANCH_ACCOUNT_DETAILS
+ @brief The key offsets for branchSectionAccountTimeTx
  */
 typedef enum{
-	 CB_BRANCH_ACCOUNT_DETAILS_BRANCH = 2,
-	CB_BRANCH_ACCOUNT_DETAILS_ACCOUNT_ID = 3,
-} CBBranchAccountDetailsKeyOffsets;
-
-/**
- @brief The key offsets for CB_TYPE_BRANCH_ACCOUNT_TIME_TX
- */
-typedef enum{
-	CB_BRANCH_ACCOUNT_TIME_TX_BRANCH = 2,
-	CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID = 3,
-	CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP = 11,
-	CB_BRANCH_ACCOUNT_TIME_TX_TX_ID = 19,
+	CB_BRANCH_ACCOUNT_TIME_TX_BRANCH = 0,
+	CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID = 1,
+	CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP = 9,
+	CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM = 17, /**< This is important. 8 bytes for allowing ordering of transactions with the same timestamp by the order they were found. */
+	CB_BRANCH_ACCOUNT_TIME_TX_TX_ID = 25,
 } CBBranchAccountTimeTxKeyOffsets;
- 
+
 // Structures
 
 /**<
- @brief Counts the credit and debit for an account when processing a transaction.
+ @brief Counts the in and outflows for an account when processing a transaction.
  */
 typedef struct{
 	uint64_t accountID;
-	uint64_t creditAmount;
-	uint64_t debitAmount;
-	bool foundCreditAddr;
-	bool creditAddrIndexIsZero;
-	uint8_t creditAddr[20];
-} CBTransactionAccountCreditDebit;
+	uint64_t inAmount;
+	uint64_t outAmount;
+	bool foundInAddr;
+	bool inAddrIndexIsZero;
+	uint8_t inAddr[20];
+} CBTransactionAccountFlow;
 
 typedef struct{
-	CBDatabase base;
+	CBDatabase * database;
 	uint64_t lastAccountID;
 	uint64_t nextTxID;
 	uint64_t nextOutputRefID;
 	CBDatabaseIndex * txDetails;
-	CBDatabaseIndex * accountDetails;
-	CBDatabaseIndex * outputDetails;
-	CBDatabaseIndex * branchOutputDetails;
-	CBDatabaseIndex * accountTxDetails;
-	CBDatabaseIndex * branchAccountTimeTx;
-	CBDatabaseIndex * branchTxDetails;
-	CBDatabaseIndex * outputAccounts;
-	CBDatabaseIndex * accountUnspentOutputs;
-	CBDatabaseIndex * txAccounts;
-	CBDatabaseIndex * txHashToID;
-	CBDatabaseIndex * txHeightBranchAndID;
-	CBDatabaseIndex * outputHashAndIndexToID;
-	CBDatabaseIndex * watchedHashes;
-	CBDatabaseTransaction tx;
+	CBDatabaseIndex * unconfTxTimestamps; /**< Timestamps for unconfirmed transactions. */
+	CBDatabaseIndex * accountUnconfBalance; /**< Contains the total of all the values of unconfirmed transactions. */
+	CBDatabaseIndex * outputDetails; /**< Contains the value, txHash, index and hash identifier of outputs. */
+	CBDatabaseIndex * accountTxDetails; /**< Contains the value of the transction for the account and the in/out address. */
+	CBDatabaseIndex * branchSectionAccountTimeTx; /**< Entries for the transactions in each accounts ordered by time and 32bit integer that insures transactions with the same time get ordered by the order found. Contains details for on-chain transactions with the balance upto that transaction. Used to fetch balances for accounts and making reorgs easier. */
+	CBDatabaseIndex * branchSectionTxDetails; /**< Contains the height and timestamp of transactions in the branches. */
+	CBDatabaseIndex * outputAccounts; /**< Entries linking outputs with accounts that own them. */
+	CBDatabaseIndex * branchSectionAccountOutputs; /**< Has a value of true when the output is unspent and false when an output is spent. Ordered by height descending. To find unspent outputs go through band find first value for an output, if the first value is unspent then it can be used. */
+	CBDatabaseIndex * txAccounts; /**< Entries linking transactions to accounts that own them. */
+	CBDatabaseIndex * txHashToID; /**< Contains transaction hashes as keys with the transaction IDs as data. */
+	CBDatabaseIndex * txBranchSectionHeightAndID; /**< Entries that list transaction IDs in order of the height and ID */
+	CBDatabaseIndex * outputHashAndIndexToID; /**< Contains transaction hashes and output indexes as keys with the output IDs as data. */
+	CBDatabaseIndex * watchedHashes; /**< Entries of output identification hashes with account IDs that watch them. */
 } CBAccounterStorage;
+
+typedef struct{
+	CBAccounterStorage * storage;
+	uint8_t branchSections[CB_MAX_BRANCH_CACHE];
+	uint8_t currentSection;
+	CBDatabaseRangeIterator it;
+	bool started;
+} CBAccounterStorageCursor;
+
+typedef struct{
+	CBAccounterStorageCursor base;
+	uint8_t branchSectionAccountOutputsMin[21];
+	uint8_t branchSectionAccountOutputsMax[21];
+	CBAssociativeArray spentOutputs; /**< Those outputs marked as spent. */
+	uint8_t numSections;
+} CBAccounterStorageUnspentOutputCursor;
+
+typedef struct{
+	CBAccounterStorageCursor base;
+	uint8_t branchSectionAccountTimeTxMin[33];
+	uint8_t branchSectionAccountTimeTxMax[33];
+} CBAccounterStorageTxCursor;
 
 // Functions
 
 /**
- @brief Adjusts the balance of an account by a transaction.
- @param database The database object.
- @param accountTxDetails The CB_TYPE_ACCOUNT_TX_DETAILS key.
- @param accountDetailsKey The CB_TYPE_BRANCH_ACCOUNT_DETAILS key.
+ @brief Adjusts the balance for an account of th unconfirmed transactions.
+ @param self The accounter storage object.
+ @param accountID The ID of the account.
+ @param value The amount to adjust the balance by.
  @returns true on success, false on failure.
  */
-bool CBAccounterAdjustAccountBalanceByTx(CBDatabase * database, uint8_t * accountTxDetails, uint8_t * accountDetailsKey);
+bool CBAccounterAdjustUnconfBalance(CBAccounterStorage * self, uint64_t accountID, uint64_t value);
 /**
- @brief Changes the spent status of an output reference on a branch.
- @param self The database object.
+ @brief Changes the spent status of an output reference on a branch to spent
+ @param self The accounter storage object.
  @param prevOut The output hash and index.
  @param branch The branch of the output reference.
- @param spent The new spent status.
- @param txInfo A pointer to the transaction information, to be updated.
+ @param blockHeight The height of the output reference.
+ @param txInfo A pointer to the transaction information, to be updated unless NULL.
  @returns true on success, false on failure.
  */
-bool CBAccounterChangeOutputReferenceSpentStatus(CBDatabase * self, CBPrevOut * prevOut, uint8_t branch, bool spent, CBAssociativeArray * txInfo);
+bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, uint8_t branch, uint32_t blockHeight, CBAssociativeArray * txInfo);
+/**
+ @brief Initialises an accounter storage cursor.
+ */
+void CBAccounterCursorInit(CBAccounterStorageCursor * cursor, CBAccounterStorage * storage, uint8_t branch);
+/**
+ @brief Gets the last cumulative balance for a branch section.
+ @param self The accounter storage object.
+ @param accountID The ID of the account
+ @param branchSection the branch section Id.
+ @param balance Will be set to the balance
+ @returns true on success, false on failure.
+ */
+bool CBAccounterGetLastAccountBranchSectionBalance(CBAccounterStorage * self, uint64_t accountID, uint8_t branchSection, uint64_t * balance);
+/**
+ @brief Gets the ID of the branch data for the last section in the branch, after any forks.
+ @param self The accounter storage object.
+ @param branch The branch ID.
+ @returns The ID.
+ */
+uint8_t CBAccounterGetLastBranchSectionID(CBAccounterStorage * self, uint8_t branch);
+/**
+ @brief Gets the ID of the branch data for the parent section of the provided branch section ID.
+ @param self The accounter storage object.
+ @param branchSectionID The branch section ID.
+ @returns CB_NO_PARENT if the section has no parent or the parent ID.
+ */
+uint8_t CBAccounterGetParentBranchSection(CBAccounterStorage * self, uint8_t branchSectionID);
+/**
+ @brief Gets the value of a transction for an account.
+ @param self The accounter storage object.
+ @param txID The transction ID.
+ @param accountID The account ID.
+ @param value The value to set.
+ @returns true on success, false on failure. 
+ */
+bool CBAccounterGetTxAccountValue(CBAccounterStorage * self, uint64_t txID, uint64_t accountID, int64_t * value);
+/**
+ @brief Removes a transaction's account details from a branch.
+ @param storage The accounter storage object.
+ @param txID The transaction ID.
+ @param txHash The transaction hash.
+ @param branch The branch to remove the transaction details from.
+ @param orderNum The data for branch ordernums.
+ @param height The data for branch heights.
+ @returns true on success, false on failure.
+ */
+bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64_t txID, uint8_t * txHash, uint8_t branch, uint8_t * orderNum, uint8_t * height);
 /**
  @brief Compares 32-bit integers.
  @param int1 A pointer to the first 32-bit integer.
  @param int2 A pointer to the second 32-bit integer.
  @returns CB_COMPARE_MORE_THAN if the first integer is bigger than the second and likewise.
  */
-CBCompare CBCompareUInt32(void * int1, void * int2);
-/**
- @brief Removes a transaction's account details from a branch.
- @param database The database object.
- @param txDetailsKey The CB_TYPE_TX_DETAILS key.
- @param txHashToIDKey The CB_TYPE_TX_HASH_TO_ID key.
- @param branch The branch to remove the transaction details from.
- @returns true on success, false on failure.
- */
-bool CBAccounterRemoveTransactionFromBranch(CBDatabase * database, uint8_t * txDetailsKey, uint8_t * txHashToIDKey, uint8_t branch);
+CBCompare CBCompareUInt32(CBAssociativeArray * foo, void * int1, void * int2);
 
 #endif

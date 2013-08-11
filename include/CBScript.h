@@ -26,10 +26,11 @@
 #include "CBDependencies.h"
 #include <stdbool.h>
 
-// Constants
+// Constants and Macros
 
 #define CB_NOT_A_NUMBER_OP UINT8_MAX
 #define CB_NOT_A_PUSH_OP UINT32_MAX
+#define CBGetScript(x) ((CBScript *)x)
 
 typedef enum{
 	CB_SIGHASH_ALL = 0x00000001,
@@ -241,13 +242,6 @@ CBScript * CBNewScriptWithData(uint8_t * data, uint32_t size);
  @returns The new CBScript object.
  */
 CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size);
-
-/**
- @brief Gets a CBScript from another object. Use this to avoid casts.
- @param self The object to obtain the CBScript from.
- @returns The CBScript object.
- */
-CBScript * CBGetScript(void * self);
 
 /**
  @brief Initialises a CBScript object from a string. @see CBNewScriptOfSize

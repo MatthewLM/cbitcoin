@@ -31,12 +31,6 @@ CBVersion * CBNewVersionFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBVersion * CBGetVersion(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitVersion(CBVersion * self, int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight){

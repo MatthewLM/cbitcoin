@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 void onErrorReceived(char * format, ...);
 void onErrorReceived(char * format, ...){
@@ -36,13 +37,13 @@ uint32_t getLen(CBBTreeNode * self){
 }
 
 int main(){
+	// ??? CB_BTREE_ELEMENTS set to 2 gives best results???
 	// ??? Add more in-depth tests.
 	unsigned int s = (unsigned int)time(NULL);
-	s = 1353092048;
 	printf("Session = %u\n", s);
-	//srand(s);
+	srand(s);
 	CBAssociativeArray array;
-	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL, NULL);
 	uint8_t key[4];
 	CBFindResult res = CBAssociativeArrayFind(&array, key);
 	if (res.found) {
@@ -90,7 +91,7 @@ int main(){
 	}
 	CBFreeAssociativeArray(&array);
 	// Create array again and test for insertion overflow situations
-	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL, NULL);
 	// Insert CB_BTREE_ELEMENTS elements
 	uint8_t keys2[CB_BTREE_ELEMENTS+1][4];
 	for (uint8_t x = 0; x < CB_BTREE_ELEMENTS; x++) {
@@ -577,9 +578,9 @@ int main(){
 	}
 	CBFreeAssociativeArray(&array);
 	// Test lots of random keys
-	CBInitAssociativeArray(&array, CBKeyCompare, NULL);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL, NULL);
 	// Generate keys
-	int size = CB_BTREE_ELEMENTS * (CB_BTREE_ELEMENTS + 2) * 20;
+	int size = 52800;
 	uint8_t * keys5 = malloc(size);
 	for (int x = 0; x < size; x++) {
 		if (x % 10)
@@ -679,8 +680,14 @@ int main(){
 		return 1;
 	}
 	// Try removing half of elements
-	for (int x = 0; x < size/2; x += 10)
+	for (int x = 0; x < size/2; x += 10){
 		CBAssociativeArrayDelete(&array, CBAssociativeArrayFind(&array, keys5 + x).position, false);
+		// Check length
+		if (getLen(array.root) != (size-x)/10 - 1) {
+			printf("DELETE LENGTH FAIL");
+			return 1;
+		}
+	}
 	// Now ensure the rest can be found
 	for (int x = size/2; x < size; x += 10) {
 		CBFindResult res = CBAssociativeArrayFind(&array, keys5 + x);
@@ -689,5 +696,41 @@ int main(){
 			return 1;
 		}
 	}
+	// Test CBAssociativeArrayRangeIteratorLast
+	CBFreeAssociativeArray(&array);
+	CBInitAssociativeArray(&array, CBKeyCompare, NULL, NULL);
+	size = CB_BTREE_ELEMENTS * (CB_BTREE_ELEMENTS + 2) * 6;
+	uint8_t * keys6 = malloc(size);
+	for (uint16_t x = 0; x < size; x += 3) {
+		keys6[x] = 2;
+		keys6[x+1] = (x/3) >> 8;
+		keys6[x+2] = x/3;
+		CBAssociativeArrayInsert(&array, keys6 + x, CBAssociativeArrayFind(&array, keys6 + x).position, NULL);
+		CBAssociativeArrayGetLast(&array, &it);
+		uint8_t * key = (uint8_t *)it.node->elements[it.index];
+		if (key[1] != ((x/3) >> 8) || key[2] != (uint8_t)(x/3)) {
+			printf("INSERT GET LAST FAIL\n");
+			return 1;
+		}
+	}
+	CBRangeIterator iter = {(uint8_t []){2,0,0}, (uint8_t []){2,0,0}};
+	for (uint16_t x = 0; x < size; x += 3) {
+		((uint8_t *)iter.maxElement)[1] = (x/3 + (x % 3)) >> 8;
+		((uint8_t *)iter.maxElement)[2] = x/3 + (x % 3);
+		for (uint16_t y = 0; y <= x; y += 3) {
+			((uint8_t *)iter.minElement)[1] = (y/3) >> 8;
+			((uint8_t *)iter.minElement)[2] = y/3;
+			if (NOT CBAssociativeArrayRangeIteratorLast(&array, &iter)) {
+				printf("RANGE ITERATOR TO LAST FAIL %u - %u\n",x,y);
+				return 1;
+			}
+			uint8_t * itKey = CBRangeIteratorGetPointer(&iter);
+			if (itKey[1] != ((x/3) >> 8) || itKey[2] != (uint8_t)(x/3)) {
+				printf("RANGE ITERATOR KEY FAIL %u - %u\n",x,y);
+				return 1;
+			}
+		}
+	}
+	CBFreeAssociativeArray(&array);
 	return 0;
 }

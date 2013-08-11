@@ -27,6 +27,7 @@
 // Cosntants
 
 #define CB_BLOCK_HEADERS_MAX_SIZE 178009
+#define CBGetBlockHeaders(x) ((CBBlockHeaders *)x)
 
 /**
  @brief Structure for CBBlockHeaders objects. @see CBBlockHeaders.h
@@ -48,13 +49,6 @@ CBBlockHeaders * CBNewBlockHeaders(void);
  @returns A new CBBlockHeaders object.
 */
 CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data);
-
-/**
- @brief Gets a CBBlockHeaders from another object. Use this to avoid casts.
- @param self The object to obtain the CBBlockHeaders from.
- @returns The CBBlockHeaders object.
-*/
-CBBlockHeaders * CBGetBlockHeaders(void * self);
 
 /**
  @brief Initialises a CBBlockHeaders object

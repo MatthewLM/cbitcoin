@@ -33,12 +33,6 @@ CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes, uin
 	return self;
 }
 
-//  Object Getter
-
-CBVersionChecksumBytes * CBGetVersionChecksumBytes(void * self){
-	return self;
-}
-
 //  Initialisers
 
 bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteArray * string, bool cacheString){

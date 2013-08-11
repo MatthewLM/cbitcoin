@@ -31,12 +31,6 @@ CBAlert * CBNewAlertFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBAlert * CBGetAlert(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature){

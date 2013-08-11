@@ -25,12 +25,6 @@ CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr){
 	return self;
 }
 
-//  Object Getter
-
-CBPeer * CBGetPeer(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitPeerByTakingNetworkAddress(CBPeer * self){

@@ -319,7 +319,7 @@ int main(){
 	CBSha256((uint8_t []){0x56, 0x21, 0xF2}, 3, hash);
 	for (int x = 0; x < 4; x++){
 		bytes = CBNewByteArrayWithDataCopy(hash, 32);
-		CBTransactionTakeInput(tx, CBNewUnsignedTransactionInput(0, bytes, 0));
+		CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, 0, bytes, 0));
 	}
 	CBReleaseObject(bytes);
 	uint8_t keyHash[32];
@@ -794,7 +794,7 @@ int main(){
 	tx = CBNewTransaction(0, 2);
 	CBSha256((uint8_t []){0x56, 0x21, 0xF2}, 3, hash);
 	bytes = CBNewByteArrayWithDataCopy(hash, 32);
-	CBTransactionTakeInput(tx, CBNewUnsignedTransactionInput(0, bytes, 0));
+	CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, 0, bytes, 0));
 	CBReleaseObject(bytes);
 	// Make output for this transaction
 	scriptObj = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
@@ -1295,7 +1295,7 @@ int main(){
 	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_DUP);
 	CBByteArraySetByte(script, 1, CB_SCRIPT_OP_HASH160);
 	CBByteArraySetByte(script, 2, 0x14);
-	memset(CBByteArrayGetData(script) + 3, 0, 20);
+	memset(CBByteArrayGetData(script) + 3, 2, 20);
 	CBByteArraySetByte(script, 23, CB_SCRIPT_OP_EQUALVERIFY);
 	CBByteArraySetByte(script, 24, CB_SCRIPT_OP_CHECKSIG);
 	output = CBNewTransactionOutput(5003, script);
@@ -1303,16 +1303,27 @@ int main(){
 		printf("TX OUTPUT KEYHASH RECOGNITION FAIL\n");
 		return 1;
 	}
+	uint8_t hashTest[20];
+	CBTransactionOuputGetHash(output, hashTest);
+	if (memcmp(hashTest, CBByteArrayGetData(script) + 3, 20)) {
+		printf("KEYHASH GET HASH FAIL\n");
+		return 1;
+	}
 	CBReleaseObject(script);
 	// Now test P2SH
 	script = CBNewScriptOfSize(23);
 	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_HASH160);
 	CBByteArraySetByte(script, 1, 0x14);
-	memset(CBByteArrayGetData(script) + 2, 0, 20);
+	memset(CBByteArrayGetData(script) + 2, 1, 20);
 	CBByteArraySetByte(script, 22, CB_SCRIPT_OP_EQUAL);
 	output->scriptObject = script;
 	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_P2SH) {
 		printf("TX OUTPUT P2SH RECOGNITION FAIL\n");
+		return 1;
+	}
+	CBTransactionOuputGetHash(output, hashTest);
+	if (memcmp(hashTest, CBByteArrayGetData(script) + 2, 20)) {
+		printf("P2SH GET HASH FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
@@ -1326,6 +1337,13 @@ int main(){
 	output->scriptObject = script;
 	if (CBTransactionOutputGetType(output) != CB_TX_OUTPUT_TYPE_MULTISIG) {
 		printf("TX OUTPUT MULTISIG RECOGNITION FAIL\n");
+		return 1;
+	}
+	CBTransactionOuputGetHash(output, hashTest);
+	uint8_t scriptHash[20];
+	CBRipemd160(CBByteArrayGetData(output->scriptObject), output->scriptObject->length, scriptHash);
+	if (memcmp(hashTest, scriptHash, 20)) {
+		printf("MULTISIG GET HASH FAIL\n");
 		return 1;
 	}
 	CBByteArraySetByte(script, 0, CB_SCRIPT_OP_0);

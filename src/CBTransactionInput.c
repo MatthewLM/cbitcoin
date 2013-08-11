@@ -37,12 +37,6 @@ CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data){
 	return self;
 }
 
-//  Object Getter
-
-CBTransactionInput * CBGetTransactionInput(void * self){
-	return self;
-}
-
 //  Initialisers
 
 void CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex){

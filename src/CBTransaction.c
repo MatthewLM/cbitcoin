@@ -37,12 +37,6 @@ CBTransaction * CBNewTransactionFromData(CBByteArray * bytes){
 	return self;
 }
 
-//  Object Getter
-
-CBTransaction * CBGetTransaction(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitTransaction(CBTransaction * self, uint32_t lockTime, uint32_t version){

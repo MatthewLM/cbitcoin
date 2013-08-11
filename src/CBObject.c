@@ -16,12 +16,6 @@
 
 #include "CBObject.h"
 
-//  Object Getter
-
-CBObject * CBGetObject(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitObject(CBObject * self){

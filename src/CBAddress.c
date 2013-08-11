@@ -33,12 +33,6 @@ CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
 	return NULL;
 }
 
-//  Object Getter
-
-CBAddress * CBGetAddress(void * self){
-	return self;
-}
-
 //  Initialiser
 
 void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString){

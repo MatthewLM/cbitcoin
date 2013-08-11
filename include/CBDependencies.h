@@ -68,7 +68,6 @@
 #pragma weak CBNewBlockChainStorage
 #pragma weak CBFreeBlockChainStorage
 #pragma weak CBBlockChainStorageBlockExists
-#pragma weak CBBlockChainStorageCommitData
 #pragma weak CBBlockChainStorageDeleteBlock
 #pragma weak CBBlockChainStorageDeleteUnspentOutput
 #pragma weak CBBlockChainStorageDeleteTransactionRef
@@ -86,7 +85,7 @@
 #pragma weak CBBlockChainStorageLoadOutputs
 #pragma weak CBBlockChainStorageLoadUnspentOutput
 #pragma weak CBBlockChainStorageMoveBlock
-#pragma weak CBBlockChainStorageReset
+#pragma weak CBBlockChainStorageRevert
 #pragma weak CBBlockChainStorageSaveBasicValidator
 #pragma weak CBBlockChainStorageSaveBlock
 #pragma weak CBBlockChainStorageSaveBlockHeader
@@ -119,6 +118,14 @@ typedef union{
 	void * ptr;
 	int i;
 } CBDepObject;
+
+// Enum for functions returing a boolean value but with an additional value for errors.
+
+typedef enum{
+	CB_FALSE,
+	CB_TRUE,
+	CB_ERROR,
+} CBErrBool;
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
@@ -156,7 +163,7 @@ bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const ui
 
 // NETWORKING DEPENDENCIES
 
-// Constants
+// Constants and Macros
 
 typedef enum{
 	CB_TIMEOUT_CONNECT,
@@ -354,15 +361,46 @@ uint64_t CBSecureRandomInteger(CBDepObject gen);
  */
 void CBFreeSecureRandomGenerator(CBDepObject gen);
 
-// BLOCK CHAIN STORAGE DEPENDENCES
+// BLOCK CHAIN AND ACOUNTER STORAGE DEPENDENCIES
+
+/**
+ @brief Returns the database storage object used for block-chain and accounter storage. The block chain and accounter storage should share the same database, though only one of either can exist. They both should share the same database so that the data remains consistent with itself. Any storage object can use the same database.
+ @param database The database storage object to set.
+ @param dataDir The directory where the data files should be stored.
+ @param commitGap The time in milliseconds before changes are commited to disk.
+ @param cacheLimit The cache limit before a commit must be made.
+ @returns true on success or false on failure.
+ */
+bool CBNewStorageDatabase(CBDepObject * database, char * dataDir, uint32_t commitGap, uint32_t cacheLimit);
+/**
+ @brief The data is staged for commit so that it is irreversible by CBBlockChainStorageRevert. Commits when the commitGap or cacheLimit is reached.
+ @param database The database storage object.
+ @returns true on success and false on failure. cbitcoin will reload the storage contents on failure. Contents should thus be recovered upon initilaising the database storage object.
+ */
+bool CBStorageDatabaseStage(CBDepObject database);
+/**
+ @brief Removes all of the non-staged pending operations.
+ @param database The database storage object.
+ */
+bool CBStorageDatabaseRevert(CBDepObject database);
+/**
+ @brief Frees the database storage object, and commits any staged changes.
+ @param database The database storage object.
+ */
+void CBFreeStorageDatabase(CBDepObject database);
+
+// BLOCK CHAIN STORAGE DEPENDENCIES
 
 /**
  @brief Returns the object used for block-chain storage.
  @param storage The storage object to set.
+ @param database The database object to use.
  @param dataDir The directory where the data files should be stored.
+ @param commitGap The time in milliseconds before changes are commited to disk.
+ @param cacheLimit The cache limit before a commit must be made.
  @returns true on success or false on failure.
  */
-bool CBNewBlockChainStorage(CBDepObject * storage, char * dataDir);
+bool CBNewBlockChainStorage(CBDepObject * storage, CBDepObject database);
 /**
  @brief Frees the block-chain storage object.
  @param iself The block-chain storage object.
@@ -372,15 +410,9 @@ void CBFreeBlockChainStorage(CBDepObject iself);
  @brief Determines if the block is already in the storage.
  @param validator A CBValidator object. The storage object can be found within this.
  @param blockHash The 20 bytes of the hash of the block
- @returns true if the block is in the storage or false otherwise.
+ @returns CB_TRUE if the block is in the storage, CB_FALSE if it isn't or CB_ERROR on error.
  */
-bool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
-/**
- @brief The data should be written to the disk atomically.
- @param self The block-chain storage object.
- @returns true on success and false on failure. cbitcoin will reload the storafe contents on failure. Storage systems should use recovery.
- */
-bool CBBlockChainStorageCommitData(CBDepObject self);
+CBErrBool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
 /**
  @brief Deletes a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -457,10 +489,9 @@ uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uin
  @brief Determines if a transaction exists in the index, which has more than zero unspent outputs.
  @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The hash of the transaction to search for.
- @param exists To be set to true if the transaction exists and has unspent outputs, else set to false.
  @param true on success or false on failure.
  */
-bool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_t * txHash, bool * exists);
+CBErrBool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_t * txHash);
 /**
  @brief Loads the basic validator information, not any branches or orphans.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -527,10 +558,10 @@ void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, 
  */
 bool CBBlockChainStorageMoveBlock(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t newBranch, uint32_t newIndex);
 /**
- @brief Removes all of the pending operations.
+ @brief Removes all of the non-staged changes in the underlying database storage object.
  @param iself The storage object.
  */
-void CBBlockChainStorageReset(CBDepObject iself);
+void CBBlockChainStorageRevert(CBDepObject iself);
 /**
  @brief Saves the basic validator information, not any branches or orphans.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -614,9 +645,9 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
  @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
  @param outputIndex The index of the output in the transaction.
- @returns true if exists or false if it doesn't.
+ @returns CB_TRUE if it exists, CB_FALSE if it doesn't or CB_ERROR on error.
  */
-bool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, uint32_t outputIndex);
+CBErrBool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, uint32_t outputIndex);
 
 // ADDRESS STORAGE DEPENDENCES
 
@@ -665,13 +696,8 @@ bool CBAddressStorageSaveAddress(CBDepObject iself, void * address);
 // Cosntants
 
 #define CB_TX_UNCONFIRMED 0
-#define CB_NO_BRANCH UINT8_MAX
-
-typedef enum{
-	CB_GET_TX_OK,
-	CB_GET_TX_ERROR,
-	CB_GET_TX_NONE
-} CBGetTxResult;
+#define CB_NO_BRANCH 0xFF
+#define CB_NO_PARENT 0xFE
 
 // Structures
 
@@ -683,28 +709,63 @@ typedef struct{
 	uint8_t addrHash[20];
 	int64_t amount;
 	uint64_t timestamp;
+	uint32_t height;
 } CBTransactionDetails;
+
+/**
+ @brief Details for an unspent output on a branch for an account.
+ */
+typedef struct{
+	uint8_t txHash[32];
+	uint32_t index;
+	uint8_t watchedHash[20];
+	uint64_t value;
+} CBUnspentOutputDetails;
 
 // Functions
 
 /**
  @brief Creates a new accounter storage object.
  @param storage The object to set.
- @param dataDir The directory where the data files should be stored.
+ @param database The database storage object.
  @returns true on success and false on failure.
  */
-bool CBNewAccounterStorage(CBDepObject * storage, char * dataDir);
+bool CBNewAccounterStorage(CBDepObject * storage, CBDepObject database);
+/**
+ @brief Creates a new accounter storage transaction cursor object for iterating through transactions.
+ @param cursor The object to set.
+ @param accounter The accounter object.
+ @param branch The branch to find the transactions for.
+ @param accountID The ID of the account to find the transactions for.
+ @param timeMin The minimum time of the transactions.
+ @param timeMax The maximum time of the transactions.
+ @returns true on success and false on failure.
+ */
+bool CBNewAccounterStorageTransactionCursor(CBDepObject * cursor, CBDepObject accounter, uint8_t branch, uint64_t accountID, uint64_t timeMin, uint64_t timeMax);
+/**
+ @brief Creates a new accounter storage unspent output cursor object for iterating through unspent outputs.
+ @param cursor The object to set.
+ @param accounter The accounter object.
+ @param branch The branch to find the unspent outputs for.
+ @param accountID The ID of the account to find the unspent outputs for.
+ @returns true on success and false on failure.
+ */
+bool CBNewAccounterStorageUnspentOutputCursor(CBDepObject * cursor, CBDepObject accounter, uint8_t branch, uint64_t accountID);
 /**
  @brief Frees the accounter storage object.
  @param self The accounter storage object.
  */
 void CBFreeAccounterStorage(CBDepObject self);
 /**
- @brief Commits data to the disk.
- @param self The accounter object.
- @returns true on success and false on failure.
+ @brief Frees the accounter storage transaction cursor object.
+ @param self The accounter storage transaction cursor object.
  */
-bool CBAccounterStorageCommit(CBDepObject self);
+void CBFreeAccounterStorageTransactionCursor(CBDepObject self);
+/**
+ @brief Frees the accounter storage unspent output cursor object.
+ @param self The accounter storage unspent output cursor object.
+ */
+void CBFreeAccounterStorageUnspentOutputCursor(CBDepObject self);
 /**
  @brief Adds a watched output hash to an account.
  @param self The accounter object. 
@@ -723,12 +784,6 @@ bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint
  */
 bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * tx, uint32_t blockHeight, uint8_t branch);
 /**
- @brief Commits the accounter information.
- @param self The accounter object.
- @returns true on success and false on failure.
- */
-bool CBAccounterCommit(CBDepObject self);
-/**
  @brief Removes information for a branch.
  @param self The accounter object.
  @param branch The branch that is removed.
@@ -739,24 +794,35 @@ bool CBAccounterDeleteBranch(CBDepObject self, uint8_t branch);
  @brief Processes a found transaction on a branch for all of the accounts
  @param self The accounter object.
  @param tx The found transaction.
- @param blockHeight The height the transaction was found.
- @param The timestamp for the transaction.
+ @param blockHeight The height the transaction was found. Make this zero if the branch is CB_NO_BRANCH
+ @param time The timestamp for the transaction.
  @param branch The branch the transaction was found on.
  @returns true on success and false on failure.
  */
-bool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t blockHeight, uint32_t time, uint8_t branch);
+bool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t blockHeight, uint64_t time, uint8_t branch);
 /**
- @brief Gets the first transaction between times, equal or greater than the txIDCursor. The txIDCursor will be moved past a found transaction's ID.
+ @brief Gets the balance for an account for a branch.
  @param self The accounter object.
- @param branch The branch to find the first transaction for.
- @param accountID The ID of the account to find the transaction for.
- @param timeMin The minimum time of the transaction.
- @param timeMax The maximum time of the transaction.
- @param txIDCursor A pointer to the transaction ID cursor to find thw next transaction.
- @param details A pointer to a CBTransactionDetails object to be set.
- @returns @see CBGetTxResult.
+ @param branch The branch ID.
+ @param accountID The account ID.
+ @param balance The balance to set.
+ @returns true on success, false on failure.
  */
-CBGetTxResult CBAccounterGetFirstTransactionBetween(CBDepObject self, uint8_t branch, uint64_t accountID, uint64_t timeMin, uint64_t timeMax, uint64_t * txIDCursor, CBTransactionDetails * details);
+bool CBAccounterGetBranchAccountBalance(CBDepObject self, uint8_t branch, uint64_t accountID, int64_t * balance);
+/**
+ @brief Gets the next transaction by a cursor.
+ @param cursor The cursor object.
+ @param details A pointer to a CBTransactionDetails object to be set.
+ @returns CB_TRUE if there was a next transaction, CB_FALSE if there wasn't or CB_ERROR on an error.
+ */
+CBErrBool CBAccounterGetNextTransaction(CBDepObject cursor, CBTransactionDetails * details);
+/**
+ @brief Gets the next unspent output by a cursor.
+ @param cursor The cursor object.
+ @param details A pointer to a CBUnspentOutputDetails object to be set.
+ @returns CB_TRUE if there was a next unspent output, CB_FALSE if there wasn't or CB_ERROR on an error.
+ */
+CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursor, CBUnspentOutputDetails * details);
 /**
  @brief Processes a transaction being lost for all of the accounts.
  @param self The accounter object.
@@ -774,10 +840,11 @@ uint64_t CBAccounterNewAccount(CBDepObject self);
  @brief Processes a new branch, inheriting a parent branch for all of the accounts.
  @param self The accounter object.
  @param newBranch The index of the new branch.
- @param inherit The index of the parent branch.
+ @param parent The index of the parent branch or CB_NO_PARENT for the genesis branch.
+ @param blockHeight The block height where the fork occurs for the new branch. ie. The height of the first block in the new branch.
  @returns true on success and false on failure. 
  */
-bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t inherit);
+bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, uint32_t blockHeight);
 
 // LOGGING DEPENDENCIES
 

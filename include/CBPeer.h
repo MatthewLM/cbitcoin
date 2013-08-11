@@ -27,12 +27,13 @@
 #include "CBInventoryBroadcast.h"
 #include "CBAssociativeArray.h"
 
-// Constants
+// Constants and Macros
 
 #define CB_MAX_RESPONSES_EXPECTED 3 // A pong, an inventory broadcast and an address broadcast.
 #define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a peer in 24 hours. ??? Not implemented
 #define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a peer.
 #define CB_PEER_NO_WORKING 0xFF // When not working on any branch.
+#define CBGetPeer(x) ((CBPeer *)x)
 
 /**
  @brief Stores a message to send in the queue with the callback to call when the message is sent.
@@ -91,13 +92,6 @@ typedef struct{
  @returns A new CBPeer object.
  */
 CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr);
-
-/**
- @brief Gets a CBPeer from another object. Use this to avoid casts.
- @param self The object to obtain the CBPeer from.
- @returns The CBPeer object.
- */
-CBPeer * CBGetPeer(void * self);
 
 /**
  @brief Initialises a CBPeer object
