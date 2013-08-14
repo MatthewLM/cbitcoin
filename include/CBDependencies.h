@@ -654,42 +654,42 @@ CBErrBool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txH
 /**
  @brief Creates a new address storage object.
  @param storage The object to set.
- @param dataDir The directory where the data files should be stored.
+ @param database The database object to use.
  @returns true on success and false on failure.
  */
-bool CBNewAddressStorage(CBDepObject * storage, char * dataDir);
+bool CBNewAddressStorage(CBDepObject * storage, CBDepObject database);
 /**
  @brief Frees the address storage object.
- @param iself The address storage object.
+ @param self The address storage object.
  */
-void CBFreeAddressStorage(CBDepObject iself);
+void CBFreeAddressStorage(CBDepObject self);
 /**
  @brief Removes an address from storage.
- @param iself The address storage object.
+ @param self The address storage object.
  @param address The address object.
  @returns true on success or false on failure.
  */
-bool CBAddressStorageDeleteAddress(CBDepObject iself, void * address);
+bool CBAddressStorageDeleteAddress(CBDepObject self, void * address);
 /**
  @brief Obtains the number of addresses in storage.
- @param iself The address storage object.
+ @param self The address storage object.
  @returns The number of addresses in storage
  */
-uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject iself);
+uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject self);
 /**
  @brief Loads all of the addresses from storage into an address manager.
- @param iself The address storage object.
+ @param self The address storage object.
  @param addrMan A CBNetworkAddressManager object.
  @returns true on success or false on failure.
  */
-bool CBAddressStorageLoadAddresses(CBDepObject iself, void * addrMan);
+bool CBAddressStorageLoadAddresses(CBDepObject self, void * addrMan);
 /**
  @brief Saves an address to storage. If the number of addresses is at "maxAddresses" remove an address to make room.
- @param iself The address storage object.
+ @param self The address storage object.
  @param address The CBNetworkAddress object.
  @returns true on success or false on failure.
  */
-bool CBAddressStorageSaveAddress(CBDepObject iself, void * address);
+bool CBAddressStorageSaveAddress(CBDepObject self, void * address);
 
 // ACCOUNTER DEPENDENCIES
 

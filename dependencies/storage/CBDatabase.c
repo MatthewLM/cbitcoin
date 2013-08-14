@@ -667,7 +667,7 @@ void CBDatabaseAddWriteValue(uint8_t * writeValue, CBDatabaseIndex * index, uint
 			// Reallocate memory if the new data length is higher
 			if (dataLen > *(uint32_t *)oldDataPtr){
 				res.position.node->elements[res.position.index] = realloc(keyPtr, index->keySize + 8 + dataLen);
-				oldDataPtr = res.position.node->elements[res.position.index] + index->keySize + 4;
+				oldDataPtr = (uint8_t *)res.position.node->elements[res.position.index] + index->keySize + 4;
 				if (stage) 
 					self->stagedSize += dataLen - *(uint32_t *)oldDataPtr;
 			}

@@ -23,15 +23,15 @@
 
 bool CBNewSecureRandomGenerator(CBDepObject * gen){
 	gen->ptr = malloc(32);
-	return *gen;
+	return true;
 }
 bool CBSecureRandomSeed(CBDepObject gen){
-	FILE * f = fopen("/dev/urandom", "r"); // Using urandom for speed.
+	FILE * f = fopen("/dev/random", "r");
 	return fread(gen.ptr, 1, 32, f) == 32;
 }
 void CBRandomSeed(CBDepObject gen, uint64_t seed){
 	memcpy(gen.ptr, &seed, 8);
-	memset(gen.ptr + 8, 0, 24); // Blank out the rest of the data
+	memset((uint8_t *)gen.ptr + 8, 0, 24); // Blank out the rest of the data
 }
 uint64_t CBSecureRandomInteger(CBDepObject gen){
 	CBSha256(gen.ptr, 32, gen.ptr);

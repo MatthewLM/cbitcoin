@@ -23,10 +23,12 @@
 #include "CBDatabase.h"
 #include "CBNetworkAddressManager.h"
 
+#define CB_NUM_ADDRS CB_ACCOUNTER_EXTRA_SIZE + CB_BLOCK_CHAIN_EXTRA_SIZE
+
 typedef struct{
-	CBDatabase base;
-	uint64_t numAddresses;
-} CBAddressStore;
+	CBDatabase * database;
+	CBDatabaseIndex * addrs;
+} CBAddressStorage;
 
 #endif
 

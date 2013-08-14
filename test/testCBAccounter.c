@@ -35,7 +35,6 @@ uint64_t CBGetMilliseconds(void){
 int main(){
 	remove("./cbitcoin/log.dat");
 	remove("./cbitcoin/del.dat");
-	remove("./cbitcoin/idx_5_0.dat");
 	remove("./cbitcoin/idx_6_0.dat");
 	remove("./cbitcoin/idx_7_0.dat");
 	remove("./cbitcoin/idx_8_0.dat");
@@ -49,6 +48,7 @@ int main(){
 	remove("./cbitcoin/idx_16_0.dat");
 	remove("./cbitcoin/idx_17_0.dat");
 	remove("./cbitcoin/idx_18_0.dat");
+	remove("./cbitcoin/idx_19_0.dat");
 	remove("./cbitcoin/val_0.dat");
 	CBDepObject storage;
 	CBDepObject database;

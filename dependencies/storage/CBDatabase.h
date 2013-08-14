@@ -39,7 +39,8 @@
 #define CB_BLOCK_CHAIN_EXTRA_SIZE (5 + CB_BRANCH_DATA_SIZE * CB_MAX_BRANCH_CACHE)
 #define CB_MAX_BRANCH_SECTIONS (CB_MAX_BRANCH_CACHE*2 - 1)
 #define CB_ACCOUNTER_EXTRA_SIZE (24 + CB_MAX_BRANCH_CACHE*9 + CB_MAX_BRANCH_SECTIONS*5)
-#define CB_DATABASE_EXTRA_DATA_SIZE CB_BLOCK_CHAIN_EXTRA_SIZE + CB_ACCOUNTER_EXTRA_SIZE
+#define CB_ADDRESS_EXTRA_SIZE 4
+#define CB_DATABASE_EXTRA_DATA_SIZE CB_BLOCK_CHAIN_EXTRA_SIZE + CB_ACCOUNTER_EXTRA_SIZE + CB_ADDRESS_EXTRA_SIZE
 
 typedef enum{
 	CB_DATABASE_FILE_TYPE_INDEX,
@@ -60,6 +61,7 @@ typedef enum{
 	CB_INDEX_ORPHAN,
 	CB_INDEX_TX,
 	CB_INDEX_UTXOUT,
+	CB_INDEX_ADDRS,
 	CB_INDEX_ACCOUNTER_START,
 } CBIndexIDs;
 
@@ -191,7 +193,7 @@ typedef struct{
 } CBIndexItData;
 
 /**
- @brief Allows iteration between a min element and a max element in an index.
+ @brief Allows iteration between a min element and a max element in an index. ??? Do NULL for no minimum or maximum?
  */
 typedef struct{
 	void * minElement;

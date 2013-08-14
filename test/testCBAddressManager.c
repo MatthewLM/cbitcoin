@@ -17,6 +17,8 @@
 #include "CBDependencies.h"
 #include <time.h>
 #include "stdarg.h"
+#include <sys/time.h>
+#include "CBAddressStorage.h"
 
 void CBLogError(char * format, ...){
 	va_list argptr;
@@ -25,11 +27,19 @@ void CBLogError(char * format, ...){
     va_end(argptr);
 	printf("\n");
 }
+
+uint64_t CBGetMilliseconds(void){
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 void onBadTime(void * foo);
 void onBadTime(void * foo){
 	printf("BAD TIME FAIL\n");
 	exit(EXIT_FAILURE);
 }
+
 uint32_t getLen(CBBTreeNode * self);
 uint32_t getLen(CBBTreeNode * self){
 	uint32_t len = self->numElements;
@@ -41,7 +51,6 @@ uint32_t getLen(CBBTreeNode * self){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
-	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
 	CBNetworkAddressManager * addrMan = CBNewNetworkAddressManager(onBadTime);
@@ -137,7 +146,7 @@ int main(){
 	// Check no duplicates
 	for (uint8_t x = 0; x < 254; x++) { 
 		for (uint8_t y = 0; y < 254; y++) {
-			if (y != x && CBNetworkAddressCompare(addrs[x], addrs[y]) == CB_COMPARE_EQUAL) {
+			if (y != x && CBNetworkAddressCompare(NULL, addrs[x], addrs[y]) == CB_COMPARE_EQUAL) {
 				printf("GET ADDRS NO DUPLICATES FAIL\n");
 				return 1;
 			}
@@ -146,15 +155,12 @@ int main(){
 	// Add peers
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++){
 		CBFreeAssociativeArray(&addrMan->addresses[x]);
-		CBInitAssociativeArray(&addrMan->addresses[x], CBNetworkAddressCompare, CBReleaseObject);
+		CBInitAssociativeArray(&addrMan->addresses[x], CBNetworkAddressCompare, NULL, CBReleaseObject);
 	}
 	CBPeer * peers[254];
 	for (uint8_t x = 0; x < 254; x++) {
 		peers[x] = CBNewPeerByTakingNetworkAddress(addrs[x]);
-		if (NOT CBNetworkAddressManagerAddPeer(addrMan, peers[x])) {
-			printf("ADD PEER FAIL\n");
-			return 1;
-		}
+		CBNetworkAddressManagerAddPeer(addrMan, peers[x]);
 	}
 	if (addrMan->peersNum != 254) {
 		printf("ADD PEERS NUM FAIL\n");
@@ -211,12 +217,14 @@ int main(){
 	}
 	CBReleaseObject(addrMan);
 	// Test address storage
-	remove("./addr_0.dat");
-	remove("./addr_1.dat");
-	remove("./addr_2.dat");
-	remove("./addr_log.dat");
-	uint64_t storage = CBNewAddressStorage("./");
-	if (NOT storage) {
+	remove("./cbitcoin/log.dat");
+	remove("./cbitcoin/del.dat");
+	remove("./cbitcoin/idx_5_0.dat");
+	remove("./cbitcoin/val_0.dat");
+	CBDepObject database;
+	CBNewStorageDatabase(&database, "./", 10000000, 10000000);
+	CBDepObject storage;
+	if (NOT CBNewAddressStorage(&storage, database)) {
 		printf("NEW ADDRESS STORAGE FAIL\n");
 		return 1;
 	}
@@ -288,6 +296,7 @@ int main(){
 		}
 	}
 	CBReleaseObject(addrMan);
+	CBFreeStorageDatabase(database);
 	CBFreeAddressStorage(storage);
 	return 0;
 }
