@@ -2,7 +2,7 @@
 
 INCDIR = $(CURDIR)/include
 BINDIR = $(CURDIR)/bin
-CFLAGS += -Wall -Wno-overflow -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -D_POSIX_C_SOURCE=200809L -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include @COMPILE_CONFIG_FLAGS@ -std=c99 -Werror
+CFLAGS += -Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I$(INCDIR) -I/usr/local/ssl/include -I/opt/local/include -Werror 
 LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
@@ -16,7 +16,7 @@ else # Assuming Linux for now
 	LFLAGS += -shared
 	LIBRARY_EXTENSION=.$(LIBRARY_VERSION).so
 	ADDITIONAL_OPENSSL_FLAGS = -ldl -L/lib/x86_64-linux-gnu/
-	export LD_LIBRARY_PATH = $(BINDIR)
+	export LD_LIBRARY_PATH = $(BINDIR):/usr/local/lib
 endif
 LIBCFLAGS = @LIB_COMPILE_CONFIG_FLAGS@
 
