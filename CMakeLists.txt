@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 project(cbitcoin)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-set(DEBUG ON)
-set(STATIC_LIB OFF)
+set(DEBUG ON CACHE BOOL "Set debug.")
+set(STATIC_LIB OFF CACHE BOOL "Compile into static/shared libraries.")
 
 if (DEBUG)
     set(OFLAGS "-ggdb3")
@@ -61,6 +61,13 @@ file(GLOB storage_SOURCE dependencies/storage/*.c)
 include_directories(dependencies/storage)
 add_library(cbitcoin-storage ${LIB_TYPE} ${storage_SOURCE})
 
+install(
+    TARGETS
+        ${LIBS}
+    DESTINATION
+        lib
+)
+
 # Tests
 enable_testing()
 
@@ -85,3 +92,14 @@ foreach (test ${tests_SOURCE})
 
     add_test(test_${test_name} ${test_name})
 endforeach (test)
+
+# Doc
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    add_custom_target(doc
+        COMMAND
+            doxygen ${CMAKE_SOURCE_DIR}/Doxyfile
+        WORKING_DIRECTORY
+            ${CMAKE_SOURCE_DIR}
+    )
+endif (DOXYGEN_FOUND)
