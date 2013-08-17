@@ -39,10 +39,6 @@ set(LIBS
     cbitcoin-storage
 )
 
-file(GLOB core_SOURCES src/*.c)
-include_directories(include)
-add_library(cbitcoin ${LIB_TYPE} ${core_SOURCES})
-
 file(GLOB crypto_SOURCE dependencies/crypto/*.c)
 include_directories(dependencies/crypto)
 add_library(cbitcoin-crypto ${LIB_TYPE} ${crypto_SOURCE})
@@ -60,6 +56,16 @@ target_link_libraries(cbitcoin-network ${EVENT_LIBRARIES})
 file(GLOB storage_SOURCE dependencies/storage/*.c)
 include_directories(dependencies/storage)
 add_library(cbitcoin-storage ${LIB_TYPE} ${storage_SOURCE})
+
+file(GLOB core_SOURCES src/*.c)
+include_directories(include)
+add_library(cbitcoin ${LIB_TYPE} ${core_SOURCES})
+target_link_libraries(cbitcoin
+    cbitcoin-crypto
+    cbitcoin-random
+    cbitcoin-network
+    cbitcoin-storage
+)
 
 install(
     TARGETS
