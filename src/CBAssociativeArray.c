@@ -21,7 +21,7 @@
 bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeIterator * it){
 	// Try to find the maximum element.
 	CBFindResult res = CBAssociativeArrayFind(self, it->maxElement);
-	if (NOT res.found) {
+	if (! res.found) {
 		if (res.position.node->numElements == 0)
 			// There are no elements
 			return false;
@@ -51,7 +51,7 @@ bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeItera
 bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it){
 	// Try to find the minimum element
 	CBFindResult res = CBAssociativeArrayFind(self, it->minElement);
-	if (NOT res.found) {
+	if (! res.found) {
 		if (res.position.node->numElements == 0)
 			// There are no elements
 			return false;
@@ -89,7 +89,7 @@ void CBAssociativeArrayClear(CBAssociativeArray * self){
 void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool doFree){
 	if (doFree)
 		self->onFree(pos.node->elements[pos.index]);
-	if (NOT pos.node->children[0]) {
+	if (! pos.node->children[0]) {
 		// Leaf
 		CBBTreeNode * parent = pos.parentIndex ? pos.parentNodes[pos.parentIndex-1] : self->root;
 		if (pos.node->numElements > CB_BTREE_HALF_ELEMENTS || pos.node == self->root) {
@@ -208,7 +208,7 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 				// Now delete the parent element and continue merge upto root if neccesary...
 				bool root = parent == self->root;
 				if ((root && parent->numElements > 1)
-					|| (NOT root && parent->numElements > CB_BTREE_HALF_ELEMENTS)) {
+					|| (! root && parent->numElements > CB_BTREE_HALF_ELEMENTS)) {
 					// Either a root and with more than one element to still remove or not root and more than half the minimum elements.
 					// Therefore remove the element and be done.
 					parent->numElements--;
@@ -300,7 +300,7 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element){
 	}
 }
 bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBPosition * it, uint32_t index){
-	if (NOT CBAssociativeArrayGetFirst(self, it))
+	if (! CBAssociativeArrayGetFirst(self, it))
 		return false;
 	// ??? Lazy method of iteration.
 	for (uint32_t x = 0; x < index; x++)
@@ -309,7 +309,7 @@ bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBPosition * it, ui
 	return true;
 }
 bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it){
-	if (NOT self->root->numElements)
+	if (! self->root->numElements)
 		return false;
 	it->node = self->root;
 	it->index = 0;
@@ -326,7 +326,7 @@ bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it){
 	return true;
 }
 bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it){
-	if (NOT self->root->numElements)
+	if (! self->root->numElements)
 		return false;
 	it->node = self->root;
 	it->parentIndex = 0;
@@ -499,7 +499,7 @@ void CBBTreeNodeBinarySearch(CBAssociativeArray * array, CBBTreeNode * node, voi
 				result->found = true;
 				break;
 			}else if (cmp == CB_COMPARE_LESS_THAN){
-				if (NOT result->position.index)
+				if (! result->position.index)
 					break;
 				right = result->position.index - 1;
 			}else
@@ -548,7 +548,7 @@ CBCompare CBKeyCompare(CBAssociativeArray * self, void * key1, void * key2){
 	int cmp = memcmp(((uint8_t *)key1) + 1, ((uint8_t *)key2) + 1, *(uint8_t *)key1);
 	if (cmp > 0)
 		return CB_COMPARE_MORE_THAN;
-	if (NOT cmp)
+	if (! cmp)
 		return CB_COMPARE_EQUAL;
 	return CB_COMPARE_LESS_THAN;
 }

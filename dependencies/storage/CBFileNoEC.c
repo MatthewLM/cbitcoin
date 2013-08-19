@@ -67,7 +67,7 @@ bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	return fread(data, 1, dataLen, file.ptr) == dataLen;
 }
 bool CBFileSeek(CBDepObject file, uint32_t pos){
-	return NOT fseek(file.ptr, pos, SEEK_SET);
+	return ! fseek(file.ptr, pos, SEEK_SET);
 }
 bool CBFileSync(CBDepObject file){
 	if (fflush(file.ptr))
@@ -90,5 +90,5 @@ bool CBFileSyncDir(char * dir){
 	return true;
 }
 bool CBFileTruncate(char * filename, uint32_t newSize){
-	return NOT truncate(filename, newSize);
+	return ! truncate(filename, newSize);
 }

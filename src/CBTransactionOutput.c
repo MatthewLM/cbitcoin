@@ -77,7 +77,7 @@ uint32_t CBTransactionOutputCalculateLength(CBTransactionOutput * self){
 }
 uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBTransactionOutput with no bytes.");
 		return 0;
 	}
@@ -146,11 +146,11 @@ CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self){
 }
 uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBTransactionInput with no bytes.");
 		return 0;
 	}
-	if (NOT self->scriptObject){
+	if (! self->scriptObject){
 		CBLogError("Attempting to serialise a CBTransactionOutput without scriptObject.");
 		return 0;
 	}

@@ -52,7 +52,7 @@ void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8
 	CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25, cacheString);
 }
 bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheString){
-	if (NOT CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, cacheString))
+	if (! CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, cacheString))
 		return false;
 	return true;
 }

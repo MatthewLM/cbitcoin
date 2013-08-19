@@ -64,7 +64,7 @@ void CBFreeGetBlocks(void * self){
 
 uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBGetBlocks with no bytes.");
 		return 0;
 	}
@@ -77,7 +77,7 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 	CBByteArray * data = CBByteArraySubReference(bytes, 4, bytes->length-4);
 	self->chainDescriptor = CBNewChainDescriptorFromData(data);
 	uint16_t len = CBChainDescriptorDeserialise(self->chainDescriptor);
-	if (NOT len){
+	if (! len){
 		CBLogError("CBGetBlocks cannot be deserialised because of an error with the CBChainDescriptor.");
 		CBReleaseObject(data);
 		return 0;
@@ -90,7 +90,7 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 		return 0;
 	}
 	self->stopAtHash = CBNewByteArraySubReference(bytes, len + 4, 32);
-	if (NOT self->stopAtHash) {
+	if (! self->stopAtHash) {
 		CBLogError("Cannot create new CBByteArray in CBGetBlocksDeserialise\n");
 		CBReleaseObject(self->chainDescriptor);
 	}
@@ -101,7 +101,7 @@ uint32_t CBGetBlocksCalculateLength(CBGetBlocks * self){
 }
 uint16_t CBGetBlocksSerialise(CBGetBlocks * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBGetBlocks with no bytes.");
 		return 0;
 	}
@@ -112,7 +112,7 @@ uint16_t CBGetBlocksSerialise(CBGetBlocks * self, bool force){
 	CBByteArraySetInt32(bytes, 0, self->version);
 	// Serialise chain descriptor
 	uint32_t len;
-	if (NOT CBGetMessage(self->chainDescriptor)->serialised // Serailise if not serialised yet.
+	if (! CBGetMessage(self->chainDescriptor)->serialised // Serailise if not serialised yet.
 		// Serialise if force is true.
 		|| force
 		// If the data shares the same data as the get blocks message, re-serialise the chain descriptor, in case it got overwritten.
@@ -121,12 +121,12 @@ uint16_t CBGetBlocksSerialise(CBGetBlocks * self, bool force){
 			// Release old byte array
 			CBReleaseObject(CBGetMessage(self->chainDescriptor)->bytes);
 		CBGetMessage(self->chainDescriptor)->bytes = CBByteArraySubReference(bytes, 4, bytes->length-4);
-		if (NOT CBGetMessage(self->chainDescriptor)->bytes) {
+		if (! CBGetMessage(self->chainDescriptor)->bytes) {
 			CBLogError("Cannot create a new CBByteArray sub reference in CBGetBlocksSerialise");
 			return 0;
 		}
 		len = CBChainDescriptorSerialise(self->chainDescriptor);
-		if (NOT len) {
+		if (! len) {
 			CBLogError("CBGetBlocks cannot be serialised because of an error with the chain descriptor. This error should never occur... :o");
 			// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
 			CBReleaseObject(CBGetMessage(self->chainDescriptor)->bytes);

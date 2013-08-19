@@ -60,7 +60,7 @@ CBErrBool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
 	memcpy(CB_KEY_ARRAY, blockHash, 20);
 	uint32_t len;
-	if (NOT CBDatabaseGetLength(storageObj->blockHashIndex, CB_KEY_ARRAY, &len)){
+	if (! CBDatabaseGetLength(storageObj->blockHashIndex, CB_KEY_ARRAY, &len)){
 		CBLogError("There was an error attempting to find the length for a block to see if it exists");
 		return CB_ERROR;
 	}
@@ -89,12 +89,12 @@ bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t b
 		return false;
 	}
 	// Remove data
-	if (NOT CBDatabaseRemoveValue(storageObj->blockIndex, CB_KEY_ARRAY, false)){
+	if (! CBDatabaseRemoveValue(storageObj->blockIndex, CB_KEY_ARRAY, false)){
 		CBLogError("Could not remove block value from database.");
 		return false;
 	}
 	// Remove hash index reference
-	if (NOT CBDatabaseRemoveValue(storageObj->blockHashIndex, CB_DATA_ARRAY, false)){
+	if (! CBDatabaseRemoveValue(storageObj->blockHashIndex, CB_DATA_ARRAY, false)){
 		CBLogError("Could not remove block hash index reference from database.");
 		return false;
 	}
@@ -107,13 +107,13 @@ bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, 
 	// Place output index into the key
 	CBInt32ToArray(CB_KEY_ARRAY, 32, outputIndex);
 	// Remove from storage
-	if (NOT CBDatabaseRemoveValue(storageObj->unspentOutputIndex, CB_KEY_ARRAY, false)) {
+	if (! CBDatabaseRemoveValue(storageObj->unspentOutputIndex, CB_KEY_ARRAY, false)) {
 		CBLogError("Could not remove an unspent output reference from storage.");
 		return false;
 	}
 	if (decrement
 		// For the transaction, decrement the number of unspent outputs
-		&& NOT CBBlockChainStorageChangeUnspentOutputsNum(storageObj, txHash, -1)) {
+		&& ! CBBlockChainStorageChangeUnspentOutputsNum(storageObj, txHash, -1)) {
 		CBLogError("Could not decrement the number of unspent outputs for a transaction.");
 		return false;
 	}
@@ -137,7 +137,7 @@ bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash)
 		CBDatabaseWriteValueSubSection(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, CB_TX_REF_NUM_UNSPENT_OUTPUTS);
 	// Else this was the last instance.
 	// Remove from storage
-	}else if (NOT CBDatabaseRemoveValue(storageObj->txIndex, CB_KEY_ARRAY, false)) {
+	}else if (! CBDatabaseRemoveValue(storageObj->txIndex, CB_KEY_ARRAY, false)) {
 		CBLogError("Could not remove a transaction reference from storage.");
 		return false;
 	}
@@ -164,7 +164,7 @@ void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint3
 	CB_KEY_ARRAY[0] = branch;
 	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
 	uint32_t blockDataLen;
-	if (NOT CBDatabaseGetLength(storageObj->blockIndex, CB_KEY_ARRAY, &blockDataLen)) {
+	if (! CBDatabaseGetLength(storageObj->blockIndex, CB_KEY_ARRAY, &blockDataLen)) {
 		CBLogError("There was an error when checking if a block header exists by getting its length.");
 		return NULL;
 	}
@@ -227,7 +227,7 @@ CBErrBool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, u
 	memcpy(CB_KEY_ARRAY, txHash, 32);
 	// See if the transaction exists
 	uint32_t len;
-	if (NOT CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)){
+	if (! CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)){
 		CBLogError("There was an error getting the length of a transaction entry to determine if a transaction exists.");
 		return CB_ERROR;
 	}
@@ -254,7 +254,7 @@ void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t
 	CB_KEY_ARRAY[0] = branch;
 	CBInt32ToArray(CB_KEY_ARRAY, 1, blockID);
 	uint32_t blockDataLen;
-	if (NOT CBDatabaseGetLength(storageObj->blockIndex, CB_KEY_ARRAY, &blockDataLen)) {
+	if (! CBDatabaseGetLength(storageObj->blockIndex, CB_KEY_ARRAY, &blockDataLen)) {
 		CBLogError("There was an error getting the length of a block to see if it exists when loading.");
 		return NULL;
 	}
@@ -302,7 +302,7 @@ bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum){
 	CBValidator * validatorObj = validator;
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
 	uint32_t len;
-	if (NOT CBDatabaseGetLength(storageObj->orphanIndex, (uint8_t []){orphanNum}, &len)){
+	if (! CBDatabaseGetLength(storageObj->orphanIndex, (uint8_t []){orphanNum}, &len)){
 		CBLogError("There was an error getting the length of an orphan for determining if it exists.");
 		return false;
 	}
@@ -380,7 +380,7 @@ void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, 
 	// Create output object
 	CBTransactionOutput * output = CBNewTransactionOutputFromData(outputBytes);
 	CBReleaseObject(outputBytes);
-	if (NOT CBTransactionOutputDeserialise(output)) {
+	if (! CBTransactionOutputDeserialise(output)) {
 		CBLogError("Could not deserialise an unspent output");
 		CBReleaseObject(output);
 		return NULL;
@@ -394,7 +394,7 @@ bool CBBlockChainStorageMoveBlock(void * validator, uint8_t branch, uint32_t blo
 	uint8_t newKey[5];
 	newKey[0] = newBranch;
 	CBInt32ToArray(newKey, 1, blockIndex);
-	if (NOT CBDatabaseChangeKey(storageObj->blockIndex, CB_KEY_ARRAY, newKey, false)){
+	if (! CBDatabaseChangeKey(storageObj->blockIndex, CB_KEY_ARRAY, newKey, false)){
 		CBLogError("Could not change the key for the location of a block.");
 		return false;
 	}
@@ -490,7 +490,7 @@ bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, u
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
 	memcpy(CB_KEY_ARRAY, txHash, 32);
 	uint32_t len;
-	if (NOT CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)) {
+	if (! CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)) {
 		CBLogError("There was an error getting the length of a transaction entry to see if it already exists.");
 		return false;
 	}
@@ -531,7 +531,7 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
 	CBDatabaseWriteValue(storageObj->unspentOutputIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
 	if (increment
 		// For the transaction, increment the number of unspent outputs
-		&& NOT CBBlockChainStorageChangeUnspentOutputsNum(storageObj, txHash, +1)) {
+		&& ! CBBlockChainStorageChangeUnspentOutputsNum(storageObj, txHash, +1)) {
 		CBLogError("Could not increment the number of unspent outputs for a transaction.");
 		return false;
 	}
@@ -543,7 +543,7 @@ CBErrBool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txH
 	memcpy(CB_KEY_ARRAY, txHash, 32);
 	CBInt32ToArray(CB_KEY_ARRAY, 32, outputIndex);
 	uint32_t len;
-	if (NOT CBDatabaseGetLength(storageObj->unspentOutputIndex, CB_KEY_ARRAY, &len)) {
+	if (! CBDatabaseGetLength(storageObj->unspentOutputIndex, CB_KEY_ARRAY, &len)) {
 		CBLogError("There was an error trying to obtain the length of an unspent output entry");
 		return CB_ERROR;
 	}

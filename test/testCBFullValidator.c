@@ -17,6 +17,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 static struct {
     uint8_t extranonce;
@@ -49,6 +50,16 @@ static struct {
     {2, 0x03e8779a}, {1, 0x98f34d8f}, {1, 0xc07b2b07}, {1, 0xdfe29668}, 
 };
 
+static struct {
+	bool valid;
+	uint32_t forkHeight;
+	uint8_t last[32];
+	bool done;
+} validatorResult = {};
+
+pthread_mutex_t completeProcessMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t completeProcessCond = PTHREAD_COND_INITIALIZER;
+
 void CBLogError(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
@@ -61,6 +72,59 @@ uint64_t CBGetMilliseconds(void){
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+bool newBranchCallback(void * foo, uint8_t branch, uint32_t blockHeight);
+bool newBranchCallback(void * foo, uint8_t branch, uint32_t blockHeight){
+	validatorResult.forkHeight = blockHeight;
+	return true;
+}
+
+bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, bool last);
+bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, bool last){
+	if (last)
+		memcpy(validatorResult.last, CBBlockGetHash(block), 32);
+	return true;
+}
+
+bool finish(void * foo, CBBlock * block);
+bool finish(void * foo, CBBlock * block){
+	validatorResult.valid = true;
+	pthread_mutex_lock(&completeProcessMutex);
+	validatorResult.done = true;
+	pthread_cond_broadcast(&completeProcessCond);
+	pthread_mutex_unlock(&completeProcessMutex);
+	return true;
+}
+
+bool invalidBlock(void * foo, CBBlock * block);
+bool invalidBlock(void * foo, CBBlock * block){
+	validatorResult.valid = false;
+	pthread_mutex_lock(&completeProcessMutex);
+	validatorResult.done = true;
+	pthread_cond_broadcast(&completeProcessCond);
+	pthread_mutex_unlock(&completeProcessMutex);
+	return true;
+}
+
+bool noNewBranches(void * foo, CBBlock * block);
+bool noNewBranches(void * foo, CBBlock * block){
+	return true;
+}
+
+void onValidatorError(void * foo);
+void onValidatorError(void * foo){
+	printf("ON VALIDATE ERROR\n");
+	exit(1);
+}
+
+void waitForResult(void);
+void waitForResult(void){
+	pthread_mutex_lock(&completeProcessMutex);
+	if (!validatorResult.done)
+		pthread_cond_wait(&completeProcessCond, &completeProcessMutex);
+	validatorResult.done = false;
+	pthread_mutex_unlock(&completeProcessMutex);
 }
 
 int main(){
@@ -79,8 +143,17 @@ int main(){
 	CBDepObject database;
 	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
 	CBNewBlockChainStorage(&storage, database);
-	CBValidator * validator = CBNewValidator(storage, 0);
-	if (NOT validator) {
+	CBValidatorCallbacks callbacks = {
+		NULL,
+		newBranchCallback,
+		newValidBlock,
+		finish,
+		invalidBlock,
+		noNewBranches,
+		onValidatorError
+	};
+	CBValidator * validator = CBNewValidator(storage, 0, callbacks);
+	if (! validator) {
 		printf("VALIDATOR INIT FAIL\n");
 		return 1;
 	}
@@ -91,8 +164,8 @@ int main(){
 	// Now create it again. It should load the data.
 	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
 	CBNewBlockChainStorage(&storage, database);
-	validator = CBNewValidator(storage, 0);
-	if (NOT validator) {
+	validator = CBNewValidator(storage, 0, callbacks);
+	if (! validator) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
 		return 1;
 	}
@@ -135,7 +208,7 @@ int main(){
 	}
 	// Try loading the genesis block
 	CBBlock * block = CBBlockChainStorageLoadBlock(validator, 0, 0);
-	if (NOT block) {
+	if (! block) {
 		printf("GENESIS RETRIEVE FAIL\n");
 		return 1;
 	}
@@ -249,8 +322,18 @@ int main(){
 	CBGetMessage(block1)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block1, true));
 	CBBlockSerialise(block1, true, false);
 	// Made block now proceed with the test.
-	CBBlockProcessResult res = CBValidatorProcessBlock(validator, block1, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_MAIN) {
+	if (CBValidatorBasicBlockValidation(validator, block1, 1349643202) != CB_BLOCK_VALIDATION_OK) {
+		printf("MAIN CHAIN ADD BASIC FAIL\n");
+		return 1;
+	}
+	CBValidatorQueueBlock(validator, block1);
+	// Check exists in queue
+	if (CBValidatorBlockExists(validator, CBBlockGetHash(block1)) != CB_TRUE) {
+		printf("MAIN CHAIN EXISTS QUEUE FAIL\n");
+		return 1;
+	}
+	waitForResult();
+	if (!validatorResult.valid || memcmp(validatorResult.last, CBBlockGetHash(block1), 32)) {
 		printf("MAIN CHAIN ADD FAIL\n");
 		return 1;
 	}
@@ -261,8 +344,8 @@ int main(){
 	CBFreeBlockChainStorage(storage);
 	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
 	CBNewBlockChainStorage(&storage, database);
-	validator = CBNewValidator(storage, 0);
-	if (NOT validator){
+	validator = CBNewValidator(storage, 0, callbacks);
+	if (! validator){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
 		return 1;
 	}
@@ -306,7 +389,7 @@ int main(){
 	// Try to load block
 	block1 = CBBlockChainStorageLoadBlock(validator, 1, 0);
 	CBBlockDeserialise(block1, true);
-	if (NOT block1) {
+	if (! block1) {
 		printf("BLOCK ONE LOAD FAIL\n");
 		return 1;
 	}
@@ -395,7 +478,7 @@ int main(){
 		printf("BLOCK ONE UNSPENT OUTPUT HEIGHT FAIL\n");
 		return 1;
 	}
-	if (NOT coinbase) {
+	if (! coinbase) {
 		printf("BLOCK ONE UNSPENT OUTPUT COINBASE FAIL\n");
 		return 1;
 	}
@@ -409,10 +492,9 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(output);
-	// Test duplicate add.
-	res = CBValidatorProcessBlock(validator, block1, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_DUPLICATE) {
-		printf("MAIN CHAIN ADD DUPLICATE FAIL\n");
+	// Test to see if the block exists
+	if (CBValidatorBlockExists(validator, CBBlockGetHash(block1)) != CB_TRUE) {
+		printf("MAIN CHAIN EXISTS FAIL\n");
 		return 1;
 	}
 	// Test block with bad PoW.
@@ -436,8 +518,7 @@ int main(){
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, true));
 	CBBlockSerialise(testBlock, true, false);
 	// Made block now proceed with the test.
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_BAD) {
 		printf("BAD POW ADD FAIL\n");
 		return 1;
 	}
@@ -448,7 +529,7 @@ int main(){
 	for (uint8_t x = 0; x < 100; x++) {
 		block = CBNewBlock();
 		block->version = 1;
-		if (x == 1 || x == 3 || NOT ((x-1) % 6))
+		if (x == 1 || x == 3 || ! ((x-1) % 6))
 			time++;
 		block->time = time;
 		block->transactionNum = 1;
@@ -483,91 +564,82 @@ int main(){
 		else
 			y -= 2;
 		printf("PROCESSING BLOCK %u\n", y);
-		res = CBValidatorProcessBlock(validator, theBlocks[y], 1230999326);
+		if (CBValidatorBasicBlockValidation(validator, theBlocks[y], 1230999326) != CB_BLOCK_VALIDATION_OK) {
+			printf("BASIC VALIDATION FAIL AT %u", y);
+			return 1;
+		}
+		CBValidatorQueueBlock(validator, theBlocks[y]);
+		waitForResult();
 		CBStorageDatabaseStage(database);
 		if (x < 22){
-			if (res.status != CB_BLOCK_STATUS_ORPHAN) {
+			if (!validatorResult.valid) {
 				printf("ORPHAN FAIL AT %u\n", y);
 				return 1;
 			}
 		}else if (x == 22){
-			if (res.status != CB_BLOCK_STATUS_SIDE) {
-				printf("SIDE FAIL AT %u\n", y);
+			if (!validatorResult.valid) {
+				printf("SIDE FAIL\n");
 				return 1;
 			}
-			if (res.data.sideBranch != 1) {
-				printf("SIDE DATA FAIL AT %u\n", y);
+			if (validatorResult.forkHeight != 1){
+				printf("SIDE FORK HEIGHT FAIL\n");
 				return 1;
 			}
 		}else if (x == 23){
-			if (res.status != CB_BLOCK_STATUS_REORG) {
-				printf("REORG FAIL AT %u\n", y);
+			if (!validatorResult.valid) {
+				printf("REORG FAIL\n");
 				return 1;
 			}
-			if (res.data.reorgData.start.chainPathIndex != 0) {
-				printf("REORG START CHAIN PATH INDEX FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.start.blockIndex != 0) {
-				printf("REORG START BLOCK INDEX FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.numBranches != 2) {
-				printf("REORG NEW CHAIN NUM BRANCHES FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[0].branch != 1) {
-				printf("REORG NEW CHAIN POINT 0 BRANCH FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[0].blockIndex != 1) {
-				printf("REORG NEW CHAIN POINT 0 BLOCK INDEX FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[1].branch != 0) {
-				printf("REORG NEW CHAIN POINT 1 BRANCH FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[1].blockIndex != 0) {
-				printf("REORG NEW CHAIN POINT 1 BLOCK INDEX FAIL AT %u\n", y);
+			if (memcmp(validatorResult.last, CBBlockGetHash(theBlocks[y]), 32)) {
+				printf("REORG LAST FAIL\n");
 				return 1;
 			}
 		}else if (x == 26){
-			if (res.status != CB_BLOCK_STATUS_MAIN_WITH_ORPHANS) {
-				printf("MAIN WITH ORPHANS FAIL AT %u\n", y);
+			if (!validatorResult.valid) {
+				printf("MAIN WITH ORPHANS FAIL\n");
 				return 1;
 			}
-			if (res.data.orphansAdded.numOrphansAdded != 20) {
-				printf("MAIN WITH ORPHANS NUM ADDED FAIL AT %u\n", y);
+			if (memcmp(validatorResult.last, CBBlockGetHash(theBlocks[24]), 32)) {
+				printf("MAIN WITH ORPHANS LAST FAIL\n");
 				return 1;
 			}
-		}else if (res.status != CB_BLOCK_STATUS_MAIN) {
-			// Reorg occurs at y == 1
-			printf("MAIN FAIL AT %u\n", y);
-			return 1;
+		}else{
+			if (!validatorResult.valid) {
+				// Reorg occurs at y == 1
+				printf("MAIN FAIL AT %u\n", y);
+				return 1;
+			}
+			if (memcmp(validatorResult.last, CBBlockGetHash(theBlocks[y]), 32)) {
+				printf("MAIN LAST FAIL AT %u\n", y);
+				return 1;
+			}
 		}
-		if (x > 1)
-			CBReleaseObject(theBlocks[y]);
 	}
+	for (uint8_t x = 0; x < 100; x++)
+		CBReleaseObject(theBlocks[x]);
 	// Now do tests without valid PoW
 	validator->flags |= CB_VALIDATOR_DISABLE_POW_CHECK;
 	// Test the disabler works
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_SIDE) {
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_OK) {
 		printf("POW CHECK DISABLE FAIL\n");
 		return 1;
 	}
-	CBStorageDatabaseStage(database);
-	if (res.data.sideBranch != 2) {
-		printf("POW CHECK DISABLE SIDE BRANCH FAIL\n");
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
+		printf("POW CHECK DISABLE VALID FAIL\n");
 		return 1;
 	}
+	if (validatorResult.forkHeight != 1) {
+		printf("POW CHECK DISABLE FORK HEIGHT FAIL\n");
+		return 1;
+	}
+	CBStorageDatabaseStage(database);
 	// No transactions
 	testBlock->transactionNum = 0;
 	testBlock->time--;
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_BAD) {
 		printf("NO TXS FAIL\n");
 		return 1;
 	}
@@ -576,8 +648,7 @@ int main(){
 	CBByteArrayGetData(testBlock->merkleRoot)[0]--;
 	CBGetMessage(testBlock)->bytes->length = CBBlockCalculateLength(testBlock, true);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_BAD) {
 		printf("INCORRECT MERKLE ROOT FAIL\n");
 		return 1;
 	}
@@ -588,9 +659,14 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	memcpy(CBByteArrayGetData(testBlock->merkleRoot), CBTransactionGetHash(testBlock->transactions[0]), 32);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
-		printf("TX NOT COINBASE FAIL\n");
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_OK) {
+		printf("TX NOT COINBASE BASIC FAIL\n");
+		return 1;
+	}
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
+		printf("TX NOT COINBASE PROCESS FAIL\n");
 		return 1;
 	}
 	// Non final coinbase
@@ -600,8 +676,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	memcpy(CBByteArrayGetData(testBlock->merkleRoot), CBTransactionGetHash(testBlock->transactions[0]), 32);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("COINBASE NOT FINAL FAIL\n");
 		return 1;
 	}
@@ -614,8 +691,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	memcpy(CBByteArrayGetData(testBlock->merkleRoot), CBTransactionGetHash(testBlock->transactions[0]), 32);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("COINBASE SCRIPT SIZE 1 FAIL\n");
 		return 1;
 	}
@@ -630,7 +708,9 @@ int main(){
 	CBReleaseObject(CBGetMessage(testBlock)->bytes);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(309);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("COINBASE SCRIPT SIZE 101 FAIL\n");
 		return 1;
 	}
@@ -640,7 +720,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	memcpy(CBByteArrayGetData(testBlock->merkleRoot), CBTransactionGetHash(testBlock->transactions[0]), 32);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("BAD TARGET FAIL\n");
 		return 1;
 	}
@@ -668,7 +750,9 @@ int main(){
 		CBBlockSerialise(testBlock, true, false);
 		// Add
 		printf("100 TEST BLOCKS PROCESSING %u\n", x);
-		if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_MAIN) {
+		CBValidatorQueueBlock(validator, testBlock);
+		waitForResult();
+		if (!validatorResult.valid) {
 			printf("100 TEST BLOCKS NUM %u FAIL\n", x);
 			return 1;
 		}
@@ -698,7 +782,9 @@ int main(){
 	CBReleaseObject(CBGetMessage(testBlock)->bytes);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(374);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("COINBASE NOT MATURE FAIL\n");
 		return 1;
 	}
@@ -710,7 +796,9 @@ int main(){
 	CBTransactionSerialise(normal, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_MAIN) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("COINBASE IS MATURE FAIL\n");
 		return 1;
 	}
@@ -724,7 +812,9 @@ int main(){
 	CBTransactionSerialise(normal, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("NON FINAL NORMAL TX FAIL\n");
 		return 1;
 	}
@@ -750,7 +840,9 @@ int main(){
 	CBReleaseObject(CBGetMessage(testBlock)->bytes);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(439);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("LATER SPEND FAIL\n");
 		return 1;
 	}
@@ -759,7 +851,9 @@ int main(){
 	testBlock->transactions[2] = normal2;
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_MAIN) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("EARLIER SPEND FAIL\n");
 		return 1;
 	}
@@ -781,7 +875,9 @@ int main(){
 	CBTransactionSerialise(normal2, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("DOUBLE SPEND IN SAME BLOCK FAIL\n");
 		return 1;
 	}
@@ -794,7 +890,9 @@ int main(){
 	CBTransactionSerialise(normal, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("DOUBLE SPEND IN SAME BLOCK FAIL\n");
 		return 1;
 	}
@@ -805,7 +903,9 @@ int main(){
 	CBTransactionSerialise(normal, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("BAD INPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -835,7 +935,9 @@ int main(){
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(502);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("COINBASE OUTPUT TOO HIGH FAIL\n");
 		return 1;
 	}
@@ -844,7 +946,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_MAIN) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("COINBASE OUTPUT IS OK FAIL\n");
 		return 1;
 	}
@@ -859,7 +963,9 @@ int main(){
 	CBTransactionSerialise(normal, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("PREV OUT INDEX NOT EXIST FAIL\n");
 		return 1;
 	}
@@ -869,7 +975,9 @@ int main(){
 	CBTransactionSerialise(normal, true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("PREV OUT TX NOT EXIST FAIL\n");
 		return 1;
 	}
@@ -884,7 +992,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("DUPLICATE COINBASE FAIL\n");
 		return 1;
 	}
@@ -973,7 +1083,9 @@ int main(){
 	CBReleaseObject(CBGetMessage(testBlock)->bytes);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, true));
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("BLOCK TOO MANY SIGOPS FAIL\n");
 		return 1;
 	}
@@ -984,8 +1096,9 @@ int main(){
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
 	CBBlockCalculateLength(testBlock, true);
-	// HERE IS WHERE {79, 109, 172, 232, 178, 152, 46, 55, 23, 237, 134, 90, 234, 38, 105, 201, 227, 244, 29, 120, 144, 175, 216, 198, 88, 86, 248, 68, 206, 145, 17, 209, 59, 0, 0, 0} IS SUPPOSED TO BE MADE TO TXKEYS
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_MAIN) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("BLOCK SIGOPS OK FAIL\n");
 		return 1;
 	}
@@ -1004,16 +1117,17 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[1], false);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_SIDE) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("SPEND ON OTHER BRANCH FIRST FAIL\n");
 		return 1;
 	}
-	CBStorageDatabaseStage(database);
-	if (res.data.sideBranch != 3) {
-		printf("SPEND ON OTHER BRANCH FIRST SIDE BRANCH FAIL\n");
+	if (validatorResult.forkHeight != 204) {
+		printf("SPEND ON OTHER BRANCH FIRST FORK HEIGHT FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
 	testBlock->time++;
 	testBlock->transactionNum = 1;
@@ -1021,8 +1135,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], false);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	// FAILURE WHEN REMOVING TX REF FOR {79, 109, 172, 232, 178, 152, 46, 55, 23, 237, 134, 90, 234, 38, 105, 201, 227, 244, 29, 120, 144, 175, 216, 198, 88, 86, 248, 68, 206, 145, 17, 209} DURING ATTEMPTED REORG. DOES NOT EXIST IN STAGED OR DISK.
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("SPEND ON OTHER BRANCH SECOND FAIL\n");
 		return 1;
 	}
@@ -1040,8 +1155,9 @@ int main(){
 	CBReleaseObject(CBGetMessage(testBlock)->bytes);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, true));
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_MAIN) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("ADD TO MAIN BRANCH AFTER FAILED REORG FAIL\n");
 		return 1;
 	}
@@ -1055,7 +1171,9 @@ int main(){
 	CBByteArray * prevOutHash2 = CBNewByteArrayWithDataCopy(CBTransactionGetHash(testBlock->transactions[1]), 32);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_SIDE) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("SPEND FROM OTHER BRANCH ON LAST BLOCK FIRST FAIL\n");
 		return 1;
 	}
@@ -1067,8 +1185,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[1], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("SPEND FROM OTHER BRANCH ON LAST BLOCK SECOND FAIL\n");
 		return 1;
 	}
@@ -1078,40 +1197,13 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[1], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_REORG) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("SUCESSFUL REORG WITH TXS FAIL\n");
 		return 1;
 	}
 	CBStorageDatabaseStage(database);
-	if (res.data.reorgData.newChain.numBranches != 3) {
-		printf("SUCESSFUL REORG WITH TXS NUM BRANCHES FAIL\n");
-		return 1;
-	}
-	if (res.data.reorgData.newChain.points[2].branch != 0) {
-		printf("SUCESSFUL REORG WITH TXS BRANCH 2 FAIL\n");
-		return 1;
-	}
-	if (res.data.reorgData.newChain.points[2].blockIndex != 0) {
-		printf("SUCESSFUL REORG WITH TXS BLOCK INDEX 2 FAIL\n");
-		return 1;
-	}
-	if (res.data.reorgData.newChain.points[1].branch != 1) {
-		printf("SUCESSFUL REORG WITH TXS BRANCH 1 FAIL\n");
-		return 1;
-	}
-	if (res.data.reorgData.newChain.points[1].blockIndex != 203) {
-		printf("SUCESSFUL REORG WITH TXS BLOCK INDEX 1 FAIL\n");
-		return 1;
-	}
-	if (res.data.reorgData.newChain.points[0].branch != 4) {
-		printf("SUCESSFUL REORG WITH TXS BRANCH 0 FAIL\n");
-		return 1;
-	}
-	if (res.data.reorgData.newChain.points[0].blockIndex != 1) {
-		printf("SUCESSFUL REORG WITH TXS BLOCK INDEX 0 FAIL\n");
-		return 1;
-	}
 	prevOutHash = CBNewByteArrayWithDataCopy(CBTransactionGetHash(testBlock->transactions[1]), 32);
 	// Test transaction is coinbase
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
@@ -1123,7 +1215,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[1], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("NORMAL TX IS COINBASE FAIL\n");
 		return 1;
 	}
@@ -1136,7 +1230,9 @@ int main(){
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, true));
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("TX OUTPUTS TOO BIG FAIL\n");
 		return 1;
 	}
@@ -1152,7 +1248,9 @@ int main(){
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, true));
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("OUTPUT REFENCE TOO HIGH INDEX FAIL\n");
 		return 1;
 	}
@@ -1162,7 +1260,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[2], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("INVALID INPUT SCRIPT FAIL\n");
 		return 1;
 	}
@@ -1183,7 +1283,9 @@ int main(){
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, true));
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("P2SH INPUT PUSH FAIL\n");
 		return 1;
 	}
@@ -1191,14 +1293,15 @@ int main(){
 	testBlock->transactionNum = 1;
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, testBlock->time - 7201).status != CB_BLOCK_STATUS_BAD_TIME) {
+	if (CBValidatorBasicBlockValidation(validator, testBlock, testBlock->time - 7201) != CB_BLOCK_VALIDATION_BAD_TIME) {
 		printf("NETWORK TIME BAD BLOCK TIME FAIL\n");
 		return 1;
 	}
 	// Test bad time against median time
 	testBlock->time -= 7;
-	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("MEDIAN TIME BAD BLOCK TIME FAIL\n");
 		return 1;
 	}
@@ -1207,7 +1310,9 @@ int main(){
 	CBTransactionSerialise(testBlock->transactions[0], true);
 	CBBlockCalculateAndSetMerkleRoot(testBlock);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("BAD COINBASE FAIL\n");
 		return 1;
 	}
@@ -1233,7 +1338,7 @@ int main(){
 		// 3:  \                               ,---> 204
 		// 1:   `-> 1 -> ... -> 200 -> ... -> 203 -> 204 -> 205
 		// 4:                     \                     `-> 205 -> 206  MAIN CHAIN
-		// 2:                      `--------> 201 -> ... -> 205 -> 206  NEW CHAIN
+		// 2:                      `-> 201 -> .......... -> 205 -> 206  NEW CHAIN
 		//
 		// Chain path stack creation.         OK
 		// Go back 2 blocks on branch 4.      OK
@@ -1242,11 +1347,16 @@ int main(){
 		// Validate new block on branch 2.    OK
 		// Commit.                            OK
 		//
-		if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != ((x == 106)? CB_BLOCK_STATUS_REORG : CB_BLOCK_STATUS_SIDE)) {
+		CBValidatorQueueBlock(validator, testBlock);
+		waitForResult();
+		if (!validatorResult.valid) {
 			printf("REORG OVER BRANCH NUM %u FAIL\n", x);
 			return 1;
 		}
-		// {79, 109, 172, 232, 178, 152, 46, 55, 23, 237, 134, 90, 234, 38, 105, 201, 227, 244, 29, 120, 144, 175, 216, 198, 88, 86, 248, 68, 206, 145, 17, 209, 59, 0, 0, 0} NOT IN TXKEYS
+		if (x == 100 && validatorResult.forkHeight != 201) {
+			printf("REORG FORK HEIGHT FAIL\n");
+			return 1;
+		}
 		CBStorageDatabaseStage(database);
 		// Change previous block to the one before it
 		memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
@@ -1254,24 +1364,20 @@ int main(){
 	// Test block back on the other branch
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), savedHash, 32);
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_SIDE) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("ADD ON OTHER BRANCH AFTER REORG OVER BRANCH FAIL\n");
 		return 1;
 	}
 	CBStorageDatabaseStage(database);
-	// Test bad orphan ???
-	memset(CBByteArrayGetData(testBlock->prevBlockHash), 1, 32);
-	CBByteArrayGetData(testBlock->merkleRoot)[0]++;
-	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
-		printf("BAD ORPHAN FAIL\n");
-		return 1;
-	}
 	// Test loading orphans
 	memset(CBByteArrayGetData(testBlock->prevBlockHash), 1, 32);
 	CBByteArrayGetData(testBlock->merkleRoot)[0]--;
 	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_ORPHAN) {
+	CBValidatorQueueBlock(validator, testBlock);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("ADD ORPHAN FAIL\n");
 		return 1;
 	}
@@ -1281,8 +1387,8 @@ int main(){
 	CBFreeBlockChainStorage(storage);
 	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
 	CBNewBlockChainStorage(&storage, database);
-	validator = CBNewValidator(storage, 0);
-	if (NOT validator) {
+	validator = CBNewValidator(storage, 0, callbacks);
+	if (! validator) {
 		printf("LOAD VALIDATOR WITH ORPHAN FAIL\n");
 		return 1;
 	}
@@ -1294,5 +1400,8 @@ int main(){
 		printf("ORPHAN DATA FAIL\n");
 		return 1;
 	}
+	CBRetainObject(validator);
+	CBFreeStorageDatabase(database);
+	CBFreeBlockChainStorage(storage);
 	return 0;
 }

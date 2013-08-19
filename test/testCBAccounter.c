@@ -53,7 +53,7 @@ int main(){
 	CBDepObject storage;
 	CBDepObject database;
 	CBNewStorageDatabase(&database, "./", 10000000, 10000000);
-	if (NOT CBNewAccounterStorage(&storage, database)){
+	if (! CBNewAccounterStorage(&storage, database)){
 		printf("NEW ACCOUNTER STORAGE FAIL\n");
 		return 1;
 	}
@@ -62,7 +62,7 @@ int main(){
 	// Add a watched hash
 	uint8_t hash1[20];
 	memset(hash1, 1, 20);
-	if (NOT CBAccounterAddWatchedOutputToAccount(storage, hash1, account1)) {
+	if (! CBAccounterAddWatchedOutputToAccount(storage, hash1, account1)) {
 		printf("ADD WATCHED OUTPUT FAIL\n");
 		return 1;
 	}
@@ -90,14 +90,14 @@ int main(){
 		return 1;
 	}
 	// Find the transaction branchless
-	if (NOT CBAccounterFoundTransaction(storage, tx1, 0, 1000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx1, 0, 1000, CB_NO_BRANCH)) {
 		printf("FOUND TX FAIL\n");
 		return 1;
 	}
 	// Check obtaining the transaction details
 	CBTransactionDetails txDetails;
 	CBDepObject cursor;
-	if (NOT CBNewAccounterStorageTransactionCursor(&cursor, storage, CB_NO_BRANCH, account1, 1000, 1000)) {
+	if (! CBNewAccounterStorageTransactionCursor(&cursor, storage, CB_NO_BRANCH, account1, 1000, 1000)) {
 		printf("CREATE CURSOR FAIL\n");
 		return 1;
 	}
@@ -128,7 +128,7 @@ int main(){
 	CBFreeAccounterStorageTransactionCursor(cursor);
 	// Check obtaining the unconf balance
 	int64_t balance;
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FAIL\n");
 		return 1;
 	}
@@ -137,7 +137,7 @@ int main(){
 		return 1;
 	}
 	// Check obtaining the unspent outputs
-	if (NOT CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, CB_NO_BRANCH, account1)) {
+	if (! CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, CB_NO_BRANCH, account1)) {
 		printf("CREATE UNSPENT OUTPUT CURSOR FAIL\n");
 		return 1;
 	}
@@ -188,17 +188,17 @@ int main(){
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
 	// Create first branch
-	if (NOT CBAccounterNewBranch(storage, 0, CB_NO_PARENT, 0)) {
+	if (! CBAccounterNewBranch(storage, 0, CB_NO_PARENT, 0)) {
 		printf("CREATE FIRST BRANCH FAIL\n");
 		return 1;
 	}
 	// Move transaction into branch
-	if (NOT CBAccounterBranchlessTransactionToBranch(storage, tx1, 1000, 0)) {
+	if (! CBAccounterBranchlessTransactionToBranch(storage, tx1, 1000, 0)) {
 		printf("MOVE TX TO BRANCH FAIL\n");
 		return 1;
 	}
 	// Check balances
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER MOVE FAIL\n");
 		return 1;
 	}
@@ -206,7 +206,7 @@ int main(){
 		printf("UNCONF BAL NUM AFTER MOVE FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER MOVE FAIL\n");
 		return 1;
 	}
@@ -305,7 +305,7 @@ int main(){
 	// Make new watched output
 	uint8_t hash2[20];
 	memset(hash2, 2, 20);
-	if (NOT CBAccounterAddWatchedOutputToAccount(storage, hash2, account1)) {
+	if (! CBAccounterAddWatchedOutputToAccount(storage, hash2, account1)) {
 		printf("ADD 2ND WATCHED OUTPUT FAIL\n");
 		return 1;
 	}
@@ -332,12 +332,12 @@ int main(){
 		return 1;
 	}
 	// Find transaction on branchless
-	if (NOT CBAccounterFoundTransaction(storage, tx2, 0, 2000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx2, 0, 2000, CB_NO_BRANCH)) {
 		printf("FOUND TX2 FAIL\n");
 		return 1;
 	}
 	// Check branchless balance
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FOR TX2 FAIL\n");
 		return 1;
 	}
@@ -420,12 +420,12 @@ int main(){
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
 	// Test loosing branchless transaction
-	if (NOT CBAccounterLostBranchlessTransaction(storage, tx2)) {
+	if (! CBAccounterLostBranchlessTransaction(storage, tx2)) {
 		printf("LOOSE BRANCHLESS TX FAIL\n");
 		return 1;
 	}
 	// Check balances
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER LOOSE FAIL\n");
 		return 1;
 	}
@@ -433,7 +433,7 @@ int main(){
 		printf("UNCONF BAL NUM AFTER LOOSE FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER LOOSE FAIL\n");
 		return 1;
 	}
@@ -530,12 +530,12 @@ int main(){
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
 	// Add directly to branch
-	if (NOT CBAccounterFoundTransaction(storage, tx2, 2000, 3000, 0)) {
+	if (! CBAccounterFoundTransaction(storage, tx2, 2000, 3000, 0)) {
 		CBLogError("DIRECT ADD TO BRANCH FAIL\n");
 		return 1;
 	}
 	// Check balances
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER DIRECT FAIL\n");
 		return 1;
 	}
@@ -543,7 +543,7 @@ int main(){
 		printf("UNCONF BAL NUM AFTER DIRECT FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER DIRECT FAIL\n");
 		return 1;
 	}
@@ -684,12 +684,12 @@ int main(){
 		return 1;
 	}
 	// Find transaction on branchless
-	if (NOT CBAccounterFoundTransaction(storage, tx3, 0, 4000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx3, 0, 4000, CB_NO_BRANCH)) {
 		printf("FOUND TX3 FAIL\n");
 		return 1;
 	}
 	// Check negative balance
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FOR TX3 FAIL\n");
 		return 1;
 	}
@@ -710,17 +710,17 @@ int main(){
 		printf("TX4 SERAILISE FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterFoundTransaction(storage, tx4, 4000, 4000, 0)) {
+	if (! CBAccounterFoundTransaction(storage, tx4, 4000, 4000, 0)) {
 		printf("FOUND TX4 FAIL\n");
 		return 1;
 	}
 	// Move over tx3
-	if (NOT CBAccounterBranchlessTransactionToBranch(storage, tx3, 4000, 0)) {
+	if (! CBAccounterBranchlessTransactionToBranch(storage, tx3, 4000, 0)) {
 		printf("MOVE TX3 INTO BRANCH 0\n");
 		return 1;
 	}
 	// Now check balances
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -728,7 +728,7 @@ int main(){
 		printf("UNCONF BAL NUM AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -898,7 +898,7 @@ int main(){
 	uint64_t account2 = CBAccounterNewAccount(storage);
 	uint8_t hash3[20];
 	memset(hash3, 3, 20);
-	if (NOT CBAccounterAddWatchedOutputToAccount(storage, hash3, account2)) {
+	if (! CBAccounterAddWatchedOutputToAccount(storage, hash3, account2)) {
 		printf("ADD WATCHED OUTPUT FOR SECOND ACCOUNT FAIL\n");
 		return 1;
 	}
@@ -923,12 +923,12 @@ int main(){
 		return 1;
 	}
 	// Test adding to branchless
-	if (NOT CBAccounterFoundTransaction(storage, tx5, 0, 5000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx5, 0, 5000, CB_NO_BRANCH)) {
 		printf("FOUND TX5 FAIL\n");
 		return 1;
 	}
 	// Check unconf balance for account 1
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FOR TX5 ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -937,7 +937,7 @@ int main(){
 		return 1;
 	}
 	// Check unconf balance for account 2
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
 		printf("GET UNCONF BAL FOR TX5 ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1045,12 +1045,12 @@ int main(){
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
 	// Now test adding to branch
-	if (NOT CBAccounterBranchlessTransactionToBranch(storage, tx5, 5000, 0)) {
+	if (! CBAccounterBranchlessTransactionToBranch(storage, tx5, 5000, 0)) {
 		CBLogError("TX5 TO BRANCH 0 FAIL\n");
 		return 1;
 	}
 	// Check balances for account 1
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1058,7 +1058,7 @@ int main(){
 		printf("UNCONF BAL NUM AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1067,7 +1067,7 @@ int main(){
 		return 1;
 	}
 	// Check balances for account 2
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
 		printf("GET UNCONF BAL AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1075,7 +1075,7 @@ int main(){
 		printf("UNCONF BAL NUM AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account2, &balance)){
 		printf("GET BRANCH 0 BAL AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1197,12 +1197,12 @@ int main(){
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
 	// Test creating new branch fork at height 2000 leaving only the first transaction in new branch
-	if (NOT CBAccounterNewBranch(storage, 1, 0, 2000)) {
+	if (! CBAccounterNewBranch(storage, 1, 0, 2000)) {
 		printf("NEW BRANCH 1 FAIL\n");
 		return 1;
 	}
 	// Test balance for branch 0 for account 1
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER NEW BRANCH ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1211,7 +1211,7 @@ int main(){
 		return 1;
 	}
 	// Test balance for branch 0 for account 2
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account2, &balance)){
 		printf("GET BRANCH 0 BAL AFTER NEW BRANCH ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1220,7 +1220,7 @@ int main(){
 		return 1;
 	}
 	// Test balance for branch 1 for account 1
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 1, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 1, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER NEW BRANCH ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1527,12 +1527,12 @@ int main(){
 		return 1;
 	}
 	// Find tx as branchless
-	if (NOT CBAccounterFoundTransaction(storage, tx6, 0, 6000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx6, 0, 6000, CB_NO_BRANCH)) {
 		printf("FOUND TX6 FAIL\n");
 		return 1;
 	}
 	// Check branchless balance for account 2
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
 		printf("GET UNCONF BAL AFTER FIRST OF TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1555,12 +1555,12 @@ int main(){
 		return 1;
 	}
 	// Find tx as branchless
-	if (NOT CBAccounterFoundTransaction(storage, tx7, 0, 7000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx7, 0, 7000, CB_NO_BRANCH)) {
 		printf("FOUND TX7 FAIL\n");
 		return 1;
 	}
 	// Check branchless balance for account 1
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER TWO TXS ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1569,7 +1569,7 @@ int main(){
 		return 1;
 	}
 	// Check branchless balance for account 2
-	if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
 		printf("GET UNCONF BAL AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1688,17 +1688,17 @@ int main(){
 		return 1;
 	}
 	// Test adding the two transactions to branch 1
-	if (NOT CBAccounterBranchlessTransactionToBranch(storage, tx6, 6000, 1)) {
+	if (! CBAccounterBranchlessTransactionToBranch(storage, tx6, 6000, 1)) {
 		printf("TX6 TO BRANCH 1 FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterBranchlessTransactionToBranch(storage, tx7, 7000, 1)) {
+	if (! CBAccounterBranchlessTransactionToBranch(storage, tx7, 7000, 1)) {
 		printf("TX7 TO BRANCH 1 FAIL\n");
 		return 1;
 	}
 	for (uint8_t x = 0; x < 2; x++) {
 		// Check balances
-		if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
+		if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 			printf("GET UNCONF BAL AFTER %s ACCOUNT 1 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1707,7 +1707,7 @@ int main(){
 			return 1;
 		}
 		// Check branchless balance for account 2
-		if (NOT CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
+		if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
 			printf("GET UNCONF BAL AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1715,7 +1715,7 @@ int main(){
 			printf("UNCONF BAL NUM AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (NOT CBAccounterGetBranchAccountBalance(storage, 1, account1, &balance)){
+		if (! CBAccounterGetBranchAccountBalance(storage, 1, account1, &balance)){
 			printf("GET BRANCH 1 BAL AFTER %s ACCOUNT 1 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1723,7 +1723,7 @@ int main(){
 			printf("BRANCH 1 BAL NUM AFTER %s ACCOUNT 1 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (NOT CBAccounterGetBranchAccountBalance(storage, 1, account2, &balance)){
+		if (! CBAccounterGetBranchAccountBalance(storage, 1, account2, &balance)){
 			printf("GET BRANCH 1 BAL AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1867,7 +1867,7 @@ int main(){
 		}
 		if (x == 0) {
 			// Test deleting branch 0
-			if (NOT CBAccounterDeleteBranch(storage, 0)) {
+			if (! CBAccounterDeleteBranch(storage, 0)) {
 				printf("DELETE BRANCH 0 FAIL\n");
 				return 1;
 			}
@@ -1875,17 +1875,17 @@ int main(){
 		// Now check branch 1 again in loop
 	}
 	// Test duplicate tx6 transaction (these can exist)
-	if (NOT CBAccounterFoundTransaction(storage, tx6, 8000, 8000, 1)) {
+	if (! CBAccounterFoundTransaction(storage, tx6, 8000, 8000, 1)) {
 		printf("FOUND DUPLICATE TX FAIL\n");
 		return 1;
 	}
 	// Test new branch serperating tx7 and duplicate tx6 and check first tx6
-	if (NOT CBAccounterNewBranch(storage, 0, 1, 7000)) {
+	if (! CBAccounterNewBranch(storage, 0, 1, 7000)) {
 		printf("NEW BRANCH TO FIRST TX6\n");
 		return 1;
 	}
 	// Check new branch balance
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account1, &balance)){
 		printf("GET BRANCH 0 BAL AFTER DUP ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1893,7 +1893,7 @@ int main(){
 		printf("BRANCH 0 BAL NUM AFTER DUP ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (NOT CBAccounterGetBranchAccountBalance(storage, 0, account2, &balance)){
+	if (! CBAccounterGetBranchAccountBalance(storage, 0, account2, &balance)){
 		printf("GET BRANCH 0 BAL AFTER DUP ACCOUNT 2 FAIL\n");
 		return 1;
 	}

@@ -15,7 +15,7 @@
 #include "CBNetworkFunctions.h"
 
 CBIPType CBGetIPType(uint8_t * IP){
-	if (NOT memcmp(IP, IPv4Start+3, 9)) // Something to do with old bitcoin versions...
+	if (! memcmp(IP, IPv4Start+3, 9)) // Something to do with old bitcoin versions...
         return CB_IP_INVALID;
 	// Check for unspecified address.
 	uint8_t x = 0;
@@ -25,9 +25,9 @@ CBIPType CBGetIPType(uint8_t * IP){
 	}
 	if (x == 16)
 		return CB_IP_INVALID;
-	if(NOT x && CBIsTor(IP)) // Check x first to see that the first byte was not zero. Just prCBLogError uneccessary memory comparisons.
+	if(! x && CBIsTor(IP)) // Check x first to see that the first byte was not zero. Just prCBLogError uneccessary memory comparisons.
 		return CB_IP_TOR;
-	if(NOT x && CBIsI2P(IP))
+	if(! x && CBIsI2P(IP))
 		return CB_IP_I2P;
 	if (x == 10 && IP[10] == 0xFF && IP[11] == 0xFF) { // Faster than CBIsIPv4
 		if (IP[12] == 0x7F || IP[12] == 0x0)
@@ -47,10 +47,10 @@ CBIPType CBGetIPType(uint8_t * IP){
 			return CB_IP_INVALID;
 		return CB_IP_IPv4;
 	}
-	if (NOT memcmp(IP, SITTStart, 12)) {
+	if (! memcmp(IP, SITTStart, 12)) {
 		return CB_IP_IPv6 | CB_IP_SITT;
 	}
-	if (NOT memcmp(IP, RFC6052Start, 12)) {
+	if (! memcmp(IP, RFC6052Start, 12)) {
 		return CB_IP_IPv6 | CB_IP_RFC6052;
 	}
 	if (IP[0] == 0x20 && IP[1] == 0x01 && IP[2] == 0 && IP[3] == 0) {
@@ -68,7 +68,7 @@ CBIPType CBGetIPType(uint8_t * IP){
 	if (IP[0] == 0x20 && IP[1] == 0x01 && IP[2] == 0x0D && IP[3] == 0xB8)
 		// Reserved for documentation
 		return CB_IP_INVALID;
-	if (NOT memcmp(IP, (uint8_t []){0xFE, 0x80, 0, 0, 0, 0, 0, 0}, 8))
+	if (! memcmp(IP, (uint8_t []){0xFE, 0x80, 0, 0, 0, 0, 0, 0}, 8))
 		// Link-Local RFC4862 reserved addresses
 		return CB_IP_INVALID;
 	if (IP[0] == 0x20 && IP[1] == 0x01 && IP[2] == 0x00 && (IP[3] & 0xF0) == 0x10)
@@ -80,11 +80,11 @@ CBIPType CBGetIPType(uint8_t * IP){
 	return CB_IP_IPv6;
 }
 bool CBIsI2P(uint8_t * IP){
-	return NOT memcmp(IP, (uint8_t []){0xFD, 0x60, 0xDB, 0x4D, 0xDD, 0xB5}, 6);
+	return ! memcmp(IP, (uint8_t []){0xFD, 0x60, 0xDB, 0x4D, 0xDD, 0xB5}, 6);
 }
 bool CBIsIPv4(uint8_t * IP){
-	return NOT memcmp(IP, IPv4Start, 12);
+	return ! memcmp(IP, IPv4Start, 12);
 }
 bool CBIsTor(uint8_t * IP){
-	return NOT memcmp(IP, (uint8_t []){0xFD, 0x87, 0xD8, 0x7E, 0xEB, 0x43}, 6);
+	return ! memcmp(IP, (uint8_t []){0xFD, 0x87, 0xD8, 0x7E, 0xEB, 0x43}, 6);
 }

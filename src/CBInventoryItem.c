@@ -60,7 +60,7 @@ void CBFreeInventoryItem(void * self){
 
 uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBInventoryItem with no bytes.");
 		return 0;
 	}
@@ -74,7 +74,7 @@ uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 }
 uint32_t CBInventoryItemSerialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBInventoryItem with no bytes.");
 		return 0;
 	}

@@ -163,6 +163,7 @@ typedef struct{
 	CBAssociativeArray itData; /** Contains the iteration keys @see CBIndexItData */
 	uint8_t numIndexes; /**< The number indexes that are involved in the transaction */
 	CBAssociativeArray valueWritingIndexes; /**< An array of index objects which have value writes in the staged changes. */
+	CBDepObject databaseMutex; /**< Mutex allowing for reading of data on different threads */
 } CBDatabase;
 
 typedef struct{
@@ -340,6 +341,7 @@ bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CB
  @param stage If true stage change.
  */
 void CBDatabaseAddWriteValue(uint8_t * writeValue, CBDatabaseIndex * index, uint8_t * key, uint32_t dataLen, uint8_t * dataPtr, uint32_t offset, bool stage);
+void CBDatabaseAddWriteValueNoMutex(uint8_t * writeValue, CBDatabaseIndex * index, uint8_t * key, uint32_t dataLen, uint8_t * dataPtr, uint32_t offset, bool stage);
 /**
  @brief Add an append operation.
  @param self The database object.
@@ -371,6 +373,7 @@ bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, uint8
  @returns true on success and false on failure.
  */
 bool CBDatabaseChangeKey(CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey, bool stage);
+bool CBDatabaseChangeKeyNoMutex(CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey, bool stage);
 /**
  @brief Removes all of the current value write, delete and change key operations.
  @param self The database object.
@@ -412,6 +415,7 @@ bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType
  @returns true on success and false on failure.
  */
 bool CBDatabaseGetLength(CBDatabaseIndex * index, uint8_t * key, uint32_t * length);
+bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t * length);
 /**
  @brief Gets a pointer to the CBIndexItData for a database index.
  @param database The database object.
@@ -533,6 +537,7 @@ bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation 
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorFirst(CBDatabaseRangeIterator * it);
+CBIndexFindStatus CBDatabaseRangeIteratorFirstNoMutex(CBDatabaseRangeIterator * it);
 /**
  @brief Returns a pointer to the key at the current position and does not iterate.
  @param it The iterator.
@@ -551,6 +556,7 @@ int CBDatabaseRangeIteratorGetLesser(CBDatabaseRangeIterator * it);
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorLast(CBDatabaseRangeIterator * it);
+CBIndexFindStatus CBDatabaseRangeIteratorLastNoMutex(CBDatabaseRangeIterator * it);
 /**
  @brief Goes to the next element of the iterator.
  @param it The iterator.
@@ -590,6 +596,7 @@ bool CBDatabaseRangeIteratorRead(CBDatabaseRangeIterator * it, uint8_t * data, u
  @returns The found status of the value.
  */
 CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, bool staged);
+CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, bool staged);
 /**
  @brief Queues a key-value delete operation.
  @param index The index object.
@@ -598,12 +605,14 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
  @returns true on success and false on failure.
  */
 bool CBDatabaseRemoveValue(CBDatabaseIndex * index, uint8_t * key, bool stage);
+bool CBDatabaseRemoveValueNoMutex(CBDatabaseIndex * index, uint8_t * key, bool stage);
 /**
  @brief Stages current changes for commiting to disk such that they are no longer to be reversed. Will commit if commit gap reached or cache limit reached.
  @param self The database object.
  @returns true on success and false on failure.
  */
 bool CBDatabaseStage(CBDatabase * self);
+bool CBDatabaseStageNoMutex(CBDatabase * self);
 /**
  @brief Queues a key-value write operation from a many data parts. The data is concatenated.
  @param index The inex object.

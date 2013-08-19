@@ -143,7 +143,7 @@ source.write("//\n\
 \n\
 CB"+name+" * CBNew"+name+"(){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
-\tif (NOT self) { \n\
+\tif (! self) { \n\
 \t\tCBLogError(\"Cannot allocate %i bytes of memory in CBNew"+name+"\n\", sizeof(*self));\n\
 \t\treturn NULL;\n\
 \t}\n\
@@ -155,7 +155,7 @@ CB"+name+" * CBNew"+name+"(){\n\
 }\n\
 CB"+name+" * CBNew"+name+"FromData(CBByteArray * data){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
-\tif (NOT self) { \n\
+\tif (! self) { \n\
 \t\tCBLogError(\"Cannot allocate %i bytes of memory in CBNew"+name+"FromData\n\", sizeof(*self));\n\
 \t\treturn NULL;\n\
 \t}\n\
@@ -175,12 +175,12 @@ CB"+name+" * CBGet"+name+"(void * self){\n\
 //  Initialisers\n\
 \n\
 bool CBInit"+name+"(CB"+name+" * self){\n\
-\tif (NOT CBInitMessageByObject(CBGetMessage(self)))\n\
+\tif (! CBInitMessageByObject(CBGetMessage(self)))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\
 bool CBInit"+name+"FromData(CB"+name+" * self, CBByteArray * data){\n\
-\tif (NOT CBInitMessageByData(CBGetMessage(self), data))\n\
+\tif (! CBInitMessageByData(CBGetMessage(self), data))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\
@@ -200,14 +200,14 @@ void CBFree"+name+"(void * self){\n\
 \n\
 uint32_t CB"+name+"Deserialise(CB"+name+" * self){\n\
 \tCBByteArray * bytes = CBGetMessage(self)->bytes;\n\
-\tif (NOT bytes) {\n\
+\tif (! bytes) {\n\
 \t\tCBLogError(\"Attempting to deserialise a CB"+name+" with no bytes.\");\n\
 \t\treturn 0;\n\
 \t}\n\
 }\n\
 uint32_t CB"+name+"Serialise(CB"+name+" * self){\n\
 \tCBByteArray * bytes = CBGetMessage(self)->bytes;\n\
-\tif (NOT bytes) {\n\
+\tif (! bytes) {\n\
 \t\tCBLogError(\"Attempting to serialise a CB"+name+" with no bytes.\");\n\
 \t\treturn 0;\n\
 \t}\n\

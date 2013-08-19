@@ -43,7 +43,7 @@ void CBDecodeBase58(CBBigInt * bi, char * str){
 			CBBigIntEqualsMultiplicationByUInt8(&bi2, alphaIndex);
 			CBBigIntEqualsAdditionByBigInt(bi, &bi2);
 		}
-		if (NOT x)
+		if (! x)
 			break;
 	}
 	free(bi2.data);
@@ -80,7 +80,7 @@ bool CBDecodeBase58Checked(CBBigInt * bi, char * str){
 	for (uint8_t x = 0; x < 4; x++)
 		if (checksum2[x] != bi->data[3-x])
 			ok = false;
-	if (NOT ok){
+	if (! ok){
 		CBLogError("The data passed to CBDecodeBase58Checked is invalid. Checksum does not match.");
 		return false;
 	}
@@ -92,10 +92,10 @@ char * CBEncodeBase58(CBBigInt * bi){
 	char * str = malloc(bi->length);
 	// Zeros
 	for (uint8_t y = bi->length - 1;; y--)
-		if (NOT bi->data[y]){
+		if (! bi->data[y]){
 			str[x] = '1';
 			x++;
-			if (NOT y)
+			if (! y)
 				break;
 		}else
 			break;

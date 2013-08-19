@@ -75,12 +75,12 @@ int main(){
 	uint8_t * shaHash = malloc(32);
 	uint8_t * ripemdHash = malloc(20);
 	for (unsigned int x = 0; x < i;) {
-		if(NOT EC_KEY_generate_key(key)){
+		if(! EC_KEY_generate_key(key)){
 			printf("GENERATE KEY FAIL\n"); 
 			return 1;
 		}
 		int pubSizeNew = i2o_ECPublicKey(key, NULL);
-		if(NOT pubSizeNew){
+		if(! pubSizeNew){
 			printf("PUB KEY TO DATA ZERO\n"); 
 			return 1;
 		}
@@ -115,7 +115,7 @@ int main(){
 		if (match) {
 			// Get private key
 			const BIGNUM * privKeyNum = EC_KEY_get0_private_key(key);
-			if (NOT privKeyNum) {
+			if (! privKeyNum) {
 				printf("PRIV KEY TO BN FAIL\n");
 			}
 			int privSizeNew = BN_num_bytes(privKeyNum);

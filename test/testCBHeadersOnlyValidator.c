@@ -64,7 +64,7 @@ int main(){
 	// Create validator
 	uint64_t storage = CBNewBlockChainStorage("./");
 	CBValidator * validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY);
-	if (NOT validator) {
+	if (! validator) {
 		printf("VALIDATOR INIT FAIL\n");
 		return 1;
 	}
@@ -73,7 +73,7 @@ int main(){
 	// Now create it again. It should load the data.
 	storage = CBNewBlockChainStorage("./");
 	validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY);
-	if (NOT validator) {
+	if (! validator) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
 		return 1;
 	}
@@ -116,7 +116,7 @@ int main(){
 	}
 	// Try loading the genesis block
 	CBBlock * block = CBBlockChainStorageLoadBlock(validator, 0, 0);
-	if (NOT block) {
+	if (! block) {
 		printf("GENESIS RETRIEVE FAIL\n");
 		return 1;
 	}
@@ -168,7 +168,7 @@ int main(){
 	CBFreeBlockChainStorage(storage);
 	storage = CBNewBlockChainStorage("./");
 	validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY);
-	if (NOT validator){
+	if (! validator){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
 		return 1;
 	}
@@ -208,7 +208,7 @@ int main(){
 	// Try to load block
 	block1 = CBBlockChainStorageLoadBlock(validator, 1, 0);
 	CBBlockDeserialise(block1, false);
-	if (NOT block1) {
+	if (! block1) {
 		printf("BLOCK ONE LOAD FAIL\n");
 		return 1;
 	}
@@ -272,7 +272,7 @@ int main(){
 	for (uint8_t x = 0; x < 100; x++) {
 		block = CBNewBlock();
 		block->version = 1;
-		if (x == 1 || x == 3 || NOT ((x-1) % 6))
+		if (x == 1 || x == 3 || ! ((x-1) % 6))
 			time++;
 		block->time = time;
 		block->transactionNum = 1;

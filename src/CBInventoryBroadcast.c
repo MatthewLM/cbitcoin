@@ -63,7 +63,7 @@ void CBFreeInventoryBroadcast(void * self){
 
 uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBInventoryBroadcast with no bytes.");
 		return 0;
 	}
@@ -86,7 +86,7 @@ uint32_t CBInventoryBroadcastDeserialise(CBInventoryBroadcast * self){
 		self->items[x] = CBNewInventoryItemFromData(data);
 		// Deserialise
 		uint8_t len = CBInventoryItemDeserialise(self->items[x]);
-		if (NOT len){
+		if (! len){
 			CBLogError("CBInventoryBroadcast cannot be deserialised because of an error with the CBInventoryItem number %u.", x);
 			CBReleaseObject(data);
 			return 0;
@@ -103,7 +103,7 @@ uint32_t CBInventoryBroadcastCalculateLength(CBInventoryBroadcast * self){
 }
 uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBInventoryBroadcast with no bytes.");
 		return 0;
 	}
@@ -115,7 +115,7 @@ uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self, bool force){
 	CBVarIntEncode(bytes, 0, num);
 	uint16_t cursor = num.size;
 	for (uint16_t x = 0; x < num.val; x++) {
-		if (NOT CBGetMessage(self->items[x])->serialised  // Serailise if not serialised yet.
+		if (! CBGetMessage(self->items[x])->serialised  // Serailise if not serialised yet.
 			// Serialise if force is true.
 			|| force
 			// If the data shares the same data as the inventory boradcast, re-serialise the inventory item, in case it got overwritten.
@@ -124,11 +124,11 @@ uint32_t CBInventoryBroadcastSerialise(CBInventoryBroadcast * self, bool force){
 				// Release old byte array
 				CBReleaseObject(CBGetMessage(self->items[x])->bytes);
 			CBGetMessage(self->items[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-			if (NOT CBGetMessage(self->items[x])->bytes) {
+			if (! CBGetMessage(self->items[x])->bytes) {
 				CBLogError("Cannot create a new CBByteArray sub reference in CBInventoryBroadcastSerialise");
 				return 0;
 			}
-			if (NOT CBInventoryItemSerialise(self->items[x])) {
+			if (! CBInventoryItemSerialise(self->items[x])) {
 				CBLogError("CBInventoryBroadcast cannot be serialised because of an error with the CBInventoryItem number %u.", x);
 				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
 				for (uint8_t y = 0; y < x + 1; y++)

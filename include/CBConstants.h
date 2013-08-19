@@ -32,7 +32,6 @@
 #define CB_24_HOURS 86400
 #define CB_SCAN_START ((CB_NETWORK_TIME_ALLOWED_TIME_DRIFT + CB_BLOCK_ALLOWED_TIME_DRIFT)*2)
 #define CB_NO_SCAN 0xFFFFFFFFFFFFFFFF
-#define NOT ! // Better readability than !
 #define CBInt16ToArray(arr, offset, i) (arr)[offset] = (uint8_t)(i); \
 									 (arr)[offset + 1] = (uint8_t)((i) >> 8);
 #define CBInt32ToArray(arr, offset, i) CBInt16ToArray(arr, offset, i) \
@@ -79,5 +78,14 @@ typedef enum{
 	CB_COMPARE_EQUAL = 0,
 	CB_COMPARE_LESS_THAN = -1,
 }CBCompare;
+
+/**
+ @brief Enum for functions returing a boolean value but with an additional value for errors.
+*/
+typedef enum{
+	CB_FALSE,
+	CB_TRUE,
+	CB_ERROR,
+} CBErrBool;
 
 #endif

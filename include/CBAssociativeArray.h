@@ -210,7 +210,7 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
  */
 void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *), void * compareObject, void (*onFree)(void *));
 /**
- @brief The default key comparison function. Reads the first byte in each key as the length, and then compares both keys fromt he remaining data.
+ @brief Reads the first byte in each key as the length, and then compares both keys from the remaining data.
  @param self The array object
  @param key1 The first key.
  @param key2 The second key.

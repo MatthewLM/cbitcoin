@@ -115,7 +115,7 @@ uint32_t CBAlertCalculateLength(CBAlert * self){
 }
 uint32_t CBAlertDeserialise(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBAlert with no bytes.");
 		return 0;
 	}
@@ -303,7 +303,7 @@ CBByteArray * CBAlertGetPayload(CBAlert * self){
 }
 CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBAlert with no bytes.");
 		return NULL;
 	}
@@ -404,7 +404,7 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 }
 uint16_t CBAlertSerialiseSignature(CBAlert * self, uint16_t offset){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBAlert with no bytes.");
 		return 0;
 	}

@@ -70,7 +70,7 @@ int main(){
 	// Check in-order
 	for (uint8_t x = 0; x < CB_BTREE_ELEMENTS; x++) {
 		CBFindResult res2 = CBAssociativeArrayFind(&array, array.root->elements[x]);
-		if (NOT res2.found) {
+		if (! res2.found) {
 			printf("ROOT FIND FOUND FAIL\n");
 			return 1;
 		}
@@ -113,7 +113,7 @@ int main(){
 		printf("INSERT MIDDLE SPLIT NODE FAIL\n");
 		return 1;
 	}
-	if (NOT res.found) {
+	if (! res.found) {
 		printf("INSERT MIDDLE SPLIT FOUND FAIL\n");
 		return 1;
 	}
@@ -133,7 +133,7 @@ int main(){
 			printf("LEFT CHILD NODE FAIL\n");
 			return 1;
 		}
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("LEFT CHILD FOUND FAIL\n");
 			return 1;
 		}
@@ -152,7 +152,7 @@ int main(){
 			printf("RIGHT CHILD NODE FAIL\n");
 			return 1;
 		}
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("RIGHT CHILD FOUND FAIL\n");
 			return 1;
 		}
@@ -186,7 +186,7 @@ int main(){
 		printf("INSERT RIGHT SPLIT NODE FAIL\n");
 		return 1;
 	}
-	if (NOT res.found) {
+	if (! res.found) {
 		printf("INSERT RIGHT SPLIT FOUND FAIL\n");
 		return 1;
 	}
@@ -204,7 +204,7 @@ int main(){
 			printf("RIGHT SPLIT LEFT CHILD NODE FAIL\n");
 			return 1;
 		}
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("RIGHT SPLIT LEFT CHILD FOUND FAIL\n");
 			return 1;
 		}
@@ -223,7 +223,7 @@ int main(){
 			printf("RIGHT SPLIT MID CHILD NODE FAIL\n");
 			return 1;
 		}
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("RIGHT SPLIT MID CHILD FOUND FAIL\n");
 			return 1;
 		}
@@ -256,7 +256,7 @@ int main(){
 		printf("INSERT LEFT SPLIT NODE FAIL\n");
 		return 1;
 	}
-	if (NOT res.found) {
+	if (! res.found) {
 		printf("INSERT LEFT SPLIT FOUND FAIL\n");
 		return 1;
 	}
@@ -274,7 +274,7 @@ int main(){
 			printf("LEFT SPLIT 3RD CHILD NODE FAIL\n");
 			return 1;
 		}
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("LEFT SPLIT 3RD CHILD FOUND FAIL\n");
 			return 1;
 		}
@@ -293,7 +293,7 @@ int main(){
 			printf("LEFT SPLIT 4TH CHILD NODE FAIL\n");
 			return 1;
 		}
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("LEFT SPLIT 4TH CHILD FOUND FAIL\n");
 			return 1;
 		}
@@ -591,7 +591,7 @@ int main(){
 	for (int x = 0; x < size; x += 10) {
 		CBAssociativeArrayInsert(&array, keys5 + x, CBAssociativeArrayFind(&array, keys5 + x).position, NULL);
 		for (int y = 0; y <= x; y += 10) {
-			if (NOT CBAssociativeArrayFind(&array, keys5 + y).found) {
+			if (! CBAssociativeArrayFind(&array, keys5 + y).found) {
 				printf("RANDOM FIND FAIL %u - %u\n", y, x);
 				return 1;
 			}
@@ -619,11 +619,11 @@ int main(){
 			printf("ITERATOR END FALSE FAIL\n");
 			return 1;
 		}
-		if (NOT CBAssociativeArrayFind(&array, it.node->elements[it.index]).found) {
+		if (! CBAssociativeArrayFind(&array, it.node->elements[it.index]).found) {
 			printf("ITERATE FIND FAIL %u\n", x);
 			return 1;
 		}
-		if (NOT CBAssociativeArrayGetElement(&array, &it2, x/10)) {
+		if (! CBAssociativeArrayGetElement(&array, &it2, x/10)) {
 			printf("GET ELEMENT FAIL %u\n", x);
 			return 1;
 		}
@@ -633,7 +633,7 @@ int main(){
 		}
 		lastKey = it.node->elements[it.index];
 		if (x + 10 == size) {
-			if (NOT CBAssociativeArrayGetLast(&array, &it2)){
+			if (! CBAssociativeArrayGetLast(&array, &it2)){
 				printf("GET LAST FAIL");
 				return 1;
 			}
@@ -643,14 +643,14 @@ int main(){
 			}
 		}
 		end = CBAssociativeArrayIterate(&array, &it);
-		if (NOT end && memcmp(it.node->elements[it.index], lastKey, 10) <= 0) {
+		if (! end && memcmp(it.node->elements[it.index], lastKey, 10) <= 0) {
 			printf("ITERATE ORDER FAIL %u\n", x);
 			return 1;
 		}
 	}
 	// Test range interation
 	CBRangeIterator rit = {minKey, maxKey};
-	if (NOT CBAssociativeArrayRangeIteratorStart(&array, &rit)){
+	if (! CBAssociativeArrayRangeIteratorStart(&array, &rit)){
 		printf("RANGER INTERATOR START FAIL\n");
 		return 1;
 	}
@@ -675,7 +675,7 @@ int main(){
 			break;
 		}
 	}
-	if (NOT end) {
+	if (! end) {
 		printf("ITERATOR END TRUE FAIL\n");
 		return 1;
 	}
@@ -691,7 +691,7 @@ int main(){
 	// Now ensure the rest can be found
 	for (int x = size/2; x < size; x += 10) {
 		CBFindResult res = CBAssociativeArrayFind(&array, keys5 + x);
-		if (NOT res.found) {
+		if (! res.found) {
 			printf("RANDOM FOUND FAIL\n");
 			return 1;
 		}
@@ -720,7 +720,7 @@ int main(){
 		for (uint16_t y = 0; y <= x; y += 3) {
 			((uint8_t *)iter.minElement)[1] = (y/3) >> 8;
 			((uint8_t *)iter.minElement)[2] = y/3;
-			if (NOT CBAssociativeArrayRangeIteratorLast(&array, &iter)) {
+			if (! CBAssociativeArrayRangeIteratorLast(&array, &iter)) {
 				printf("RANGE ITERATOR TO LAST FAIL %u - %u\n",x,y);
 				return 1;
 			}

@@ -23,7 +23,7 @@ bool CBNewAddressStorage(CBDepObject * storage, CBDepObject database){
 	CBAddressStorage * self = malloc(sizeof(*self));
 	self->database = database.ptr;
 	self->addrs = CBLoadIndex(self->database, CB_INDEX_ADDRS, 18, 10000);
-	if (NOT self->addrs) {
+	if (! self->addrs) {
 		CBLogError("Could not load address index.");
 		return false;
 	}
@@ -39,14 +39,14 @@ bool CBAddressStorageDeleteAddress(CBDepObject uself, void * address){
 	memcpy(CB_KEY_ARRAY, CBByteArrayGetData(addrObj->ip), 16);
 	CBInt16ToArray(CB_KEY_ARRAY, 16, addrObj->port);
 	// Remove address
-	if (NOT CBDatabaseRemoveValue(self->addrs, CB_KEY_ARRAY, false)) {
+	if (! CBDatabaseRemoveValue(self->addrs, CB_KEY_ARRAY, false)) {
 		CBLogError("Could not remove an address from storage.");
 		return false;
 	}
 	// Decrease number of addresses
 	CBInt32ToArray(self->database->current.extraData, CB_NUM_ADDRS, CBArrayToInt32(self->database->current.extraData, CB_NUM_ADDRS) - 1);
 	// Commit changes
-	if (NOT CBDatabaseStage(self->database)) {
+	if (! CBDatabaseStage(self->database)) {
 		CBLogError("Could not commit the removal of a network address.");
 		return false;
 	}
@@ -66,7 +66,7 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 	}
 	while(status == CB_DATABASE_INDEX_FOUND) {
 		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
-		if (NOT CBDatabaseRangeIteratorRead(&it, CB_DATA_ARRAY, 20, 0)) {
+		if (! CBDatabaseRangeIteratorRead(&it, CB_DATA_ARRAY, 20, 0)) {
 			CBLogError("Could not read address data from database.");
 			return false;
 		}
@@ -103,7 +103,7 @@ bool CBAddressStorageSaveAddress(CBDepObject uself, void * address){
 	// Increase the number of addresses
 	CBInt32ToArray(self->database->current.extraData, CB_NUM_ADDRS, CBArrayToInt32(self->database->current.extraData, CB_NUM_ADDRS) + 1);
 	// Commit changes
-	if (NOT CBDatabaseStage(self->database)) {
+	if (! CBDatabaseStage(self->database)) {
 		CBLogError("Could not commit adding a new network address to storage.");
 		return false;
 	}

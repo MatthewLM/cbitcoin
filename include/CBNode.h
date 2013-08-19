@@ -38,35 +38,37 @@ typedef enum{
  */
 typedef struct{
 	CBNetworkCommunicator base; /**< Uses a CBNetworkCommunicator as the base structure. */
-	uint64_t blockStorage; /**< The storage object for the validation information and block headers */
+	CBDepObject database;
+	CBDepObject blockChainStorage; /**< The storage object for the block chain */
+	CBDepObject accounterStorage; /**< The storage object for accounting. */
 	CBValidator * validator; /**< Validator for headers only validation */
-	uint64_t accounter; /**< The accounter object. */
 	CBAssociativeArray ourTxs; /**< Unconfirmed transactions that belong to this node. */
 	CBAssociativeArray otherTxs; /**< Unconfirmed transactions that are to be relayed but do not belong to this node. This is only used by a fully validating node. */
-	uint32_t otherTxsSize; /**< The size of all of the transactions stored by otherTransactions. */
+	CBAssociativeArray unconfTxOuts; /**< Unconfirmed transaction outputs and their spent status. */
+	uint32_t otherTxsSize; /**< The size of all of the transactions stored by otherTxs. */
 	uint32_t otherTxsSizeLimit; /**< The limit of the size for other transactions. Should be at least the maximum transaction size. */
-	CBNodeFlags flags;
-	CBAssociativeArray reRequest; /**< An array of the block hashes (20 bytes) needed again */
+	uint32_t startScanning; /**< The timestamp from where to start scanning for transactions */
+	CBNodeFlags flags; /**< @see CBNodeFlags */
 } CBNode;
 
 /**
  @brief Creates a new CBNode object.
- @param dataDir The directory for the data to be stored.
+ @param database The database object to use.
  @param flags Flags for the node.
  @param otherTxsSizeLimit The limit of the size of the unconfirmed transactions to hold which are not owned by the accounts. Should be at least the maximum transaction size.
  @returns A new CBNode object.
  */
-CBNode * CBNewNode(char * dataDir, CBNodeFlags flags, uint32_t otherTxsSizeLimit);
+CBNode * CBNewNode(CBDepObject database, CBNodeFlags flags, uint32_t otherTxsSizeLimit);
 
 /**
  @brief Initialises a CBNode object
  @param self The CBNode object to initialise
- @param dataDir The directory for the data to be stored.
+ @param database The database object to use.
  @param flags Flags for the node
  @param otherTxsSizeLimit The limit of the size of the unconfirmed transactions to hold which are not owned by the accounts. Should be at least the maximum transaction size.
  @returns true on success, false on failure.
  */
-bool CBInitNode(CBNode * self, char * dataDir, CBNodeFlags flags, uint32_t otherTxsSizeLimit);
+bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, uint32_t otherTxsSizeLimit);
 
 /**
  @brief Releases and frees all of the objects stored by the CBNode object.
@@ -85,21 +87,14 @@ void CBFreeNode(void * self);
  @brief Adds a transaction to the other transaction array.
  @param self The CBNode object.
  @param tx The transaction.
- @returns true on success and false on failure.
  */
-bool CBNodeAddOtherTransaction(CBNode * self, CBTransaction * tx);
+void CBNodeAddOtherTransaction(CBNode * self, CBTransaction * tx);
 /**
- @brief Checks the inputs for the unconfirmed transactions and lose transactions with missing inputs.
+ @brief Checks the inputs for the unconfirmed transactions and loses transactions with missing inputs.
  @param self The CBNode object.
  @returns true on success and false on failure.
  */
 bool CBNodeCheckInputs(CBNode * self);
-/**
- @brief Checks the inputs (unless headers only) for the unconfirmed transactions and lose transactions with missing inputs, and then saves the scanner information and commits the accounter information to storage.
- @param self The CBNode object.
- @returns true on success and false on failure.
- */
-bool CBNodeCheckInputsAndSave(CBNode * self);
 /**
  @brief Processes the finding of a block on the main chain.
  @param self The CBNode object.
@@ -163,13 +158,13 @@ bool CBNodeSyncScan(CBNode * self, CBChainPath * mainPath, uint8_t pathPoint, ui
  @param tx2 The second transaction.
  @returns A CBCompare value corresponding to the transaction hashes.
  */
-CBCompare CBTransactionCompare(void * tx1, void * tx2);
+CBCompare CBTransactionCompare(CBAssociativeArray * foo, void * tx1, void * tx2);
 /**
  @brief Compares a hash with a transaction's hash.
  @param hash A hash for a transaction.
  @param tx The transaction object
  @returns A CBCompare value corresponding to the transaction hashes.
  */
-CBCompare CBTransactionAndHashCompare(void * hash, void * tx);
+CBCompare CBTransactionAndHashCompare(CBAssociativeArray * foo, void * hash, void * tx);
 
 #endif

@@ -107,7 +107,7 @@ void CBFreeByteArray(void * self){
 	free(self);
 }
 void CBByteArrayReleaseSharedData(CBByteArray * self){
-	if (NOT self->sharedData)
+	if (! self->sharedData)
 		return;
 	self->sharedData->references--;
 	if (self->sharedData->references < 1) {
@@ -137,12 +137,12 @@ CBByteArray * CBByteArrayCopy(CBByteArray * self){
 	return new;
 }
 void CBByteArrayCopyByteArray(CBByteArray * self, uint32_t writeOffset, CBByteArray * source){
-	if (NOT source->length)
+	if (! source->length)
 		return;
 	memmove(self->sharedData->data + self->offset + writeOffset, source->sharedData->data + source->offset, source->length);
 }
 void CBByteArrayCopySubByteArray(CBByteArray * self, uint32_t writeOffset, CBByteArray * source, uint32_t readOffset, uint32_t length){
-	if (NOT length)
+	if (! length)
 		return;
 	memmove(self->sharedData->data + self->offset + writeOffset, source->sharedData->data + source->offset + readOffset, length);
 }

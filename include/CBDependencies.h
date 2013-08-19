@@ -119,14 +119,6 @@ typedef union{
 	int i;
 } CBDepObject;
 
-// Enum for functions returing a boolean value but with an additional value for errors.
-
-typedef enum{
-	CB_FALSE,
-	CB_TRUE,
-	CB_ERROR,
-} CBErrBool;
-
 // CRYPTOGRAPHIC DEPENDENCIES
 
 /**
@@ -846,10 +838,27 @@ uint64_t CBAccounterNewAccount(CBDepObject self);
  */
 bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, uint32_t blockHeight);
 
+// NODE STORAGE DEPENDENCIES
+
+bool CBNodeStorageGetStartScanningTime(CBDepObject database, uint32_t * time);
+
+// THREADING DEPENDENCIES
+
+void CBNewThread(CBDepObject * thread, void * (*function)(void *), void * arg);
+void * CBThreadJoin(CBDepObject thread);
+void CBNewMutex(CBDepObject * mutex);
+void CBFreeMutex(CBDepObject mutex);
+void CBMutexLock(CBDepObject mutex);
+void CBMutexUnlock(CBDepObject mutex);
+void CBNewCondition(CBDepObject * cond);
+void CBFreeCondition(CBDepObject cond);
+void CBConditionWait(CBDepObject cond, CBDepObject mutex);
+void CBConditionSignal(CBDepObject cond);
+
 // LOGGING DEPENDENCIES
 
 /**
- @brief Logs an error.
+ @brief Logs an error. Should be thread-safe.
  @param error The error message followed by arguments displayed by the printf() format.
  */
 void CBLogError(char * error, ...);

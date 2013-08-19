@@ -67,7 +67,7 @@ void CBChainDescriptorAddHash(CBChainDescriptor * self, CBByteArray * hash){
 }
 uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
@@ -96,7 +96,7 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 }
 uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}

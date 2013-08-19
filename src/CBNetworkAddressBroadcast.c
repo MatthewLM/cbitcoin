@@ -67,7 +67,7 @@ void CBNetworkAddressBroadcastAddNetworkAddress(CBNetworkAddressBroadcast * self
 }
 uint32_t CBNetworkAddressBroadcastDeserialise(CBNetworkAddressBroadcast * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBNetworkAddressBroadcast with no bytes.");
 		return 0;
 	}
@@ -93,7 +93,7 @@ uint32_t CBNetworkAddressBroadcastDeserialise(CBNetworkAddressBroadcast * self){
 			if (self->addresses[x]){
 				// Deserialise
 				len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);
-				if (NOT len)
+				if (! len)
 					CBLogError("CBNetworkAddressBroadcast cannot be deserialised because of an error with the CBNetworkAddress number %u.", x);
 			}else{
 				len = 0;
@@ -103,7 +103,7 @@ uint32_t CBNetworkAddressBroadcastDeserialise(CBNetworkAddressBroadcast * self){
 			len = 0;
 			CBLogError("Could not create CBByteArray in CBNetworkAddressBroadcastDeserialise for network address %u.", x);
 		}
-		if (NOT len) {
+		if (! len) {
 			// Release bytes
 			CBReleaseObject(data);
 			return 0;
@@ -120,7 +120,7 @@ uint32_t CBNetworkAddressBroadcastCalculateLength(CBNetworkAddressBroadcast * se
 }
 uint32_t CBNetworkAddressBroadcastSerialise(CBNetworkAddressBroadcast * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBNetworkAddressBroadcast with no bytes.");
 		return 0;
 	}
@@ -132,7 +132,7 @@ uint32_t CBNetworkAddressBroadcastSerialise(CBNetworkAddressBroadcast * self, bo
 	CBVarIntEncode(bytes, 0, num);
 	uint16_t cursor = num.size;
 	for (uint8_t x = 0; x < num.val; x++) {
-		if (NOT CBGetMessage(self->addresses[x])->serialised // Serailise if not serialised yet.
+		if (! CBGetMessage(self->addresses[x])->serialised // Serailise if not serialised yet.
 			// Serialise if force is true.
 			|| force
 			// If the data shares the same data as this address broadcast, re-serialise the address, in case it got overwritten.
@@ -142,7 +142,7 @@ uint32_t CBNetworkAddressBroadcastSerialise(CBNetworkAddressBroadcast * self, bo
 				// Release old byte array
 				CBReleaseObject(CBGetMessage(self->addresses[x])->bytes);
 			CBGetMessage(self->addresses[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-			if (NOT CBNetworkAddressSerialise(self->addresses[x], self->timeStamps)) {
+			if (! CBNetworkAddressSerialise(self->addresses[x], self->timeStamps)) {
 				CBLogError("CBNetworkAddressBroadcast cannot be serialised because of an error with the CBNetworkAddress number %u.", x);
 				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
 				for (uint8_t y = 0; y < x + 1; y++)

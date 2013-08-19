@@ -38,7 +38,7 @@ void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArra
 	self->penalty = 0;
 	self->ip = ip;
 	self->isPublic = isPublic;
-	if (NOT ip) {
+	if (! ip) {
 		ip = CBNewByteArrayOfSize(16);
 		memset(CBByteArrayGetData(ip), 0, 16);
 		self->type = CB_IP_INVALID;
@@ -74,7 +74,7 @@ void CBFreeNetworkAddress(void * self){
 
 uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBNetworkAddress with no bytes.");
 		return 0;
 	}
@@ -109,7 +109,7 @@ bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr){
 }
 uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBNetworkAddress with no bytes.");
 		return 0;
 	}

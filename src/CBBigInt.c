@@ -61,7 +61,7 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a, CBBigInt * b){
 	}
 	// Propagate overflow up the whole length of a if necessary
 	while (overflow && x < a->length)
-		overflow = NOT ++a->data[x++]; // Index at x, increment x, increment data, test new value for overflow.
+		overflow = ! ++a->data[x++]; // Index at x, increment x, increment data, test new value for overflow.
 	if (overflow) { // Add extra byte
 		a->length++;
 		CBBigIntRealloc(a, a->length);
@@ -69,7 +69,7 @@ void CBBigIntEqualsAdditionByBigInt(CBBigInt * a, CBBigInt * b){
 	}
 }
 void CBBigIntEqualsDivisionBy58(CBBigInt * a, uint8_t * ans){
-	if (a->length == 1 && NOT a->data[0]) // "a" is zero
+	if (a->length == 1 && ! a->data[0]) // "a" is zero
 		return;
 	// base-256 long division.
 	uint16_t temp = 0;
@@ -79,18 +79,18 @@ void CBBigIntEqualsDivisionBy58(CBBigInt * a, uint8_t * ans){
 		ans[x] = temp / 58;
 		temp -= ans[x] * 58;
 	}
-	if (NOT ans[a->length-1]) // If last byte is zero, adjust length.
+	if (! ans[a->length-1]) // If last byte is zero, adjust length.
 		a->length--;
 	memmove(a->data, ans, a->length); // Done calculation. Move ans to "a".
 }
 void CBBigIntEqualsMultiplicationByUInt8(CBBigInt * a, uint8_t b){
-	if (NOT b) {
+	if (! b) {
 		// Mutliplication by zero. "a" becomes zero
 		a->length = 1;
 		a->data[0] = 0;
 		return;
 	}
-	if (a->length == 1 && NOT a->data[0]) // "a" is zero
+	if (a->length == 1 && ! a->data[0]) // "a" is zero
 		return;
 	// Multiply b by each byte and then add to answer
 	uint16_t carry = 0;
@@ -144,13 +144,13 @@ uint8_t CBBigIntModuloWith58(CBBigInt * a){
 		result %= 58;
 		result += a->data[x] % 58;
 		result %= 58;
-		if (NOT x)
+		if (! x)
 			break;
 	}
 	return result;
 }
 void CBBigIntNormalise(CBBigInt * a){
-	while (a->length > 1 && NOT a->data[a->length-1])
+	while (a->length > 1 && ! a->data[a->length-1])
 		a->length--;
 }
 void CBBigIntRealloc(CBBigInt * bi, uint8_t allocLen){

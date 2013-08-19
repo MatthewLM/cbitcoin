@@ -54,7 +54,7 @@ int main(){
 	printf("Session = %ui\n", s);
 	srand(s);
 	CBNetworkAddressManager * addrMan = CBNewNetworkAddressManager(onBadTime);
-	if (NOT addrMan) {
+	if (! addrMan) {
 		printf("NEW ADDR MAN FAIL\n");
 		return 1;
 	}
@@ -104,7 +104,7 @@ int main(){
 				}
 				// Test getting addresses
 				CBNetworkAddress * addr2 = CBNetworkAddressManagerGotNetworkAddress(addrMan, addr);
-				if (NOT addr2 || addr2 != addr) {
+				if (! addr2 || addr2 != addr) {
 					printf("GOT NETWORK ADDR FAIL");
 					return 1;
 				}
@@ -224,7 +224,7 @@ int main(){
 	CBDepObject database;
 	CBNewStorageDatabase(&database, "./", 10000000, 10000000);
 	CBDepObject storage;
-	if (NOT CBNewAddressStorage(&storage, database)) {
+	if (! CBNewAddressStorage(&storage, database)) {
 		printf("NEW ADDRESS STORAGE FAIL\n");
 		return 1;
 	}
@@ -234,21 +234,21 @@ int main(){
 		addrs[x] = CBNewNetworkAddress(x, ip, x, x % 2, true);
 		addrs[x]->penalty = x;
 		CBReleaseObject(ip);
-		if (NOT CBAddressStorageSaveAddress(storage, addrs[x])){
+		if (! CBAddressStorageSaveAddress(storage, addrs[x])){
 			printf("SAVE ADDRESS FAIL\n");
 			return 1;
 		}
 	}
 	// Remove 5 of them
 	for (uint8_t x = 0; x < 10; x += 2) {
-		if (NOT CBAddressStorageDeleteAddress(storage, addrs[x])){
+		if (! CBAddressStorageDeleteAddress(storage, addrs[x])){
 			printf("REMOVE ADDRESS FAIL\n");
 			return 1;
 		}
 	}
 	// Test loading addresses
 	addrMan = CBNewNetworkAddressManager(onBadTime);
-	if (NOT CBAddressStorageLoadAddresses(storage, addrMan)) {
+	if (! CBAddressStorageLoadAddresses(storage, addrMan)) {
 		printf("LOAD ADDRESSES FAIL\n");
 		return 1;
 	}

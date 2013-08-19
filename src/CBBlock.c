@@ -134,7 +134,7 @@ uint8_t * CBBlockCalculateMerkleRoot(CBBlock * self){
 }
 uint32_t CBBlockDeserialise(CBBlock * self, bool transactions){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBBlock with no bytes.");
 		return 0;
 	}
@@ -168,7 +168,7 @@ uint32_t CBBlockDeserialise(CBBlock * self, bool transactions){
 			CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 			CBTransaction * transaction = CBNewTransactionFromData(data);
 			uint32_t len = CBTransactionDeserialise(transaction);
-			if (NOT len){
+			if (! len){
 				CBLogError("CBBlock cannot be deserialised because of an error with the transaction number %u.", x);
 				CBReleaseObject(data);
 				return 0;
@@ -206,7 +206,7 @@ uint32_t CBBlockDeserialise(CBBlock * self, bool transactions){
 }
 
 uint8_t * CBBlockGetHash(CBBlock * self){
-	if (NOT self->hashSet){
+	if (! self->hashSet){
 		CBBlockCalculateHash(self, self->hash);
 		self->hashSet = true;
 	}
@@ -214,7 +214,7 @@ uint8_t * CBBlockGetHash(CBBlock * self){
 }
 uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBBlock with no bytes.");
 		return 0;
 	}
@@ -237,7 +237,7 @@ uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force){
 	CBVarIntEncode(bytes, 80, transactionNum);
 	if (transactions) {
 		for (uint32_t x = 0; x < self->transactionNum; x++) {
-			if (NOT CBGetMessage(self->transactions[x])->serialised // Serailise if not serialised yet.
+			if (! CBGetMessage(self->transactions[x])->serialised // Serailise if not serialised yet.
 				// Serialise if force is true.
 				|| force
 				// If the data shares the same data as this block, re-serialise the transaction, in case it got overwritten.
@@ -246,11 +246,11 @@ uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force){
 					// Release old byte array
 					CBReleaseObject(CBGetMessage(self->transactions[x])->bytes);
 				CBGetMessage(self->transactions[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-				if (NOT CBGetMessage(self->transactions[x])->bytes) {
+				if (! CBGetMessage(self->transactions[x])->bytes) {
 					CBLogError("Cannot create a new CBByteArray sub reference in CBBlockSerialise for the transaction number %u", x);
 					return 0;
 				}
-				if (NOT CBTransactionSerialise(self->transactions[x], force)) {
+				if (! CBTransactionSerialise(self->transactions[x], force)) {
 					CBLogError("CBBlock cannot be serialised because of an error with the transaction number %u.", x);
 					return 0;
 				}

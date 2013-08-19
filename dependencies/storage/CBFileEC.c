@@ -21,14 +21,14 @@ bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	CBFile * fileObj = file.ptr;
 	// Look for appending to existing section
 	uint8_t offset = fileObj->dataLength % 8;
-	if (NOT CBFileSeek(file, fileObj->dataLength)) 
+	if (! CBFileSeek(file, fileObj->dataLength)) 
 		return false;
 	// Increase total data length.
 	fileObj->dataLength += dataLen;
 	if (offset) {
 		// There is an existing section
 		// Write to existing section.
-		if (NOT CBFileWriteMidway(fileObj->rdwr, offset, &data, &dataLen))
+		if (! CBFileWriteMidway(fileObj->rdwr, offset, &data, &dataLen))
 			return false;
 	}
 	// Make complete sections
@@ -65,7 +65,7 @@ bool CBFileAppendZeros(CBDepObject file, uint32_t amount){
 	CBFile * fileObj = file.ptr;
 	// Look for appending to existing section
 	uint8_t offset = fileObj->dataLength % 8;
-	if (NOT CBFileSeek(file, fileObj->dataLength))
+	if (! CBFileSeek(file, fileObj->dataLength))
 		return false;
 	// Increase total data length.
 	fileObj->dataLength += amount;
@@ -74,7 +74,7 @@ bool CBFileAppendZeros(CBDepObject file, uint32_t amount){
 	if (offset) {
 		// There is an existing section
 		// Write to existing section.
-		if (NOT CBFileWriteMidway(fileObj->rdwr, offset, &wholeSectionPtr, &amount))
+		if (! CBFileWriteMidway(fileObj->rdwr, offset, &wholeSectionPtr, &amount))
 			return false;
 	}
 	// Add whole sections
@@ -101,7 +101,7 @@ bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 	CBFile * fileObj = file->ptr;
 	fileObj->new = new;
 	fileObj->rdwr = fopen(filename, new ? "wb+" : "rb+");
-	if (NOT fileObj->rdwr)
+	if (! fileObj->rdwr)
 		return false;
 	uint8_t data[5];
 	if (new) {
@@ -115,7 +115,7 @@ bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 		fileObj->dataLength = 0;
 	}else{
 		// Get length
-		if (NOT CBFileReadLength(fileObj->rdwr, &fileObj->dataLength)) {
+		if (! CBFileReadLength(fileObj->rdwr, &fileObj->dataLength)) {
 			CBFileClose(*file);
 			return false;
 		}
@@ -144,7 +144,7 @@ bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	uint8_t offset = fileObj->cursor % 8;
 	if (offset) {
 		uint8_t insertLen = CBFileWriteMidway(fileObj->rdwr, offset, &data, &dataLen);
-		if (NOT insertLen)
+		if (! insertLen)
 			return false;
 		// Move cursor
 		fileObj->cursor += insertLen;
@@ -164,7 +164,7 @@ bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 		fileObj->cursor += 8;
 	}
 	// If no more data then return
-	if (NOT dataLen)
+	if (! dataLen)
 		return true;
 	// Add remaining data
 	memcpy(section, data, dataLen);
@@ -181,7 +181,7 @@ bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	// Increase cursor
 	fileObj->cursor += dataLen;
 	// Reseek
-	if (NOT CBFileSeek(file, fileObj->cursor))
+	if (! CBFileSeek(file, fileObj->cursor))
 		return false;
 	return true;
 }
@@ -219,7 +219,7 @@ bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
 		fileObj->cursor += remaining;
 	}
 	// Reseek for next read
-	if (NOT CBFileSeek(file, fileObj->cursor))
+	if (! CBFileSeek(file, fileObj->cursor))
 		return false;
 	return true;
 }
@@ -248,7 +248,7 @@ bool CBFileReadLength(FILE * rd, uint32_t * length){
 bool CBFileSeek(CBDepObject file, uint32_t pos){
 	CBFile * fileObj = file.ptr;
 	fileObj->cursor = pos;
-	return NOT fseek(fileObj->rdwr, 5 + pos / 8 * 9, SEEK_SET);
+	return ! fseek(fileObj->rdwr, 5 + pos / 8 * 9, SEEK_SET);
 }
 bool CBFileSync(CBDepObject file){
 	CBFile * fileObj = file.ptr;
@@ -283,7 +283,7 @@ bool CBFileTruncate(char * filename, uint32_t newSize){
 		return false;
 	if (fsync(file))
 		return false;
-	return NOT truncate(filename, 5 + ((newSize - 1)/8 + 1)*9);
+	return ! truncate(filename, 5 + ((newSize - 1)/8 + 1)*9);
 }
 uint8_t CBFileWriteMidway(FILE * rd, uint8_t offset, uint8_t ** data, uint32_t * dataLen){
 	uint8_t section[9];

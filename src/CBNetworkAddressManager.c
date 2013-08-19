@@ -38,17 +38,17 @@ bool CBInitNetworkAddressManager(CBNetworkAddressManager * self, void (*onBadTim
 	// Assign arguments to structure
 	self->onBadTime = onBadTime;
 	// Create random number generators.
-	if (NOT CBNewSecureRandomGenerator(&self->rndGen)) {
+	if (! CBNewSecureRandomGenerator(&self->rndGen)) {
 		CBLogError("Could not create a random number generator.");
 		return false;
 	}
 	// Seed the random number generator.
-	if (NOT CBSecureRandomSeed(self->rndGen)){
+	if (! CBSecureRandomSeed(self->rndGen)){
 		CBFreeSecureRandomGenerator(self->rndGen);
 		CBLogError("Could not securely seed the random number generator.");
 		return false;
 	}
-	if (NOT CBNewSecureRandomGenerator(&self->rndGenForBucketIndices)){
+	if (! CBNewSecureRandomGenerator(&self->rndGenForBucketIndices)){
 		CBFreeSecureRandomGenerator(self->rndGen);
 		CBLogError("Could not create a random number generator for the bucket indices.");
 		return false;
@@ -104,7 +104,7 @@ void CBNetworkAddressManagerAdjustTime(CBNetworkAddressManager * self){
 		CBPosition it;
 		CBAssociativeArrayGetElement(&self->peerTimeOffsets, &it, index);
 		int16_t median = ((CBPeer *)it.node->elements[it.index])->timeOffset;
-		if (NOT (self->timeOffsetNum % 2)){
+		if (! (self->timeOffsetNum % 2)){
 			// Average middle pair
 			CBAssociativeArrayGetElement(&self->peerTimeOffsets, &it, index + 1);
 			median = (((CBPeer *)it.node->elements[it.index])->timeOffset + median) / 2;
@@ -123,7 +123,7 @@ void CBNetworkAddressManagerAdjustTime(CBNetworkAddressManager * self){
 				if (CBAssociativeArrayIterate(&self->peers, &it))
 					break;
 			}
-			if (NOT found)
+			if (! found)
 				self->onBadTime(self->callbackHandler);
 		}else
 			self->networkTimeOffset = median;
@@ -170,7 +170,7 @@ uint64_t CBNetworkAddressManagerGetNetworkTime(CBNetworkAddressManager * self){
 	return time(NULL) + self->networkTimeOffset;
 }
 void CBNetworkAddressManagerSetBucketIndex(CBNetworkAddressManager * self, CBNetworkAddress * addr){
-	if (NOT addr->bucketSet) {
+	if (! addr->bucketSet) {
 		uint64_t group = CBNetworkAddressManagerGetGroup(self, addr);
 		// Add the group with the secure secret generated during initialisation.
 		CBRandomSeed(self->rndGenForBucketIndices, group + self->secret);
@@ -226,7 +226,7 @@ uint64_t CBNetworkAddressManagerGetGroup(CBNetworkAddressManager * self, CBNetwo
 }
 CBPeer * CBNetworkAddressManagerGetPeer(CBNetworkAddressManager * self, uint32_t x){
 	CBPosition it;
-	if (NOT CBAssociativeArrayGetElement(&self->peers, &it, x)){
+	if (! CBAssociativeArrayGetElement(&self->peers, &it, x)){
 		CBLogError("Attempted to get a peer with an out of range index");
 		return NULL;
 	}

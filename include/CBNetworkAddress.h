@@ -46,7 +46,7 @@ typedef struct{
 	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. IPv4 addresses should use the IPv4 mapped IPv6 addresses. */
 	CBIPType type; /**< The type of the IP */
 	uint16_t port; /**< Port number */
-	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_NOT_SET before it is set once a CBVersion message is received. */
+	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_!_SET before it is set once a CBVersion message is received. */
 	bool isPublic; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. If false the address is private and should be forgotten when connections are closed and never relayed. Addresses are made public when we receive them in an address broadcast. */
 	uint8_t bucket; /**< The bucket number for this address. */
 	bool bucketSet; /**< True if the bucket has been previously set */

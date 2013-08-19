@@ -16,7 +16,6 @@
 #include "CBBase58.h"
 #include <time.h>
 
-void CBLogError(char * b, ...);
 void CBLogError(char * b, ...){
 	printf("%s\n", b);
 }

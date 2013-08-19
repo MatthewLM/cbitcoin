@@ -55,7 +55,7 @@ void CBFreePingPong(void * self){
 
 uint8_t CBPingPongDeserialise(CBPingPong * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBPingPong with no bytes.");
 		return 0;
 	}
@@ -68,7 +68,7 @@ uint8_t CBPingPongDeserialise(CBPingPong * self){
 }
 uint8_t CBPingPongSerialise(CBPingPong * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBPingPong with no bytes.");
 		return 0;
 	}

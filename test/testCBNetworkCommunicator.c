@@ -101,7 +101,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 	printf("%s received %u from %s (%p) WITH TESTER %i and PROG %i (%p)\n", (comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"), theMessage->type, (CBGetNetworkAddress(peer)->port == 45562)? "L1" : ((CBGetNetworkAddress(peer)->port == 45563)? "L2" : ((CBGetNetworkAddress(peer)->port == 45564) ? "CN" : "UK")), (void *)peer, x, *prog, (void *)prog);
 	switch (theMessage->type) {
 		case CB_MESSAGE_TYPE_VERSION:
-			if (NOT ((peer->versionSent && *prog == GOTACK) || (*prog == 0))) {
+			if (! ((peer->versionSent && *prog == GOTACK) || (*prog == 0))) {
 				printf("VERSION FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -128,14 +128,14 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 			*prog |= GOTVERSION;
 			break;
 		case CB_MESSAGE_TYPE_VERACK:
-			if ((NOT peer->versionSent || peer->versionAck)) {
+			if ((! peer->versionSent || peer->versionAck)) {
 				printf("VERACK FAIL\n");
 				exit(EXIT_FAILURE);
 			}
 			*prog |= GOTACK;
 			break;
 		case CB_MESSAGE_TYPE_PING:
-			if (NOT (*prog & GOTVERSION && *prog & GOTACK)) {
+			if (! (*prog & GOTVERSION && *prog & GOTACK)) {
 				printf("PING FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -143,7 +143,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 			*prog |= GOTPING;
 			break;
 		case CB_MESSAGE_TYPE_PONG:
-			if (NOT (*prog & GOTVERSION && *prog & GOTACK)) {
+			if (! (*prog & GOTVERSION && *prog & GOTACK)) {
 				printf("PONG FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -152,14 +152,14 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 			*prog |= GOTPONG;
 			break;
 		case CB_MESSAGE_TYPE_GETADDR:
-			if (NOT (*prog & GOTVERSION && *prog & GOTACK)) {
+			if (! (*prog & GOTVERSION && *prog & GOTACK)) {
 				printf("GET ADDR FAIL\n");
 				exit(EXIT_FAILURE);
 			}
 			*prog |= GOTGETADDR;
 			break;
 		case CB_MESSAGE_TYPE_ADDR:
-			if (NOT (*prog & GOTVERSION && *prog & GOTACK)) {
+			if (! (*prog & GOTVERSION && *prog & GOTACK)) {
 				printf("ADDR FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -305,7 +305,7 @@ int main(){
 	CBNetworkCommunicatorStart(commListen);
 	pthread_t listenThread = ((CBEventLoop *) commListen->eventLoop)->loopThread;
 	CBNetworkCommunicatorStartListening(commListen);
-	if (NOT commListen->isListeningIPv4) {
+	if (! commListen->isListeningIPv4) {
 		printf("FIRST LISTEN FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -313,7 +313,7 @@ int main(){
 	CBNetworkCommunicatorStart(commListen2);
 	pthread_t listen2Thread = ((CBEventLoop *) commListen2->eventLoop)->loopThread;
 	CBNetworkCommunicatorStartListening(commListen2);
-	if (NOT commListen2->isListeningIPv4) {
+	if (! commListen2->isListeningIPv4) {
 		printf("SECOND LISTEN FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -330,7 +330,7 @@ int main(){
 		printf("ADDRESS DISCOVERY LISTEN ONE ADDR NUM FAIL %i != 1\n", commListen->addresses->addrNum);
 		exit(EXIT_FAILURE);
 	}
-	if(NOT CBNetworkAddressManagerGotNetworkAddress(commListen->addresses, addrListen2)){
+	if(! CBNetworkAddressManagerGotNetworkAddress(commListen->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY LISTEN ONE LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -339,7 +339,7 @@ int main(){
 		printf("ADDRESS DISCOVERY LISTEN TWO ADDR NUM FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if (NOT CBNetworkAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
+	if (! CBNetworkAddressManagerGotNetworkAddress(commListen2->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY LISTEN TWO LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
@@ -349,12 +349,12 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 	addrListen->bucketSet = false;
-	if (NOT CBNetworkAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
+	if (! CBNetworkAddressManagerGotNetworkAddress(commConnect->addresses, addrListen)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN ONE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	addrListen2->bucketSet = false;
-	if (NOT CBNetworkAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
+	if (! CBNetworkAddressManagerGotNetworkAddress(commConnect->addresses, addrListen2)){
 		printf("ADDRESS DISCOVERY CONNECT LISTEN TWO FAIL\n");
 		exit(EXIT_FAILURE);
 	}

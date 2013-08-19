@@ -61,7 +61,7 @@ int main(){
 	memset(hashData, 0, 32);
 	hashData[27] = 0xFF;
 	hashData[26] = 0xFF;
-	if (NOT CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
+	if (! CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
 		printf("CHECK POW MAX EQUAL FAIL\n");
 		return 1;
 	}
@@ -82,14 +82,14 @@ int main(){
 		return 1;
 	}
 	hashData[26] = 0xFE;
-	if (NOT CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
+	if (! CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
 		printf("CHECK POW LOW HASH MANTISSA FAIL\n");
 		return 1;
 	}
 	hashData[27] = 0x00;
 	hashData[26] = 0xFF;
 	hashData[25] = 0xFF;
-	if (NOT CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
+	if (! CBValidateProofOfWork(hashData, CB_MAX_TARGET)) {
 		printf("CHECK POW LOW HASH EXPONENT FAIL\n");
 		return 1;
 	}
@@ -118,7 +118,7 @@ int main(){
 	}
 	// Test basic transaction validation
 	uint64_t value;
-	if (NOT CBTransactionValidateBasic(tx, false, &value)) {
+	if (! CBTransactionValidateBasic(tx, false, &value)) {
 		printf("BASIC VALIDATION FAIL\n");
 		return 1;
 	}
@@ -162,7 +162,7 @@ int main(){
 	script = CBNewScriptWithDataCopy((uint8_t [1]){0}, 1);
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(50, script));
 	CBReleaseObject(script);
-	if (NOT CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx), &value)) {
+	if (! CBTransactionValidateBasic(tx, CBTransactionIsCoinBase(tx), &value)) {
 		printf("BASIC VALIDATION COINBASE FAIL\n");
 		return 1;
 	}
@@ -364,12 +364,12 @@ int main(){
 	tx = CBNewTransaction(0, 1);
 	CBScript * nullScript = CBNewScriptOfSize(0);
 	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TX_INPUT_FINAL, nullScript, 0));
-	if (NOT CBTransactionIsFinal(tx, 0, 0)) {
+	if (! CBTransactionIsFinal(tx, 0, 0)) {
 		printf("TX FINAL INPUT FAIL\n");
 		return 1;
 	}
 	CBTransactionTakeInput(tx, CBNewTransactionInput(nullScript, CB_TX_INPUT_FINAL - 1, nullScript, 0));
-	if (NOT CBTransactionIsFinal(tx, 0, 0)) {
+	if (! CBTransactionIsFinal(tx, 0, 0)) {
 		printf("TX NOT FINAL INPUT NO LOCKTIME FAIL\n");
 		return 1;
 	}
@@ -379,26 +379,26 @@ int main(){
 		return 1;
 	}
 	tx->lockTime = 56;
-	if (NOT CBTransactionIsFinal(tx, 0, 57)) {
+	if (! CBTransactionIsFinal(tx, 0, 57)) {
 		printf("TX FINAL BLOCK LOCKTIME FAIL\n");
 		return 1;
 	}
 	if (CBTransactionIsFinal(tx, 0, 56)) {
-		printf("TX NOT FINAL BLOCK LOCKTIME FAIL\n");
+		printf("TX ! FINAL BLOCK LOCKTIME FAIL\n");
 		return 1;
 	}
 	tx->lockTime = 500000000;
-	if (NOT CBTransactionIsFinal(tx, 500000001, 0)) {
+	if (! CBTransactionIsFinal(tx, 500000001, 0)) {
 		printf("TX FINAL TIME LOCKTIME FAIL\n");
 		return 1;
 	}
 	if (CBTransactionIsFinal(tx, 500000000, 0)) {
-		printf("TX NOT FINAL TIME LOCKTIME FAIL\n");
+		printf("TX ! FINAL TIME LOCKTIME FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(tx->inputs[1]);
 	tx->inputNum--;
-	if (NOT CBTransactionIsFinal(tx, 500000000, 0)) {
+	if (! CBTransactionIsFinal(tx, 500000000, 0)) {
 		printf("TX ALL FINAL SEQUENCES FAIL\n");
 		return 1;
 	}

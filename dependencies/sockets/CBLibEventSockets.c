@@ -237,7 +237,7 @@ bool CBSocketAddEvent(CBDepObject eventID, uint32_t timeout){
 		res = event_add(event->event, &time);
 	}else
 		res = event_add(event->event, NULL);
-	return NOT res;
+	return ! res;
 }
 bool CBSocketRemoveEvent(CBDepObject eventID){
 	CBEvent * event = eventID.ptr;
@@ -263,7 +263,7 @@ int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len){
 	ssize_t res = read((evutil_socket_t)socketID.i, data, len);
 	if (res > 0)
 		return (int32_t)res; // OK, read data.
-	if (NOT res)
+	if (! res)
 		return CB_SOCKET_CONNECTION_CLOSE; // If read() gives zero it means the connection was closed.
 	if (errno == EAGAIN)
 		return 0; // False event. Wait again. No bytes read.
@@ -282,7 +282,7 @@ bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint16_t time, void (
 		res = event_add(theTimer->timer, &timev);
 	}else
 		res = event_add(theTimer->timer, NULL);
-	return NOT res;
+	return ! res;
 }
 void CBFireTimer(evutil_socket_t foo, short bar, void * timer){
 	CBTimer * theTimer = timer;
@@ -308,7 +308,7 @@ void CBCloseSocket(CBDepObject socketID){
 	evutil_closesocket((evutil_socket_t)socketID.i);
 }
 void CBExitEventLoop(CBDepObject loopID){
-	if (NOT loopID)
+	if (! loopID)
 		return;
 	CBEventLoop * loop = loopID.ptr;
 	if(event_base_loopbreak(loop->base)){

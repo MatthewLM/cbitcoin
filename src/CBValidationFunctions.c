@@ -33,7 +33,7 @@ void CBCalculateBlockWork(CBBigInt * work, uint32_t target){
 		uint8_t i = 31 - x * 4 - zeroBytes + 4;
 		for (uint8_t y = 0; y < 4; y++){
 			work->data[i] = workSeg >> ((3 - y) * 8);
-			if (NOT i){
+			if (! i){
 				CBBigIntNormalise(work);
 				return;
 			}
@@ -125,7 +125,7 @@ bool CBTransactionIsFinal(CBTransaction * tx, uint64_t time, uint64_t height){
 	return true;
 }
 bool CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * outputValue){
-	if (NOT tx->inputNum || NOT tx->outputNum)
+	if (! tx->inputNum || ! tx->outputNum)
 		return false;
 	uint32_t length;
 	if (CBGetMessage(tx)->bytes) // Already have length

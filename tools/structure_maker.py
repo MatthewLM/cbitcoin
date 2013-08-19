@@ -117,7 +117,7 @@ source.write("//\n\
 \n\
 CB"+name+" * CBNew"+name+"(){\n\
 \tCB"+name+" * self = malloc(sizeof(*self));\n\
-\tif (NOT self)\n\
+\tif (! self)\n\
 \t\treturn NULL;\n\
 \tCBGetObject(self)->free = CBFree"+name+";\n\
 \tif(CBInit"+name+"(self))\n\
@@ -135,7 +135,7 @@ CB"+name+" * CBGet"+name+"(void * self){\n\
 //  Initialiser\n\
 \n\
 bool CBInit"+name+"(CB"+name+" * self){\n\
-\tif (NOT CBInitObject(CBGetObject(self)))\n\
+\tif (! CBInitObject(CBGetObject(self)))\n\
 \t\treturn false;\n\
 \treturn true;\n\
 }\n\

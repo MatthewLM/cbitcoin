@@ -38,29 +38,14 @@ typedef enum{
 }CBValidatorFlags;
 
 /**
- @brief The status of a processed block.
- */
-typedef enum{
-	CB_BLOCK_STATUS_MAIN, /**< The block has extended the main branch and that is it. */
-	CB_BLOCK_STATUS_REORG, /**< The block has extended the main branch and has caused a reorganisation of the block chain. */
-	CB_BLOCK_STATUS_MAIN_WITH_ORPHANS, /**< The block has extended the main branch and one or more orphans were also added */
-	CB_BLOCK_STATUS_SIDE, /**< The block has extended a branch which is not the main branch. */
-	CB_BLOCK_STATUS_ORPHAN, /**< The block is an orphan */
-	CB_BLOCK_STATUS_BAD, /**< The block did not pass validation. */
-	CB_BLOCK_STATUS_BAD_TIME, /**< The block has a bad time */
-	CB_BLOCK_STATUS_DUPLICATE, /**< The block has already been received. */
-	CB_BLOCK_STATUS_ERROR, /**< There was an error while processing a block */
-	CB_BLOCK_STATUS_CONTINUE, /**< Continue with the validation. Only returned by CBValidatorBasicBlockValidation */
-	CB_BLOCK_STATUS_NO_NEW, /**< Cannot remove a branch for a new one. */
-} CBBlockProcessStatus;
-
-/**
- @brief The return type for CBValidatorCompleteBlockValidation
+ @brief The return type for CBValidatorCompleteBlockValidation and CBProcessBLock
  */
 typedef enum{
 	CB_BLOCK_VALIDATION_OK, /**< The validation passed with no problems. */
-	CB_BLOCK_VALIDATION_BAD, /**< The block failed valdiation. */
+	CB_BLOCK_VALIDATION_BAD, /**< The block failed validation. */
 	CB_BLOCK_VALIDATION_ERR, /**< There was an error during the validation processing. */
+	CB_BLOCK_VALIDATION_BAD_TIME, /**< The block failed validation due to a bad timestamp */
+	CB_BLOCK_VALIDATION_NO_NEW, /**< No new branches are available. */
 } CBBlockValidationResult;
 
 #define CB_MAX_ORPHAN_CACHE 20
@@ -69,6 +54,7 @@ typedef enum{
 #define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
 #define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours from network time
+#define CB_MAX_BLOCK_QUEUE 20
 
 /**
  @brief Describes a point on a chain.
@@ -94,30 +80,6 @@ typedef struct{
 	uint32_t blockIndex; /**< The block index for the branch this is describing. */
 } CBChainPathPoint;
 
-typedef struct{
-	CBChainPath newChain; /**< The new main chain path */
-	CBChainPathPoint start; /**< The start of the reorganisation on the new chain */
-} CBReorgData;
-
-typedef struct{
-	uint8_t numOrphansAdded; /**< The number of orphans added. */
-	CBBlock * orphans[CB_MAX_ORPHAN_CACHE]; /**< Pointers to the orphan blocks */
-} CBOrphansData;
-
-union CBBlockProcessResultData{
-	CBReorgData reorgData; /**< Data for when there was a reorganisation. (CB_BLOCK_STATUS_REORG) */
-	uint8_t sideBranch; /**< Data for when a block was added to the side branch. It is the index of the branch (CB_BLOCK_STATUS_SIDE). */
-	CBOrphansData orphansAdded; /**< The orphans added (CB_BLOCK_STATUS_MAIN_WITH_ORPHANS). */
-};
-
-/**
- @brief The return type for CBValidatorProcessBlock
- */
-typedef struct{
-	CBBlockProcessStatus status; /**< The status of the processed block */
-	union CBBlockProcessResultData data; /**< Any data that may be associated with the result */
-} CBBlockProcessResult;
-
 /**
  @brief Represents a block branch.
  */
@@ -133,6 +95,19 @@ typedef struct{
 } CBBlockBranch;
 
 /**
+ @brief These functions contain the callback object as the first argument. These functions, except for onValidatorError, should return false if the validator should terminate with an error due to a error in the callback, and then onValidatorError will still be called.
+ */
+typedef struct{
+	void * callbackObject;
+	bool (*newBranchCallback)(void *, uint8_t branch, uint32_t blockHeight); /**< Callback for when a new branch is made. "branch" is the index of the new branch and blockHeight is the height of the first block on the branch. */
+	bool (*newValidBlock)(void *, uint8_t branch, CBBlock * block, uint32_t blockHeight, bool last); /**< Callback for when the validator fully validates a block. "branch" is the index of the branch the block was validated on. "block" is the validated block. "blockHeight" is the height of the block. "last" is true if this is the last block to be validated and is thus now the head of the block-chain. */
+	bool (*finish)(void *, CBBlock * block); /**< Called once the validator is finished processing a block which is not determined to be invalid yet, and when it is safe to commit the changes to the database. */
+	bool (*invalidBlock)(void *, CBBlock * block); /**< Called when a block is found to be invalid. */
+	bool (*noNewBranches)(void *, CBBlock * block); /**< Called when a block cannot fit onto any new branches */
+	void (*onValidatorError)(void *); /**< Called upon an error with the validator. */
+} CBValidatorCallbacks;
+
+/**
  @brief Structure for CBValidator objects. @see CBValidator.h
  */
 typedef struct{
@@ -145,25 +120,35 @@ typedef struct{
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
 	CBDepObject storage; /**< The storage component object */
 	CBValidatorFlags flags; /**< Flags for validation options */
+	CBValidatorCallbacks callbacks; /**< @see CBValidatorCallbacks */
+	CBDepObject blockProcessThread;
+	CBDepObject blockQueueMutex; /**< Mutex for accessing and modifying the block queue. */
+	CBDepObject orphanMutex;
+	CBDepObject blockProcessWaitCond; /**< Condition for waiting for more queued blocks. */
+	CBBlock * blockQueue[CB_MAX_BLOCK_QUEUE];
+	uint8_t queueFront;
+	uint8_t queueSize;
+	bool shutDownThread;
 } CBValidator;
 
 /**
  @brief Creates a new CBValidator object.
  @param storage The block-chain storage component.
  @param flags The flags used for validating this block.
+ @param callbacks @see CBValidatorCallbacks
  @returns A new CBValidator object.
  */
-
-CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags);
+CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags, CBValidatorCallbacks callbacks);
 
 /**
  @brief Initialises a CBValidator object.
  @param self The CBValidator object to initialise.
  @param storage The block-chain storage component.
  @param flags The flags used for validating this block.
+ @param callbacks @see CBValidatorCallbacks
  @returns true on success, false on failure.
  */
-bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags);
+bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags, CBValidatorCallbacks callbacks);
 
 /**
  @brief Release a free all of the objects stored by the CBValidator object.
@@ -195,13 +180,15 @@ bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * b
  */
 bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block);
 /**
- @brief Does basic validation on a block 
+ @brief Does basic validation on a block. It does not check if a block is a duplicate so this should be checked beforehand. Do not request blocks that the node already owns.
  @param self The CBValidator object.
  @param block The block to valdiate.
  @param networkTime The network time.
  @returns The block status.
  */
-CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime);
+CBBlockValidationResult CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime);
+CBErrBool CBValidatorBlockExists(CBValidator * self, uint8_t * hash);
+void * CBValidatorBlockProcessThread(void * validator);
 /**
  @brief Completes the validation for a block during main branch extention or reorganisation.
  @param self The CBValidator object.
@@ -211,11 +198,6 @@ CBBlockProcessStatus CBValidatorBasicBlockValidation(CBValidator * self, CBBlock
  @returns CB_BLOCK_VALIDATION_OK if the block passed validation, CB_BLOCK_VALIDATION_BAD if the block failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
 CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t height);
-/**
- @brief Frees the orphans in a CBBlockProcessResult.
- @param res The CBBlockProcessResult with orphans to free.
- */
-void CBValidatorFreeBlockProcessResultOrphans(CBBlockProcessResult * res);
 /**
  @brief Gets the block height of the alst block in the main chain.
  @param self The CBValidator
@@ -271,26 +253,25 @@ uint32_t CBValidatorGetMedianTime(CBValidator * self, uint8_t branch, uint32_t p
  */
 CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex, uint32_t inputIndex, uint64_t * value, uint32_t * sigOps);
 /**
- @brief Processes a block. Block headers are validated, ensuring the integrity of the transaction data is OK, checking the block's proof of work and calculating the total branch work to the genesis block. If the block extends the main branch complete validation is done. If the block extends a branch to become the new main branch because it has the most work, a re-organisation of the block-chain is done.
+ @brief Processes a block. Without calling CBValidatorBasicBlockValidation (should be called beforehand), blocks are validated, ensuring the integrity of the transaction data is OK, checking the block's proof of work and calculating the total branch work to the genesis block. If the block extends the main branch complete validation is done. If the block extends a branch to become the new main branch because it has the most work, a re-organisation of the block-chain is done. This function only calls the newBranchCallback and newValidBlock callbacks.
  @param self The CBValidator object.
  @param block The block to process.
- @param networkTime The network time.
- @return The status of the block.
+ @return @see CBBlockValidationResult
  */
-CBBlockProcessResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block, uint64_t networkTime);
+CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block);
 /**
  @brief Processes a block into a branch. This is used once basic validation is done on a block and it is determined what branch it needs to go into and when this branch is ready to receive the block.
  @param self The CBValidator object.
  @param block The block to process.
- @param networkTime The network time.
  @param branch The branch to add to.
  @param prevBranch The branch of the previous block.
  @param prevBlockIndex The index of the previous block.
  @param prevBlockTarget The target of the previous block.
  @param txHashes The transaction hashes for the block.
- @param result The result to set.
+ @returns The result.
  */
-void CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint64_t networkTime, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget, CBBlockProcessResult * result);
+CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget);
+bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block);
 /**
  @brief Saves the last validated blocks from startBranch to endBranch
  @param self The CBValidator object.

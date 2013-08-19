@@ -135,7 +135,7 @@ int main(){
 	CBReleaseObject(outputScript);
 	// Test CBScriptIsPushOnly
 	script = CBNewScriptWithDataCopy((uint8_t [20]){0x02, 0x04, 0x73, CB_SCRIPT_OP_PUSHDATA1, 0x03, 0xA2, 0x70, 0x73, CB_SCRIPT_OP_PUSHDATA2, 0x01, 0x00, 0x5A, CB_SCRIPT_OP_PUSHDATA4, 0x03, 0x0, 0x0, 0x0, 0x5F, 0x70, 0x74}, 20);
-	if (NOT CBScriptIsPushOnly(script)) {
+	if (! CBScriptIsPushOnly(script)) {
 		printf("IS PUSH PUSH FAIL\n");
 		return 1;
 	}

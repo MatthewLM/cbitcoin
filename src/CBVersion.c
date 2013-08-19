@@ -72,7 +72,7 @@ void CBFreeVersion(void * self){
 
 uint32_t CBVersionDeserialise(CBVersion * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBVersion with no bytes.");
 		return 0;
 	}
@@ -87,7 +87,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 	CBByteArray * data = CBByteArraySubReference(bytes, 20, bytes->length-20);
 	self->addRecv = CBNewNetworkAddressFromData(data, false);
 	uint32_t len = CBNetworkAddressDeserialise(self->addRecv, false); // No time from version message.
-	if (NOT len){
+	if (! len){
 		CBLogError("CBVersion cannot be deserialised because of an error with the receiving address.");
 		CBReleaseObject(data);
 		return 0;
@@ -104,7 +104,7 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 		data = CBByteArraySubReference(bytes, 46, bytes->length-46);
 		self->addSource = CBNewNetworkAddressFromData(data, false);
 		uint32_t len = CBNetworkAddressDeserialise(self->addSource, false); // No time from version message.
-		if (NOT len){
+		if (! len){
 			CBLogError("CBVersion cannot be deserialised because of an error with the source address.");
 			CBReleaseObject(data);
 			return 0;
@@ -143,7 +143,7 @@ uint32_t CBVersionCalculateLength(CBVersion * self){
 }
 uint32_t CBVersionSerialise(CBVersion * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
-	if (NOT bytes) {
+	if (! bytes) {
 		CBLogError("Attempting to serialise a CBVersion with no bytes.");
 		return 0;
 	}
@@ -154,7 +154,7 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 	CBByteArraySetInt32(bytes, 0, self->version);
 	CBByteArraySetInt64(bytes, 4, self->services);
 	CBByteArraySetInt64(bytes, 12, self->time);
-	if (NOT CBGetMessage(self->addRecv)->serialised // Serailise if not serialised yet.
+	if (! CBGetMessage(self->addRecv)->serialised // Serailise if not serialised yet.
 		// Serialise if force is true.
 		|| force
 		// If the data shares the same data as this version message, re-serialise the receiving address, in case it got overwritten.
@@ -165,11 +165,11 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 			// Release old byte array
 			CBReleaseObject(CBGetMessage(self->addRecv)->bytes);
 		CBGetMessage(self->addRecv)->bytes = CBByteArraySubReference(bytes, 20, bytes->length-20);
-		if (NOT CBGetMessage(self->addRecv)->bytes) {
+		if (! CBGetMessage(self->addRecv)->bytes) {
 			CBLogError("Cannot create a new CBByteArray sub reference in CBVersionSerialise for receiving address.");
 			return 0;
 		}
-		if (NOT CBNetworkAddressSerialise(self->addRecv, false)) {
+		if (! CBNetworkAddressSerialise(self->addRecv, false)) {
 			CBLogError("CBVersion cannot be serialised because of an error with the receiving CBNetworkAddress");
 			// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
 			CBReleaseObject(CBGetMessage(self->addRecv)->bytes);
@@ -189,7 +189,7 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 			CBLogError("Attempting to serialise a CBVersion with a userAgent over 400 bytes.");
 			return 0;
 		}
-		if (NOT CBGetMessage(self->addSource)->serialised // Serailise if not serialised yet.
+		if (! CBGetMessage(self->addSource)->serialised // Serailise if not serialised yet.
 			// Serialise if force is true.
 			|| force
 			// If the data shares the same data as this version message, re-serialise the source address, in case it got overwritten.
@@ -200,11 +200,11 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 				// Release old byte array
 				CBReleaseObject(CBGetMessage(self->addSource)->bytes);
 			CBGetMessage(self->addSource)->bytes = CBByteArraySubReference(bytes, 46, bytes->length-46);
-			if (NOT CBGetMessage(self->addSource)->bytes) {
+			if (! CBGetMessage(self->addSource)->bytes) {
 				CBLogError("Cannot create a new CBByteArray sub reference in CBVersionSerialise for source address.");
 				return 0;
 			}
-			if (NOT CBNetworkAddressSerialise(self->addSource, false)) {
+			if (! CBNetworkAddressSerialise(self->addSource, false)) {
 				CBLogError("CBVersion cannot be serialised because of an error with the source CBNetworkAddress");
 				// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.
 				CBReleaseObject(CBGetMessage(self->addSource)->bytes);
