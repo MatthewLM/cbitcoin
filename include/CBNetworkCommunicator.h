@@ -25,8 +25,8 @@
 #include "CBPeer.h"
 #include "CBDependencies.h"
 #include "CBNetworkAddressManager.h"
-#include "CBNetworkAddressBroadcast.h"
-#include "CBInventoryBroadcast.h"
+#include "CBNetworkAddressList.h"
+#include "CBInventory.h"
 #include "CBGetBlocks.h"
 #include "CBTransaction.h"
 #include "CBBlockHeaders.h"
@@ -61,7 +61,6 @@ typedef enum{
 typedef enum{
 	CB_MESSAGE_ACTION_CONTINUE, /**< Continue as normal */
 	CB_MESSAGE_ACTION_DISCONNECT, /**< Disconnect the peer */
-	CB_MESSAGE_ACTION_STOP, /**< Stop the CBNetworkCommunicator */
 	CB_MESSAGE_ACTION_RETURN /**< Return from the message handler with no further action. */
 } CBOnMessageReceivedAction;
 
@@ -75,10 +74,21 @@ typedef enum{
 	CB_MESSAGE_HEADER_CHECKSUM = 20, /**< The checksum of the message */
 } CBMessageHeaderOffsets;
 
+typedef struct CBNetworkCommunicator CBNetworkCommunicator;
+
+typedef struct{
+	void (*onPeerConnection)(CBNetworkCommunicator *, CBPeer *); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
+	void (*onPeerDisconnection)(CBNetworkCommunicator *, CBPeer *); /**< Callback for when a peer has been disconnected. The first argument is the CBNetworkCommunicator and the second is the peer. */
+	bool (*onTimeOut)(CBNetworkCommunicator *, void *); /**< Timeout event callback when an expected response timeouts. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The first argument is the CBNetworkCommunicator responsible for the timeout. The second argument is the peer with the timeout. Return true if the peer should be disconnected, else false. */
+	bool (*acceptingType)(CBNetworkCommunicator *, CBPeer *, CBMessageType); /**< Return true if the network communicator should accept the message type, else false. */
+	CBOnMessageReceivedAction (*onMessageReceived)(CBNetworkCommunicator *, CBPeer *); /**< The callback for when a message has been received from a peer. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
+	void (*onNetworkError)(CBNetworkCommunicator *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the network communicator. */
+} CBNetworkCommunicatorCallbacks;
+
 /**
  @brief Structure for CBNetworkCommunicator objects. @see CBNetworkCommunicator.h
 */
-typedef struct {
+struct CBNetworkCommunicator {
 	CBObject base; /**< CBObject base structure */
 	uint32_t networkID; /**< The 4 byte id for sending and receiving messages for a given network. */
 	CBNetworkCommunicatorFlags flags; /**< Flags for the operation of the CBNetworkCommunicator. */
@@ -120,24 +130,22 @@ typedef struct {
 	bool useAddrStorage; /**< Set to true if using addrStorage */
 	CBAssociativeArray relayedAddrs; /**< An array of the relayed addresses in a 24 hour period, in which the array is cleared. */
 	uint64_t relayedAddrsLastClear; /**< The time relayedAddrs was last cleared */
-	void (*onPeerConnection)(void *, void *); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
-	void (*onPeerDisconnection)(void *, void *); /**< Callback for when a peer has been disconnected. The first argument is the CBNetworkCommunicator and the second is the peer. */
-	void (*onTimeOut)(void *, void *, CBTimeOutType); /**< Timeout event callback with a void pointer argument for the CBNetworkCommunicator and then CBNetworkAddress. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The first argument is the CBNetworkCommunicator responsible for the timeout. The second argument is the peer with the timeout. Lastly there is the CBTimeOutType */
-	CBOnMessageReceivedAction (*onMessageReceived)(void *, void *); /**< The callback for when a message has been received from a peer. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
-	void (*onNetworkError)(void *); /**< Called when both IPv4 and IPv6 fails. Has an argument for the network communicator. */
-} CBNetworkCommunicator;
+	CBDepObject peersMutex;
+	CBDepObject sendMessageMutex;
+	CBNetworkCommunicatorCallbacks callbacks;
+};
 
 /**
  @brief Creates a new CBNetworkCommunicator object.
  @returns A new CBNetworkCommunicator object.
  */
-CBNetworkCommunicator * CBNewNetworkCommunicator(void);
+CBNetworkCommunicator * CBNewNetworkCommunicator(CBNetworkCommunicatorCallbacks callbacks);
 
 /**
  @brief Initialises a CBNetworkCommunicator object
  @param self The CBNetworkCommunicator object to initialise
  */
-void CBInitNetworkCommunicator(CBNetworkCommunicator * self);
+void CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBNetworkCommunicatorCallbacks callbacks);
 
 /**
  @brief Release and free all of the objects stored by a CBNetworkCommunicator object.
@@ -257,7 +265,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
  */
 CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetworkCommunicator * self, CBPeer * peer);
 /**
- @brief Sends a message by placing it on the send queue. Will serialise standard messages (unless serialised already) but not alternative messages or alert messages.
+ @brief Sends a message by placing it on the send queue. Will serialise standard messages (unless serialised already) but not alternative messages or alert messages. This function is mutex protected.
  @param self The CBNetworkCommunicator object.
  @param peer The CBPeer.
  @param message The CBMessage to send.

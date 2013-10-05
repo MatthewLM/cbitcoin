@@ -53,8 +53,8 @@ uint64_t CBGetMilliseconds(void){
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
-void onTimeOut(void * tester, void * comm, void * peer, CBTimeOutType type);
-void onTimeOut(void * tester, void * comm, void * peer, CBTimeOutType type){
+void onTimeOut(CBNetworkCommunicator * comm, void * peer, CBTimeOutType type);
+void onTimeOut(CBNetworkCommunicator * comm, void * peer, CBTimeOutType type){
 	switch (type) {
 		case CB_TIMEOUT_CONNECT:
 			printf("TIMEOUT FAIL: CONNECT\n");
@@ -80,28 +80,32 @@ void stop(void * comm){
 	CBNetworkCommunicatorStop(comm);
 }
 
-CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void * vpeer);
-CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void * vpeer){
-	Tester * tester = vtester;
-	pthread_mutex_lock(&tester->testingMutex); // Only one processing of test at a time.
-	CBPeer * peer = vpeer;
-	CBNetworkCommunicator * comm = vcomm;
+bool acceptType(CBNetworkCommunicator *, CBMessageType);
+bool acceptType(CBNetworkCommunicator * comm, CBMessageType type){
+	return true;
+}
+
+Tester tester;
+
+CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer);
+CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer){
+	pthread_mutex_lock(&tester.testingMutex); // Only one processing of test at a time.
 	CBMessage * theMessage = peer->receive;
 	// Assign peer to tester progress.
 	uint8_t x = 0;
-	for (; x < tester->progNum; x++)
-		if (tester->peerToProg[x] == peer)
+	for (; x < tester.progNum; x++)
+		if (tester.peerToProg[x] == peer)
 			break;
-	if (x == tester->progNum) {
+	if (x == tester.progNum) {
 		printf("NEW NODE OBJ: (%s, %p), (%p)\n", (comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"), (void *)comm, (void *)peer);
-		tester->peerToProg[x] = peer;
-		tester->progNum++;
+		tester.peerToProg[x] = peer;
+		tester.progNum++;
 	}
-	TesterProgress * prog = tester->prog + x;
+	TesterProgress * prog = tester.prog + x;
 	printf("%s received %u from %s (%p) WITH TESTER %i and PROG %i (%p)\n", (comm->ourIPv4->port == 45562)? "L1" : ((comm->ourIPv4->port == 45563)? "L2" : "CN"), theMessage->type, (CBGetNetworkAddress(peer)->port == 45562)? "L1" : ((CBGetNetworkAddress(peer)->port == 45563)? "L2" : ((CBGetNetworkAddress(peer)->port == 45564) ? "CN" : "UK")), (void *)peer, x, *prog, (void *)prog);
 	switch (theMessage->type) {
 		case CB_MESSAGE_TYPE_VERSION:
-			if (! ((peer->versionSent && *prog == GOTACK) || (*prog == 0))) {
+			if (! ((peer->handshakeStatus & CB_HANDSHAKE_SENT_VERSION && *prog == GOTACK) || (*prog == 0))) {
 				printf("VERSION FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -128,7 +132,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 			*prog |= GOTVERSION;
 			break;
 		case CB_MESSAGE_TYPE_VERACK:
-			if ((! peer->versionSent || peer->versionAck)) {
+			if ((! (peer->handshakeStatus & CB_HANDSHAKE_SENT_VERSION) || peer->handshakeStatus & CB_HANDSHAKE_GOT_ACK)) {
 				printf("VERACK FAIL\n");
 				exit(EXIT_FAILURE);
 			}
@@ -163,7 +167,7 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 				printf("ADDR FAIL\n");
 				exit(EXIT_FAILURE);
 			}
-			tester->addrComplete++;
+			tester.addrComplete++;
 			break;
 		default:
 			printf("MESSAGE FAIL\n");
@@ -172,36 +176,36 @@ CBOnMessageReceivedAction onMessageReceived(void * vtester, void * vcomm, void *
 	}
 	if (*prog == (GOTVERSION | GOTACK | GOTPING | GOTPONG | GOTGETADDR)) {
 		*prog |= COMPLETE;
-		tester->complete++;
+		tester.complete++;
 	}
-	printf("COMPLETION: %i - %i\n", tester->addrComplete, tester->complete);
-	if (tester->addrComplete > 7) {
-		// addrComplete can be seven in the case that one of the listening nodes has the other listening node before the connector has sent get_addr
+	printf("COMPLETION: %i - %i\n", tester.addrComplete, tester.complete);
+	if (tester.addrComplete > 7) {
+		// addrComplete can be seven in the case that one of the listening nodes has connected to the other and then the connecting node asks the other node what addresses it has and it has the other node.
 		printf("ADDR COMPLETE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
-	if (tester->complete == 6) {
-		if (tester->addrComplete > 4) {
-			// Usually addrComplete will be 6 but sometimes addresses are not relayed when the address is being connected to. In reality this is not a problem, as it is seldom an address will be in a connecting state.
+	if (tester.complete == 6) {
+		if (tester.addrComplete > 4) {
+			// Usually addrComplete will be 6 but sometimes addresses are not sent in response to getaddr when the address is being connected to. In reality this is not a problem, as it is seldom an address will be in a connecting state.
 			// Completed testing
 			printf("DONE\n");
 			printf("STOPPING COMM L1\n");
-			CBRunOnNetworkThread(tester->comms[0]->eventLoop, stop, tester->comms[0]);
+			CBRunOnEventLoop(tester.comms[0]->eventLoop, stop, tester.comms[0]);
 			printf("STOPPING COMM L2\n");
-			CBRunOnNetworkThread(tester->comms[1]->eventLoop, stop, tester->comms[1]);
+			CBRunOnEventLoop(tester.comms[1]->eventLoop, stop, tester.comms[1]);
 			printf("STOPPING COMM CN\n");
-			CBRunOnNetworkThread(tester->comms[2]->eventLoop, stop, tester->comms[2]);
+			CBRunOnEventLoop(tester.comms[2]->eventLoop, stop, tester.comms[2]);
 			return CB_MESSAGE_ACTION_RETURN;
 		}else{
 			printf("ADDR COMPLETE DURING COMPLETE FAIL\n");
 			exit(EXIT_FAILURE);
 		}
 	}
-	pthread_mutex_unlock(&tester->testingMutex);
+	pthread_mutex_unlock(&tester.testingMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
-void onNetworkError(void * foo, void * comm);
-void onNetworkError(void * foo, void * comm){
+void onNetworkError(CBNetworkCommunicator * comm);
+void onNetworkError(CBNetworkCommunicator * comm){
 	printf("DID LOSE LAST NODE\n");
 	exit(EXIT_FAILURE);
 }
@@ -210,9 +214,12 @@ void onBadTime(void * foo){
 	printf("BAD TIME FAIL\n");
 	exit(EXIT_FAILURE);
 }
+void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar);
+void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar){
+	return;
+}
 
 int main(){
-	Tester tester;
 	memset(&tester, 0, sizeof(tester));
 	pthread_mutex_init(&tester.testingMutex, NULL);
 	evthread_use_pthreads();
@@ -232,12 +239,17 @@ int main(){
 	// First listening CBNetworkCommunicator setup.
 	CBNetworkAddressManager * addrManListen = CBNewNetworkAddressManager(onBadTime);
 	addrManListen->maxAddressesInBucket = 2;
-	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator();
+	CBNetworkCommunicatorCallbacks callbacks = {
+		onPeerWhatever,
+		onPeerWhatever,
+		onTimeOut,
+		acceptType,
+		onMessageReceived,
+		onNetworkError
+	};
+	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator(callbacks);
 	CBNetworkCommunicatorSetReachability(commListen, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManListen->callbackHandler = commListen;
-	commListen->onMessageReceived = onMessageReceived;
-	commListen->onNetworkError = onNetworkError;
-	commListen->onTimeOut = onTimeOut;
 	commListen->networkID = CB_PRODUCTION_NETWORK_BYTES;
 	commListen->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
 	commListen->version = CB_PONG_VERSION;
@@ -249,16 +261,12 @@ int main(){
 	CBNetworkCommunicatorSetNetworkAddressManager(commListen, addrManListen);
 	CBNetworkCommunicatorSetUserAgent(commListen, userAgent);
 	CBNetworkCommunicatorSetOurIPv4(commListen, addrListen);
-	commListen->callbackHandler = &tester;
 	// Second listening CBNetworkCommunicator setup.
 	CBNetworkAddressManager * addrManListen2 = CBNewNetworkAddressManager(onBadTime);
 	addrManListen2->maxAddressesInBucket = 2;
-	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator();
+	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator(callbacks);
 	CBNetworkCommunicatorSetReachability(commListen2, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManListen2->callbackHandler = commListen2;
-	commListen2->onMessageReceived = onMessageReceived;
-	commListen2->onNetworkError = onNetworkError;
-	commListen2->onTimeOut = onTimeOut;
 	commListen2->networkID = CB_PRODUCTION_NETWORK_BYTES;
 	commListen2->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
 	commListen2->version = CB_PONG_VERSION;
@@ -270,19 +278,15 @@ int main(){
 	CBNetworkCommunicatorSetNetworkAddressManager(commListen2, addrManListen2);
 	CBNetworkCommunicatorSetUserAgent(commListen2, userAgent2);
 	CBNetworkCommunicatorSetOurIPv4(commListen2, addrListen2);
-	commListen2->callbackHandler = &tester;
 	// Connecting CBNetworkCommunicator setup.
 	CBNetworkAddressManager * addrManConnect = CBNewNetworkAddressManager(onBadTime);
 	addrManConnect->maxAddressesInBucket = 2;
 	// We are going to connect to both listing CBNetworkCommunicators.
 	CBNetworkAddressManagerAddAddress(addrManConnect, addrListenB);
 	CBNetworkAddressManagerAddAddress(addrManConnect, addrListen2B);
-	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator();
+	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(callbacks);
 	CBNetworkCommunicatorSetReachability(commConnect, CB_IP_IPv4 | CB_IP_LOCAL, true);
 	addrManConnect->callbackHandler = commConnect;
-	commConnect->onMessageReceived = onMessageReceived;
-	commConnect->onNetworkError = onNetworkError;
-	commConnect->onTimeOut = onTimeOut;
 	commConnect->networkID = CB_PRODUCTION_NETWORK_BYTES;
 	commConnect->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
 	commConnect->version = CB_PONG_VERSION;
@@ -294,7 +298,6 @@ int main(){
 	CBNetworkCommunicatorSetNetworkAddressManager(commConnect, addrManConnect);
 	CBNetworkCommunicatorSetUserAgent(commConnect, userAgent3);
 	CBNetworkCommunicatorSetOurIPv4(commConnect, addrConnect);
-	commConnect->callbackHandler = &tester;
 	// Release objects
 	CBReleaseObject(userAgent);
 	// Give tester communicators
@@ -303,7 +306,7 @@ int main(){
 	tester.comms[2] = commConnect;
 	// Start listening on first listener. Can start listening on this thread since the event loop will not be doing anything.
 	CBNetworkCommunicatorStart(commListen);
-	pthread_t listenThread = ((CBEventLoop *) commListen->eventLoop)->loopThread;
+	pthread_t listenThread = ((CBEventLoop *) commListen->eventLoop.ptr)->loopThread;
 	CBNetworkCommunicatorStartListening(commListen);
 	if (! commListen->isListeningIPv4) {
 		printf("FIRST LISTEN FAIL\n");
@@ -311,7 +314,7 @@ int main(){
 	}
 	// Start listening on second listener.
 	CBNetworkCommunicatorStart(commListen2);
-	pthread_t listen2Thread = ((CBEventLoop *) commListen2->eventLoop)->loopThread;
+	pthread_t listen2Thread = ((CBEventLoop *) commListen2->eventLoop.ptr)->loopThread;
 	CBNetworkCommunicatorStartListening(commListen2);
 	if (! commListen2->isListeningIPv4) {
 		printf("SECOND LISTEN FAIL\n");
@@ -319,7 +322,7 @@ int main(){
 	}
 	// Start connection
 	CBNetworkCommunicatorStart(commConnect);
-	pthread_t connectThread = ((CBEventLoop *) commConnect->eventLoop)->loopThread;
+	pthread_t connectThread = ((CBEventLoop *) commConnect->eventLoop.ptr)->loopThread;
 	CBNetworkCommunicatorTryConnections(commConnect);
 	// Wait until the network loop ends for all CBNetworkCommunicators.
 	pthread_join(listenThread, NULL);

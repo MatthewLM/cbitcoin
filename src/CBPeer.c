@@ -30,14 +30,12 @@ CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr){
 void CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->receive = NULL;
 	self->receivedHeader = false;
-	self->versionSent = false;
-	self->versionAck = false;
+	self->handshakeStatus = CB_HANDSHAKE_NONE;
 	self->versionMessage = NULL;
-	self->acceptedTypes = 0;
 	self->timeOffset = 0;
 	self->sentHeader = false;
 	self->messageSent = 0;
-	self->timeBroadcast = 0;
+	self->time = 0;
 	self->connectionWorking = false;
 	self->typesExpectedNum = 0;
 	self->downloadTime = 0;
@@ -50,6 +48,5 @@ void CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->sendQueueSize = 0;
 	self->messageReceived = false;
 	self->requestedData = NULL;
-	self->advertisedData = 0;
 	self->branchWorkingOn = CB_PEER_NO_WORKING;
 }

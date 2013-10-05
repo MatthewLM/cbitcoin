@@ -32,6 +32,12 @@
 
 #define CB_BTREE_ELEMENTS 32 // Algorithm only works with even values. Best with powers of 2. This refers to the number of elements and not children.
 #define CB_BTREE_HALF_ELEMENTS (CB_BTREE_ELEMENTS/2)
+#define CBAssociativeArrayForEach(el, arr) \
+	for (struct CBAssociativeArrayForEachData s = {.first = true, .enterNested = true}; \
+		s.enterNested && (s.first && CBAssociativeArrayGetFirst(arr, &s.it) || !s.first && !CBAssociativeArrayIterate(arr, &s.it)) ; \
+		s.first = false, s.enterNested = !s.enterNested) \
+		for (el = s.it.node->elements[s.it.index];s.enterNested;s.enterNested = !s.enterNested)
+#define CBCurrentPosition s.it
 
 typedef struct CBBTreeNode CBBTreeNode;
 
@@ -55,6 +61,12 @@ typedef struct{
 	uint8_t parentIndex;
 	uint8_t parentCursor;
 } CBPosition;
+
+struct CBAssociativeArrayForEachData{
+	CBPosition it;
+	bool first;
+	bool enterNested;
+};
 
 /**
  @brief Describes the result of a find operation
@@ -162,6 +174,7 @@ bool CBAssociativeArrayGet(CBAssociativeArray * self, CBPosition * it);
  @oaram right The child to the right of the value we are inserting, which will be a new child from a split or NULL for a new value.
  */
 void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right);
+bool CBAssociativeArrayIsEmpty(CBAssociativeArray * self);
 /**
  @brief Iterates to the next element, in order.
  @param self The array object.

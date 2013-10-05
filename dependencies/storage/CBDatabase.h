@@ -40,7 +40,8 @@
 #define CB_MAX_BRANCH_SECTIONS (CB_MAX_BRANCH_CACHE*2 - 1)
 #define CB_ACCOUNTER_EXTRA_SIZE (24 + CB_MAX_BRANCH_CACHE*9 + CB_MAX_BRANCH_SECTIONS*5)
 #define CB_ADDRESS_EXTRA_SIZE 4
-#define CB_DATABASE_EXTRA_DATA_SIZE CB_BLOCK_CHAIN_EXTRA_SIZE + CB_ACCOUNTER_EXTRA_SIZE + CB_ADDRESS_EXTRA_SIZE
+#define CB_NODE_EXTRA_SIZE 8
+#define CB_DATABASE_EXTRA_DATA_SIZE CB_BLOCK_CHAIN_EXTRA_SIZE + CB_ACCOUNTER_EXTRA_SIZE + CB_ADDRESS_EXTRA_SIZE + CB_NODE_EXTRA_SIZE
 
 typedef enum{
 	CB_DATABASE_FILE_TYPE_INDEX,
@@ -62,6 +63,8 @@ typedef enum{
 	CB_INDEX_TX,
 	CB_INDEX_UTXOUT,
 	CB_INDEX_ADDRS,
+	CB_INDEX_OUR_TXS,
+	CB_INDEX_OTHER_TXS,
 	CB_INDEX_ACCOUNTER_START,
 } CBIndexIDs;
 
@@ -544,6 +547,7 @@ CBIndexFindStatus CBDatabaseRangeIteratorFirstNoMutex(CBDatabaseRangeIterator * 
  @returns A pointer to the key at the current position.
  */
 uint8_t * CBDatabaseRangeIteratorGetKey(CBDatabaseRangeIterator * it);
+bool CBDatabaseRangeIteratorGetLength(CBDatabaseRangeIterator * it, uint32_t * length);
 /**
  @brief Goes to the first elment of the iterator.
  @param it The iterator.

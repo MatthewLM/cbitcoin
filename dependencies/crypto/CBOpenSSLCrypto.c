@@ -25,6 +25,33 @@
 
 // Implementation
 
+bool CBNewKeyPair(CBDepObject * keyPair){
+	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
+	if (!EC_KEY_generate_key(key)) {
+		CBLogError("Failed to generate a new elliptic curve key.");
+		return false;
+	}
+	keyPair->ptr = key;
+	return true;
+}
+uint8_t CBKeyPairGetPublicKeySize(CBDepObject keyPair){
+	return i2o_ECPublicKey(keyPair.ptr, NULL);
+}
+uint8_t CBKeyPairGetSigSize(CBDepObject keyPair){
+	return ECDSA_size(keyPair.ptr);
+}
+bool CBKeyPairGetPublicKey(CBDepObject keyPair, uint8_t * pubKey){
+	uint8_t * pubKeyCursor = pubKey;
+	i2o_ECPublicKey(keyPair.ptr, &pubKeyCursor);
+	return true;
+}
+bool CBKeyPairSign(CBDepObject keyPair, uint8_t * hash, uint8_t * signature, uint8_t sigSize){
+	if (!ECDSA_sign(0, hash, 32, signature, (unsigned int *)&sigSize, keyPair.ptr)) {
+		CBLogError("Could not produce a signature.");
+		return false;
+	}
+	return true;
+}
 void CBSha160(uint8_t * data, uint16_t len, uint8_t * output){
     SHA1(data, len, output);
 }

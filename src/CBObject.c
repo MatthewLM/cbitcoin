@@ -26,11 +26,12 @@ void CBInitObject(CBObject * self){
 
 void CBReleaseObject(void * self){
 	CBObject * obj = self;
+	if (self == NULL)
+		return;
 	// Decrement reference counter. Free if no more references.
 	obj->references--;
-	if (obj->references < 1){
+	if (obj->references < 1)
 		obj->free(obj);
-	}
 }
 void CBRetainObject(void * self){
 	// Increment reference counter.

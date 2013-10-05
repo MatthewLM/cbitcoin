@@ -439,6 +439,9 @@ void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosit
 		CBAssociativeArrayInsert(self, midKeyValue, pos, new);
 	}
 }
+bool CBAssociativeArrayIsEmpty(CBAssociativeArray * self){
+	return self->root->numElements == 0;
+}
 bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it){
 	// Look for child
 	if (it->node->children[0]) {

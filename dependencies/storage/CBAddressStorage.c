@@ -31,6 +31,7 @@ bool CBNewAddressStorage(CBDepObject * storage, CBDepObject database){
 	return true;
 }
 void CBFreeAddressStorage(CBDepObject self){
+	CBFreeIndex(((CBAddressStorage *)self.ptr)->addrs);
 	free(self.ptr);
 }
 bool CBAddressStorageDeleteAddress(CBDepObject uself, void * address){
@@ -58,7 +59,7 @@ uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject uself){
 bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 	CBAddressStorage * self = uself.ptr;
 	CBNetworkAddressManager * addrManObj = addrMan;
-	CBDatabaseRangeIterator it = {(uint8_t []){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, (uint8_t []){0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}, self->addrs};
+	CBDatabaseRangeIterator it = {(uint8_t [18]){0}, (uint8_t [18]){0xFF}, self->addrs};
 	CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not get the first address from the database.");

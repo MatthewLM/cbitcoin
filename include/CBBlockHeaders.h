@@ -35,7 +35,7 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint16_t headerNum; /**< The number of headers. */
-	CBBlock ** blockHeaders; /**< The block headers as CBBlock objects with no transactions. The number of transactions is given however. */
+	CBBlock * blockHeaders[2000]; /**< The block headers as CBBlock objects with no transactions. The number of transactions is given however. */
 } CBBlockHeaders;
 
 /**

@@ -35,11 +35,12 @@
  @brief The type of a CBMessage.
  */
 typedef enum{
+	CB_MESSAGE_TYPE_NONE = 0,
 	CB_MESSAGE_TYPE_VERSION = 1, /**< @see CBVersion.h */
 	CB_MESSAGE_TYPE_VERACK = 2, /**< Acknowledgement and acceptance of a peer's version and connection. */
-	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBNetworkAddressBroadcast.h */
-	CB_MESSAGE_TYPE_INV = 8, /**< @see CBInventoryBroadcast.h */
-	CB_MESSAGE_TYPE_GETDATA = 16, /**< @see CBInventoryBroadcast.h */
+	CB_MESSAGE_TYPE_ADDR = 4, /**< @see CBNetworkAddress.h */
+	CB_MESSAGE_TYPE_INV = 8, /**< @see CBInventory.h */
+	CB_MESSAGE_TYPE_GETDATA = 16, /**< @see CBInventory.h */
 	CB_MESSAGE_TYPE_GETBLOCKS = 32, /**< @see CBGetBlocks.h */
 	CB_MESSAGE_TYPE_GETHEADERS = 64, /**< @see CBGetBlocks.h */
 	CB_MESSAGE_TYPE_TX = 128, /**< @see CBTransaction.h */

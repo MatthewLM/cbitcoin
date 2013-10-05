@@ -57,7 +57,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t e
 	if (access(filename, F_OK)
 		&& (mkdir(filename, S_IRWXU | S_IRWXG)
 			|| chmod(filename, S_IRWXU | S_IRWXG))){
-		CBLogError("Could not create the folder for a database.");
+		CBLogError("Could not create the folder (%s) for a database.", filename);
 		return false;
 	}
 	// Check data consistency
@@ -874,17 +874,13 @@ bool CBDatabaseChangeKeyNoMutex(CBDatabaseIndex * index, uint8_t * previousKey, 
 	return true;
 }
 void CBDatabaseClearCurrent(CBDatabase * self) {
-	CBPosition pos;
-	CBPosition pos2;
 	CBMutexLock(self->databaseMutex);
 	// Go through index tx data
-	if (CBAssociativeArrayGetFirst(&self->current.indexes, &pos)) for (;;){
-		CBIndexTxData * indexTxData = pos.node->elements[pos.index];
+	CBAssociativeArrayForEach(CBIndexTxData * indexTxData, &self->current.indexes) {
 		CBIndexItData * indexItData = CBDatabaseGetIndexItData(self, indexTxData->index, false);
 		if (indexItData) {
 			// Change txKeys back to old keys in changeKeys
-			if (CBAssociativeArrayGetFirst(&indexTxData->changeKeysOld, &pos2)) for (;;){
-				uint8_t * changeKey = pos2.node->elements[pos2.index];
+			CBAssociativeArrayForEach(uint8_t * changeKey, &indexTxData->changeKeysOld){
 				uint8_t cmpKey[indexTxData->index->keySize + 2];
 				cmpKey[0] = indexTxData->index->keySize + 1;
 				cmpKey[1] = indexTxData->index->ID;
@@ -896,26 +892,16 @@ void CBDatabaseClearCurrent(CBDatabase * self) {
 					memcpy(txKey + 2, changeKey, indexTxData->index->keySize);
 					CBAssociativeArrayInsert(&indexItData->txKeys, txKey, CBAssociativeArrayFind(&indexItData->txKeys, txKey).position, NULL);
 				}
-				if (CBAssociativeArrayIterate(&indexTxData->changeKeysOld, &pos2))
-					break;
 			}
 		}
-		if (CBAssociativeArrayIterate(&self->current.indexes, &pos))
-			break;
 	}
 	// Remove currentAddedKeys from txKeys
-	if (CBAssociativeArrayGetFirst(&self->itData, &pos)) for (;;) {
-		CBIndexItData * indexItData = pos.node->elements[pos.index];
-		if (CBAssociativeArrayGetFirst(&indexItData->currentAddedKeys, &pos2)) for (;;){
-			CBAssociativeArrayDelete(&indexItData->txKeys, CBAssociativeArrayFind(&indexItData->txKeys, pos.node->elements[pos.index]).position, true);
-			if (CBAssociativeArrayIterate(&indexItData->currentAddedKeys, &pos2))
-				break;
-		}
+	CBAssociativeArrayForEach(CBIndexItData * indexItData, &self->itData){
+		CBAssociativeArrayForEach(uint8_t * key, &indexItData->currentAddedKeys)
+			CBAssociativeArrayDelete(&indexItData->txKeys, CBAssociativeArrayFind(&indexItData->txKeys, key).position, true);
 		// Reset currentAddedKeys
 		CBFreeAssociativeArray(&indexItData->currentAddedKeys);
 		CBInitAssociativeArray(&indexItData->currentAddedKeys, CBTransactionKeysCompare, indexItData->index, NULL);
-		if (CBAssociativeArrayIterate(&self->itData, &pos))
-			break;
 	}
 	// Free index tx data
 	CBFreeAssociativeArray(&self->current.indexes);
@@ -952,8 +938,7 @@ bool CBDatabaseCommit(CBDatabase * self){
 	}
 	// Loop through index files to write the previous lengths
 	CBPosition pos;
-	if (CBAssociativeArrayGetFirst(&self->valueWritingIndexes, &pos)) for (;;) {
-		CBDatabaseIndex * ind = pos.node->elements[pos.index];
+	CBAssociativeArrayForEach(CBDatabaseIndex * ind, &self->valueWritingIndexes){
 		data[0] = ind->ID;
 		CBInt16ToArray(data, 1, ind->lastFile);
 		CBInt32ToArray(data, 3, ind->lastSize);
@@ -962,8 +947,6 @@ bool CBDatabaseCommit(CBDatabase * self){
 			CBFileClose(self->logFile);
 			return false;
 		}
-		if (CBAssociativeArrayIterate(&self->valueWritingIndexes, &pos))
-			break;
 	}
 	// Sync log file, so that it is now active with the information of the previous file sizes.
 	if (! CBFileSync(self->logFile)){
@@ -982,14 +965,9 @@ bool CBDatabaseCommit(CBDatabase * self){
 	// Lock mutex as data can be changed here
 	CBMutexLock(self->databaseMutex);
 	// Loop through indexes
-	CBPosition indIt;
-	if (CBAssociativeArrayGetFirst(&self->staged.indexes, &indIt)) for (;;) {
-		CBPosition it;
-		// Get index tx data
-		CBIndexTxData * indexTxData = indIt.node->elements[indIt.index];
+	CBAssociativeArrayForEach(CBIndexTxData * indexTxData, &self->staged.indexes){
 		// Change keys
-		if (CBAssociativeArrayGetFirst(&indexTxData->changeKeysOld, &it)) for (;;) {
-			uint8_t * oldKeyPtr = it.node->elements[it.index];
+		CBAssociativeArrayForEach(uint8_t * oldKeyPtr, &indexTxData->changeKeysOld){
 			uint8_t * newKeyPtr = oldKeyPtr + indexTxData->index->keySize;
 			// Find index entry
 			CBIndexFindResult res = CBDatabaseIndexFind(indexTxData->index, oldKeyPtr);
@@ -1071,15 +1049,11 @@ bool CBDatabaseCommit(CBDatabase * self){
 				return false;
 			}
 			CBFreeIndexElementPos(res.el);
-			// Iterate to next key to change.
-			if (CBAssociativeArrayIterate(&indexTxData->changeKeysOld, &it))
-				break;
 		}
 		// Go through each value write key
 		// Get the first key with an interator
-		if (CBAssociativeArrayGetFirst(&indexTxData->valueWrites, &it)) for (;;) {
+		CBAssociativeArrayForEach(uint8_t * keyPtr, &indexTxData->valueWrites) {
 			// Get the data for writing
-			uint8_t * keyPtr = it.node->elements[it.index];
 			uint32_t offset = *(uint32_t *)(keyPtr + indexTxData->index->keySize);
 			uint32_t dataSize = *(uint32_t *)(keyPtr + indexTxData->index->keySize + 4);
 			uint8_t * dataPtr = keyPtr + indexTxData->index->keySize + 8;
@@ -1189,13 +1163,9 @@ bool CBDatabaseCommit(CBDatabase * self){
 					return false;
 				}
 			}
-			// Iterate to next key-value to write.
-			if (CBAssociativeArrayIterate(&indexTxData->valueWrites, &it))
-				break;
 		}
 		// Delete values
-		if (CBAssociativeArrayGetFirst(&indexTxData->deleteKeys, &it)) for (;;) {
-			uint8_t * keyPtr = it.node->elements[it.index];
+		CBAssociativeArrayForEach(uint8_t * keyPtr, &indexTxData->deleteKeys) {
 			// Find index entry
 			CBIndexFindResult res = CBDatabaseIndexFind(indexTxData->index, keyPtr);
 			if (res.status == CB_DATABASE_INDEX_ERROR) {
@@ -1218,9 +1188,6 @@ bool CBDatabaseCommit(CBDatabase * self){
 				CBFreeIndexElementPos(res.el);
 				return false;
 			}
-			// Iterate to next key to delete.
-			if (CBAssociativeArrayIterate(&indexTxData->deleteKeys, &it))
-				break;
 		}
 		// Update the last index file information
 		if (indexTxData->index->lastFile != indexTxData->index->newLastFile
@@ -1237,9 +1204,6 @@ bool CBDatabaseCommit(CBDatabase * self){
 				return false;
 			}
 		}
-		// Iterate to this next index if there is one
-		if (CBAssociativeArrayIterate(&self->staged.indexes, &indIt))
-			break;
 	}
 	// Update the data last file information
 	if (lastFileSize != self->lastSize) {
@@ -1307,13 +1271,10 @@ bool CBDatabaseCommit(CBDatabase * self){
 	}
 	CBFileClose(self->logFile);
 	// Reset txKeys
-	if (CBAssociativeArrayGetFirst(&self->itData, &pos)) for (;;) {
-		CBIndexItData * indexItData = pos.node->elements[pos.index];
+	CBAssociativeArrayForEach(CBIndexItData * indexItData, &self->itData){
 		// Reset currentAddedKeys
 		CBFreeAssociativeArray(&indexItData->txKeys);
 		CBInitAssociativeArray(&indexItData->txKeys, CBTransactionKeysCompare, indexItData->index, free);
-		if (CBAssociativeArrayIterate(&self->itData, &pos))
-			break;
 	}
 	// Free index tx data
 	CBFreeAssociativeArray(&self->staged.indexes);
@@ -1547,8 +1508,13 @@ bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t
 	for (CBDatabaseTransactionChanges * c = &self->current;; c = &self->staged) {
 		CBIndexTxData * indexTxData = CBDatabaseGetIndexTxData(c, index, false);
 		if (indexTxData) {
+			// Check for a deletion value
+			CBFindResult res = CBAssociativeArrayFind(&indexTxData->deleteKeys, diskKey);
+			if (res.found){
+				*length = CB_DOESNT_EXIST;
+				return true;
+			}
 			// First check for CB_OVERWRITE_DATA value write entry as it replaces the length on disk.
-			CBFindResult res;
 			uint8_t compareData[index->keySize + 4];
 			memcpy(compareData, diskKey, index->keySize);
 			*(uint32_t *)(compareData + index->keySize) = CB_OVERWRITE_DATA;
@@ -2087,6 +2053,10 @@ uint8_t * CBDatabaseRangeIteratorGetKey(CBDatabaseRangeIterator * it){
 	// The index key is the least or both are the same.
 	: it->indexPos.nodeLoc.cachedNode->elements[it->indexPos.index].key;
 }
+bool CBDatabaseRangeIteratorGetLength(CBDatabaseRangeIterator * it, uint32_t * length){
+	// ??? We already have found the element in the transaction or index, no need to find twice. Should be changed
+	return CBDatabaseGetLength(it->index, CBDatabaseRangeIteratorGetKey(it), length);
+}
 int CBDatabaseRangeIteratorGetLesser(CBDatabaseRangeIterator * it){
 	if (it->gotTxEl && it->gotIndEl)
 		return memcmp(((uint8_t *)CBRangeIteratorGetPointer(&it->txIt)),
@@ -2532,53 +2502,34 @@ bool CBDatabaseStage(CBDatabase * self){
 }
 bool CBDatabaseStageNoMutex(CBDatabase * self){
 	// Go through all indicies
-	CBPosition pos;
-	if (CBAssociativeArrayGetFirst(&self->current.indexes, &pos)) for (;;){
-		CBIndexTxData * indexTxData = pos.node->elements[pos.index];
+	CBAssociativeArrayForEach(CBIndexTxData * indexTxData, &self->current.indexes){
 		// Change keys
-		CBPosition pos2;
-		if (CBAssociativeArrayGetFirst(&indexTxData->changeKeysOld, &pos2)) for (;;) {
-			uint8_t * changeKey = pos2.node->elements[pos2.index];
+		CBAssociativeArrayForEach(uint8_t * changeKey, &indexTxData->changeKeysOld)
 			if (! CBDatabaseChangeKeyNoMutex(indexTxData->index, changeKey, changeKey + indexTxData->index->keySize, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
 				return false;
 			}
-			if (CBAssociativeArrayIterate(&indexTxData->changeKeysOld, &pos2))
-				break;
-		}
 		// Write values
-		if (CBAssociativeArrayGetFirst(&indexTxData->valueWrites, &pos2)) for (;;) {
-			uint8_t * valueWrite = pos2.node->elements[pos2.index];
+		CBAssociativeArrayForEach(uint8_t * valueWrite, &indexTxData->valueWrites) {
 			uint32_t * offsetPtr = (uint32_t *)(valueWrite + indexTxData->index->keySize);
 			uint32_t * sizePtr = offsetPtr + 1;
 			uint8_t * dataPtr = (uint8_t *)(sizePtr + 1);
 			CBDatabaseAddWriteValueNoMutex(valueWrite, indexTxData->index, valueWrite, *sizePtr, dataPtr, *offsetPtr, true);
-			if (CBAssociativeArrayIterate(&indexTxData->valueWrites, &pos2))
-				break;
 		}
 		// Remove the value writes array onFree function because we have used the data for the staging
 		indexTxData->valueWrites.onFree = NULL;
 		// Deletions
-		if (CBAssociativeArrayGetFirst(&indexTxData->deleteKeys, &pos2)) for (;;) {
-			uint8_t * deleteKey = pos2.node->elements[pos2.index];
+		CBAssociativeArrayForEach(uint8_t * deleteKey, &indexTxData->deleteKeys)
 			if (! CBDatabaseRemoveValueNoMutex(indexTxData->index, deleteKey, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
 				return false;
 			}
-			if (CBAssociativeArrayIterate(&indexTxData->deleteKeys, &pos2))
-				break;
-		}
-		if (CBAssociativeArrayIterate(&self->current.indexes, &pos))
-			break;
 	}
 	// Reset currentAddedKeys
-	if (CBAssociativeArrayGetFirst(&self->itData, &pos)) for (;;) {
-		CBIndexItData * indexItData = pos.node->elements[pos.index];
+	CBAssociativeArrayForEach(CBIndexItData * indexItData, &self->itData) {
 		// Reset currentAddedKeys
 		CBFreeAssociativeArray(&indexItData->currentAddedKeys);
 		CBInitAssociativeArray(&indexItData->currentAddedKeys, CBTransactionKeysCompare, indexItData->index, NULL);
-		if (CBAssociativeArrayIterate(&self->itData, &pos))
-			break;
 	}
 	// Free index tx data
 	CBFreeAssociativeArray(&self->current.indexes);

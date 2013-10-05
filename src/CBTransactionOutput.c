@@ -47,10 +47,12 @@ void CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScrip
 void CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script){
 	self->scriptObject = script;
 	self->value = value;
+	self->spent = false;
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * data){
 	self->scriptObject = NULL;
+	self->spent = false;
 	CBInitMessageByData(CBGetMessage(self), data);
 }
 

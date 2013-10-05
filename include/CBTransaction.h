@@ -29,6 +29,7 @@
 // Constants and Macros
 
 #define CB_TX_MAX_SIZE 999915 // Block size minus the header
+#define CB_TX_MAX_STANDARD_VERSION 1
 #define CBGetTransaction(x) ((CBTransaction *)x)
 
 /**
@@ -125,15 +126,17 @@ uint8_t * CBTransactionGetHash(CBTransaction * self);
  @param input The index of the input to sign.
  @param signType The type of signature to get the data for.
  @param hash The 32 byte data hash for signing or checking signatures.
- @returns CB_TX_HASH_OK if the hash has been retreived with no problems. CB_TX_HASH_BAD is returned if the hash is invalid and CB_TX_HASH_ERR is returned upon an error.
+ @returns true if the hash has been retreived with no problems. false is returned if the hash is invalid.
  */
-CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash);
+bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash);
+bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutput * prevOut, CBScript * p2sh);
 /**
  @brief Determines if a transaction is a coinbase transaction or not.
  @param self The CBTransaction object.
  @returns true if the transaction is a coin-base transaction or false if not.
  */
 bool CBTransactionIsCoinBase(CBTransaction * self);
+bool CBTransactionIsStandard(CBTransaction * self);
 /**
  @brief Serialises a CBTransaction to the byte data.
  @param self The CBTransaction object.
@@ -141,6 +144,7 @@ bool CBTransactionIsCoinBase(CBTransaction * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionSerialise(CBTransaction * self, bool force);
+bool CBTransactionSignInput(CBTransaction * self, CBDepObject keyPair, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.

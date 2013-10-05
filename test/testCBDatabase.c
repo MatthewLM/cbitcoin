@@ -1549,6 +1549,24 @@ int main(){
 		printf("CLEAR CURRENT WITH TWO INDEXES READ FAIL\n");
 		return 1;
 	}
+	// Delete staged without staging delete and test get length
+	CBDatabaseRemoveValue(index4, key7, false);
+	CBDatabaseGetLength(index4, key7, &len);
+	if (len != CB_DOESNT_EXIST) {
+		printf("NON STAGED DELETE OF STAGED READ LEN FAIL\n");
+		return 1;
+	}
+	// Delete commited without staging delete and test get length
+	CBDatabaseWriteValue(index4, key7, (uint8_t *)"commited", 9);
+	CBDatabaseStage(storage);
+	CBDatabaseCommit(storage);
+	CBDatabaseRemoveValue(index4, key7, false);
+	CBDatabaseGetLength(index4, key7, &len);
+	if (len != CB_DOESNT_EXIST) {
+		printf("NON STAGED DELETE OF COMMITED READ LEN FAIL\n");
+		return 1;
+	}
+	CBDatabaseClearCurrent(storage);
 	CBFreeIndex(index4);
 	// Test extra data
 	if (memcmp(storage->current.extraData, (uint8_t [10]){0}, 10)) {

@@ -40,14 +40,6 @@ typedef enum{
 }CBSignType;
 
 /*
- @brief The return values for CBTransactionGetInputHashForSignature.
- */
-typedef enum{
-	CB_TX_HASH_OK, /**< Transaction hash was made OK */
-	CB_TX_HASH_BAD, /**< The transaction is invalid and a hash cannot be made. */
-} CBGetHashReturn;
-
-/*
  @brief The return values for CBScriptExecute. @see CBScript.h
  */
 typedef enum{
@@ -170,10 +162,6 @@ typedef enum{
     CB_SCRIPT_OP_NOP8 = 0xb7,
     CB_SCRIPT_OP_NOP9 = 0xb8,
     CB_SCRIPT_OP_NOP10 = 0xb9,
-    CB_SCRIPT_OP_SMALLINTEGER = 0xfa,
-    CB_SCRIPT_OP_PUBKEYS = 0xfb,
-    CB_SCRIPT_OP_PUBKEYHASH = 0xfd,
-    CB_SCRIPT_OP_PUBKEY = 0xfe,
     CB_SCRIPT_OP_INVALIDOPCODE = 0xff,
 }CBScriptOp;
 
@@ -208,7 +196,7 @@ CBScript * CBNewScriptOfSize(uint32_t size);
 /**
  @brief Creates a new CBScript object from a string. The script text should follow the following Backus–Naur Form:
  /code
- <digit> = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"
+ <digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"
  <hex_digits> ::= <digit> | <digit> <hex_digits>
  <hex> ::= "0x" <hex_digits>
  <operation_name> = "0" | "FALSE" | "1NEGATE" | "RESERVED" | "1" | "TRUE" | "2" | "3" | "4" |  "5" | "6" | "7" | "8" | "9" | "10" | "11" | "12" | "13" | "14" | "15" | "16" | "NOP" | "VER" | "IF" | "NOTIF" | "VERIF" | "VERNOTIF" | "ELSE" | "ENDIF" | "VERIFY" | "RETURN" | "TOALTSTACK" | "FROMALTSTACK" | "2DROP" | "2DUP" | "3DUP" | "2OVER" | "2ROT" | "2SWAP" | "IFDUP" | "DEPTH" | "DROP" | "DUP" | "NIP" | "OVER" | "PICK" | "ROLL" | "ROT" | "SWAP" | "TUCK" | "CAT" | "SUBSTR" | "LEFT" | "RIGHT = 0x81" | "SIZE" | "INVERT" | "AND" | "OR" | "XOR" | "EQUAL" | "EQUALVERIFY" | "RESERVED1" | "RESERVED2" | "1ADD" | "1SUB" | "2MUL" | "2DIV" | "NEGATE" | "ABS" | "NOT" | "0NOTEQUAL" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "LSHIFT " | "RSHIFT" | "BOOLAND" | "BOOLOR" | "NUMEQUAL" | "NUMEQUALVERIFY" | "NUMNOTEQUAL" | "LESSTHAN" | "GREATERTHAN" | "LESSTHANOREQUAL" | "GREATERTHANOREQUAL" | "MIN" | "MAX" | "WITHIN" | "RIPEMD160" | "SHA1" | "SHA256" | "HASH160" | "HASH256" | "CODESEPARATOR" | "CHECKSIG" | "CHECKSIGVERIFY" | "CHECKMULTISIG" | "CHECKMULTISIGVERIFY" | "NOP1" | "NOP2" | "NOP3" | "NOP4" | "NOP5" | "NOP6" | "NOP7" | "NOP8" | "NOP9" | "NOP10"
@@ -228,6 +216,7 @@ CBScript * CBNewScriptOfSize(uint32_t size);
  @returns A new CBScript object or NULL on failure.
  */
 CBScript * CBNewScriptFromString(char * string);
+CBScript * CBNewScriptPubKeyHash(uint8_t * pubKeyHash);
 /**
  @brief Creates a new CBScript using data.
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
@@ -251,6 +240,7 @@ CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size);
  @returns true on success, false on failure.
  */
 bool CBInitScriptFromString(CBScript * self, char * string);
+void CBInitScriptPubKeyHash(CBScript * self, uint8_t * pubKeyHash);
 
 /**
  @brief Release and free all of the objects stored by the CBScript object.
@@ -285,7 +275,7 @@ CBScriptStack CBNewEmptyScriptStack(void);
  @param p2sh If false, do not allow any P2SH matches.
  @returns CB_SCRIPT_VALID is the program ended with true, CB_SCRIPT_INVALID on script failure or CB_SCRIPT_ERR if an error occured with the interpreter such as running of of memory.
  */
-CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh);
+CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, bool (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh);
 /**
  @brief Gets the amount being pushed from a script op at a given offset.
  @param self The script object.
@@ -321,9 +311,9 @@ bool CBScriptIsP2SH(CBScript * self);
 /**
  @brief Determines if a script has only push operations.
  @param self The CBScript object.
- @retuns true if the script has only push operations, false otherwise. Also returns false when an invalid push operation if found.
+ @retuns The number of push operations found if the script has only push operations, 0 otherwise. Also returns 0 when an invalid push operation if found.
  */
-bool CBScriptIsPushOnly(CBScript * self);
+uint16_t CBScriptIsPushOnly(CBScript * self);
 /**
  @brief Gets the number of a script operation number, which can be OP_0 or OP_1 to OP_16.
  @param op The operation.

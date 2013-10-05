@@ -190,16 +190,19 @@ void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint3
 	CBReleaseObject(data);
 	return block;
 }
-bool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index){
+CBErrBool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
 	memcpy(CB_KEY_ARRAY, blockHash, 20);
-	if (CBDatabaseReadValue(storageObj->blockHashIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	CBIndexFindStatus stat = CBDatabaseReadValue(storageObj->blockHashIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 5, 0, false);
+	if (stat == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not read a block hash reference from the block chain database.");
-		return false;
+		return CB_ERROR;
 	}
+	if (stat == CB_DATABASE_INDEX_NOT_FOUND)
+		return CB_FALSE;
 	*branch = CB_DATA_ARRAY[CB_BLOCK_HASH_REF_BRANCH];
 	*index = CBArrayToInt32(CB_DATA_ARRAY, CB_BLOCK_HASH_REF_INDEX);
-	return true;
+	return CB_TRUE;
 }
 uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint32_t blockIndex){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
@@ -536,6 +539,17 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
 		return false;
 	}
 	return true;
+}
+CBErrBool CBBlockChainStorageTransactionExists(void * validator, uint8_t * txHash){
+	CBValidator * validatorObj = validator;
+	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
+	memcpy(CB_KEY_ARRAY, txHash, 32);
+	uint32_t len;
+	if (! CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)) {
+		CBLogError("There was an error trying to obtain the length of a transaction entry");
+		return CB_ERROR;
+	}
+	return len != CB_DOESNT_EXIST;
 }
 CBErrBool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, uint32_t outputIndex){
 	CBValidator * validatorObj = validator;

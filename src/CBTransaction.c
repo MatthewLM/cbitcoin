@@ -176,12 +176,10 @@ uint8_t * CBTransactionGetHash(CBTransaction * self){
 	}
 	return self->hash;
 }
-CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){
+bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){
 	CBTransaction * self= vself;
-	if (self->inputNum < input + 1) {
-		CBLogError("Receiving transaction hash to sign cannot be done for because the input index goes past the number of inputs.");
-		return CB_TX_HASH_BAD;
-	}
+	if (self->inputNum < input + 1)
+		return false;
 	uint8_t last5Bits = (signType & 0x1f); // For some reason this is what the C++ client does.
 	CBVarInt prevOutputSubScriptVarInt = CBVarIntFromUInt64(prevOutSubScript->length);
 	uint32_t sizeOfData = 12 + prevOutSubScript->length + prevOutputSubScriptVarInt.size; // Version, lock time and the sign type make up 12 bytes.
@@ -193,10 +191,8 @@ CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray 
 	if (last5Bits == CB_SIGHASH_NONE){
 		sizeOfData++; // Just for the CBVarInt and no outputs.
 	}else if ((signType & 0x1f) == CB_SIGHASH_SINGLE){
-		if (self->outputNum < input + 1) {
-			CBLogError("Receiving transaction hash to sign cannot be done for CB_SIGHASH_SINGLE because there are not enough outputs.");
-			return CB_TX_HASH_BAD;
-		}
+		if (self->outputNum < input + 1)
+			return false;
 		sizeOfData += CBVarIntSizeOf(input + 1) + input * 9; // For outputs up to the input index
 		// The size for the output at the input index.
 		uint32_t len = CBGetByteArray(self->outputs[input]->scriptObject)->length;
@@ -294,17 +290,63 @@ CBGetHashReturn CBTransactionGetInputHashForSignature(void * vself, CBByteArray 
 	CBSha256(CBByteArrayGetData(data), sizeOfData, firstHash);
 	CBSha256(firstHash, 32, hash);
 	CBReleaseObject(data);
-	return CB_TX_HASH_OK;
+	return true;
+}
+bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutput * prevOut, CBScript * p2sh){
+	// Get the number of stack items
+	uint16_t num = CBScriptIsPushOnly(input->scriptObject);
+	if (p2sh) {
+		if (CBScriptIsKeyHash(p2sh)) {
+			if (num != 3)
+				return false;
+		}else if (CBScriptIsMultisig(p2sh)){
+			if (num - 1 != CBScriptOpGetNumber(CBByteArrayGetByte(p2sh, 0)))
+				return false;
+		}else
+			return false;
+		return true;
+	}
+	CBTransactionOutputType type = CBTransactionOutputGetType(prevOut);
+	if (type == CB_TX_OUTPUT_TYPE_UNKNOWN)
+		return false;
+	if (type == CB_TX_OUTPUT_TYPE_KEYHASH) {
+		if (num != 2)
+			return false;
+	}else if (num != CBScriptOpGetNumber(CBByteArrayGetByte(prevOut->scriptObject, 0)))
+		return false;
+	return true;
 }
 bool CBTransactionIsCoinBase(CBTransaction * self){
 	return (self->inputNum == 1
 			&& self->inputs[0]->prevOut.index == 0xFFFFFFFF
 			&& CBByteArrayIsNull(self->inputs[0]->prevOut.hash));
 }
+bool CBTransactionIsStandard(CBTransaction * self) {
+	if (self->version > CB_TX_MAX_STANDARD_VERSION)
+		return false;
+	for (uint32_t x = 0; x < self->inputNum; x++) {
+		if (self->inputs[x]->scriptObject->length > 500)
+			return false;
+		if (CBScriptIsPushOnly(self->inputs[x]->scriptObject) == 0)
+			return false;
+	}
+	for (uint32_t x = 0; x < self->outputNum; x++) {
+		CBTransactionOutputType type = CBTransactionOutputGetType(self->outputs[x]);
+		if (type == CB_TX_OUTPUT_TYPE_UNKNOWN)
+			return false;
+		if (type == CB_TX_OUTPUT_TYPE_MULTISIG) {
+			uint8_t pubKeyNum = CBScriptOpGetNumber(CBByteArrayGetByte(self->outputs[x]->scriptObject, self->outputs[x]->scriptObject->length - 2));
+			if (pubKeyNum > 3)
+				// Only allow upto m of 3 multisig.
+				return false;
+		}
+	}
+	return true;
+}
 uint32_t CBTransactionSerialise(CBTransaction * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
-		CBLogError("Attempting to serialise a CBTransaction with no bytes. Now that you think about it, that was a bit stupid wasn't it?");
+		CBLogError("Attempting to serialise a CBTransaction with no bytes.");
 		return 0;
 	}
 	if (! self->inputNum || ! self->outputNum) {
@@ -402,6 +444,35 @@ uint32_t CBTransactionSerialise(CBTransaction * self, bool force){
 	// Make the hash not set for this serialisation.
 	self->hashSet = false;
 	return cursor + 4;
+}
+bool CBTransactionSignInput(CBTransaction * self, CBDepObject keyPair, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+	// Get public key and signature sizes
+	uint8_t pubKeySize = CBKeyPairGetPublicKeySize(keyPair);
+	uint8_t sigSize = CBKeyPairGetSigSize(keyPair);
+	// Initilialise script data
+	self->inputs[input]->scriptObject = CBNewScriptOfSize(pubKeySize + sigSize + 3);
+	// Add push data size for signature
+	CBByteArraySetByte(self->inputs[input]->scriptObject, 0, sigSize + 1); // Can do this, no more than 74 bytes
+	// Obtain the signature hash
+	uint8_t hash[32];
+	if (!CBTransactionGetInputHashForSignature(self, prevOutSubScript, input, signType, hash)){
+		CBLogError("Unable to obtain a hash for producing an input signature.");
+		return false;
+	}
+	// Now produce the signature.
+	if (!CBKeyPairSign(keyPair, hash, CBByteArrayGetData(self->inputs[input]->scriptObject) + 1, sigSize)){
+		CBLogError("There was an error producing the signature for a transaction input.");
+		return false;
+	}
+	// Add the sign type
+	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 1, signType);
+	// Add the public key
+	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 2, pubKeySize);
+	if (!CBKeyPairGetPublicKey(keyPair, CBByteArrayGetData(self->inputs[input]->scriptObject) + sigSize + 3)){
+		CBLogError("There was an error adding a public key to an input.");
+		return false;
+	}
+	return true;
 }
 void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input){
 	self->inputNum++;

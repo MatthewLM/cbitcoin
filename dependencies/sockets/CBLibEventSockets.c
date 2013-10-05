@@ -297,8 +297,8 @@ void CBDoRun(evutil_socket_t socketID, short eventNum, void * arg){
 	CBEventLoop * loop = arg;
 	loop->userCallback(loop->userArg);
 }
-bool CBRunOnNetworkThread(uint64_t loopID, void (*callback)(void *), void * arg){
-	CBEventLoop * loop = (CBEventLoop *) loopID;
+bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg){
+	CBEventLoop * loop = loopID.ptr;
 	loop->userCallback = callback;
 	loop->userArg = arg;
 	event_active(loop->userEvent, 0, 0);
@@ -308,8 +308,6 @@ void CBCloseSocket(CBDepObject socketID){
 	evutil_closesocket((evutil_socket_t)socketID.i);
 }
 void CBExitEventLoop(CBDepObject loopID){
-	if (! loopID)
-		return;
 	CBEventLoop * loop = loopID.ptr;
 	if(event_base_loopbreak(loop->base)){
 		// Error occured. No choice but to do a dirty closure.

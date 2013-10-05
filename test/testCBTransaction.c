@@ -1358,5 +1358,6 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(output);
+	ADD STANDARDS TESTS
 	return 0;
 }

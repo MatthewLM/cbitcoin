@@ -32,6 +32,12 @@ CBScript * CBNewScriptFromString(char * string){
 	free(self);
 	return NULL;
 }
+CBScript * CBNewScriptPubKeyHash(uint8_t * pubKeyHash){
+	CBScript * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeByteArray;
+	CBInitScriptPubKeyHash(self, pubKeyHash);
+	return self;
+}
 CBScript * CBNewScriptWithData(uint8_t * data, uint32_t size){
 	return CBNewByteArrayWithData(data, size);
 }
@@ -39,7 +45,7 @@ CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size){
 	return CBNewByteArrayWithDataCopy(data, size);
 }
 
-//  Initialiser
+//  Initialisers
 
 bool CBInitScriptFromString(CBScript * self, char * string){
 	uint8_t * data = NULL;
@@ -521,6 +527,16 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 	return true;
 }
 
+void CBInitScriptPubKeyHash(CBScript * self, uint8_t * pubKeyHash){
+	CBInitByteArrayOfSize(self, 25);
+	CBByteArraySetByte(self, 0, CB_SCRIPT_OP_DUP);
+	CBByteArraySetByte(self, 1, CB_SCRIPT_OP_HASH160);
+	CBByteArraySetByte(self, 2, 20);
+	CBByteArraySetBytes(self, 3, pubKeyHash, 20);
+	CBByteArraySetByte(self, 23, CB_SCRIPT_OP_EQUALVERIFY);
+	CBByteArraySetByte(self, 24, CB_SCRIPT_OP_CHECKSIG);
+}
+
 void CBDestroyScript(void * self){
 	CBDestroyByteArray(self);
 }
@@ -541,7 +557,7 @@ CBScriptStack CBNewEmptyScriptStack(){
 	stack.length = 0;
 	return stack;
 }
-CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CBGetHashReturn (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh){
+CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, bool (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh){
 	// ??? Adding syntax parsing to the begining of the interpreter is maybe a good idea.
 	// This looks confusing but isn't too bad, trust me.
 	CBScriptStack altStack = CBNewEmptyScriptStack();
@@ -1131,8 +1147,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 						CBSubScriptRemoveSignature(subScript, &subScriptLen, signature);
 						// Complete verification
 						CBByteArray * subScriptByteArray = CBNewByteArrayWithData(subScript, subScriptLen);
-						CBGetHashReturn hashRes = getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
-						if (hashRes == CB_TX_HASH_OK)
+						if (getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash))
 							// Use minus one on the signature length because the hash type
 							res = CBEcdsaVerify(signature.data, signature.length-1, hash, publicKey.data, publicKey.length);
 						else res = false;
@@ -1190,8 +1205,7 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, CB
 							// Get sign type
 							CBSignType signType = signature->data[signature->length-1];
 							// Check signature
-							CBGetHashReturn hashRes = getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash);
-							if (hashRes == CB_TX_HASH_OK){
+							if (getHashForSig(transaction, subScriptByteArray, inputIndex, signType, hash)){
 								// Use minus one on the signature length because the hash type
 								if (CBEcdsaVerify(signature->data, signature->length-1, hash, publicKey.data, publicKey.length)){
 									sig++;
@@ -1358,12 +1372,14 @@ bool CBScriptIsP2SH(CBScript * self){
 			&& CBByteArrayGetByte(self, 1) == 0x14
 			&& CBByteArrayGetByte(self, 22) == CB_SCRIPT_OP_EQUAL);
 }
-bool CBScriptIsPushOnly(CBScript * self){
+uint16_t CBScriptIsPushOnly(CBScript * self){
 	uint32_t x = 0;
+	uint16_t num = 0;
 	for (; x < self->length;) { 
 		CBScriptOp op = CBByteArrayGetByte(self, x);
 		if (op <= CB_SCRIPT_OP_16) {
 			// Is a push operation
+			num++;
 			x++;
 			uint32_t a;
 			if (! op
@@ -1387,9 +1403,9 @@ bool CBScriptIsPushOnly(CBScript * self){
 			if (a > 520)
 				return false;
 			x += a;
-		}else return false;
+		}else return 0;
 	}
-	return x == self->length;
+	return (x == self->length) ? num : 0;
 }
 uint8_t CBScriptOpGetNumber(CBScriptOp op){
 	if (op == CB_SCRIPT_OP_0)

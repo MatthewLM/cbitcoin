@@ -142,6 +142,36 @@ void CBFreeValidator(void * self){
 
 //  Functions
 
+CBCompare CBPtrCompare(CBAssociativeArray * foo, void * ptr1, void * ptr2){
+	if (ptr1 > ptr2)
+		return CB_COMPARE_MORE_THAN;
+	if (ptr1 < ptr2)
+		return CB_COMPARE_LESS_THAN;
+	return CB_COMPARE_EQUAL;
+}
+bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block){
+	self->branches[self->mainBranch].lastValidation = self->branches[self->mainBranch].numBlocks;
+	// Update unspent outputs
+	if (!CBValidatorUpdateUnspentOutputsForward(self, block, self->mainBranch, self->branches[self->mainBranch].numBlocks, CB_ADD_BLOCK_LAST)) {
+		CBLogError("Could not update the unspent outputs when adding a block directly to the main chain.");
+		return false;
+	}
+	// Update work
+	CBBigInt work;
+	CBCalculateBlockWork(&work, block->target);
+	CBBigIntEqualsAdditionByBigInt(&work, &self->branches[self->mainBranch].work);
+	// Add to branch
+	if (!CBValidatorAddBlockToBranch(self, self->mainBranch, block, work)){
+		CBLogError("There was an error when adding a new block directly to the main branch.");
+		return false;
+	}
+	// Update storage
+	if (!CBBlockChainStorageSaveBranch(self, self->mainBranch)) {
+		CBLogError("Could not save the last validated block for the main branch when adding a new block directly to the main chain.");
+		return false;
+	}
+	return true;
+}
 bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * block, CBBigInt work){
 	// Store the block
 	if (! ((self->flags & CB_VALIDATOR_HEADERS_ONLY) ?
@@ -261,24 +291,24 @@ void * CBValidatorBlockProcessThread(void * validator){
 		CBBlockValidationResult res = CBValidatorProcessBlock(self, block);
 		switch (res) {
 			case CB_BLOCK_VALIDATION_BAD:
-				if (!self->callbacks.invalidBlock(self->callbacks.callbackObject, block)) {
+				if (!self->callbacks.invalidBlock(self->callbackQueue[self->queueFront], block)) {
 					CBLogError("invalidBlock returned false");
-					self->callbacks.onValidatorError(self->callbacks.callbackObject);
+					self->callbacks.onValidatorError(self->callbackQueue[self->queueFront]);
 				}
 				break;
 			case CB_BLOCK_VALIDATION_ERR:
-				self->callbacks.onValidatorError(self->callbacks.callbackObject);
+				self->callbacks.onValidatorError(self->callbackQueue[self->queueFront]);
 				break;
 			case CB_BLOCK_VALIDATION_NO_NEW:
-				if (!self->callbacks.noNewBranches(self->callbacks.callbackObject, block)) {
+				if (!self->callbacks.noNewBranches(self->callbackQueue[self->queueFront], block)) {
 					CBLogError("noNewBranches returned false");
-					self->callbacks.onValidatorError(self->callbacks.callbackObject);
+					self->callbacks.onValidatorError(self->callbackQueue[self->queueFront]);
 				}
 				break;
 			default:
-				if (!self->callbacks.finish(self->callbacks.callbackObject, block)) {
+				if (!self->callbacks.finish(self->callbackQueue[self->queueFront], block)) {
 					CBLogError("finish returned false");
-					self->callbacks.onValidatorError(self->callbacks.callbackObject);
+					self->callbacks.onValidatorError(self->callbackQueue[self->queueFront]);
 				}
 				break;
 		}
@@ -299,6 +329,9 @@ CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, u
 	uint32_t sigOps = 0;
 	// Do validation for transactions.
 	for (uint32_t x = 0; x < block->transactionNum; x++) {
+		// Skip transaction validation if validated already
+		if (self->callbacks.alreadyValidated(self->callbackQueue[self->queueFront], block->transactions[x]))
+			continue;
 		// Check for duplicate transactions which have unspent outputs, except for two blocks (See BIP30 https://en.bitcoin.it/wiki/BIP_0030 and https://github.com/bitcoin/bitcoin/blob/master/src/main.cpp#L1568)
 		if (memcmp(CBBlockGetHash(block), (uint8_t []){0xec, 0xca, 0xe0, 0x00, 0xe3, 0xc8, 0xe4, 0xe0, 0x93, 0x93, 0x63, 0x60, 0x43, 0x1f, 0x3b, 0x76, 0x03, 0xc5, 0x63, 0xc1, 0xff, 0x61, 0x81, 0x39, 0x0a, 0x4d, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00}, 32)
 			&& memcmp(CBBlockGetHash(block), (uint8_t []){0x21, 0xd7, 0x7c, 0xcb, 0x4c, 0x08, 0x38, 0x6a, 0x04, 0xac, 0x01, 0x96, 0xae, 0x10, 0xf6, 0xa1, 0xd2, 0xc2, 0xa3, 0x77, 0x55, 0x8c, 0xa1, 0x90, 0xf1, 0x43, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00}, 32)) {
@@ -373,7 +406,7 @@ CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self){
 		CBByteArray * hash = CBNewByteArrayOfSize(32);
 		if (! CBBlockChainStorageGetBlockHash(self, branch, blockIndex, CBByteArrayGetData(hash))) {
 			CBLogError("Could not get a block hash from the storage for a chain descriptor.");
-			return false;
+			return NULL;
 		}
 		CBChainDescriptorTakeHash(chainDesc, hash);
 		// If this is the genesis block, break
@@ -477,67 +510,48 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 		if (exists == CB_FALSE)
 			return CB_BLOCK_VALIDATION_BAD;
 		// Exists so therefore load the unspent output
-		bool coinbase;
-		uint32_t outputHeight;
-		prevOut = CBBlockChainStorageLoadUnspentOutput(self, CBByteArrayGetData(prevOutRef.hash), prevOutRef.index, &coinbase, &outputHeight);
-		if (! prevOut) {
-			CBLogError("Could not load an unspent output.");
+		CBErrBool ok = CBValidatorLoadUnspentOutputAndCheckMaturity(self, prevOutRef, blockHeight, &prevOut);
+		if (ok == CB_ERROR) {
+			CBLogError("Could not load an unspent output and check maturity.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
-		// Check coinbase maturity
-		if (coinbase && blockHeight - outputHeight < CB_COINBASE_MATURITY)
+		if (ok == CB_FALSE)
 			return CB_BLOCK_VALIDATION_BAD;
 	}
 	// We have sucessfully received an output for this input. Verify the input script for the output script.
-	CBScriptStack stack = CBNewEmptyScriptStack();
-	// Execute the input script.
-	CBScriptExecuteReturn res = CBScriptExecute(block->transactions[transactionIndex]->inputs[inputIndex]->scriptObject, &stack, CBTransactionGetInputHashForSignature, block->transactions[transactionIndex], inputIndex, false);
-	// Check is script is invalid, but for input scripts, do not care if false.
-	if (res == CB_SCRIPT_INVALID){
-		CBFreeScriptStack(stack);
+	if (CBValidatorVerifyScripts(self, block->transactions[transactionIndex], inputIndex, prevOut, sigOps, false) == CB_INPUT_BAD) {
 		CBReleaseObject(prevOut);
 		return CB_BLOCK_VALIDATION_BAD;
 	}
-	// Verify P2SH inputs.
-	if (CBScriptIsP2SH(prevOut->scriptObject)){
-		// For P2SH inputs, there must be no script operations except for push operations.
-		if (! CBScriptIsPushOnly(block->transactions[transactionIndex]->inputs[inputIndex]->scriptObject)
-			// We must have data in the stack.
-			|| ! stack.length){
-			CBFreeScriptStack(stack);
-			CBReleaseObject(prevOut);
-			return CB_BLOCK_VALIDATION_BAD;
-		}
-		// Since the output is a P2SH we include the serialised script in the signature operations
-		CBScript * p2shScript = CBNewScriptWithDataCopy(stack.elements[stack.length - 1].data, stack.elements[stack.length - 1].length);
-		*sigOps += CBScriptGetSigOpCount(p2shScript, true);
-		if (*sigOps > CB_MAX_SIG_OPS){
-			CBFreeScriptStack(stack);
-			CBReleaseObject(prevOut);
-			return CB_BLOCK_VALIDATION_BAD;
-		}
-		CBReleaseObject(p2shScript);
-	}
-	// Execute the output script.
-	res = CBScriptExecute(prevOut->scriptObject, &stack, CBTransactionGetInputHashForSignature, block->transactions[transactionIndex], inputIndex, true);
-	// Finished with the stack.
-	CBFreeScriptStack(stack);
 	// Increment the value with the input value then be done with the output
 	*value += prevOut->value;
 	CBReleaseObject(prevOut);
-	// Check the result of the output script
-	if (res != CB_SCRIPT_TRUE)
-		return CB_BLOCK_VALIDATION_BAD;
 	return CB_BLOCK_VALIDATION_OK;
+}
+CBErrBool CBValidatorLoadUnspentOutputAndCheckMaturity(CBValidator * self, CBPrevOut prevOutRef, uint32_t blockHeight, CBTransactionOutput ** output){
+	bool coinbase;
+	uint32_t outputHeight;
+	*output = CBBlockChainStorageLoadUnspentOutput(self, CBByteArrayGetData(prevOutRef.hash), prevOutRef.index, &coinbase, &outputHeight);
+	if (! *output) {
+		CBLogError("Could not load an unspent output.");
+		return CB_ERROR;
+	}
+	// Check coinbase maturity
+	return !coinbase || blockHeight - outputHeight >= CB_COINBASE_MATURITY;
 }
 CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block){
 	uint8_t prevBranch;
 	uint32_t prevBlockIndex;
 	uint32_t prevBlockTarget;
+	// Call start
+	if (!self->callbacks.start(self->callbackQueue[self->queueFront])) {
+		CBLogError("start returned false");
+		return CB_BLOCK_VALIDATION_ERR;
+	}
 	// Determine what type of block this is.
 	if (CBBlockChainStorageBlockExists(self, CBByteArrayGetData(block->prevBlockHash))) {
 		// Has a block in the block hash index. Get branch and index.
-		if (!CBBlockChainStorageGetBlockLocation(self, CBByteArrayGetData(block->prevBlockHash), &prevBranch, &prevBlockIndex)) {
+		if (CBBlockChainStorageGetBlockLocation(self, CBByteArrayGetData(block->prevBlockHash), &prevBranch, &prevBlockIndex) != CB_TRUE) {
 			CBLogError("Could not get the location of a previous block.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
@@ -557,10 +571,13 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 	}
 	// Not an orphan. See if this is an extention or new branch.
 	uint8_t branch;
-	if (prevBlockIndex == self->branches[prevBranch].numBlocks - 1)
+	if (prevBlockIndex == self->branches[prevBranch].numBlocks - 1){
+		// Call workingOnBranch
+		if (! self->callbacks.workingOnBranch(self->callbackQueue[self->queueFront], prevBranch))
+			return CB_BLOCK_VALIDATION_BAD;
 		// Extension
 		branch = prevBranch;
-	else{
+	}else{
 		// New branch
 		if (self->numBranches == CB_MAX_BRANCH_CACHE) {
 			// ??? SINCE BRANCHES ARE TRIMMED OR DELETED THERE ARE SECURITY IMPLICATIONS: A peer could prevent other branches having a chance by creating many branches when the node is not up-to-date. To protect against this potential attack peers should only be allowed to provide one branch at a time and before accepting new branches from peers there should be a completed branch which is not the main branch.
@@ -574,9 +591,13 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 					earliestBranch = x;
 				}
 			}
+			// ??? Add check if only the peer we got this block from was previously working on the earliest branch
 			if (self->branches[earliestBranch].working || earliestBranch == self->mainBranch)
 				// Cannot overwrite branch
 				return CB_BLOCK_VALIDATION_NO_NEW;
+			// Call workingOnBranch
+			if (! self->callbacks.workingOnBranch(self->callbackQueue[self->queueFront], earliestBranch))
+				return CB_BLOCK_VALIDATION_BAD;
 			// Check to see the highest block dependency for other branches.
 			uint32_t highestDependency = 0;
 			uint8_t mergeBranch = 255;
@@ -637,6 +658,11 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 						}
 					}
 				}
+				// Call the delete branch callback
+				if (!self->callbacks.deleteBranchCallback(self->callbackQueue[self->queueFront], earliestBranch)){
+					CBLogError("deleteBranchCallback returned false");
+					return CB_BLOCK_VALIDATION_ERR;
+				}
 			}
 			// Overwrite earliest branch
 			branch = earliestBranch;
@@ -687,7 +713,7 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 			return CB_BLOCK_VALIDATION_ERR;
 		}
 		// Call newBranchCallback
-		if (!self->callbacks.newBranchCallback(self->callbacks.callbackObject, branch, self->branches[branch].startHeight)){
+		if (!self->callbacks.newBranchCallback(self->callbackQueue[self->queueFront], branch, prevBranch, self->branches[branch].startHeight)){
 			CBLogError("newBranchCallback returned false.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
@@ -892,9 +918,9 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 							atLeastOne = true;
 						}
 					}
-					// Call newValidBlock
-					if (!self->callbacks.newValidBlock(self->callbacks.callbackObject, tempBranch, tempBlock, self->branches[tempBranch].startHeight + tempBlockIndex, false)) {
-						CBLogError("newValidBlock returned false.");
+					// Update the unspent output indicies.
+					if (!CBValidatorUpdateUnspentOutputsForward(self, tempBlock, tempBranch, self->branches[tempBranch].lastValidation, CB_ADD_BLOCK_NEW)) {
+						CBLogError("Could not update the unspent outputs when validating a block during reorganisation.");
 						return CB_BLOCK_VALIDATION_ERR;
 					}
 					// This block passed validation. Move onto next block.
@@ -934,9 +960,8 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 			return res;
 		self->branches[branch].lastValidation = self->branches[branch].numBlocks;
 		// Update the unspent output indicies.
-		if (!CBValidatorUpdateUnspentOutputsForward(self, block, branch, self->branches[branch].lastValidation)) {
+		if (!CBValidatorUpdateUnspentOutputsForward(self, block, branch, self->branches[branch].lastValidation, CB_ADD_BLOCK_LAST)) {
 			CBLogError("Could not update the unspent outputs when adding a block to the main chain.");
-			CBBlockChainStorageRevert(self->storage);
 			return CB_BLOCK_VALIDATION_ERR;
 		}
 	}
@@ -958,20 +983,17 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 			return CB_BLOCK_VALIDATION_ERR;
 		}
 	}
-	// Call newValidBlock for the new block-chain head block.
-	if (!self->callbacks.newValidBlock(self->callbacks.callbackObject, branch, block, self->branches[branch].startHeight + self->branches[branch].numBlocks - 1, true)) {
-		CBLogError("newValidBlock for the head block returned false.");
-		return CB_BLOCK_VALIDATION_ERR;
-	}
 	return CB_BLOCK_VALIDATION_OK;
 }
-bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block){
+bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackObj){
 	// Schedule the block for complete processing.
 	CBRetainObject(block);
 	CBMutexLock(self->blockQueueMutex);
 	if (self->queueSize == CB_MAX_BLOCK_QUEUE)
 		return false;
-	self->blockQueue[(self->queueFront + self->queueSize) % CB_MAX_BLOCK_QUEUE] = block;
+	uint8_t index = (self->queueFront + self->queueSize) % CB_MAX_BLOCK_QUEUE;
+	self->blockQueue[index] = block;
+	self->callbackQueue[index] = callbackObj;
 	self->queueSize++;
 	if (self->queueSize == 1)
 		// We have just added a block to the queue when there was not one before so wake-up the processing thread.
@@ -990,6 +1012,11 @@ bool CBValidatorSaveLastValidatedBlocks(CBValidator * self, uint8_t branches){
 	return true;
 }
 bool CBValidatorUpdateUnspentOutputsBackward(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex){
+	// Call rmBlock
+	if (!self->callbacks.rmBlock(self->callbackQueue[self->queueFront], branch, block)) {
+		CBLogError("rmBlock returned false");
+		return false;
+	}
 	// Update unspent outputs... Go through transactions, adding the prevOut references and removing the outputs for one transaction at a time.
 	uint8_t * txReadData = NULL;
 	uint32_t txReadDataSize = 0;
@@ -1064,7 +1091,12 @@ bool CBValidatorUpdateUnspentOutputsBackward(CBValidator * self, CBBlock * block
 	free(txReadData);
 	return true;
 }
-bool CBValidatorUpdateUnspentOutputsForward(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex){
+bool CBValidatorUpdateUnspentOutputsForward(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType){
+	// Call addBlock
+	if (!self->callbacks.addBlock(self->callbackQueue[self->queueFront], branch, block, self->branches[branch].startHeight + blockIndex, addType)) {
+		CBLogError("addBlock returned false");
+		return false;
+	}
 	// Update unspent outputs... Go through transactions, removing the prevOut references and adding the outputs for one transaction at a time.
 	uint32_t cursor = 80; // Cursor to find output positions.
 	uint8_t byte = CBByteArrayGetByte(CBGetMessage(block)->bytes, 80);
@@ -1108,8 +1140,7 @@ bool CBValidatorUpdateUnspentOutputsForward(CBValidator * self, CBBlock * block,
 			cursor += CBTransactionOutputCalculateLength(block->transactions[x]->outputs[y]);
 		}
 		// Add transaction to transaction index
-		if (! CBBlockChainStorageSaveTransactionRef(self, txHash, branch, blockIndex, outputsPos, cursor - outputsPos, 
-													  x == 0, block->transactions[x]->outputNum)) {
+		if (! CBBlockChainStorageSaveTransactionRef(self, txHash, branch, blockIndex, outputsPos, cursor - outputsPos, x == 0, block->transactions[x]->outputNum)) {
 			CBLogError("Could not write transaction reference to transaction index.");
 			return false;
 		}
@@ -1134,7 +1165,7 @@ bool CBValidatorUpdateUnspentOutputsAndLoad(CBValidator * self, uint8_t branch, 
 	// Update indices going backwards
 	bool res;
 	if (forward)
-		res = CBValidatorUpdateUnspentOutputsForward(self, block, branch, blockIndex);
+		res = CBValidatorUpdateUnspentOutputsForward(self, block, branch, blockIndex, CB_ADD_BLOCK_PREV);
 	else
 		res = CBValidatorUpdateUnspentOutputsBackward(self, block, branch, blockIndex);
 	if (! res)
@@ -1142,4 +1173,43 @@ bool CBValidatorUpdateUnspentOutputsAndLoad(CBValidator * self, uint8_t branch, 
 	// Free the block
 	CBReleaseObject(block);
 	return res;
+}
+bool CBValidatorVerifyScripts(CBValidator * self, CBTransaction * tx, uint32_t inputIndex, CBTransactionOutput * output, uint32_t * sigOps, bool checkStandard){
+	CBScript * p2sh = NULL;
+	// Vrify scripts, check input for standard and count p2sh sigops.
+	CBScriptStack stack = CBNewEmptyScriptStack();
+	// Execute the input script.
+	CBScriptExecuteReturn scriptRes = CBScriptExecute(tx->inputs[inputIndex]->scriptObject, &stack, CBTransactionGetInputHashForSignature, tx, inputIndex, false);
+	// Check is script is invalid, but for input scripts, do not care if false.
+	if (scriptRes == CB_SCRIPT_INVALID) {
+		CBFreeScriptStack(stack);
+		return CB_INPUT_BAD;
+	}
+	// Verify P2SH inputs.
+	if (CBScriptIsP2SH(output->scriptObject)){
+		// For P2SH inputs, there must be no script operations except for push operations, and there should be at least one push operation.
+		if (CBScriptIsPushOnly(tx->inputs[inputIndex]->scriptObject) == 0){
+			CBFreeScriptStack(stack);
+			return CB_INPUT_BAD;
+		}
+		// Since the output is a P2SH we include the serialised script in the signature operations
+		p2sh = CBNewScriptWithDataCopy(stack.elements[stack.length - 1].data, stack.elements[stack.length - 1].length);
+		*sigOps += CBScriptGetSigOpCount(p2sh, true);
+		if (*sigOps > CB_MAX_SIG_OPS){
+			CBFreeScriptStack(stack);
+			return CB_INPUT_BAD;
+		}
+	}
+	// Check for standard input
+	if (checkStandard && CBTransactionInputIsStandard(tx->inputs[inputIndex], output, p2sh)) {
+		CBFreeScriptStack(stack);
+		return CB_INPUT_NON_STD;
+	}
+	if (p2sh)
+		CBReleaseObject(p2sh);
+	// Execute the output script.
+	scriptRes = CBScriptExecute(output->scriptObject, &stack, CBTransactionGetInputHashForSignature, tx, inputIndex, true);
+	// Finished with the stack.
+	CBFreeScriptStack(stack);
+	return (scriptRes == CB_SCRIPT_TRUE) ? CB_INPUT_OK : CB_INPUT_BAD;
 }

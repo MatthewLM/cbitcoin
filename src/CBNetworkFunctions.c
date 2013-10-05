@@ -43,7 +43,7 @@ CBIPType CBGetIPType(uint8_t * IP){
 			// Zero network
 			return CB_IP_INVALID;
 		if (IP[12] == 0xFF && IP[13] == 0xFF && IP[14] == 0xFF && IP[15] == 0xFF)
-			// Broadcast address
+			//  address
 			return CB_IP_INVALID;
 		return CB_IP_IPv4;
 	}

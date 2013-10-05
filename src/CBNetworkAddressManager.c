@@ -114,15 +114,11 @@ void CBNetworkAddressManagerAdjustTime(CBNetworkAddressManager * self){
 			self->networkTimeOffset = 0;
 			// Check to see if any peers are within 5 minutes of the system time and do not have the same time, else give a bad time error.
 			bool found = false;
-			if (CBAssociativeArrayGetFirst(&self->peers, &it)) for (;;){
-				CBPeer * peer = it.node->elements[it.index];
+			CBAssociativeArrayForEach(CBPeer * peer, &self->peers)
 				if (peer->timeOffset < 300 && peer->timeOffset){
 					found = true;
 					break;
 				}
-				if (CBAssociativeArrayIterate(&self->peers, &it))
-					break;
-			}
 			if (! found)
 				self->onBadTime(self->callbackHandler);
 		}else

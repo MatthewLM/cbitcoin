@@ -24,8 +24,9 @@
 
 #include "CBNetworkAddress.h"
 #include "CBVersion.h"
-#include "CBInventoryBroadcast.h"
+#include "CBInventory.h"
 #include "CBAssociativeArray.h"
+#include "CBValidator.h"
 
 // Constants and Macros
 
@@ -33,7 +34,17 @@
 #define CB_NODE_MAX_ADDRESSES_24_HOURS 100 // Maximum number of addresses accepted by a peer in 24 hours. ??? Not implemented
 #define CB_SEND_QUEUE_MAX_SIZE 10 // Sent no more than 10 messages at once to a peer.
 #define CB_PEER_NO_WORKING 0xFF // When not working on any branch.
+#define CB_END_REQ_BLOCKS 0xFFFF
 #define CBGetPeer(x) ((CBPeer *)x)
+
+typedef enum{
+	CB_HANDSHAKE_NONE = 0,
+	CB_HANDSHAKE_GOT_VERSION = 1,
+	CB_HANDSHAKE_SENT_VERSION = 2,
+	CB_HANDSHAKE_GOT_ACK = 4,
+	CB_HANDSHAKE_SENT_ACK = 8,
+	CB_HANDSHAKE_DONE = 15
+}CBHandshakeStatus;
 
 /**
  @brief Stores a message to send in the queue with the callback to call when the message is sent.
@@ -42,6 +53,11 @@ typedef struct{
 	CBMessage * message;
 	void (*callback)(void *, void *);
 } CBSendQueueItem;
+
+typedef struct{
+	uint8_t reqBlock[32];
+	uint16_t next;
+} CBReqBlock;
 
 /**
  @brief Structure for CBPeer objects. @see CBPeer.h
@@ -60,15 +76,13 @@ typedef struct{
 	CBDepObject receiveEvent; /**< Event for receving data from this peer */
 	CBDepObject sendEvent; /**< Event for sending data from this peer */
 	CBDepObject connectEvent; /**< Event for connecting to the peer. */
-	bool versionSent; /**< True if the version was sent to this peer */
+	CBHandshakeStatus handshakeStatus;
 	CBVersion * versionMessage; /**< The version message from this peer. */
-	bool versionAck; /**< This peer acknowledged the version message. */
 	uint8_t * headerBuffer; /**< Used by a CBNetworkCommunicator to read the message header before processing. */
 	uint32_t messageReceived; /**< Used by a CBNetworkCommunicator to store the message length received. When the header is received 24 bytes are taken off. */
-	uint16_t acceptedTypes; /**< Set messages that will be accepted on receiving. When a peer tries to send another message, drop the peer. Starts empty */
 	bool receivedHeader; /**< True if the receiving message's header has been received. */
 	int64_t timeOffset; /**< The offset from the system time this peer has */
-	uint64_t timeBroadcast; /**< Time of the last own address brodcast. */
+	uint64_t time; /**< Time of the last own address brodcast. */
 	bool connectionWorking; /**< True when the connection has been successful and the peer has ben added to the CBNetworkAddressManager. */
 	CBMessageType typesExpected[CB_MAX_RESPONSES_EXPECTED]; /**< List of expected responses */
 	uint8_t typesExpectedNum; /**< Number of expected responses */
@@ -80,11 +94,22 @@ typedef struct{
 	uint64_t latencyTimerStart; /**< Used to measure latency (in millisconds). */
 	uint64_t downloadTimerStart; /**< Used to measure download time (in millisconds). */
 	CBMessageType latencyExpected; /**< Message expected for the latency measurement */
-	uint32_t advertisedData; /**< The number of inventory items we have advertised but not satisfied with the actual data yet. */
-	CBInventoryBroadcast * requestedData; /**< Data which is requested by this node */
+	CBInventory * requestedData; /**< Data which is requested by this node */
 	uint16_t sendDataIndex; /**< The index of the inventory broadcast to send data to a peer. */
-	CBAssociativeArray expectedObjects; /**< 20 bytes of the hashes for the objects we expect the peer to provide us with and nothing else (ie. After get data requests). */
+	CBAssociativeArray expectedTxs; /**< 20 bytes of the hashes for the tx we expect the peer to provide us with and nothing else (ie. After get data requests). */
+	bool expectHeaders; /**< True if we expect headers from the peer. */
+	bool expectBlock; /**< True if we expect blocks from the peer */
+	bool downloading; /**< True if currently downloading blocks from the peer. */
+	bool upload; /**< True if is uploading or had uploaded blocks to the peer. */
+	bool upToDate; /**< True if up to date with peer. */
+	uint8_t expectedBlock[20]; /**< 20 bytes of the hash of the block we expect from the peer. */
 	uint8_t branchWorkingOn; /**< The branch we are receiving from this peer */
+	bool allowNewBranch; /**< True when the peer can change branches that it is giving us. ie. After we have downloaded all the blocks from an inventory they gave us, but the inventory should have blocks all on one branch. */
+	CBReqBlock reqBlocks[500]; /**< Blocks we require from the node, with linked elements. */
+	uint16_t reqBlockStart; /**< The index of the start of the required blocks. */
+	uint16_t reqBlockCursor; /**< The index of the next block to ask for. */
+	void * nodeObj; /**< The node object. */
+	CBDepObject invResponseTimer;
 } CBPeer;
 
 /**

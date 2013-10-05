@@ -53,12 +53,6 @@ void CBCanSend(evutil_socket_t socketID, short eventNum, void * arg);
 void CBCanReceive(evutil_socket_t socketID, short eventNum, void * arg);
 void CBFireTimer(evutil_socket_t foo, short bar, void * timer);
 void CBDoRun(evutil_socket_t socketID, short eventNum, void * arg);
-/**
- @brief Runs a callback on the network thread.
- @param loopID The loop ID
- @returns true if sucessful, false otherwise.
- */
-bool CBRunOnNetworkThread(uint64_t loopID, void (*callback)(void *), void * arg);
 
 typedef struct{
 	struct event_base * base;

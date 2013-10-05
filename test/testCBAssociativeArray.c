@@ -731,6 +731,18 @@ int main(){
 			}
 		}
 	}
+	// Test for each macro
+	uint16_t x = 0;
+	CBAssociativeArrayForEach(uint8_t * el, &array){
+		if (el[1] != ((x/3) >> 8) || el[2] != (uint8_t)(x/3)) {
+			printf("FOR EACH FAIL %u\n", x);
+			return 1;
+		}
+		// Test break
+		if (x == 333)
+			break;
+		x+=3;
+	}
 	CBFreeAssociativeArray(&array);
 	return 0;
 }

@@ -95,6 +95,7 @@
 #pragma weak CBBlockChainStorageSaveOrphanHeader
 #pragma weak CBBlockChainStorageSaveTransactionRef
 #pragma weak CBBlockChainStorageSaveUnspentOutput
+#pragma weak CBBlockChainStorageTransactionExists
 #pragma weak CBBlockChainStorageUnspentOutputExists
 
 // Weak linking for address storage functions
@@ -121,6 +122,11 @@ typedef union{
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
+bool CBNewKeyPair(CBDepObject * keyPair);
+uint8_t CBKeyPairGetPublicKeySize(CBDepObject keyPair);
+uint8_t CBKeyPairGetSigSize(CBDepObject keyPair);
+bool CBKeyPairGetPublicKey(CBDepObject keyPair, uint8_t * pubKey);
+bool CBKeyPairSign(CBDepObject keyPair, uint8_t * hash, uint8_t * signature, uint8_t sigSize);
 /**
  @brief SHA-256 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -159,8 +165,6 @@ bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const ui
 
 typedef enum{
 	CB_TIMEOUT_CONNECT,
-	CB_TIMEOUT_RESPONSE,
-	CB_TIMEOUT_NO_DATA,
 	CB_TIMEOUT_SEND,
 	CB_TIMEOUT_RECEIVE
 } CBTimeOutType;
@@ -223,6 +227,12 @@ bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID);
  @returns true on success, false on failure.
  */
 bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator);
+/**
+ @brief Runs a callback on the event loop.
+ @param loopID The loop ID
+ @returns true if sucessful, false otherwise.
+ */
+bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg);
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
  @param eventID The event object to set.
@@ -458,9 +468,9 @@ void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint3
  @param blockHash The 20 bytes of the hash of the block
  @param branch Will be set to the branch of the block.
  @param index Will be set to the index of the block.
- @returns true on success or false otherwise.
+ @returns CB_TRUE if found, CB_FALSE if not found and CB_ERROR on an error.
  */
-bool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index);
+CBErrBool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index);
 /**
  @brief Obtains the timestamp for a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -633,6 +643,13 @@ bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, u
  */
 bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, uint32_t position, uint32_t length, bool increment);
 /**
+ @brief Determines if a transaction exists in the block chain.
+ @param validator A CBValidator object. The storage object can be found within this.
+ @param txHash The transaction's hash.
+ @returns CB_TRUE if it exists, CB_FALSE if it doesn't or CB_ERROR on error.
+ */
+CBErrBool CBBlockChainStorageTransactionExists(void * validator, uint8_t * txHash);
+/**
  @brief Determines if an unspent output exists.
  @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash of this output.
@@ -693,16 +710,29 @@ bool CBAddressStorageSaveAddress(CBDepObject self, void * address);
 
 // Structures
 
+
+typedef struct{
+	uint8_t addrHash[20];
+	int64_t amount;
+} CBAccountTransactionDetails;
+
 /**
  @brief Details for a transaction on a branch for an account.
  */
 typedef struct{
+	CBAccountTransactionDetails accountTxDetails;
 	uint8_t txHash[32];
-	uint8_t addrHash[20];
-	int64_t amount;
 	uint64_t timestamp;
 	uint32_t height;
 } CBTransactionDetails;
+
+typedef struct CBTransactionAccountDetailList CBTransactionAccountDetailList;
+
+struct CBTransactionAccountDetailList{
+	CBAccountTransactionDetails accountTxDetails;
+	uint64_t accountID;
+	CBTransactionAccountDetailList * next;
+};
 
 /**
  @brief Details for an unspent output on a branch for an account.
@@ -713,6 +743,10 @@ typedef struct{
 	uint8_t watchedHash[20];
 	uint64_t value;
 } CBUnspentOutputDetails;
+
+// Function implemented by the core
+
+void CBFreeTransactionAccountDetailList(CBTransactionAccountDetailList * list);
 
 // Functions
 
@@ -789,9 +823,10 @@ bool CBAccounterDeleteBranch(CBDepObject self, uint8_t branch);
  @param blockHeight The height the transaction was found. Make this zero if the branch is CB_NO_BRANCH
  @param time The timestamp for the transaction.
  @param branch The branch the transaction was found on.
- @returns true on success and false on failure.
+ @param details A linked list of transaction details for various accounts.
+ @returns CB_TRUE if this transaction belongs to an account, CB_FALSE if it doesn't and CB_ERROR on failure.
  */
-bool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t blockHeight, uint64_t time, uint8_t branch);
+CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t blockHeight, uint64_t time, uint8_t branch, CBTransactionAccountDetailList ** details);
 /**
  @brief Gets the balance for an account for a branch.
  @param self The accounter object.
@@ -815,6 +850,8 @@ CBErrBool CBAccounterGetNextTransaction(CBDepObject cursor, CBTransactionDetails
  @returns CB_TRUE if there was a next unspent output, CB_FALSE if there wasn't or CB_ERROR on an error.
  */
 CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursor, CBUnspentOutputDetails * details);
+bool CBAccounterGetTransactionTime(CBDepObject self, uint8_t * txHash, uint64_t * time);
+CBErrBool CBAccounterIsOurs(CBDepObject self, uint8_t * txHash);
 /**
  @brief Processes a transaction being lost for all of the accounts.
  @param self The accounter object.
@@ -837,10 +874,18 @@ uint64_t CBAccounterNewAccount(CBDepObject self);
  @returns true on success and false on failure. 
  */
 bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, uint32_t blockHeight);
+CBErrBool CBAccounterTransactionExists(CBDepObject self, uint8_t * hash);
 
 // NODE STORAGE DEPENDENCIES
 
-bool CBNodeStorageGetStartScanningTime(CBDepObject database, uint32_t * time);
+bool CBNewNodeStorage(CBDepObject * storage, CBDepObject database);
+void CBFreeNodeStorage(CBDepObject storage);
+bool CBNodeStorageGetStartScanningTime(CBDepObject storage, uint64_t * startTime);
+bool CBNodeStorageLoadUnconfTxs(void * node);
+bool CBNodeStorageRemoveOurTx(CBDepObject storage, void * tx);
+bool CBNodeStorageAddOurTx(CBDepObject storage, void * tx);
+bool CBNodeStorageRemoveOtherTx(CBDepObject storage, void * tx);
+bool CBNodeStorageAddOtherTx(CBDepObject storage, void * tx);
 
 // THREADING DEPENDENCIES
 

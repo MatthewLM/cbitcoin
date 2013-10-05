@@ -48,6 +48,7 @@ typedef enum{
 typedef enum{
 	CB_TX_DETAILS_BRANCH_INSTANCES = 0, /**< The number of branches owning this transaction or duplicates. */
 	CB_TX_DETAILS_HASH = 1, /**< The transaction hash. */
+	CB_TX_DETAILS_TIMESTAMP = 33 /**< The timestamp of the transaction. Duplicate transactions will have the same timestamp, but so what? */
 } CBTransactionDetailsOffsets;
 
 /**
@@ -80,7 +81,6 @@ typedef enum{
  */
 typedef enum{
 	CB_BRANCH_TX_DETAILS_HEIGHT = 0,
-	CB_BRANCH_TX_DETAILS_TIMESTAMP = 4,
 } CBBranchTxDetailsDataOffsets;
 
 /**
@@ -183,7 +183,6 @@ typedef struct{
 	uint64_t nextTxID;
 	uint64_t nextOutputRefID;
 	CBDatabaseIndex * txDetails;
-	CBDatabaseIndex * unconfTxTimestamps; /**< Timestamps for unconfirmed transactions. */
 	CBDatabaseIndex * accountUnconfBalance; /**< Contains the total of all the values of unconfirmed transactions. */
 	CBDatabaseIndex * outputDetails; /**< Contains the value, txHash, index and hash identifier of outputs. */
 	CBDatabaseIndex * accountTxDetails; /**< Contains the value of the transction for the account and the in/out address. */

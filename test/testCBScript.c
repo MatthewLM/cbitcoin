@@ -60,7 +60,7 @@ int main(){
 				return 1;
 			}else{
 				CBScriptStack stack = CBNewEmptyScriptStack();
-				bool res = CBScriptExecute(script, &stack, NULL, NULL, 0, true);
+				CBScriptExecuteReturn res = CBScriptExecute(script, &stack, NULL, NULL, 0, true);
 				CBFreeScriptStack(stack);
 				char c = fgetc(f);
 				if ((c == '1' && res != CB_SCRIPT_TRUE)
@@ -135,13 +135,13 @@ int main(){
 	CBReleaseObject(outputScript);
 	// Test CBScriptIsPushOnly
 	script = CBNewScriptWithDataCopy((uint8_t [20]){0x02, 0x04, 0x73, CB_SCRIPT_OP_PUSHDATA1, 0x03, 0xA2, 0x70, 0x73, CB_SCRIPT_OP_PUSHDATA2, 0x01, 0x00, 0x5A, CB_SCRIPT_OP_PUSHDATA4, 0x03, 0x0, 0x0, 0x0, 0x5F, 0x70, 0x74}, 20);
-	if (! CBScriptIsPushOnly(script)) {
+	if (CBScriptIsPushOnly(script) != 4) {
 		printf("IS PUSH PUSH FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);
 	script = CBNewScriptWithDataCopy((uint8_t [13]){0x02, 0x04, 0x73, CB_SCRIPT_OP_PUSHDATA1, 0x03, 0xA2, 0x70, 0x73, CB_SCRIPT_OP_PUSHDATA2, 0x01, 0x00, 0x5A, CB_SCRIPT_OP_DEPTH}, 13);
-	if (CBScriptIsPushOnly(script)) {
+	if (CBScriptIsPushOnly(script) != 0) {
 		printf("IS NOT PUSH FAIL\n");
 		return 1;
 	}

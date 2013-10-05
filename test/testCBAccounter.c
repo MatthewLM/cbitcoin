@@ -33,10 +33,9 @@ uint64_t CBGetMilliseconds(void){
 }
 
 int main(){
+	// ??? For all tests, should change return statuses to EXIT_SUCCESS and EXIT_FAILURE
 	remove("./cbitcoin/log.dat");
 	remove("./cbitcoin/del.dat");
-	remove("./cbitcoin/idx_6_0.dat");
-	remove("./cbitcoin/idx_7_0.dat");
 	remove("./cbitcoin/idx_8_0.dat");
 	remove("./cbitcoin/idx_9_0.dat");
 	remove("./cbitcoin/idx_10_0.dat");
@@ -49,6 +48,8 @@ int main(){
 	remove("./cbitcoin/idx_17_0.dat");
 	remove("./cbitcoin/idx_18_0.dat");
 	remove("./cbitcoin/idx_19_0.dat");
+	remove("./cbitcoin/idx_20_0.dat");
+	remove("./cbitcoin/idx_21_0.dat");
 	remove("./cbitcoin/val_0.dat");
 	CBDepObject storage;
 	CBDepObject database;
@@ -90,10 +91,30 @@ int main(){
 		return 1;
 	}
 	// Find the transaction branchless
-	if (! CBAccounterFoundTransaction(storage, tx1, 0, 1000, CB_NO_BRANCH)) {
+	CBTransactionAccountDetailList * details;
+	if (! CBAccounterFoundTransaction(storage, tx1, 0, 1000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX1 ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash1, 20)) {
+		printf("TX1 ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 400) {
+		printf("TX1 ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX1 DIRECT END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check obtaining the transaction details
 	CBTransactionDetails txDetails;
 	CBDepObject cursor;
@@ -105,7 +126,7 @@ int main(){
 		printf("GET FIRST TX FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FOUND TX ADDR HASH FAIL\n");
 		return 1;
 	}
@@ -113,7 +134,7 @@ int main(){
 		printf("FOUND TX HEIGHT FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FOUND TX AMOUNT FAIL\n");
 		return 1;
 	}
@@ -227,7 +248,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCH 0 AFTER MOVE FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FOUND TX ADDR HASH AFTER MOVE FAIL\n");
 		return 1;
 	}
@@ -235,7 +256,7 @@ int main(){
 		printf("FOUND TX HEIGHT AFTER MOVE FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FOUND TX AMOUNT AFTER MOVE FAIL\n");
 		return 1;
 	}
@@ -332,10 +353,29 @@ int main(){
 		return 1;
 	}
 	// Find transaction on branchless
-	if (! CBAccounterFoundTransaction(storage, tx2, 0, 2000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx2, 0, 2000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX2 FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX2 ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash1, 20)) {
+		printf("TX2 ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 50) {
+		printf("TX2 ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX2 END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check branchless balance
 	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FOR TX2 FAIL\n");
@@ -454,7 +494,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCH 0 AFTER LOOSE FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FOUND TX ADDR HASH AFTER LOOSE FAIL\n");
 		return 1;
 	}
@@ -462,7 +502,7 @@ int main(){
 		printf("FOUND TX HEIGHT AFTER LOOSE FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FOUND TX AMOUNT AFTER LOOSE FAIL\n");
 		return 1;
 	}
@@ -530,10 +570,29 @@ int main(){
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
 	// Add directly to branch
-	if (! CBAccounterFoundTransaction(storage, tx2, 2000, 3000, 0)) {
+	if (! CBAccounterFoundTransaction(storage, tx2, 2000, 3000, 0, &details)) {
 		CBLogError("DIRECT ADD TO BRANCH FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX2 DIRECT ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash1, 20)) {
+		printf("TX2 DIRECT ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 50) {
+		printf("TX2 DIRECT ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX2 DIRECT END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check balances
 	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER DIRECT FAIL\n");
@@ -557,7 +616,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCH 0 AFTER DIRECT FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FIRST TX ADDR HASH AFTER DIRECT FAIL\n");
 		return 1;
 	}
@@ -565,7 +624,7 @@ int main(){
 		printf("FIRST TX HEIGHT AFTER DIRECT FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FIRST TX AMOUNT AFTER DIRECT FAIL\n");
 		return 1;
 	}
@@ -581,7 +640,7 @@ int main(){
 		printf("GET SECOND TX IN BRANCH 0 AFTER DIRECT FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("SECOND TX ADDR HASH AFTER DIRECT FAIL\n");
 		return 1;
 	}
@@ -589,7 +648,7 @@ int main(){
 		printf("SECOND TX HEIGHT AFTER DIRECT FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 50) {
+	if (txDetails.accountTxDetails.amount != 50) {
 		printf("SECOND TX AMOUNT AFTER DIRECT FAIL\n");
 		return 1;
 	}
@@ -684,10 +743,29 @@ int main(){
 		return 1;
 	}
 	// Find transaction on branchless
-	if (! CBAccounterFoundTransaction(storage, tx3, 0, 4000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx3, 0, 4000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX3 FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX3 ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
+		printf("TX3 ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != -200) {
+		printf("TX3 ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX3 END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check negative balance
 	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FOR TX3 FAIL\n");
@@ -710,10 +788,29 @@ int main(){
 		printf("TX4 SERAILISE FAIL\n");
 		return 1;
 	}
-	if (! CBAccounterFoundTransaction(storage, tx4, 4000, 4000, 0)) {
+	if (! CBAccounterFoundTransaction(storage, tx4, 4000, 4000, 0, &details)) {
 		printf("FOUND TX4 FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX4 ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
+		printf("TX4 ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != -50) {
+		printf("TX4 ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX4 END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Move over tx3
 	if (! CBAccounterBranchlessTransactionToBranch(storage, tx3, 4000, 0)) {
 		printf("MOVE TX3 INTO BRANCH 0\n");
@@ -742,7 +839,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCH 0 AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FIRST TX ADDR HASH AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -750,7 +847,7 @@ int main(){
 		printf("FIRST TX HEIGHT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FIRST TX AMOUNT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -766,7 +863,7 @@ int main(){
 		printf("GET SECOND TX IN BRANCH 0 AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("SECOND TX ADDR HASH AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -774,7 +871,7 @@ int main(){
 		printf("SECOND TX HEIGHT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 50) {
+	if (txDetails.accountTxDetails.amount != 50) {
 		printf("SECOND TX AMOUNT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -791,7 +888,7 @@ int main(){
 		printf("GET THIRD TX IN BRANCH 0 AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
 		printf("THIRD TX ADDR HASH AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -799,7 +896,7 @@ int main(){
 		printf("THIRD TX HEIGHT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -50) {
+	if (txDetails.accountTxDetails.amount != -50) {
 		printf("THIRD TX AMOUNT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -815,7 +912,7 @@ int main(){
 		printf("GET FORTH TX IN BRANCH 0 AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
 		printf("FORTH TX ADDR HASH AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -823,7 +920,7 @@ int main(){
 		printf("FORTH TX HEIGHT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -200) {
+	if (txDetails.accountTxDetails.amount != -200) {
 		printf("FORTH TX AMOUNT AFTER TX3 MOVE FAIL\n");
 		return 1;
 	}
@@ -923,10 +1020,42 @@ int main(){
 		return 1;
 	}
 	// Test adding to branchless
-	if (! CBAccounterFoundTransaction(storage, tx5, 0, 5000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx5, 0, 5000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX5 FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX5 ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash3, 20)) {
+		printf("TX5 ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != -100) {
+		printf("TX5 ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	details = details->next;
+	if (details->accountID != account2) {
+		printf("TX5 ACCOUNT 2 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash3, 20)) {
+		printf("TX5 ACCOUNT 2 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 100) {
+		printf("TX5 ACCOUNT 2 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX5 END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check unconf balance for account 1
 	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL FOR TX5 ACCOUNT 1 FAIL\n");
@@ -951,7 +1080,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCHLESS FOR TX5 ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("FIRST TX ADDR HASH FOR TX5 ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -959,7 +1088,7 @@ int main(){
 		printf("FIRST TX HEIGHT FOR TX5 ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -100) {
+	if (txDetails.accountTxDetails.amount != -100) {
 		printf("FIRST TX AMOUNT FOR TX5 ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -982,11 +1111,11 @@ int main(){
 		printf("GET FIRST TX IN BRANCHLESS FOR TX5 ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("FIRST TX ADDR HASH FOR TX5 ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 100) {
+	if (txDetails.accountTxDetails.amount != 100) {
 		printf("FIRST TX AMOUNT FOR TX5 ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1089,7 +1218,7 @@ int main(){
 		printf("GET ONLY LAST TX IN BRANCH 0 AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("LAST ONLY TX ADDR HASH AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1097,7 +1226,7 @@ int main(){
 		printf("LAST ONLY TX HEIGHT AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -100) {
+	if (txDetails.accountTxDetails.amount != -100) {
 		printf("LAST ONLY TX AMOUNT AFTER TX5 MOVE ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1119,7 +1248,7 @@ int main(){
 		printf("GET TX IN BRANCH 0 AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("TX ADDR HASH AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1127,7 +1256,7 @@ int main(){
 		printf("LAST ONLY TX HEIGHT AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 100) {
+	if (txDetails.accountTxDetails.amount != 100) {
 		printf("TX AMOUNT AFTER TX5 MOVE ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1234,7 +1363,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCH 0 AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FIRST TX ADDR HASH AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1242,7 +1371,7 @@ int main(){
 		printf("FIRST TX HEIGHT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FIRST TX AMOUNT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1258,7 +1387,7 @@ int main(){
 		printf("GET SECOND TX IN BRANCH 0 AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("SECOND TX ADDR HASH AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1266,7 +1395,7 @@ int main(){
 		printf("SECOND TX HEIGHT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 50) {
+	if (txDetails.accountTxDetails.amount != 50) {
 		printf("SECOND TX AMOUNT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1282,7 +1411,7 @@ int main(){
 		printf("GET THIRD TX IN BRANCH 0 AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
 		printf("THIRD TX ADDR HASH AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1290,7 +1419,7 @@ int main(){
 		printf("THIRD TX HEIGHT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -50) {
+	if (txDetails.accountTxDetails.amount != -50) {
 		printf("THIRD TX AMOUNT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1306,7 +1435,7 @@ int main(){
 		printf("GET FORTH TX IN BRANCH 0 AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, CBByteArrayGetData(prevOutHash), 20)) {
 		printf("FORTH TX ADDR HASH AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1314,7 +1443,7 @@ int main(){
 		printf("FORTH TX HEIGHT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -200) {
+	if (txDetails.accountTxDetails.amount != -200) {
 		printf("FORTH TX AMOUNT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1330,7 +1459,7 @@ int main(){
 		printf("GET FIFTH TX IN BRANCH 0 AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("FIFTH TX ADDR HASH AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1338,7 +1467,7 @@ int main(){
 		printf("FIFTH TX HEIGHT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -100) {
+	if (txDetails.accountTxDetails.amount != -100) {
 		printf("FIFTH TX AMOUNT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1361,7 +1490,7 @@ int main(){
 		printf("GET TX IN BRANCH 0 AFTER NEW BRANCH ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("TX ADDR HASH AFTER NEW BRANCH ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1369,7 +1498,7 @@ int main(){
 		printf("TX HEIGHT AFTER NEW BRANCH ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 100) {
+	if (txDetails.accountTxDetails.amount != 100) {
 		printf("TX AMOUNT AFTER NEW BRANCH ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1445,7 +1574,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCH 1 AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("FIRST TX IN BRANCH 1 ADDR HASH AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1453,7 +1582,7 @@ int main(){
 		printf("FIRST TX IN BRANCH 1 HEIGHT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("FIRST TX IN BRANCH 1 AMOUNT AFTER NEW BRANCH FAIL\n");
 		return 1;
 	}
@@ -1527,10 +1656,29 @@ int main(){
 		return 1;
 	}
 	// Find tx as branchless
-	if (! CBAccounterFoundTransaction(storage, tx6, 0, 6000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx6, 0, 6000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX6 FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account2) {
+		printf("TX6 ACCOUNT 2 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash3, 20)) {
+		printf("TX6 ACCOUNT 2 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 300) {
+		printf("TX6 ACCOUNT 2 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX6 END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check branchless balance for account 2
 	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account2, &balance)){
 		printf("GET UNCONF BAL AFTER FIRST OF TWO TXS ACCOUNT 2 FAIL\n");
@@ -1555,10 +1703,42 @@ int main(){
 		return 1;
 	}
 	// Find tx as branchless
-	if (! CBAccounterFoundTransaction(storage, tx7, 0, 7000, CB_NO_BRANCH)) {
+	if (! CBAccounterFoundTransaction(storage, tx7, 0, 7000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX7 FAIL\n");
 		return 1;
 	}
+	// Check details
+	if (details->accountID != account1) {
+		printf("TX7 ACCOUNT 1 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash1, 20)) {
+		printf("TX7 ACCOUNT 1 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 100) {
+		printf("TX7 ACCOUNT 1 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	details = details->next;
+	if (details->accountID != account2) {
+		printf("TX7 ACCOUNT 2 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash1, 20)) {
+		printf("TX7 ACCOUNT 2 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != -300) {
+		printf("TX7 ACCOUNT 2 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX7 END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
 	// Check branchless balance for account 1
 	if (! CBAccounterGetBranchAccountBalance(storage, CB_NO_BRANCH, account1, &balance)){
 		printf("GET UNCONF BAL AFTER TWO TXS ACCOUNT 1 FAIL\n");
@@ -1583,7 +1763,7 @@ int main(){
 		printf("GET TX IN BRANCHLESS AFTER TWO TXS FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("TX IN BRANCHLESS ADDR HASH AFTER TWO TXS FAIL\n");
 		return 1;
 	}
@@ -1591,7 +1771,7 @@ int main(){
 		printf("TX IN BRANCHLESS HEIGHT AFTER TWO TXS FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 100) {
+	if (txDetails.accountTxDetails.amount != 100) {
 		printf("TX IN BRANCHLESS AMOUNT AFTER TWO TXS FAIL\n");
 		return 1;
 	}
@@ -1613,7 +1793,7 @@ int main(){
 		printf("GET FIRST TX IN BRANCHLESS AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("FIRST TX IN BRANCHLESS ADDR HASH AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1621,7 +1801,7 @@ int main(){
 		printf("FIRST TX IN BRANCHLESS HEIGHT AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 300) {
+	if (txDetails.accountTxDetails.amount != 300) {
 		printf("FIRST TX IN BRANCHLESS AMOUNT AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1637,7 +1817,7 @@ int main(){
 		printf("GET SECOND TX IN BRANCHLESS AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("SECOND TX IN BRANCHLESS ADDR HASH AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1645,7 +1825,7 @@ int main(){
 		printf("SECOND TX IN BRANCHLESS HEIGHT AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != -300) {
+	if (txDetails.accountTxDetails.amount != -300) {
 		printf("SECOND TX IN BRANCHLESS AMOUNT AFTER TWO TXS ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -1737,7 +1917,7 @@ int main(){
 			printf("GET FIRST TX IN BRANCH 1 AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (memcmp(txDetails.addrHash, hash1, 20)) {
+		if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 			printf("FIRST TX IN BRANCH 1 ADDR HASH AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1745,7 +1925,7 @@ int main(){
 			printf("FIRST TX IN BRANCH 1 HEIGHT AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (txDetails.amount != 400) {
+		if (txDetails.accountTxDetails.amount != 400) {
 			printf("FIRST TX IN BRANCH 1 AMOUNT AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1761,7 +1941,7 @@ int main(){
 			printf("GET SECOND TX IN BRANCH 1 AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (memcmp(txDetails.addrHash, hash1, 20)) {
+		if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 			printf("SECOND TX IN BRANCH 1 ADDR HASH AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1769,7 +1949,7 @@ int main(){
 			printf("SECOND TX IN BRANCH 1 HEIGHT AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (txDetails.amount != 100) {
+		if (txDetails.accountTxDetails.amount != 100) {
 			printf("SECOND TX IN BRANCH 1 AMOUNT AFTER %s FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1791,7 +1971,7 @@ int main(){
 			printf("GET FIRST TX IN BRANCH 1 AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (memcmp(txDetails.addrHash, hash3, 20)) {
+		if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 			printf("FIRST TX IN BRANCH 1 ADDR HASH AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1799,7 +1979,7 @@ int main(){
 			printf("FIRST TX IN BRANCH 1 HEIGHT AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (txDetails.amount != 300) {
+		if (txDetails.accountTxDetails.amount != 300) {
 			printf("FIRST TX IN BRANCH 1 AMOUNT AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1815,7 +1995,7 @@ int main(){
 			printf("GET SECOND TX IN BRANCH 1 AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (memcmp(txDetails.addrHash, hash1, 20)) {
+		if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 			printf("SECOND TX IN BRANCH 1 ADDR HASH AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1823,7 +2003,7 @@ int main(){
 			printf("SECOND TX IN BRANCH 1 HEIGHT AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
-		if (txDetails.amount != -300) {
+		if (txDetails.accountTxDetails.amount != -300) {
 			printf("SECOND TX IN BRANCH 1 AMOUNT AFTER %s ACCOUNT 2 FAIL\n", (x == 0) ? "TWO TXS MOVE" : "DELETE BRANCH 0");
 			return 1;
 		}
@@ -1875,11 +2055,30 @@ int main(){
 		// Now check branch 1 again in loop
 	}
 	// Test duplicate tx6 transaction (these can exist)
-	if (! CBAccounterFoundTransaction(storage, tx6, 8000, 8000, 1)) {
+	if (! CBAccounterFoundTransaction(storage, tx6, 8000, 0, 1, &details)) {
 		printf("FOUND DUPLICATE TX FAIL\n");
 		return 1;
 	}
-	// Test new branch serperating tx7 and duplicate tx6 and check first tx6
+	// Check details
+	if (details->accountID != account2) {
+		printf("TX6 DUPLICATE ACCOUNT 2 DETAILS ACCOUNT ID FAIL\n");
+		return 1;
+	}
+	if (memcmp(details->accountTxDetails.addrHash, hash3, 20)) {
+		printf("TX6 DUPLICATE DIRECT ACCOUNT 2 DETAILS ADDR FAIL\n");
+		return 1;
+	}
+	if (details->accountTxDetails.amount != 300) {
+		printf("TX6 DUPLICATE DIRECT ACCOUNT 2 DETAILS AMOUNT FAIL\n");
+		return 1;
+	}
+	if (details->next != NULL) {
+		printf("TX6 DUPLICATE END FAIL\n");
+		return 1;
+	}
+	// Free details
+	CBFreeTransactionAccountDetailList(details);
+	// Test new branch seperating tx7 and second tx6 and check first tx6
 	if (! CBAccounterNewBranch(storage, 0, 1, 7000)) {
 		printf("NEW BRANCH TO FIRST TX6\n");
 		return 1;
@@ -1907,7 +2106,7 @@ int main(){
 		printf("GET FIRST TX6 IN BRANCH 1 AFTER DUP FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("FIRST TX6 IN BRANCH 1 ADDR HASH AFTER DUP FAIL\n");
 		return 1;
 	}
@@ -1915,7 +2114,7 @@ int main(){
 		printf("FIRST TX6 IN BRANCH 1 HEIGHT AFTER DUP FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 300) {
+	if (txDetails.accountTxDetails.amount != 300) {
 		printf("FIRST TX6 IN BRANCH 1 AMOUNT AFTER DUP FAIL\n");
 		return 1;
 	}
@@ -1927,16 +2126,11 @@ int main(){
 		printf("FIRST TX6 IN BRANCH 1 TX HASH AFTER DUP FAIL\n");
 		return 1;
 	}
-	if (CBAccounterGetNextTransaction(cursor, &txDetails) != CB_FALSE) {
-		printf("NO MORE FIRST TX6 IN BRANCH 1 AFTER DUP FAIL\n");
-		return 1;
-	}
-	CBNewAccounterStorageTransactionCursor(&cursor, storage, 1, account2, 8000, 8000);
 	if (CBAccounterGetNextTransaction(cursor, &txDetails) != CB_TRUE) {
 		printf("GET SECOND TX6 IN BRANCH 1 AFTER DUP FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("SECOND TX6 IN BRANCH 1 ADDR HASH AFTER DUP FAIL\n");
 		return 1;
 	}
@@ -1944,11 +2138,11 @@ int main(){
 		printf("SECOND TX6 IN BRANCH 1 HEIGHT AFTER DUP FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 300) {
+	if (txDetails.accountTxDetails.amount != 300) {
 		printf("SECOND TX6 IN BRANCH 1 AMOUNT AFTER DUP FAIL\n");
 		return 1;
 	}
-	if (txDetails.timestamp != 8000){
+	if (txDetails.timestamp != 6000){
 		printf("SECOND TX6 IN BRANCH 1 TIMESTAMP AFTER DUP FAIL\n");
 		return 1;
 	}
@@ -1966,7 +2160,7 @@ int main(){
 		printf("GET TX IN BRANCH 0 AFTER DUP ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash1, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash1, 20)) {
 		printf("TX IN BRANCH 0 ADDR HASH AFTER DUP ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1974,7 +2168,7 @@ int main(){
 		printf("TX IN BRANCH 0 HEIGHT AFTER DUP ACCOUNT 1 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 400) {
+	if (txDetails.accountTxDetails.amount != 400) {
 		printf("TX IN BRANCH 0 AMOUNT AFTER DUP ACCOUNT 1 FAIL\n");
 		return 1;
 	}
@@ -1996,7 +2190,7 @@ int main(){
 		printf("GET TX IN BRANCH 0 AFTER DUP ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (memcmp(txDetails.addrHash, hash3, 20)) {
+	if (memcmp(txDetails.accountTxDetails.addrHash, hash3, 20)) {
 		printf("TX IN BRANCH 0 ADDR HASH AFTER DUP ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -2004,7 +2198,7 @@ int main(){
 		printf("TX IN BRANCH 0 HEIGHT AFTER DUP ACCOUNT 2 FAIL\n");
 		return 1;
 	}
-	if (txDetails.amount != 300) {
+	if (txDetails.accountTxDetails.amount != 300) {
 		printf("TX IN BRANCH 0 AMOUNT AFTER DUP ACCOUNT 2 FAIL\n");
 		return 1;
 	}
@@ -2089,10 +2283,37 @@ int main(){
 		return 1;
 	}
 	if (CBAccounterGetNextUnspentOutput(cursor, &uoDetails) != CB_FALSE) {
-		CBLogError("NO MORE UNSPENT OUTPUTS AFTER DUP ACCOUNT 2 FAIL");
+		printf("NO MORE UNSPENT OUTPUTS AFTER DUP ACCOUNT 2 FAIL\n");
 		return 1;
 	}
 	CBFreeAccounterStorageUnspentOutputCursor(cursor);
+	// Test CBAccounterIsOurs
+	if (CBAccounterIsOurs(storage, CBTransactionGetHash(tx1)) != CB_TRUE) {
+		printf("IS OURS TX1 FAIL\n");
+		return 1;
+	}
+	if (CBAccounterIsOurs(storage, CBTransactionGetHash(tx6)) != CB_TRUE) {
+		printf("IS OURS TX6 FAIL\n");
+		return 1;
+	}
+	// Test CBAccounterGetTransactionTime
+	uint64_t time;
+	if (!CBAccounterGetTransactionTime(storage, CBTransactionGetHash(tx1), &time)) {
+		printf("GET TX1 TIME FAIL\n");
+		return 1;
+	}
+	if (time != 1000) {
+		printf("TX1 TIME FAIL\n");
+		return 1;
+	}
+	if (!CBAccounterGetTransactionTime(storage, CBTransactionGetHash(tx6), &time)) {
+		printf("GET TX2 TIME FAIL\n");
+		return 1;
+	}
+	if (time != 6000) {
+		printf("TX6 TIME FAIL\n");
+		return 1;
+	}
 	// ??? Add tests for duplicate transactions added and then removed as unconfimed? Also duplicate txs moved from branchless to a branch.
 	CBReleaseObject(tx1);
 	CBReleaseObject(tx2);

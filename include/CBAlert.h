@@ -49,6 +49,7 @@ typedef struct{
 	CBByteArray * hiddenComment; /**< Comment that should be hidden from end-users */
 	CBByteArray * displayedComment; /**< Comment that can be displayed to end-users */
 	CBByteArray * reserved; /**< Reserved bytes */
+	CBByteArray * payload; /**< Payload bytes */
 	CBByteArray * signature; /**< ECDSA signature for data */
 } CBAlert;
 
@@ -56,7 +57,7 @@ typedef struct{
  @brief Creates a new CBAlert object.
  @returns A new CBAlert object.
 */
-CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature);
+CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved);
 /**
 @brief Creates a new CBAlert object from serialised data.
  @param data Serialised CBAlert data.
@@ -68,7 +69,7 @@ CBAlert * CBNewAlertFromData(CBByteArray * data);
  @brief Initialises a CBAlert object
  @param self The CBAlert object to initialise
 */
-void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature);
+void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved);
 /**
  @brief Initialises a CBAlert object from serialised data
  @param self The CBAlert object to initialise
@@ -122,9 +123,9 @@ CBByteArray * CBAlertGetPayload(CBAlert * self);
 /**
  @brief Serialises the payload of a CBAlert and returns a CBByteArray to the specifc payload bytes to aid in creating a signature.
  @param self The CBAlert object
- @returns The payload bytes on sucess. NULL on failure.
+ @returns true on sucess. false on failure.
 */
-CBByteArray * CBAlertSerialisePayload(CBAlert * self);
+bool CBAlertSerialisePayload(CBAlert * self);
 /**
  @brief Serialises the signature of a CBAlert.
  @param self The CBAlert object

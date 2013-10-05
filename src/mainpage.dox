@@ -3,7 +3,7 @@
 Refer to the following list of files for cbitcoin features:
 
 CBAddress.h - An extension on CBVersionChecksumBytes for bitcoin addresses.\n
-CBNetworkAddressBroadcast.h - This is the "addr" message structure with functions.\n
+CBNetworkAddressList.h - This is the "addr" message structure with functions.\n
 CBNetworkAddressManager.h - A structure with functions for managing CBNetworkAddress objects and CBPeer objects.\n
 CBAlert.h - This is the "alert" message structure with functions.\n
 CBBase58.h - Base-58 encoding and decoding, used for bitcoin addresses.\n
@@ -15,7 +15,7 @@ CBChainDescriptor.h - This is a structure refered to as a block locator elsewher
 CBConstants.h - Constants and enumeration types used throughout the library.\n
 CBDependencies.h - Weak-linked function prototypes. You may need to implement some of these funtions to use the parts of cbitcoin you want. Look in the dependencies folder for some implementations already available for you.\n
 CBGetBlocks.h - This is a structure with functions for the "getblocks" and "getheaders" messages.\n
-CBInventoryBroadcast.h - This is a structure with functions for the "inv" and "getdata" messages.\n
+CBInventory.h - This is a structure with functions for the "inv" and "getdata" messages.\n
 CBMerkleNode.h - Graph node structure for merkle trees and functions for building and using merkle trees.\n
 CBMessage.h - The base structure for bitcoin messages which contain data to be passed over the bitcoin network.\n
 CBNetworkAddress.h - A network address structure with functions used to represent a socket address in the bitcoin network.\n

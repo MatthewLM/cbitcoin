@@ -18,10 +18,10 @@
 
 //  Constructors
 
-CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature){
+CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved){
 	CBAlert * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeAlert;
-	CBInitAlert(self, version, relayUntil, expiration, ID, cancel, minVer, maxVer, priority, hiddenComment, displayedComment, reserved, signature);
+	CBInitAlert(self, version, relayUntil, expiration, ID, cancel, minVer, maxVer, priority, hiddenComment, displayedComment, reserved);
 	return self;
 }
 CBAlert * CBNewAlertFromData(CBByteArray * data){
@@ -33,7 +33,7 @@ CBAlert * CBNewAlertFromData(CBByteArray * data){
 
 //  Initialisers
 
-void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved, CBByteArray * signature){
+void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved){
 	self->version = version;
 	self->relayUntil = relayUntil;
 	self->expiration = expiration;
@@ -48,8 +48,8 @@ void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t ex
 	if (displayedComment) CBRetainObject(displayedComment);
 	self->reserved = reserved;
 	if (reserved) CBRetainObject(reserved);
-	self->signature = signature;
-	CBRetainObject(signature);
+	self->signature = NULL;
+	self->payload = NULL;
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitAlertFromData(CBAlert * self, CBByteArray * data){
@@ -59,6 +59,7 @@ void CBInitAlertFromData(CBAlert * self, CBByteArray * data){
 	self->displayedComment = NULL;
 	self->reserved = NULL;
 	self->signature = NULL;
+	self->payload = NULL;
 	CBInitMessageByData(CBGetMessage(self), data);
 }
 
@@ -75,6 +76,7 @@ void CBDestroyAlert(void * vself){
 	if (self->displayedComment) CBReleaseObject(self->displayedComment);
 	if (self->reserved) CBReleaseObject(self->reserved);
 	if (self->signature) CBReleaseObject(self->signature);
+	if (self->payload) CBReleaseObject(self->payload);
 	CBDestroyMessage(self);
 }
 void CBFreeAlert(void * self){
@@ -257,12 +259,10 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 								CBVarInt sigLen = CBVarIntDecode(bytes, cursor);
 								cursor += size;
 								if (bytes->length >= cursor + sigLen.val){ // Can cover signature
+									self->payload = CBNewByteArraySubReference(bytes, payloadLen.size, (uint32_t)payloadLen.val);
 									self->signature = CBNewByteArraySubReference(bytes, cursor, (uint32_t)sigLen.val);
-									if (self->signature) {
-										// Done signature OK. Now return successfully.
-										return cursor += sigLen.val;
-									}else
-										CBLogError("Cannot create new CBByteArray in CBAlertDeserialise for the signature\n");
+									// Done signature OK. Now return successfully.
+									return cursor += sigLen.val;
 								}else{
 									CBLogError("Attempting to deserialise a CBAlert with a byte array length smaller than required to cover the signature.");
 								}
@@ -301,11 +301,11 @@ CBByteArray * CBAlertGetPayload(CBAlert * self){
 	CBVarInt payloadLen = CBVarIntDecode(bytes, 0);
 	return CBNewByteArraySubReference(bytes, payloadLen.size, (uint32_t)payloadLen.val);
 }
-CBByteArray * CBAlertSerialisePayload(CBAlert * self){
+bool CBAlertSerialisePayload(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to serialise a CBAlert with no bytes.");
-		return NULL;
+		return false;
 	}
 	// Calculate length
 	CBVarInt setCancelLen = CBVarIntFromUInt64(self->setCancelNum);
@@ -337,7 +337,7 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 	length += payloadLen.size; // Add the length of this var int.
 	if (bytes->length < length + 1) {
 		CBLogError("Attempting to serialise a CBAlert with less bytes than required for the payload and a signature var int.");
-		return NULL;
+		return false;
 	}
 	// Serialise the payload section.
 	CBVarIntEncode(bytes, 0, payloadLen);
@@ -400,12 +400,13 @@ CBByteArray * CBAlertSerialisePayload(CBAlert * self){
 		CBByteArrayChangeReference(self->reserved, bytes, cursor);
 		cursor += reservedLen.val;
 	}
-	return CBNewByteArraySubReference(bytes, payloadLen.size, cursor - payloadLen.size); // Return the sub reference for the payload data. Exclude the payload var int. From this a signature can be made easily.
+	self->payload = CBNewByteArraySubReference(bytes, payloadLen.size, cursor - payloadLen.size);
+	return true;
 }
 uint16_t CBAlertSerialiseSignature(CBAlert * self, uint16_t offset){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
-		CBLogError("Attempting to deserialise a CBAlert with no bytes.");
+		CBLogError("Attempting to serialise a CBAlert with no bytes.");
 		return 0;
 	}
 	CBVarInt sigLen = CBVarIntFromUInt64(self->signature->length);

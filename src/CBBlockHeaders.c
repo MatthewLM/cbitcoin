@@ -35,12 +35,10 @@ CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data){
 
 void CBInitBlockHeaders(CBBlockHeaders * self){
 	self->headerNum = 0;
-	self->blockHeaders = NULL;
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitBlockHeadersFromData(CBBlockHeaders * self, CBByteArray * data){
 	self->headerNum = 0;
-	self->blockHeaders = NULL;
 	CBInitMessageByData(CBGetMessage(self), data);
 }
 
@@ -84,7 +82,6 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 		return 0;
 	}
 	// Deserialise each header
-	self->blockHeaders = malloc(sizeof(*self->blockHeaders) * (size_t)headerNum.val);
 	self->headerNum = headerNum.val;
 	uint16_t cursor = headerNum.size;
 	for (uint16_t x = 0; x < headerNum.val; x++) {
@@ -153,8 +150,5 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force){
 	return cursor;
 }
 void CBBlockHeadersTakeBlockHeader(CBBlockHeaders * self, CBBlock * header){
-	self->headerNum++;
-	CBBlock ** temp = realloc(self->blockHeaders, sizeof(*self->blockHeaders) * self->headerNum);
-	self->blockHeaders = temp;
-	self->blockHeaders[self->headerNum-1] = header;
+	self->blockHeaders[self->headerNum++] = header;
 }

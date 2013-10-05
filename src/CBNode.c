@@ -18,10 +18,10 @@
 
 //  Constructor
 
-/*CBNode * CBNewNode(CBDepObject database, CBNodeFlags flags, uint32_t otherTxsSizeLimit){
+CBNode * CBNewNode(CBDepObject database, CBNodeFlags flags, CBNodeCallbacks nodeCallbacks, CBNetworkCommunicatorCallbacks commCallbacks, CBOnMessageReceivedAction (*onMessageReceived)(CBNode *, CBPeer *, CBMessage *)){
 	CBNode * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeNode;
-	if (CBInitNode(self, database, flags, otherTxsSizeLimit))
+	if (CBInitNode(self, database, flags, nodeCallbacks, commCallbacks, onMessageReceived))
 		return self;
 	free(self);
 	return NULL;
@@ -29,44 +29,41 @@
 
 //  Initialiser
 
-bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, uint32_t otherTxsSizeLimit){
+bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCallbacks nodeCallbacks, CBNetworkCommunicatorCallbacks commCallbacks, CBOnMessageReceivedAction (*onMessageReceived)(CBNode *, CBPeer *, CBMessage *)){
 	self->flags = flags;
-	self->otherTxsSizeLimit = otherTxsSizeLimit;
-	self->otherTxsSize = 0;
 	self->database = database;
+	self->callbacks = nodeCallbacks;
 	// Initialise network communicator
-	CBInitNetworkCommunicator(CBGetNetworkCommunicator(self));
+	commCallbacks.onMessageReceived = CBNodeOnMessageReceived;
+	CBInitNetworkCommunicator(CBGetNetworkCommunicator(self), commCallbacks);
 	// Set network communicator fields.
 	CBGetNetworkCommunicator(self)->flags = CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY | CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING;
 	CBGetNetworkCommunicator(self)->version = CB_PONG_VERSION;
-	// Set callbacks
-	CBGetNetworkCommunicator(self)->onMessageReceived = CBNodeProcessMessage;
-	CBGetNetworkCommunicator(self)->onPeerConnection = CBNodePeerSetup;
-	CBGetNetworkCommunicator(self)->onPeerDisconnection = CBNodePeerFree;
-	// Initialise the transaction arrays
-	CBInitAssociativeArray(&self->ourTxs, CBTransactionCompare, NULL, CBReleaseObject);
-	if (!(flags & CB_NODE_HEADERS_ONLY))
-		// Only have other transactions if we are not a headers only node.
-		CBInitAssociativeArray(&self->otherTxs, CBTransactionCompare, NULL, CBReleaseObject);
+	CBNetworkCommunicatorSetAlternativeMessages(CBGetNetworkCommunicator(self), NULL, NULL);
+	// Create address manager
+	CBGetNetworkCommunicator(self)->addresses = CBNewNetworkAddressManager(CBNodeOnValidatorError);
+	CBGetNetworkCommunicator(self)->addresses->maxAddressesInBucket = 1000;
+	CBGetNetworkCommunicator(self)->addresses->callbackHandler = self;
+	// Initialise thread data
+	self->shutDownThread = false;
+	self->messageQueue = NULL;
+	CBNewMutex(&self->blockAndTxMutex);
+	CBNewMutex(&self->messageProcessMutex);
+	CBNewCondition(&self->messageProcessWaitCond);
+	CBNewThread(&self->messageProcessThread, CBNodeProcessMessages, self);
 	// Initialise the storage objects
 	if (CBNewBlockChainStorage(&self->blockChainStorage, database)) {
-		if (CBNewAccounterStorage(&self->accounterStorage, database)) {
-			// Initialise the validator
-			self->validator = CBNewValidator(self->blockChainStorage, (flags & CB_NODE_HEADERS_ONLY) ? CB_VALIDATOR_HEADERS_ONLY : 0);
-			if (self->validator){
-				if (CBNodeStorageGetStartScanningTime(database, &self->startScanning))
-					return true;
-				else
-					CBLogError("Could not obtain the time to start scanning.");
-				CBReleaseObject(self->validator);
-			}else
-				CBLogError("Could not create the validator object for a node");
-			CBFreeAccounterStorage(self->accounterStorage);
-		}else
+		if (CBNewAccounterStorage(&self->accounterStorage, database))
+			if (CBNewNodeStorage(&self->nodeStorage, database))
+				return true;
+			else
+				CBLogError("Could not create the node storage object for a node");
+		else
 			CBLogError("Could not create the accounter storage object for a node");
 		CBFreeBlockChainStorage(self->blockChainStorage);
 	}else
 		CBLogError("Could not create the block storage object for a node");
+	CBFreeNetworkCommunicator(self);
 	return false;
 }
 
@@ -74,12 +71,20 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, uint32_t
 
 void CBDestroyNode(void * vself){
 	CBNode * self = vself;
+	// Exit thread.
+	self->shutDownThread = true;
+	CBMutexLock(self->messageProcessMutex);
+	if (self->messageQueue == NULL)
+		// The thread is waiting for messages so wake it.
+		CBConditionSignal(self->messageProcessWaitCond);
+	CBMutexUnlock(self->messageProcessMutex);
+	CBThreadJoin(self->messageProcessThread);
 	CBFreeBlockChainStorage(self->blockChainStorage);
 	CBFreeAccounterStorage(self->accounterStorage);
 	CBReleaseObject(self->validator);
-	CBFreeAssociativeArray(&self->ourTxs);
-	if (!(self->flags & CB_NODE_HEADERS_ONLY))
-		CBFreeAssociativeArray(&self->otherTxs);
+	CBFreeMutex(self->blockAndTxMutex);
+	CBFreeMutex(self->messageProcessMutex);
+	CBFreeCondition(self->messageProcessWaitCond);
 	CBDestroyNetworkCommunicator(vself);
 }
 void CBFreeNode(void * self){
@@ -89,586 +94,192 @@ void CBFreeNode(void * self){
 
 //  Functions
 
-void CBNodeAddOtherTransaction(CBNode * self, CBTransaction * tx){
-	CBPosition pos;
-	pos.index = 0;
-	pos.node = self->otherTxs.root;
-	// Continually delete transactions until we have space.
-	while (self->otherTxsSize + CBGetMessage(tx)->bytes->length > self->otherTxsSizeLimit)
-		CBAssociativeArrayDelete(&self->otherTxs, pos, true);
-	// Insert new transaction
-	CBAssociativeArrayInsert(&self->otherTxs, tx, CBAssociativeArrayFind(&self->otherTxs, tx).position, NULL);
-}
-bool CBNodeCheckInputs(CBNode * self){
-	CBPosition it;
-	for (CBAssociativeArray * array = &self->otherTxs;; array = &self->ourTxs){
-		if (CBAssociativeArrayGetFirst(array, &it)) for (;;) {
-			// Loop through inputs ensuring the outputs exist for them.
-			CBTransaction * tx = it.node->elements[it.index];
-			bool iterate = true;
-			for (uint32_t x = 0; x < tx->inputNum; x++) {
-				CBErrBool res = CBBlockChainStorageUnspentOutputExists(self->validator, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), tx->inputs[x]->prevOut.index);
-				if (res == CB_ERROR) {
-					CBLogError("Could not determine is an unspent output exists.");
-					return false;
-				}
-				if (res == CB_FALSE){
-					// There exists no unspent outputs in the block-chain storage for this transaction input. Therefore this transaction is no longer valid.
-					// Lose the transaction from the accounter if it is ours
-					if (array == &self->ourTxs && !CBAccounterLostBranchlessTransaction(self->accounterStorage, tx)) {
-						CBLogError("Could not lose a transaction with missing inputs as one of our unconfirmed transactions.");
-						return false;
-					}
-					// Delete the transaction
-					CBAssociativeArrayDelete(array, it, false);
-					// Find new position for iterator
-					it = CBAssociativeArrayFind(array, tx).position;
-					// Finally release transaction
-					CBReleaseObject(tx);
-					// Do not iterate
-					iterate = false;
-					break;
-				}
-			}
-			if (iterate && CBAssociativeArrayIterate(array, &it))
-				break;
-		}
-		if (array == &self->ourTxs)
-			break;
-	}
-	return true;
-}
-bool CBNodeFoundBlock(CBNode * self, CBBlock * block, uint8_t branch, uint32_t blockIndex){
-	// Check to see if we are scanning yet
-	uint32_t blockHeight = self->validator->branches[branch].startHeight + blockIndex;
-	if (block->time >= self->startScanning) {
-		// Look through each transaction
-		for (uint32_t x = 0; x < block->transactionNum; x++) {
-			if (!(self->flags & CB_NODE_HEADERS_ONLY)) {
-				// Check to see if the transaction was in the otherTxs array
-				CBFindResult res = CBAssociativeArrayFind(&self->otherTxs, block->transactions[x]);
-				if (res.found){
-					// Remove the transaction from the array as it is now in a block.
-					CBAssociativeArrayDelete(&self->otherTxs, res.position, true);
-					// Decrease the size of the other transactions
-					self->otherTxsSize -= CBGetMessage(block->transactions[x])->bytes->length;
-					return true;
-				}
-			}
-			// Check to see if the transaction was in in the ourTxs array.
-			CBFindResult res = CBAssociativeArrayFind(&self->ourTxs, block->transactions[x]);
-			if (res.found) {
-				// Remove the transaction from the array as it is now in a block.
-				CBAssociativeArrayDelete(&self->ourTxs, res.position, true);
-				// Move the unconfirmed transaction accounter infomation to the branch.
-			}
-			THINK MAYBE CHANGE VALIDATOR TO HAVE CALLBACKS FOR FORK AND FOUND BLOCK?
-			HERE
-			
-			if (self->flags & CB_NODE_HEADERS_ONLY) {
-				// We are headers only so add transaction directly
-				if (! CBAccounterFoundTransaction(self->accounter, block->transactions[x], blockHeight, block->time))
-					return false;
-			}else{
-				// Check if the transaction exists in one of the arrays
-				
-				if (res.found){
-					// Remove the transaction from the array as it is now in a block.
-					CBAssociativeArrayDelete(&self->otherTxs, res.position, true);
-					// Decrease the size of the other transactions
-					self->otherTxsSize -= CBGetMessage(block->transactions[x])->bytes->length;
-				}else{
-					CBFindResult res = CBAssociativeArrayFind(&self->ourTxs, block->transactions[x]);
-					if (res.found) {
-						// Remove the transaction from the array as it is now in a block.
-						CBAssociativeArrayDelete(&self->ourTxs, res.position, true);
-						// Change the status of the transaction to confirmed.
-						bool foo;
-						if (! CBAccounterTransactionChangeStatus(self->accounter, block->transactions[x], blockHeight, &foo)){
-							CBLogError("Could not change the status of a transaction by the accounter.");
-							return false;
-						}
-						// Remove from storage
-						if (! CBAccounterStorageDeleteUnconfirmedTransaction(self->accounter, block->transactions[x])) {
-							CBLogError("Could not remove an unconfirmed transaction belonging to an account or accounts from the storage.");
-							return false;
-						}
-					}else
-						// Give this previously unfound transaction to the accounter to deal with.
-						if (! CBAccounterFoundTransaction(self->accounter, block->transactions[x], blockHeight, block->time))
-							return false;
-				}
-			}
-		}
-	}
-	return true;
-}
-void CBNodePeerFree(void * self, void * vpeer){
+void CBNodeDisconnectNode(void * vpeer){
 	CBPeer * peer = vpeer;
-	CBFreeAssociativeArray(&peer->expectedObjects);
+	CBNetworkCommunicator * comm = peer->nodeObj;
+	CBNetworkCommunicatorDisconnect(comm, peer, CB_24_HOURS, false);
 }
-void CBNodePeerSetup(void * self, void * vpeer){
-	CBPeer * peer = vpeer;
-	if (! CBInitAssociativeArray(&peer->expectedObjects, CBKeyCompare, free)) {
-		CBLogError("Could not create the expected objects array for a peer");
-		CBNetworkCommunicatorDisconnect(CBGetNetworkCommunicator(self), peer, 0, false);
+CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer){
+	CBNode * self = CBGetNode(comm);
+	// Add message to queue
+	CBRetainObject(peer->receive);
+	CBMutexLock(self->messageProcessMutex);
+	if (self->messageQueue == NULL)
+		self->messageQueue = self->messageQueueBack = malloc(sizeof(*self->messageQueueBack));
+	else{
+		self->messageQueueBack->next = malloc(sizeof(*self->messageQueueBack));
+		self->messageQueueBack = self->messageQueueBack->next;
 	}
-}
-CBOnMessageReceivedAction CBNodeProcessBlock(CBNode * self, CBBlock * block){
-	// Validate block
-	CBBlockProcessResult result = CBValidatorProcessBlock(self->validator, block, CBNetworkAddressManagerGetNetworkTime(CBGetNetworkCommunicator(self)->addresses));
-	switch (result.status) {
-		case CB_BLOCK_STATUS_ERROR:
-			// There was an error with processing the block.
-		case CB_BLOCK_STATUS_BAD:
-			// The peer sent us a bad block
-			return CB_MESSAGE_ACTION_DISCONNECT;
-		case CB_BLOCK_STATUS_SIDE:
-		case CB_BLOCK_STATUS_BAD_TIME:
-		case CB_BLOCK_STATUS_ORPHAN:
-		case CB_BLOCK_STATUS_NO_NEW:
-			// In these cases just continue.
-			return CB_MESSAGE_ACTION_CONTINUE;
-		case CB_BLOCK_STATUS_DUPLICATE:
-			// If headers-only this means we have re-requested a block to get transactions we need.
-			if (! (self->flags & CB_NODE_HEADERS_ONLY)) {
-				// First verify the merkle root
-				uint8_t * merkleRoot = CBBlockCalculateMerkleRoot(block);
-				if (! merkleRoot) {
-					CBLogError("Could not calculate the merkle root for scanning transactions for a re-requested block.");
-					return CB_MESSAGE_ACTION_DISCONNECT;
-				}
-				if (memcmp(merkleRoot, CBByteArrayGetData(block->merkleRoot), 32))
-					return CB_MESSAGE_ACTION_DISCONNECT;
-				// Find the block index and branch
-				uint8_t branch;
-				uint32_t blockIndex;
-				if (! CBBlockChainStorageGetBlockLocation(self->validator, CBBlockGetHash(block), &branch, &blockIndex)) {
-					CBLogError("Could not get the location of a duplicate block, to check that we got it to scan for transactions.");
-					return CB_MESSAGE_ACTION_DISCONNECT;
-				}
-				// Check this is the next block we need.
-				if ((blockIndex == 0
-					&& self->scanInfo.lastBlockIndex == self->validator->branches[branch].parentBlockIndex
-					&& self->scanInfo.lastBranch == self->validator->branches[branch].parentBranch)
-					|| (blockIndex > 0
-						&& self->scanInfo.lastBlockIndex == blockIndex - 1
-						&& self->scanInfo.lastBranch == branch)) {
-					// This is the block we want
-					if (! CBNodeFoundBlock(self, block, branch, blockIndex))
-						return CB_MESSAGE_ACTION_STOP;
-					// Save
-					if (! CBNodeCheckInputsAndSave(self)) {
-						CBLogError("Could not save the accounter information for a re-requested block.");
-						return false;
-					}
-				}else
-					// The peer is giving us the blocks in the wrong order, stupid thing!
-					return CB_MESSAGE_ACTION_DISCONNECT;
-			}
-			return CB_MESSAGE_ACTION_CONTINUE;
-		case CB_BLOCK_STATUS_MAIN:
-			// The block was added alone onto the main chain.
-			if (! CBNodeFoundBlock(self, block, self->validator->mainBranch, self->validator->branches[self->validator->mainBranch].numBlocks - 1))
-				return CB_MESSAGE_ACTION_STOP;
-			// Check inputs and save
-			if (! CBNodeCheckInputsAndSave(self)) {
-				CBLogError("Could not check the inputs and save during a main chain extention.");
-				return false;
-			}
-			return CB_MESSAGE_ACTION_CONTINUE;
-		case CB_BLOCK_STATUS_MAIN_WITH_ORPHANS:
-			// Scan all new blocks
-			// First the block we processed
-			if (! CBNodeFoundBlock(self, block, self->validator->mainBranch, self->validator->branches[self->validator->mainBranch].numBlocks - 1 - result.data.orphansAdded.numOrphansAdded)){
-				CBValidatorFreeBlockProcessResultOrphans(&result);
-				return CB_MESSAGE_ACTION_STOP;
-			}
-			// Now the orphans
-			// If we are fully validating we can process the orphans here, but for headers only nodes, we need to request them again.
-			if (self->flags & CB_NODE_HEADERS_ONLY) {
-				// Add the orphans to be re-requested
-				for (uint8_t x = 0; x < result.data.orphansAdded.numOrphansAdded; x++) {
-					uint8_t * hashKey = malloc(21);
-					if (! hashKey) {
-						CBLogError("Could not allocate memory for a block hash key for re-requesting previously orphans for transactions.");
-						CBValidatorFreeBlockProcessResultOrphans(&result);
-						return CB_MESSAGE_ACTION_STOP;
-					}
-					hashKey[0] = 20;
-					memcmp(hashKey + 1, CBBlockGetHash(result.data.orphansAdded.orphans[x]), 20);
-					if (! CBAssociativeArrayInsert(&self->reRequest, hashKey, CBAssociativeArrayFind(&self->reRequest, hashKey).position, NULL)){
-						CBLogError("Could not insert a previously orphan block hash key into the array for re-reuesting transactions.");
-						CBValidatorFreeBlockProcessResultOrphans(&result);
-						free(hashKey);
-						return CB_MESSAGE_ACTION_STOP;
-					}
-				}
-			}else for (uint8_t x = 0; x < result.data.orphansAdded.numOrphansAdded; x++) {
-				if (! CBNodeFoundBlock(self, result.data.orphansAdded.orphans[x], self->validator->mainBranch, self->validator->branches[self->validator->mainBranch].numBlocks - result.data.orphansAdded.numOrphansAdded + x)){
-					CBValidatorFreeBlockProcessResultOrphans(&result);
-					return CB_MESSAGE_ACTION_STOP;
-				}
-			}
-			// Check inputs and save
-			if (! CBNodeCheckInputsAndSave(self)) {
-				CBLogError("Could not check the inputs and save during a main chain extention with orphans.");
-				return false;
-			}
-			// Free the result
-			CBValidatorFreeBlockProcessResultOrphans(&result);
-			return CB_MESSAGE_ACTION_CONTINUE;
-		case CB_BLOCK_STATUS_REORG:{
-			// Lose blocks down to fork point and then find blocks up to the end of the new chain.
-			CBChainPath * mainChain = &result.data.reorgData.newChain;
-			uint8_t pathPoint = result.data.reorgData.start.chainPathIndex;
-			if (! CBNodeSyncScan(self, mainChain, pathPoint, result.data.reorgData.start.blockIndex)) {
-				CBLogError("Could not synchronise the acounts to a re-organised block chain.");
-				return false;
-			}
-		}
-		default:
-			return CB_MESSAGE_ACTION_CONTINUE;
-	}
-}
-CBOnMessageReceivedAction CBNodeProcessMessage(void * vself, void * vpeer){
-	CBNode * self = vself;
-	CBPeer * peer = vpeer;
-	switch (peer->receive->type) {
-		case CB_MESSAGE_TYPE_BLOCK:{
-			// The peer sent us a block
-			CBBlock * block = CBGetBlock(peer->receive);
-			// If the peer already gave us this block, disconnect them.
-			uint8_t blockKey[21];
-			blockKey[0] = 21;
-			memcpy(blockKey + 1, CBBlockGetHash(block), 20);
-			CBFindResult res = CBAssociativeArrayFind(&peer->expectedObjects, blockKey);
-			if (! res.found)
-				// We did not expect this block from this peer.
-				return CB_MESSAGE_ACTION_DISCONNECT;
-			return CBNodeProcessBlock(self, block);
-		}
-		case CB_MESSAGE_TYPE_GETBLOCKS:
-			// We are not a full node
-			return CB_MESSAGE_ACTION_DISCONNECT;
-		case CB_MESSAGE_TYPE_GETHEADERS:{
-			// The peer is requesting headers
-			CBGetBlocks * getHeaders = CBGetGetBlocks(peer->receive);
-			CBChainDescriptor * chainDesc = getHeaders->chainDescriptor;
-			// Go though the chain descriptor until a hash is found that we own
-			uint8_t branch;
-			uint32_t blockIndex;
-			CBBlockHeaders * headers = CBNewBlockHeaders();
-			if (! headers) {
-				CBLogError("Could not create the block headers object for sending headers to a peer.");
-				return CB_MESSAGE_ACTION_DISCONNECT;
-			}
-			if (chainDesc->hashNum == 0) {
-				// Give the hash stop block if it exists, else send nothing.
-				if (CBBlockChainStorageGetBlockLocation(self->validator, CBByteArrayGetData(getHeaders->stopAtHash), &branch, &blockIndex)) {
-					// Load and give the block header
-					CBBlock * header = CBBlockChainStorageGetBlockHeader(self->validator, branch, blockIndex);
-					if (! header) {
-						CBReleaseObject(headers);
-						CBLogError("Could not create a block header for sending to a peer.");
-						return CB_MESSAGE_ACTION_DISCONNECT;
-					}
-					CBBlockHeadersTakeBlockHeader(headers, header);
-				}else{
-					CBReleaseObject(headers);
-					return CB_MESSAGE_ACTION_CONTINUE;
-				}
-			}else{
-				bool found = false;
-				for (uint16_t x = 0; x < chainDesc->hashNum; x++) {
-					if (CBBlockChainStorageBlockExists(self->validator, CBByteArrayGetData(chainDesc->hashes[x]))){
-						// We have a block header that we own. Get the location
-						if (! CBBlockChainStorageGetBlockLocation(self->validator, CBByteArrayGetData(chainDesc->hashes[x]), &branch, &blockIndex)){
-							CBReleaseObject(headers);
-							CBLogError("Could not locate a block header in the block chain storage.");
-							return CB_MESSAGE_ACTION_DISCONNECT;
-						}
-						found = true;
-						break;
-					}
-				}
-				// Get the chain path for the main chain
-				CBChainPath mainChainPath = CBValidatorGetMainChainPath(self->validator);
-				CBChainPathPoint intersection;
-				if (found){
-					// Get the chain path for the block header we have found
-					CBChainPath peerChainPath = CBValidatorGetChainPath(self->validator, branch, blockIndex);
-					// Determine where the intersection is on the main chain
-					intersection = CBValidatorGetChainIntersection(&mainChainPath, &peerChainPath);
-				}else{
-					// Start at block 1
-					intersection.blockIndex = 1;
-					intersection.chainPathIndex = mainChainPath.numBranches - 1;
-				}
-				// Now provide headers from this intersection up to 2000 blocks, the last one we have or the stopAtHash.
-				for (uint8_t x = 0; x < 2000; x++) {
-					// Check to see if we reached the last block in the main chain.
-					if (intersection.chainPathIndex == 0
-						&& intersection.blockIndex == mainChainPath.points[intersection.chainPathIndex].blockIndex)
-						break;
-					// Check to see if we reached stopAtHash
-					uint8_t hash[32];
-					if (! CBBlockChainStorageGetBlockHash(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex, hash)) {
-						if (x > 0)
-							CBReleaseObject(headers);
-						CBLogError("Could not obtain a hash for a block to check stopAtHash.");
-						return CB_MESSAGE_ACTION_DISCONNECT;
-					}
-					if (memcmp(hash, CBByteArrayGetData(getHeaders->stopAtHash), 32) == 0) {
-						if (x == 0)
-							// Peer had a stopAtHash which prevented us giving any blocks
-							return CB_MESSAGE_ACTION_DISCONNECT;
-						break;
-					}
-					// Move to the next block
-					if (intersection.blockIndex == mainChainPath.points[intersection.chainPathIndex].blockIndex) {
-						// Move to next branch
-						intersection.chainPathIndex--;
-						intersection.blockIndex = 0;
-					}else{
-						// Move to the next block
-						intersection.blockIndex++;
-					}
-					// Add block header
-					CBBlock * header = CBBlockChainStorageGetBlockHeader(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex);
-					if (! header) {
-						CBReleaseObject(headers);
-						CBLogError("Could not create a block header for sending to a peer.");
-						return CB_MESSAGE_ACTION_DISCONNECT;
-					}
-					CBBlockHeadersTakeBlockHeader(headers, header);
-				}
-			}
-			// Send the headers
-			CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(headers), NULL);
-			CBReleaseObject(headers);
-			break;
-		}
-		case CB_MESSAGE_TYPE_GETDATA:{
-			// The peer is requesting data. It should only be requesting transactions that we own.
-			CBInventoryBroadcast * getData = CBGetInventoryBroadcast(peer->receive);
-			// Ensure it is requesting no more data than we have advertised and not satisfied
-			if (getData->itemNum > peer->advertisedData)
-				return CB_MESSAGE_ACTION_DISCONNECT;
-			// Begin sending requested data.
-			peer->sendDataIndex = 0;
-			peer->requestedData = getData;
-			CBRetainObject(peer->requestedData);
-			if (CBNodeSendRequestedData(self, peer))
-				// Return since the node was stoped.
-				return CB_MESSAGE_ACTION_RETURN;
-			break;
-		}
-		case CB_MESSAGE_TYPE_HEADERS:{
-			// The peer has headers for us.
-			CBBlockHeaders * headers = CBGetBlockHeaders(peer->receive);
-			CBOnMessageReceivedAction action;
-			if (headers->headerNum == 0)
-				// The peer has no more headers for us, so we end here
-				return CB_MESSAGE_ACTION_CONTINUE;
-			for (uint16_t x = 0; x < headers->headerNum; x++) {
-				action = CBNodeProcessBlock(self, headers->blockHeaders[x]);
-				if (action == CB_MESSAGE_ACTION_STOP)
-					return CB_MESSAGE_ACTION_STOP;
-				if (action == CB_MESSAGE_ACTION_DISCONNECT)
-					break;
-			}
-			// Ask for new headers from this peer unless, we are to disconnect it
-			CBByteArray * nullHash = CBNewByteArrayOfSize(32);
-			memset(CBByteArrayGetData(nullHash), 0, 32);
-			CBChainDescriptor * chainDesc = CBValidatorGetChainDescriptor(self->validator);
-			CBGetBlocks * getHeaders = CBNewGetBlocks(1, chainDesc, nullHash);
-			CBReleaseObject(chainDesc);
-			CBReleaseObject(nullHash);
-			CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getHeaders), NULL);
-			CBReleaseObject(getHeaders);
-			return action;
-		}
-		case CB_MESSAGE_TYPE_INV:{
-			// The peer has sent us an inventory broadcast
-			CBInventoryBroadcast * inv = CBGetInventoryBroadcast(peer->receive);
-			// Get data request for objects we want.
-			CBInventoryBroadcast * getData = NULL;
-			for (uint16_t x = 0; x < inv->itemNum; x++) {
-				uint8_t * hash = CBByteArrayGetData(inv->items[x]->hash);
-				if (inv->items[x]->type == CB_INVENTORY_ITEM_BLOCK) {
-					// Check if we have the block
-					if (CBBlockChainStorageBlockExists(self->validator, hash))
-						continue;
-				}else if (inv->items[x]->type == CB_INVENTORY_ITEM_TX){
-					// Check if we have the transaction
-					self->ourTxs.compareFunc = CBTransactionAndHashCompare;
-					CBFindResult res = CBAssociativeArrayFind(&self->ourTxs, hash);
-					self->ourTxs.compareFunc = CBTransactionCompare;
-					if (res.found)
-						continue;
-					if (! (self->flags & CB_NODE_HEADERS_ONLY)) {
-						self->otherTxs.compareFunc = CBTransactionAndHashCompare;
-						CBFindResult res = CBAssociativeArrayFind(&self->otherTxs, hash);
-						self->otherTxs.compareFunc = CBTransactionCompare;
-						if (res.found)
-							continue;
-						if (CBBlockChains) {
-							<#statements#>
-						}
-					}
-				}else continue;
-			}
-		}
-		default:
-			break;
-	}
+	self->messageQueueBack->peer = peer;
+	self->messageQueueBack->message = peer->receive;
+	self->messageQueueBack->next = NULL;
+	// Wakeup thread if this is the first in the queue
+	if (self->messageQueue == self->messageQueueBack)
+		// We have just added a block to the queue when there was not one before so wake-up the processing thread.
+		CBConditionSignal(self->messageProcessWaitCond);
+	CBMutexUnlock(self->messageProcessMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
-bool CBNodeSendRequestedData(CBNode * self, CBPeer * peer){
-	// See if the request has been satisfied
-	if (peer->sendDataIndex == peer->requestedData->itemNum) {
-		// We have sent everything
-		CBReleaseObject(peer->requestedData);
-		peer->requestedData = NULL;
-		return false;
+void CBNodeOnValidatorError(void * vpeer){
+	CBNode * self = CBGetPeer(vpeer)->nodeObj;
+	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+	CBLogError("There was a validation error.");
+	self->callbacks.onFatalNodeError(self);
+	CBReleaseObject(self);
+}
+CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert){
+	// ??? Presently ignoring alerts
+	return CB_MESSAGE_ACTION_CONTINUE;
+}
+void * CBNodeProcessMessages(void * node){
+	CBNode * self = node;
+	CBMutexLock(self->messageProcessMutex);
+	for (;;) {
+		if (self->messageQueue == NULL && !self->shutDownThread)
+			// Wait for more messages
+			CBConditionWait(self->messageProcessWaitCond, self->messageProcessMutex);
+		// Check to see if the thread should terminate
+		if (self->shutDownThread){
+			CBMutexUnlock(self->messageProcessMutex);
+			return NULL;
+		}
+		// Process next message on queue
+		CBMessageQueue * toProcess = self->messageQueue;
+		CBMutexUnlock(self->messageProcessMutex);
+		// Handle alerts and getblocks
+		CBOnMessageReceivedAction action;
+		if (toProcess->message->type == CB_MESSAGE_TYPE_GETBLOCKS)
+			// The peer is requesting blocks
+			action = CBNodeSendBlocksInvOrHeaders(self, toProcess->peer, true);
+		else if (toProcess->message->type == CB_MESSAGE_TYPE_ALERT)
+			// The peer sent us an alert message
+			action = CBNodeProcessAlert(self, toProcess->peer, CBGetAlert(toProcess->message));
+		action = self->onMessageReceived(self, toProcess->peer, toProcess->message);
+		if (action == CB_MESSAGE_ACTION_DISCONNECT)
+			// We need to disconnect the node
+			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectNode, toProcess->peer);
+		CBMutexLock(self->messageProcessMutex);
+		// Remove this from queue
+		self->messageQueue = toProcess->next;
+		free(toProcess);
 	}
-	// Check that the type is a transaction if headers only.
-	if (self->flags & CB_NODE_HEADERS_ONLY
-		&& peer->requestedData->items[peer->sendDataIndex]->type != CB_INVENTORY_ITEM_TX) {
-		CBNetworkCommunicatorDisconnect(CBGetNetworkCommunicator(self), peer, CB_24_HOURS, false);
-		return true;
-	}
-	switch (peer->requestedData->items[peer->sendDataIndex]->type) {
-		case CB_INVENTORY_ITEM_TX:{
-			// First look for our transactions
-			// Change the comparison function to accept a hash in place of a transaction object.
-			self->ourTxs.compareFunc = CBTransactionAndHashCompare;
-			CBFindResult res = CBAssociativeArrayFind(&self->ourTxs, CBByteArrayGetData(peer->requestedData->items[peer->sendDataIndex]->hash));
-			// Change the comparison function back
-			self->ourTxs.compareFunc = CBTransactionCompare;
-			if (res.found)
-				// The peer was requesting one of our transactions
-				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBFindResultToPointer(res), CBNodeSendRequestedDataVoid);
-			else{
-				// Now check the other transactions
-				self->otherTxs.compareFunc = CBTransactionAndHashCompare;
-				res = CBAssociativeArrayFind(&self->otherTxs, CBByteArrayGetData(peer->requestedData->items[peer->sendDataIndex]->hash));
-				self->otherTxs.compareFunc = CBTransactionCompare;
-				if (res.found)
-					// The peer was requesting another transaction
-					CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBFindResultToPointer(res), CBNodeSendRequestedDataVoid);
-				else{
-					// The peer was requesting something we do not have!
-					CBNetworkCommunicatorDisconnect(CBGetNetworkCommunicator(self), peer, CB_24_HOURS, false);
-					return true;
-				}
-			}
+}
+CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err){
+	CBLogError(err);
+	self->callbacks.onFatalNodeError(self);
+	CBReleaseObject(self);
+	return CB_MESSAGE_ACTION_RETURN;
+}
+CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, bool full){
+	CBGetBlocks * getBlocks = CBGetGetBlocks(peer->receive);
+	CBChainDescriptor * chainDesc = getBlocks->chainDescriptor;
+	if (chainDesc->hashNum == 0)
+		// Why do this?
+		return CB_MESSAGE_ACTION_DISCONNECT;
+	uint8_t branch;
+	uint32_t blockIndex;
+	// Go though the chain descriptor until a hash is found that we own
+	bool found = false;
+	// Lock block mutex for block chain access
+	CBMutexLock(self->blockAndTxMutex);
+	for (uint16_t x = 0; x < chainDesc->hashNum; x++) {
+		CBErrBool exists = CBBlockChainStorageGetBlockLocation(CBGetNode(self)->validator, CBByteArrayGetData(chainDesc->hashes[x]), &branch, &blockIndex);
+		if (exists == CB_ERROR)
+			return CBNodeReturnError(self, "Could not look for block with chain descriptor hash.");
+		if (exists == CB_TRUE){
+			// We have a block that we own.
+			found = true;
 			break;
 		}
-		case CB_INVENTORY_ITEM_BLOCK:{
-			// ??? Implement
-		}
-		case CB_INVENTORY_ITEM_ERROR:
-			return false;
 	}
-	// Now move to the next piece of data
-	peer->sendDataIndex++;
-	// Lower the unsatisfied advertised data number
-	peer->advertisedData--;
-	return false;
+	// Get the chain path for the main chain
+	CBChainPath mainChainPath = CBValidatorGetMainChainPath(self->validator);
+	CBChainPathPoint intersection;
+	if (found){
+		// Get the chain path for the block header we have found
+		CBChainPath peerChainPath = CBValidatorGetChainPath(self->validator, branch, blockIndex);
+		// Determine where the intersection is on the main chain
+		intersection = CBValidatorGetChainIntersection(&mainChainPath, &peerChainPath);
+	}else{
+		// Start at block 1
+		intersection.blockIndex = 1;
+		intersection.chainPathIndex = mainChainPath.numBranches - 1;
+	}
+	CBMessage * message;
+	// Now provide headers from this intersection up to 2000 blocks or block inventory items up to 500, the last one we have or the stopAtHash.
+	for (uint8_t x = 0; x < (full ? 500 : 2000); x++) {
+		// Check to see if we reached the last block in the main chain.
+		if (intersection.chainPathIndex == 0
+			&& intersection.blockIndex == mainChainPath.points[0].blockIndex) {
+			if (x == 0)
+				// The intersection is at the last block. The peer is up-to-date with us
+				return CB_MESSAGE_ACTION_CONTINUE;
+			break;
+		}
+		// Move to the next block
+		if (intersection.blockIndex == mainChainPath.points[intersection.chainPathIndex].blockIndex) {
+			// Move to next branch
+			intersection.chainPathIndex--;
+			intersection.blockIndex = 0;
+		}else{
+			// Move to the next block
+			intersection.blockIndex++;
+		}
+		// Get the hash
+		uint8_t hash[32];
+		if (! CBBlockChainStorageGetBlockHash(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex, hash)) {
+			if (x != 0) CBReleaseObject(message);
+			return CBNodeReturnError(self, "Could not obtain a hash for a block.");
+		}
+		// Check to see if we are at stopAtHash
+		if (memcmp(hash, CBByteArrayGetData(getBlocks->stopAtHash), 32) == 0){
+			if (x == 0)
+				// The stop at hash was the next block wanted which makes no sense
+				return CB_MESSAGE_ACTION_DISCONNECT;
+			break;
+		}
+		if (x == 0){
+			// Create inventory or block headers object to send to peer.
+			if (full) {
+				message = CBGetMessage(CBNewInventory());
+				message->type = CB_MESSAGE_TYPE_INV;
+			}else{
+				message = CBGetMessage(CBNewBlockHeaders());
+				message->type = CB_MESSAGE_TYPE_HEADERS;
+			}
+		}
+		// Add block header or add inventory item
+		if (full) {
+			CBByteArray * hashObj = CBNewByteArrayWithDataCopy(hash, 32);
+			CBInventoryTakeInventoryItem(CBGetInventory(message), CBNewInventoryItem(CB_INVENTORY_ITEM_BLOCK, hashObj));
+			CBReleaseObject(hashObj);
+		}else
+			CBBlockHeadersTakeBlockHeader(CBGetBlockHeaders(message), CBBlockChainStorageGetBlockHeader(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex));
+	}
+	CBMutexUnlock(self->blockAndTxMutex);
+	// Send the message
+	CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, message, NULL);
+	CBReleaseObject(message);
+	// We are uploading to the peer
+	peer->upload = true;
+	return CB_MESSAGE_ACTION_CONTINUE;
 }
-void CBNodeSendRequestedDataVoid(void * self, void * peer){
-	CBNodeSendRequestedData(self, peer);
-}
-bool CBNodeSyncScan(CBNode * self, CBChainPath * mainPath, uint8_t pathPoint, uint32_t forkBlockIndex){
-	uint8_t forkBranch = mainPath->points[pathPoint].branch;
-	while (self->scanInfo.lastBranch != forkBranch
-		   || self->scanInfo.lastBlockIndex != forkBlockIndex) {
-		// Load block
-		CBBlock * block = CBBlockChainStorageLoadBlock(self->validator, self->scanInfo.lastBlockIndex, self->scanInfo.lastBranch);
-		if (! block) {
-			CBLogError("Could not load a lost block.");
-			return false;
-		}
-		// Lose the block
-		for (uint32_t x = 0; x < block->transactionNum; x++) {
-			bool owned;
-			if (! CBAccounterTransactionChangeStatus(self->accounter, block->transactions[x], CB_TX_UNCONFIRMED, &owned)) {
-				CBReleaseObject(block);
-				CBLogError("Could not change the status of a transaction to unconfirmed.");
-				return false;
-			}
-			// Add back into an array.
-			if (owned) {
-				if (! CBAssociativeArrayInsert(&self->ourTxs, block->transactions[x], CBAssociativeArrayFind(&self->ourTxs, block->transactions[x]).position, NULL)) {
-					CBReleaseObject(block);
-					CBLogError("Could not insert a transaction from a lost block into the array for unconfirmed transactions owned by accounts.");
-					return false;
-				}
-				if (! CBAccounterStorageSaveUnconfirmedTransaction(self->accounter, block->transactions[x])) {
-					CBReleaseObject(block);
-					CBLogError("Could not insert a transaction from a lost block into storage for unconfirmed transactions owned by accounts.");
-					return false;
-				}
-			}else if (! CBNodeAddOtherTransaction(self, block->transactions[x])) {
-				CBReleaseObject(block);
-				CBLogError("Could not insert a transaction from a lost block into an array for unconfirmed transactions not owned by accounts.");
-				return false;
-			}
-		}
-		CBReleaseObject(block);
-		// Go down a block
-		if (self->scanInfo.lastBlockIndex > 0)
-			self->scanInfo.lastBlockIndex--;
-		else
-			self->scanInfo.lastBlockIndex = self->validator->branches[self->scanInfo.lastBranch--].parentBlockIndex;
-	}
-	// Add blocks
-	for (uint8_t x = pathPoint; x--;) {
-		for (;;) {
-			self->scanInfo.lastBlockIndex++;
-			if (self->scanInfo.lastBlockIndex > mainPath->points[x].blockIndex){
-				self->scanInfo.lastBlockIndex = 0;
-				break;
-			}
-			// Load block
-			CBBlock * block = CBBlockChainStorageLoadBlock(self->validator, self->scanInfo.lastBlockIndex, mainPath->points[pathPoint].branch);
-			if (! block) {
-				CBLogError("Could not load a lost block.");
-				return false;
-			}
-			if (! CBNodeFoundBlock(self, block, mainPath->points[pathPoint].branch, self->scanInfo.lastBlockIndex)){
-				CBReleaseObject(block);
-				CBLogError("Failure when processing a block when syncronising accounter and validator.");
-				return false;
-			}
-			CBReleaseObject(block);
-		}
-	}
-	// Check inputs and save
-	if (! CBNodeCheckInputsAndSave(self)) {
-		CBLogError("Could not check the inputs and save during synchronisation between the validator and accounter.");
-		return false;
-	}
-	return true;
-}
-CBCompare CBTransactionCompare(CBAssociativeArray * foo, void * tx1, void * tx2){
-	CBTransaction * tx1Obj = tx1;
-	CBTransaction * tx2Obj = tx2;
-	int res = memcmp(CBTransactionGetHash(tx1Obj), CBTransactionGetHash(tx2Obj), 32);
+CBCompare CBTransactionPtrCompare(CBAssociativeArray * foo, void * tx1, void * tx2){
+	CBTransaction ** tx1Obj = tx1;
+	CBTransaction ** tx2Obj = tx2;
+	int res = memcmp(CBTransactionGetHash(*tx1Obj), CBTransactionGetHash(*tx2Obj), 32);
 	if (res > 0)
 		return CB_COMPARE_MORE_THAN;
 	if (res == 0)
 		return CB_COMPARE_EQUAL;
 	return CB_COMPARE_LESS_THAN;
 }
-CBCompare CBTransactionAndHashCompare(CBAssociativeArray * foo,void * hash, void * tx){
-	CBTransaction * txObj = tx;
-	int res = memcmp((uint8_t *)hash, CBTransactionGetHash(txObj), 32);
+CBCompare CBTransactionPtrAndHashCompare(CBAssociativeArray * foo,void * hash, void * tx){
+	CBTransaction ** txObj = tx;
+	int res = memcmp((uint8_t *)hash, CBTransactionGetHash(*txObj), 32);
 	if (res > 0)
 		return CB_COMPARE_MORE_THAN;
 	if (res == 0)
 		return CB_COMPARE_EQUAL;
 	return CB_COMPARE_LESS_THAN;
-}*/
+}
