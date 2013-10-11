@@ -16,6 +16,8 @@
 #include "CBBlockChainStorage.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <pthread.h>
+#include <sys/time.h>
 
 static struct {
     uint8_t extranonce;
@@ -48,31 +50,144 @@ static struct {
     {2, 0x03e8779a}, {1, 0x98f34d8f}, {1, 0xc07b2b07}, {1, 0xdfe29668}, 
 };
 
-void CBLogError(char * format, ...){
-	va_list argptr;
-    va_start(argptr, format);
-    vfprintf(stderr, format, argptr);
-    va_end(argptr);
-	printf("\n");
+static struct {
+	bool valid;
+	uint32_t forkHeight;
+	uint8_t last[32];
+	bool done;
+} validatorResult = {0};
+
+pthread_mutex_t completeProcessMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t completeProcessCond = PTHREAD_COND_INITIALIZER;
+
+uint64_t CBGetMilliseconds(void){
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+bool newBranchCallback(void * foo, uint8_t branch, uint8_t parent, uint32_t blockHeight);
+bool newBranchCallback(void * foo, uint8_t branch, uint8_t parent, uint32_t blockHeight){
+	validatorResult.forkHeight = blockHeight;
+	return true;
+}
+
+bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType type);
+bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType type){
+	if (type == CB_ADD_BLOCK_LAST)
+		memcpy(validatorResult.last, CBBlockGetHash(block), 32);
+	return true;
+}
+
+bool rmBlock(void * foo, uint8_t, CBBlock * block);
+bool rmBlock(void * foo, uint8_t branch, CBBlock * block){
+	return true;
+}
+
+bool finish(void * foo, CBBlock * block);
+bool finish(void * foo, CBBlock * block){
+	validatorResult.valid = true;
+	pthread_mutex_lock(&completeProcessMutex);
+	validatorResult.done = true;
+	pthread_cond_broadcast(&completeProcessCond);
+	pthread_mutex_unlock(&completeProcessMutex);
+	return true;
+}
+
+bool invalidBlock(void * foo, CBBlock * block);
+bool invalidBlock(void * foo, CBBlock * block){
+	validatorResult.valid = false;
+	pthread_mutex_lock(&completeProcessMutex);
+	validatorResult.done = true;
+	pthread_cond_broadcast(&completeProcessCond);
+	pthread_mutex_unlock(&completeProcessMutex);
+	return true;
+}
+
+bool noNewBranches(void * foo, CBBlock * block);
+bool noNewBranches(void * foo, CBBlock * block){
+	return true;
+}
+
+void onValidatorError(void * foo);
+void onValidatorError(void * foo){
+	printf("ON VALIDATE ERROR\n");
+	exit(1);
+}
+
+bool start(void *);
+bool start(void * foo){
+	return true;
+}
+uint64_t alreadyValidated(void *, CBTransaction *);
+uint64_t alreadyValidated(void * foo, CBTransaction * tx){
+	return 0;
+}
+bool isOrphan(void *, CBBlock *);
+bool isOrphan(void * foo, CBBlock * block){
+	return true;
+}
+bool deleteBranchCallback(void *, uint8_t branch);
+bool deleteBranchCallback(void * foo, uint8_t branch){
+	return true;
+}
+bool workingOnBranch(void *, uint8_t branch);
+bool workingOnBranch(void * foo, uint8_t branch){
+	return true;
+}
+
+void waitForResult(void);
+void waitForResult(void){
+	pthread_mutex_lock(&completeProcessMutex);
+	if (!validatorResult.done)
+		pthread_cond_wait(&completeProcessCond, &completeProcessMutex);
+	validatorResult.done = false;
+	pthread_mutex_unlock(&completeProcessMutex);
 }
 
 int main(){
-	remove("./blk_log.dat");
-	remove("./blk_0.dat");
-	remove("./blk_1.dat");
-	remove("./blk_2.dat");
+	remove("./cbitcoin/log.dat");
+	remove("./cbitcoin/del.dat");
+	remove("./cbitcoin/idx_0_0.dat");
+	remove("./cbitcoin/idx_1_0.dat");
+	remove("./cbitcoin/idx_2_0.dat");
+	remove("./cbitcoin/idx_3_0.dat");
+	remove("./cbitcoin/idx_4_0.dat");
+	remove("./cbitcoin/idx_5_0.dat");
+	remove("./cbitcoin/idx_6_0.dat");
+	remove("./cbitcoin/val_0.dat");
 	// Create validator
-	uint64_t storage = CBNewBlockChainStorage("./");
-	CBValidator * validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY);
+	CBDepObject storage;
+	CBDepObject database;
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	CBValidatorCallbacks callbacks = {
+		start,
+		alreadyValidated,
+		isOrphan,
+		deleteBranchCallback,
+		workingOnBranch,
+		newBranchCallback,
+		newValidBlock,
+		rmBlock,
+		finish,
+		invalidBlock,
+		noNewBranches,
+		onValidatorError
+	};
+	CBValidator * validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY, callbacks);
 	if (! validator) {
 		printf("VALIDATOR INIT FAIL\n");
 		return 1;
 	}
+	CBStorageDatabaseStage(database);
 	CBReleaseObject(validator);
+	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
 	// Now create it again. It should load the data.
-	storage = CBNewBlockChainStorage("./");
-	validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY);
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY, callbacks);
 	if (! validator) {
 		printf("VALIDATOR LOAD FROM FILE FAIL\n");
 		return 1;
@@ -158,16 +273,24 @@ int main(){
 	CBGetMessage(block1)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block1, false));
 	CBBlockSerialise(block1, false, false);
 	// Made block now proceed with the test.
-	CBBlockProcessResult res = CBValidatorProcessBlock(validator, block1, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_MAIN) {
+	if (CBValidatorBasicBlockValidation(validator, block1, 1349643202) != CB_BLOCK_VALIDATION_OK) {
+		printf("MAIN CHAIN BASIC VALIDATION FAIL");
+		return 1;
+	}
+	CBValidatorQueueBlock(validator, block1, NULL);
+	waitForResult();
+	if (!validatorResult.valid) {
 		printf("MAIN CHAIN ADD FAIL\n");
 		return 1;
 	}
 	// Check validator data is correct, after closing and loading data
+	CBStorageDatabaseStage(database);
 	CBReleaseObject(validator);
+	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
-	storage = CBNewBlockChainStorage("./");
-	validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY);
+	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
+	CBNewBlockChainStorage(&storage, database);
+	validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY, callbacks);
 	if (! validator){
 		printf("BLOCK ONE LOAD FROM FILE FAIL\n");
 		return 1;
@@ -240,12 +363,6 @@ int main(){
 		printf("BLOCK ONE VERSION FAIL\n");
 		return 1;
 	}
-	// Test duplicate add.
-	res = CBValidatorProcessBlock(validator, block1, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_DUPLICATE) {
-		printf("MAIN CHAIN ADD DUPLICATE FAIL\n");
-		return 1;
-	}
 	// Test block with bad PoW.
 	CBBlock * testBlock = CBNewBlock();
 	testBlock->version = 1;
@@ -258,9 +375,8 @@ int main(){
 	CBGetMessage(testBlock)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(testBlock, false));
 	CBBlockSerialise(testBlock, false, false);
 	// Made block now proceed with the test.
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
-		printf("BAD POW ADD FAIL\n");
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_BAD) {
+		printf("BAD POW ADD FAIL");
 		return 1;
 	}
 	// Add 100 blocks to test
@@ -307,116 +423,116 @@ int main(){
 		else
 			y -= 2;
 		printf("PROCESSING BLOCK %u\n", y);
-		res = CBValidatorProcessBlock(validator, theBlocks[y], 1230999326);
+		if (CBValidatorBasicBlockValidation(validator, theBlocks[y], 1230999326) != CB_BLOCK_VALIDATION_OK) {
+			printf("100 BLOCKS BASIC VALDIATION FAIL");
+			return 1;
+		}
+		CBValidatorQueueBlock(validator, theBlocks[y], NULL);
+		waitForResult();
+		CBStorageDatabaseStage(database);
 		if (x < 22){
-			if (res.status != CB_BLOCK_STATUS_ORPHAN) {
+			if (!validatorResult.valid) {
 				printf("ORPHAN FAIL AT %u\n", y);
 				return 1;
 			}
 		}else if (x == 22){
-			if (res.status != CB_BLOCK_STATUS_SIDE) {
-				printf("SIDE FAIL AT %u\n", y);
+			if (!validatorResult.valid) {
+				printf("SIDE FAIL\n");
 				return 1;
 			}
-			if (res.data.sideBranch != 1) {
-				printf("SIDE DATA FAIL AT %u\n", y);
+			if (validatorResult.forkHeight != 1){
+				printf("SIDE FORK HEIGHT FAIL\n");
 				return 1;
 			}
 		}else if (x == 23){
-			if (res.status != CB_BLOCK_STATUS_REORG) {
-				printf("REORG FAIL AT %u\n", y);
+			if (!validatorResult.valid) {
+				printf("REORG FAIL\n");
 				return 1;
 			}
-			if (res.data.reorgData.blockHeight != 1) {
-				printf("REORG BLOCK HEIGHT FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.start.chainPathIndex != 0) {
-				printf("REORG START CHAIN PATH INDEX FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.start.blockIndex != 0) {
-				printf("REORG START BLOCK INDEX FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.numBranches != 2) {
-				printf("REORG NEW CHAIN NUM BRANCHES FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[0].branch != 1) {
-				printf("REORG NEW CHAIN POINT 0 BRANCH FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[0].blockIndex != 1) {
-				printf("REORG NEW CHAIN POINT 0 BLOCK INDEX FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[1].branch != 0) {
-				printf("REORG NEW CHAIN POINT 1 BRANCH FAIL AT %u\n", y);
-				return 1;
-			}
-			if (res.data.reorgData.newChain.points[1].blockIndex != 0) {
-				printf("REORG NEW CHAIN POINT 1 BLOCK INDEX FAIL AT %u\n", y);
+			if (memcmp(validatorResult.last, CBBlockGetHash(theBlocks[y]), 32)) {
+				printf("REORG LAST FAIL\n");
 				return 1;
 			}
 		}else if (x == 26){
-			if (res.status != CB_BLOCK_STATUS_MAIN_WITH_ORPHANS) {
-				printf("MAIN WITH ORPHANS FAIL AT %u\n", y);
+			if (!validatorResult.valid) {
+				printf("MAIN WITH ORPHANS FAIL\n");
 				return 1;
 			}
-			if (res.data.numOrphansAdded != 20) {
-				printf("MAIN WITH ORPHANS NUM ADDED FAIL AT %u\n", y);
+			if (memcmp(validatorResult.last, CBBlockGetHash(theBlocks[24]), 32)) {
+				printf("MAIN WITH ORPHANS LAST FAIL\n");
 				return 1;
 			}
-		}else if (res.status != CB_BLOCK_STATUS_MAIN) {
-			// Reorg occurs at y == 1
-			printf("MAIN FAIL AT %u\n", y);
-			return 1;
+		}else{
+			if (!validatorResult.valid) {
+				// Reorg occurs at y == 1
+				printf("MAIN FAIL AT %u\n", y);
+				return 1;
+			}
+			if (memcmp(validatorResult.last, CBBlockGetHash(theBlocks[y]), 32)) {
+				printf("MAIN LAST FAIL AT %u\n", y);
+				return 1;
+			}
 		}
-		if (x > 1)
-			CBReleaseObject(theBlocks[y]);
 	}
+	for (uint8_t x = 0; x < 100; x++)
+		CBReleaseObject(theBlocks[x]);
 	// Now do tests without valid PoW
 	validator->flags |= CB_VALIDATOR_DISABLE_POW_CHECK;
 	// Test the disabler works
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_SIDE) {
-		printf("POW CHECK DISABLE FAIL\n");
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_OK) {
+		printf("POW CHECK DISABLE BASIC VALIDATION FAIL\n");
 		return 1;
 	}
-	if (res.data.sideBranch != 2) {
-		printf("POW CHECK DISABLE DATA FAIL\n");
+	CBValidatorQueueBlock(validator, testBlock, NULL);
+	waitForResult();
+	if (!validatorResult.valid) {
+		printf("POW CHECK DISABLE FAIL\n");
 		return 1;
 	}
 	// No transactions
 	testBlock->transactionNum = 0;
 	testBlock->time--;
 	CBBlockSerialise(testBlock, false, false);
-	res = CBValidatorProcessBlock(validator, testBlock, 1349643202);
-	if (res.status != CB_BLOCK_STATUS_BAD) {
-		printf("NO TXS FAIL\n");
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_BAD) {
+		printf("NO TXS FAIL");
 		return 1;
 	}
 	// Bad target
 	testBlock->transactionNum = 1;
 	testBlock->target = CB_MAX_TARGET - 1;
 	CBBlockSerialise(testBlock, false, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_OK) {
+		printf("BAD TARGET BASIC VALIDATION FAIL");
+		return 1;
+	}
+	CBValidatorQueueBlock(validator, testBlock, NULL);
+	waitForResult();
+	if (validatorResult.valid) {
 		printf("BAD TARGET FAIL\n");
 		return 1;
 	}
 	// Test bad time against network time
 	CBBlockSerialise(testBlock, false, false);
-	if (CBValidatorProcessBlock(validator, testBlock, testBlock->time - 7201).status != CB_BLOCK_STATUS_BAD_TIME) {
-		printf("NETWORK TIME BAD BLOCK TIME FAIL\n");
+	if (CBValidatorBasicBlockValidation(validator, testBlock, testBlock->time - 7201) != CB_BLOCK_VALIDATION_BAD_TIME) {
+		printf("BAD TIME FAIL");
 		return 1;
 	}
 	// Test bad time against median time
 	testBlock->time--;
 	CBBlockSerialise(testBlock, false, false);
-	if (CBValidatorProcessBlock(validator, testBlock, 1349643202).status != CB_BLOCK_STATUS_BAD) {
-		printf("MEDIAN TIME BAD BLOCK TIME FAIL\n");
+	if (CBValidatorBasicBlockValidation(validator, testBlock, 1349643202) != CB_BLOCK_VALIDATION_OK) {
+		printf("BAD TIME MEDIAN BASIC VALIDATION FAIL");
 		return 1;
 	}
+	CBValidatorQueueBlock(validator, testBlock, NULL);
+	waitForResult();
+	if (validatorResult.valid) {
+		printf("BAD TIME MEDIAN FAIL\n");
+		return 1;
+	}
+	CBStorageDatabaseStage(database);
+	CBReleaseObject(validator);
+	CBFreeStorageDatabase(database);
+	CBFreeBlockChainStorage(storage);
 	return 0;
 }

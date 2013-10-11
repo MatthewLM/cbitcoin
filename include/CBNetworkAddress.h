@@ -26,10 +26,12 @@
 #include "CBDependencies.h"
 #include "CBNetworkFunctions.h"
 #include <time.h>
+#include <stdio.h>
 
 // Constants and Macros
 
 #define CBGetNetworkAddress(x) ((CBNetworkAddress *)x)
+#define CB_NETWORK_ADDR_STR_SIZE 48
 
 typedef enum{
 	CB_SERVICE_FULL_BLOCKS = 1, /**< Service for full blocks. Node maintains the entire blockchain. */
@@ -100,6 +102,7 @@ void CBDestroyNetworkAddress(void * self);
 void CBFreeNetworkAddress(void * self);
  
 //  Functions
+
 /**
  @brief Deserialises a CBNetworkAddress so that it can be used as an object.
  @param self The CBNetworkAddress object
@@ -121,5 +124,6 @@ bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr);
  @returns The length written on success, 0 on failure.
  */
 uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp);
+char * CBNetworkAddressToString(CBNetworkAddress * self, char output[48]);
 
 #endif

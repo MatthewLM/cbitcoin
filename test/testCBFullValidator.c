@@ -55,7 +55,7 @@ static struct {
 	uint32_t forkHeight;
 	uint8_t last[32];
 	bool done;
-} validatorResult = {};
+} validatorResult = {0};
 
 pthread_mutex_t completeProcessMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t completeProcessCond = PTHREAD_COND_INITIALIZER;
@@ -80,19 +80,15 @@ bool newBranchCallback(void * foo, uint8_t branch, uint8_t parent, uint32_t bloc
 	return true;
 }
 
-bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, bool last);
-bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, bool last){
-	if (last)
+bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType type);
+bool newValidBlock(void * foo, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType type){
+	if (type == CB_ADD_BLOCK_LAST)
 		memcpy(validatorResult.last, CBBlockGetHash(block), 32);
 	return true;
 }
 
-bool lostTx(void * foo, CBTransaction * tx);
-bool lostTx(void * foo, CBTransaction * tx){
-	return true;
-}
-bool foundTx(void * foo, CBTransaction * tx);
-bool foundTx(void * foo, CBTransaction * tx){
+bool rmBlock(void * foo, uint8_t, CBBlock * block);
+bool rmBlock(void * foo, uint8_t branch, CBBlock * block){
 	return true;
 }
 
@@ -127,6 +123,27 @@ void onValidatorError(void * foo){
 	exit(1);
 }
 
+bool start(void *);
+bool start(void * foo){
+	return true;
+}
+uint64_t alreadyValidated(void *, CBTransaction *);
+uint64_t alreadyValidated(void * foo, CBTransaction * tx){
+	return 0;
+}
+bool isOrphan(void *, CBBlock *);
+bool isOrphan(void * foo, CBBlock * block){
+	return true;
+}
+bool deleteBranchCallback(void *, uint8_t branch);
+bool deleteBranchCallback(void * foo, uint8_t branch){
+	return true;
+}
+bool workingOnBranch(void *, uint8_t branch);
+bool workingOnBranch(void * foo, uint8_t branch){
+	return true;
+}
+
 void waitForResult(void);
 void waitForResult(void){
 	pthread_mutex_lock(&completeProcessMutex);
@@ -153,11 +170,14 @@ int main(){
 	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
 	CBNewBlockChainStorage(&storage, database);
 	CBValidatorCallbacks callbacks = {
-		NULL,
+		start,
+		alreadyValidated,
+		isOrphan,
+		deleteBranchCallback,
+		workingOnBranch,
 		newBranchCallback,
 		newValidBlock,
-		lostTx,
-		foundTx,
+		rmBlock,
 		finish,
 		invalidBlock,
 		noNewBranches,

@@ -120,7 +120,7 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
 						pos.node->elements[0] = parent->elements[parentPosition - 1];
 						// Now move left sibling's far right element to parent
 						parent->elements[parentPosition - 1] = left->elements[left->numElements - 1];
-						if (left->children[left->numElements])
+						if (left->children[0])
 							// Make left sibling's far right child the far left child of this node
 							pos.node->children[0] = left->children[left->numElements];
 						// Now remove left sibling's far right element and be done

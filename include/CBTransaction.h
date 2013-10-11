@@ -30,6 +30,7 @@
 
 #define CB_TX_MAX_SIZE 999915 // Block size minus the header
 #define CB_TX_MAX_STANDARD_VERSION 1
+#define CB_TX_HASH_STR_SIZE 41
 #define CBGetTransaction(x) ((CBTransaction *)x)
 
 /**
@@ -129,6 +130,7 @@ uint8_t * CBTransactionGetHash(CBTransaction * self);
  @returns true if the hash has been retreived with no problems. false is returned if the hash is invalid.
  */
 bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash);
+void CBTransactionHashToString(CBTransaction * self, char output[CB_TX_HASH_STR_SIZE]);
 bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutput * prevOut, CBScript * p2sh);
 /**
  @brief Determines if a transaction is a coinbase transaction or not.

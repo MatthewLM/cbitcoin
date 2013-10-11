@@ -29,6 +29,7 @@
 // Constants and Macros
 
 #define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
+#define CB_BLOCK_HASH_STR_SIZE 41
 #define CBGetBlock(x) ((CBBlock *)x)
 
 /**
@@ -144,6 +145,7 @@ uint32_t CBBlockDeserialise(CBBlock * self, bool transactions);
  @returns The hash for the block. This is a 32 byte long, double SHA-256 hash and is a pointer to the hash field in the block.
  */
 uint8_t * CBBlockGetHash(CBBlock * self);
+void CBBlockHashToString(CBBlock * self, char output[CB_BLOCK_HASH_STR_SIZE]);
 /**
  @brief Serialises a CBBlock to the byte data.
  @param self The CBBlock object

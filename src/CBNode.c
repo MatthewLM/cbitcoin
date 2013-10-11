@@ -33,6 +33,7 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
 	self->flags = flags;
 	self->database = database;
 	self->callbacks = nodeCallbacks;
+	self->onMessageReceived = onMessageReceived;
 	// Initialise network communicator
 	commCallbacks.onMessageReceived = CBNodeOnMessageReceived;
 	CBInitNetworkCommunicator(CBGetNetworkCommunicator(self), commCallbacks);
@@ -131,7 +132,7 @@ CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAle
 	// ??? Presently ignoring alerts
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
-void * CBNodeProcessMessages(void * node){
+void CBNodeProcessMessages(void * node){
 	CBNode * self = node;
 	CBMutexLock(self->messageProcessMutex);
 	for (;;) {
@@ -141,7 +142,7 @@ void * CBNodeProcessMessages(void * node){
 		// Check to see if the thread should terminate
 		if (self->shutDownThread){
 			CBMutexUnlock(self->messageProcessMutex);
-			return NULL;
+			return;
 		}
 		// Process next message on queue
 		CBMessageQueue * toProcess = self->messageQueue;
@@ -231,13 +232,6 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 			if (x != 0) CBReleaseObject(message);
 			return CBNodeReturnError(self, "Could not obtain a hash for a block.");
 		}
-		// Check to see if we are at stopAtHash
-		if (memcmp(hash, CBByteArrayGetData(getBlocks->stopAtHash), 32) == 0){
-			if (x == 0)
-				// The stop at hash was the next block wanted which makes no sense
-				return CB_MESSAGE_ACTION_DISCONNECT;
-			break;
-		}
 		if (x == 0){
 			// Create inventory or block headers object to send to peer.
 			if (full) {
@@ -255,6 +249,9 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 			CBReleaseObject(hashObj);
 		}else
 			CBBlockHeadersTakeBlockHeader(CBGetBlockHeaders(message), CBBlockChainStorageGetBlockHeader(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex));
+		// Check to see if we are at stopAtHash
+		if (getBlocks->stopAtHash && memcmp(hash, CBByteArrayGetData(getBlocks->stopAtHash), 32) == 0)
+			break;
 	}
 	CBMutexUnlock(self->blockAndTxMutex);
 	// Send the message

@@ -131,5 +131,42 @@ uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp){
 	bytes->length = cursor + 2;
 	CBGetMessage(self)->serialised = true;
 	return cursor + 2;
-
+}
+char * CBNetworkAddressToString(CBNetworkAddress * self, char output[48]){
+	if (self->type & CB_IP_IP4) {
+		sprintf(output, "[::ffff:%u.%u.%u.%u]:%u",
+				CBByteArrayGetByte(self->ip, 12),
+				CBByteArrayGetByte(self->ip, 13),
+				CBByteArrayGetByte(self->ip, 14),
+				CBByteArrayGetByte(self->ip, 15),
+				self->port);
+		return strchr(output, '\0');
+	}
+	*(output++) = '[';
+	uint8_t numColons = 0;
+	for (uint8_t x = 0; x < 16; x += 2) {
+		// Also can be used for any reading of big endian 16 bit integers
+		uint16_t num = CBByteArrayReadPort(self->ip, x);
+		if (num == 0) {
+			// Skip
+			if (numColons < 2) {
+				*(output++) = ':';
+				if (numColons == 0)
+					*(output++) = ':';
+				numColons = 2;
+			}
+		}else{
+			// Write number
+			sprintf(output, "%x", num);
+			output = strchr(output, '\0');
+			if (x != 14) {
+				*(output++) = ':';
+				numColons = 1;
+			}
+		}
+	}
+	// Add port number
+	*output = ']';
+	sprintf(output + 1, ":%u", self->port);
+	return strchr(output, '\0');
 }

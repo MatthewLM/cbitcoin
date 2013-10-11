@@ -39,19 +39,13 @@ CBDepObject keyPairs[3];
 uint8_t addrs[3][20];
 CBTransaction * initialTxs[14];
 
+pthread_mutex_t completeProcessMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t completeProcessCond = PTHREAD_COND_INITIALIZER;
+
 uint64_t CBGetMilliseconds(void){
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-}
-
-void CBLogError(char * format, ...);
-void CBLogError(char * format, ...){
-	va_list argptr;
-    va_start(argptr, format);
-    vfprintf(stderr, format, argptr);
-    va_end(argptr);
-	printf("\n");
 }
 
 void onFatalNodeError(CBNode * node);
@@ -105,7 +99,7 @@ void finishReceiveInitialTest(void){
 				}
 				for (uint8_t y = 4;; y++) {
 					if (memcmp(CBTransactionGetHash(fndTx->utx.tx), CBTransactionGetHash(initialTxs[y]), 32) == 0) {
-						if (!(y > 10 ^ fndTx->utx.numUnconfDeps != 0)) {
+						if (!((y > 10) ^ (fndTx->utx.numUnconfDeps != 0))) {
 							printf("RECEIVE INITIAL BLOCKS AND TXS FINISH NUM UNCONF DEPS FAIL\n");
 							exit(EXIT_FAILURE);
 						}
@@ -129,12 +123,12 @@ void finishReceiveInitialTest(void){
 void newBlock(CBNode *, CBBlock * block, uint32_t height, uint32_t forkPoint);
 void newBlock(CBNode * node, CBBlock * block, uint32_t height, uint32_t forkPoint){
 	CBNodeFull * nodeFull = CBGetNodeFull(node);
+	int nodeNum = (nodes[0] == nodeFull)? 0 : ((nodes[1] == nodeFull)? 1 : 2);
 	if (testPhase == RECEIVE_INITIAL_BLOCKS_AND_TXS) {
-		if (nodeFull == nodes[0]) {
+		if (nodeNum == 0) {
 			printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK SENDING NODE\n");
 			exit(EXIT_FAILURE);
 		}
-		int nodeNum = (nodes[1] == nodeFull)? 1 : 2;
 		if (forkPoint == 500) {
 			if (nodeNum != 1) {
 				printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK NOT IN NODE 1\n");
@@ -209,7 +203,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
 				exit(EXIT_FAILURE);
 			}
-			if (details->accountTxDetails.amount != 1250000000) {
+			if (details->accountTxDetails.amount != 625000000) {
 				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD AMOUNT\n", txNum);
 				exit(EXIT_FAILURE);
 			}
@@ -244,7 +238,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
 					exit(EXIT_FAILURE);
 				}
-				if (details->accountTxDetails.amount != 625000000*(1-(x == 0)*2)) {
+				if (details->accountTxDetails.amount != 312500000*(1-(x == 0)*2)) {
 					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD AMOUNT\n", txNum);
 					exit(EXIT_FAILURE);
 				}
@@ -280,7 +274,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ADDR HASH\n",txNum);
 					exit(EXIT_FAILURE);
 				}
-				if (details->accountTxDetails.amount != -312500000) {
+				if (details->accountTxDetails.amount != -156250000) {
 					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD AMOUNT\n", txNum);
 					exit(EXIT_FAILURE);
 				}
@@ -312,6 +306,7 @@ void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
 }
 
 int main(){
+	puts("You may need to move your mouse around if this test stalls.");
 	// Create three nodes to talk to each other
 	CBDepObject databases[3];
 	CBNodeCallbacks callbacks = {
@@ -341,7 +336,7 @@ int main(){
 		CBNewStorageDatabase(&databases[x], directory, 10000000, 10000000);
 		nodes[x] = CBNewNodeFull(databases[x], CB_NODE_CHECK_STANDARD, 100000, callbacks);
 		CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
-		CBNetworkAddress * addr = CBNewNetworkAddress(0, loopBack, 45562 + x, 0, true);
+		CBNetworkAddress * addr = CBNewNetworkAddress(0, loopBack, 45562 + x, 0, false);
 		CBReleaseObject(loopBack);
 		CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
 		CBNetworkCommunicator * comm = CBGetNetworkCommunicator(nodes[x]);
@@ -352,7 +347,7 @@ int main(){
 		comm->timeOut = 2000;
 		CBNetworkCommunicatorSetUserAgent(comm, userAgent);
 		CBNetworkCommunicatorSetOurIPv4(comm, addr);
-		CBNetworkCommunicatorSetReachability(comm, CB_IP_IPv4 | CB_IP_LOCAL, true);
+		CBNetworkCommunicatorSetReachability(comm, CB_IP_IP4 | CB_IP_LOCAL, true);
 		// Disbable POW check
 		CBGetNode(nodes[x])->validator->flags |= CB_VALIDATOR_DISABLE_POW_CHECK;
 	}
@@ -376,7 +371,7 @@ int main(){
 	block->transactions[0] = CBNewTransaction(0, 1);
 	CBByteArray * nullHash = CBNewByteArrayOfSize(32);
 	memset(CBByteArrayGetData(nullHash), 0, 32);
-	CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0,0}, 1);
+	CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0,0}, 2);
 	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(script, CB_TX_INPUT_FINAL, nullHash, 0xFFFFFFFF));
 	CBReleaseObject(script);
 	CBReleaseObject(nullHash);
@@ -391,13 +386,13 @@ int main(){
 	CBBlockCalculateAndSetMerkleRoot(block);
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
 	CBBlockSerialise(block, true, false);
-	// Add direct
-	CBValidatorAddBlockDirectly(CBGetNode(nodes[0])->validator, block);
-	CBValidatorAddBlockDirectly(CBGetNode(nodes[1])->validator, block);
+	// Add blocks
+	CBNodeFullAddBlockDirectly(nodes[0], block);
+	CBNodeFullAddBlockDirectly(nodes[1], block);
 	CBByteArray * firstCoinbase = CBNewByteArrayWithDataCopy(CBTransactionGetHash(block->transactions[0]), 32);
 	// Add 999 more
 	CBByteArray * prevToFork, * lastNode0BlockHash;
-	for (uint8_t x = 0; x < 1499; x++) {
+	for (uint16_t x = 0; x < 1499; x++) {
 		if (x == 999)
 			block->prevBlockHash = prevToFork;
 		else
@@ -408,9 +403,9 @@ int main(){
 		CBBlockCalculateAndSetMerkleRoot(block);
 		CBBlockSerialise(block, true, true);
 		if (x < 999)
-			CBValidatorAddBlockDirectly(CBGetNode(nodes[0])->validator, block);
+			CBNodeFullAddBlockDirectly(nodes[0], block);
 		if (x < 499 || x >= 999){
-			CBValidatorAddBlockDirectly(CBGetNode(nodes[1])->validator, block);
+			CBNodeFullAddBlockDirectly(nodes[1], block);
 			if (x == 498)
 				prevToFork = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
 		}
@@ -440,16 +435,17 @@ int main(){
 		CBTransactionTakeInput(block->transactions[x], CBNewTransactionInput(script, CB_TX_INPUT_FINAL, firstCoinbase, x-1));
 		CBReleaseObject(script);
 		script = CBNewScriptPubKeyHash(addrs[x % 3]);
-		CBTransactionTakeOutput(block->transactions[x], CBNewTransactionOutput(625000000, script));
-		CBTransactionTakeOutput(block->transactions[x], CBNewTransactionOutput(625000000, script));
+		for (uint8_t y = 0; y < 4; y++)
+			CBTransactionTakeOutput(block->transactions[x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
+		CBGetMessage(block->transactions[x])->bytes = CBNewByteArrayOfSize(CBTransactionCalculateLength(block->transactions[x]));
 		CBTransactionSerialise(block->transactions[x], true);
 		initialTxs[x-1] = block->transactions[x];
 	}
 	CBBlockCalculateAndSetMerkleRoot(block);
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
 	CBBlockSerialise(block, true, true);
-	CBValidatorAddBlockDirectly(CBGetNode(nodes[0])->validator, block);
+	CBNodeFullAddBlockDirectly(nodes[0], block);
 	CBGetNetworkCommunicator(nodes[0])->blockHeight = 1001;
 	CBGetNetworkCommunicator(nodes[1])->blockHeight = 1000;
 	// Broadcast transactions
@@ -470,23 +466,26 @@ int main(){
 			CBReleaseObject(prev);
 		}
 		script = CBNewScriptPubKeyHash(addrs[x % 3]);
-		CBTransactionTakeOutput(tx, CBNewTransactionOutput(312500000*(1 + (x >= 6)), script));
-		CBTransactionTakeOutput(tx, CBNewTransactionOutput(312500000*(1 + (x >= 6)), script));
+		CBTransactionTakeOutput(tx, CBNewTransactionOutput(156250000*(1 + (x >= 6)), script));
+		CBTransactionTakeOutput(tx, CBNewTransactionOutput(156250000*(1 + (x >= 6)), script));
 		CBReleaseObject(script);
 		// Sign transaction
 		CBTransactionSignInput(tx, keyPairs[(x % 4 + 1) % 3], block->transactions[x % 4 + 1]->outputs[x/4]->scriptObject, 0, CB_SIGHASH_ALL);
 		if (x >= 6)
-			CBTransactionSignInput(tx, keyPairs[(x % 2)*2], deps[x % 2]->outputs[x/2]->scriptObject, 1, CB_SIGHASH_ALL);
+			CBTransactionSignInput(tx, keyPairs[(x % 2)*2], deps[x % 2]->outputs[(x-6)/2]->scriptObject, 1, CB_SIGHASH_ALL);
+		CBGetMessage(tx)->bytes = CBNewByteArrayOfSize(CBTransactionCalculateLength(tx));
 		CBTransactionSerialise(tx, false);
-		CBNodeFullBroadcastTransaction(nodes[0], tx, x >= 6);
+		CBNodeFullBroadcastTransaction(nodes[0], tx, x >= 6, 312500000 + (x >= 6)*156250000);
 		initialTxs[x+4] = tx;
 	}
 	testPhase = RECEIVE_INITIAL_BLOCKS_AND_TXS;
 	// Start nodes and listen on node 1 and 2
-	for (uint8_t x = 0; x < 3; x++) {
+	for (uint8_t x = 3; x--;) {
 		CBNetworkCommunicatorStart(CBGetNetworkCommunicator(nodes[x]));
 		if (x > 0)
 			CBNetworkCommunicatorStartListening(CBGetNetworkCommunicator(nodes[x]));
+		else
+			CBNetworkCommunicatorTryConnections(CBGetNetworkCommunicator(nodes[x]));
 	}
 	pthread_exit(NULL);
 }

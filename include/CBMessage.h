@@ -29,6 +29,7 @@
 
 // Constants and Macros
 
+#define CB_MESSAGE_TYPE_STR_SIZE 11
 #define CBGetMessage(x) ((CBMessage *)x)
 
 /*
@@ -100,5 +101,7 @@ void CBDestroyMessage(void * self);
 void CBFreeMessage(void * self);
 
 //  Functions
+
+void CBMessageTypeToString(CBMessageType type, char output[CB_MESSAGE_TYPE_STR_SIZE]);
 
 #endif

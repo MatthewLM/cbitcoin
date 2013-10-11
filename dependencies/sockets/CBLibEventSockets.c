@@ -17,6 +17,7 @@
 // Implementation
 
 CBSocketReturn CBNewSocket(CBDepObject * socketID, bool IPv6){
+	// You need to use PF_INET for IPv4 mapped IPv6 addresses despite using the IPv6 format.
 	socketID->i = socket(IPv6 ? PF_INET6 : PF_INET, SOCK_STREAM, 0);
 	if (socketID->i == -1) {
 		if (errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT) {
@@ -123,24 +124,15 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 	loop->onTimeOut = onDidTimeout;
 	loop->communicator = communicator;
 	loop->userEvent = event_new(loop->base, 0, 0, CBDoRun, loop);
-	// Create thread attributes explicitly for portability reasons.
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); // May need to be joinable.
-	// Create joinable thread
-	if(pthread_create(&loop->loopThread, &attr, CBStartEventLoop, loop)){
-		// Thread creation failed.
-		pthread_attr_destroy(&attr);
-		event_base_free(base);
-		return false;
-	}
-	pthread_attr_destroy(&attr);
+	// Create thread
+	CBNewThread(&loop->loopThread, CBStartEventLoop, loop);
 	loopID->ptr = loop;
 	return loop;
 }
-void * CBStartEventLoop(void * vloop){
+void CBStartEventLoop(void * vloop){
 	CBEventLoop * loop = vloop;
 	// Start event loop
+	CBLogVerbose("Starting network event loop.");
 	if(event_base_dispatch(loop->base) == -1){
 		// Error
 		loop->onError(loop->communicator);
@@ -148,7 +140,6 @@ void * CBStartEventLoop(void * vloop){
 	// Break from loop. Free everything.
 	event_base_free(loop->base);
 	free(loop);
-	return NULL;
 }
 bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanAccept)(void *, CBDepObject)){
 	CBEvent * event = malloc(sizeof(*event));
@@ -182,10 +173,11 @@ void CBDidConnect(evutil_socket_t socketID, short eventNum, void * arg){
 		int optval = -1;
 		socklen_t optlen = sizeof(optval);
 		getsockopt(socketID, SOL_SOCKET, SO_ERROR, &optval, &optlen);
-		if (optval)
+		if (optval){
 			// Act as timeout
-			event->loop->onTimeOut(event->loop->communicator, event->peer, CB_TIMEOUT_CONNECT);
-		else
+			CBLogError("Connection error: %s", strerror(optval));
+			event->loop->onTimeOut(event->loop->communicator, event->peer, CB_TIMEOUT_CONNECT_ERROR);
+		}else
 			// Connection successful
 			event->onEvent.ptr(event->loop->communicator, event->peer);
 	}
@@ -311,7 +303,7 @@ void CBExitEventLoop(CBDepObject loopID){
 	CBEventLoop * loop = loopID.ptr;
 	if(event_base_loopbreak(loop->base)){
 		// Error occured. No choice but to do a dirty closure.
-		pthread_cancel(loop->loopThread);
+		pthread_cancel(((CBThread *)loop->loopThread.ptr)->thread);
 		event_base_free(loop->base);
 		free(loop);
 	}

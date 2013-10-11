@@ -24,8 +24,8 @@
 
 typedef enum{
 	CB_IP_INVALID = 0,
-	CB_IP_IPv4 = 1,
-	CB_IP_IPv6 = 2,
+	CB_IP_IP4 = 1,
+	CB_IP_IP6 = 2,
 	CB_IP_LOCAL = 4,
 	CB_IP_TOR = 8,
 	CB_IP_I2P = 16,

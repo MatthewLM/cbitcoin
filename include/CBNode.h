@@ -110,7 +110,7 @@ void CBNodeDisconnectNode(void * vpeer);
 CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer);
 void CBNodeOnValidatorError(void *);
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert);
-void * CBNodeProcessMessages(void * node);
+void CBNodeProcessMessages(void * node);
 CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err);
 CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, bool full);
 /**

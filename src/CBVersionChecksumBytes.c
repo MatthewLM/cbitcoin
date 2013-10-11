@@ -64,7 +64,7 @@ void CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t 
 void CBDestroyVersionChecksumBytes(void * vself){
 	CBVersionChecksumBytes * self = vself;
 	if (self->cachedString) CBReleaseObject(self->cachedString);
-	CBFreeByteArray(CBGetByteArray(self));
+	CBDestroyByteArray(CBGetByteArray(self));
 }
 void CBFreeVersionChecksumBytes(void * self){
 	CBDestroyVersionChecksumBytes(self);

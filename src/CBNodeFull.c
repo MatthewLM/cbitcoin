@@ -50,12 +50,14 @@ bool CBInitNodeFull(CBNodeFull * self, CBDepObject database, CBNodeFlags flags, 
 	self->otherTxsSizeLimit = otherTxsSizeLimit;
 	self->otherTxsSize = 0;
 	self->numberPeersDownload = 0;
+	self->numCanDownload = 0;
 	self->deleteOrphanTime = CBGetMilliseconds();
 	self->initialisedFoundUnconfTxsNew = false;
 	self->initialisedFoundUnconfTxsPrev = false;
 	self->initialisedLostUnconfTxs = false;
 	self->initialisedOurLostTxs = false;
 	self->newTransactions = NULL;
+	self->addingDirect = false;
 	// Initialise the validator
 	CBGetNode(self)->validator = CBNewValidator(CBGetNode(self)->blockChainStorage, 0, (CBValidatorCallbacks){
 		CBNodeFullStartValidation,
@@ -69,7 +71,7 @@ bool CBInitNodeFull(CBNodeFull * self, CBDepObject database, CBNodeFlags flags, 
 		CBNodeFullValidatorFinish,
 		CBNodeFullInvalidBlock,
 		CBNodeFullNoNewBranches,
-		CBNodeOnValidatorError
+		CBNodeOnValidatorError,
 	 });
 	if (CBGetNode(self)->validator){
 		// Initialise all of the arrays except for the orphans.
@@ -87,6 +89,7 @@ bool CBInitNodeFull(CBNodeFull * self, CBDepObject database, CBNodeFlags flags, 
 			// Initialise the mutexes
 			CBNewMutex(&self->pendingBlockDataMutex);
 			CBNewMutex(&self->numberPeersDownloadMutex);
+			CBNewMutex(&self->numCanDownloadMutex);
 			CBNewMutex(&self->workingMutex);
 			return true;
 		}else{
@@ -116,6 +119,7 @@ void CBDestroyNodeFull(void * vself){
 	CBFreeAssociativeArray(&self->allChainFoundTxs);
 	CBFreeMutex(self->pendingBlockDataMutex);
 	CBFreeMutex(self->numberPeersDownloadMutex);
+	CBFreeMutex(self->numCanDownloadMutex);
 	CBFreeMutex(self->workingMutex);
 	CBDestroyNode(vself);
 }
@@ -322,6 +326,27 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 				fndTx->utx.tx = tx;
 				fndTx->utx.numUnconfDeps = 0;
 				fndTx->utx.type = CB_TX_OURS;
+				// Calculate input value.
+				fndTx->inputValue = 0;
+				for (uint32_t x = 0; x < tx->inputNum; x++) {
+					// We need to get the previous output value
+					uint8_t * prevOutHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
+					// See if we have this transaction as unconfirmed.
+					CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, prevOutHash);
+					if (fndTx == NULL) {
+						// Load from chain
+						bool coinbase;
+						uint32_t height;
+						CBTransactionOutput * output = CBBlockChainStorageLoadUnspentOutput(CBGetNode(self)->validator, prevOutHash, tx->inputs[x]->prevOut.index, &coinbase, &height);
+						if (output == NULL) {
+							CBLogError("Could not load an output for counting the input value for a transaction of ours becomind unconfirmed.");
+							return false;
+						}
+						fndTx->inputValue += output->value;
+						CBReleaseObject(output);
+					}else
+						fndTx->inputValue += fndTx->utx.tx->outputs[tx->inputs[x]->prevOut.index]->value;
+				}
 				CBRetainObject(fndTx);
 				CBAssociativeArrayInsert(&self->ourTxs, fndTx, CBAssociativeArrayFind(&self->ourTxs, fndTx).position, NULL);
 				// If this was a chain dependency, move dependency data to CBFoundTransaction, else init empty dependant's array
@@ -339,7 +364,7 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 				}else
 					CBInitAssociativeArray(&fndTx->dependants, CBTransactionPtrCompare, NULL, NULL);
 				// Remove our tx from the node storage.
-				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->accounterStorage, fndTx->utx.tx)) {
+				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->nodeStorage, fndTx->utx.tx)) {
 					CBLogError("Could not remove our transaction moving onto the chain.");
 					return false;
 				}
@@ -444,8 +469,10 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 				}else{
 					if (fndTx->nextRelay < CBGetMilliseconds()) {
 						// Initialise inv if not already
-						if (invs[currentInv] == NULL)
+						if (invs[currentInv] == NULL){
 							invs[currentInv] = CBNewInventory();
+							CBGetMessage(invs[currentInv])->type = CB_MESSAGE_TYPE_INV;
+						}
 						// Add this transaction
 						CBByteArray * hashObj = CBNewByteArrayWithDataCopy(CBTransactionGetHash(fndTx->utx.tx), 32);
 						CBInventoryTakeInventoryItem(invs[currentInv], CBNewInventoryItem(CB_INVENTORY_ITEM_TX, hashObj));
@@ -506,7 +533,18 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 	CBNodeFullFinishedWithBlock(self, block);
 	return true;
 }
-CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, CBUnconfTransaction utx, CBFoundTransaction ** fndTxPtr){
+bool CBNodeFullAddBlockDirectly(CBNodeFull * self, CBBlock * block){
+	self->addingDirect = true;
+	if (!CBValidatorAddBlockDirectly(CBGetNode(self)->validator, block, &(CBPeer){.nodeObj=self})){
+		CBLogError("Could not add a block directly to the validator.");
+		return false;
+	}
+	self->addingDirect = false;
+	return true;
+}
+CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, CBUnconfTransaction utx, CBFoundTransaction ** fndTxPtr, uint64_t txInputValue){
+	char txStr[CB_TX_HASH_STR_SIZE];
+	CBTransactionHashToString(utx.tx, txStr);
 	// Create found transaction data
 	CBFoundTransaction * fndTx = malloc(sizeof(*fndTx));
 	if (fndTxPtr != NULL)
@@ -514,16 +552,18 @@ CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, 
 	fndTx->utx = utx;
 	fndTx->timeFound = CBGetMilliseconds();
 	fndTx->nextRelay = fndTx->timeFound + 1800000;
+	fndTx->inputValue = txInputValue;
 	CBInitAssociativeArray(&fndTx->dependants, CBTransactionPtrCompare, NULL, NULL);
 	if (ours){
 		// Store in ourTxs storage
 		fndTx->utx.type = CB_TX_OURS;
 		CBAssociativeArrayInsert(&self->ourTxs, fndTx, CBAssociativeArrayFind(&self->ourTxs, fndTx).position, NULL);
 		// We save to storage
-		if (!CBNodeStorageAddOurTx(CBGetNode(self)->accounterStorage, utx.tx)){
-			CBLogError("Unable to add our transaction to storage.");
+		if (!CBNodeStorageAddOurTx(CBGetNode(self)->nodeStorage, utx.tx)){
+			CBLogError("Unable to add our transaction %s to storage.", txStr);
 			return CB_ERROR;
 		}
+		CBLogVerbose("Added transaction %s as ours and unconfirmed.", txStr);
 	}else{
 		// Store in the otherTxs array, if we have space for it.
 		bool fits = true;
@@ -544,16 +584,18 @@ CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, 
 		self->otherTxsSize += CBGetMessage(utx.tx)->bytes->length;
 		CBAssociativeArrayInsert(&self->otherTxs, fndTx, CBAssociativeArrayFind(&self->otherTxs, fndTx).position, NULL);
 		// We save to storage
-		if (!CBNodeStorageAddOtherTx(CBGetNode(self)->accounterStorage, utx.tx)){
-			CBLogError("Unable to add other transaction to storage.");
+		if (!CBNodeStorageAddOtherTx(CBGetNode(self)->nodeStorage, utx.tx)){
+			CBLogError("Unable to add other transaction %s to storage.", txStr);
 			return CB_ERROR;
 		}
+		CBLogVerbose("Added transaction %s as other and unconfirmed.", txStr);
 	}
 	// If no unconfirmed dependencies, we can add this to allChainFoundTxs
 	if (utx.numUnconfDeps == 0)
 		CBAssociativeArrayInsert(&self->allChainFoundTxs, fndTx, CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx).position, NULL);
 	// Relay to all peers
 	CBInventory * inv = CBNewInventory();
+	CBGetMessage(inv)->type = CB_MESSAGE_TYPE_INV;
 	CBByteArray * txHash = CBNewByteArrayWithDataCopy(CBTransactionGetHash(utx.tx), 32);
 	CBInventoryTakeInventoryItem(inv, CBNewInventoryItem(CB_INVENTORY_ITEM_TX, txHash));
 	CBReleaseObject(txHash);
@@ -582,7 +624,7 @@ void CBNodeFullAddToDependency(CBAssociativeArray * deps, uint8_t * hash, void *
 		// Not found, therefore add this as a dependant.
 		CBAssociativeArrayInsert(&txDep->dependants, el, res.position, NULL);
 }
-CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction utx, CBFoundTransaction ** fndTx){
+CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction utx, CBFoundTransaction ** fndTx, uint64_t txInputValue){
 	// Everything is OK so check transaction through accounter
 	uint64_t timestamp = time(NULL);
 	CBErrBool ours = CBNodeFullFoundTransaction(self, utx.tx, timestamp, 0, CB_NO_BRANCH, true);
@@ -590,10 +632,11 @@ CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction
 		CBLogError("Could not process an unconfirmed transaction with the accounter.");
 		return CB_ERROR;
 	}
-	return CBNodeFullAddOurOrOtherFoundTransaction(self, ours, utx, fndTx);
+	return CBNodeFullAddOurOrOtherFoundTransaction(self, ours, utx, fndTx, txInputValue);
 }
-bool CBNodeFullAlreadyValidated(void * vpeer, CBTransaction * tx){
-	return CBNodeFullGetFoundTransaction(CBGetPeer(vpeer)->nodeObj, CBTransactionGetHash(tx)) != NULL;
+uint64_t CBNodeFullAlreadyValidated(void * vpeer, CBTransaction * tx){
+	CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(CBGetPeer(vpeer)->nodeObj, CBTransactionGetHash(tx));
+	return (fndTx == NULL)? 0 : fndTx->inputValue;
 }
 void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash){
 	// Make this block expected from this peer
@@ -607,13 +650,13 @@ void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash){
 	// Send getdata
 	CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
 }
-bool CBNodeFullBroadcastTransaction(CBNodeFull * self, CBTransaction * tx, uint32_t numUnconfDeps){
+bool CBNodeFullBroadcastTransaction(CBNodeFull * self, CBTransaction * tx, uint32_t numUnconfDeps, uint64_t txInputValue){
 	// Add to accounter
 	if (CBNodeFullFoundTransaction(self, tx, time(NULL), 0, CB_NO_BRANCH, true) != CB_TRUE) {
 		CBLogError("Could not add a broadcast transaction to the accounter.");
 		return false;
 	}
-	return CBNodeFullAddOurOrOtherFoundTransaction(self, true, (CBUnconfTransaction){tx, CB_TX_OURS, numUnconfDeps}, NULL);
+	return CBNodeFullAddOurOrOtherFoundTransaction(self, true, (CBUnconfTransaction){tx, CB_TX_OURS, numUnconfDeps}, NULL, txInputValue);
 }
 void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 	CBMutexLock(self->pendingBlockDataMutex);
@@ -636,7 +679,7 @@ void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 	// Now add this block to be got next.
 	if (next->downloading) {
 		// Remove block from askedFor
-		CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, peer->expectedBlock).position, true);
+		CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, peer->expectedBlock).position, false);
 		// Find the block in the required blocks on this node and reposition it to be the next block to get.
 		uint16_t prevX = UINT16_MAX;
 		uint16_t highestX = 0;
@@ -722,7 +765,7 @@ void CBNodeFullDownloadFromSomePeer(CBNodeFull * self){
 	CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
 	// ??? Order peers by block height
 	CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers){
-		if (!peer->downloading && !peer->upload && !peer->upToDate) {
+		if (!peer->downloading && !peer->upload && !peer->upToDate && peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS) {
 			// Ask this peer for blocks.
 			// Send getblocks
 			if (!CBNodeFullSendGetBlocks(self, peer))
@@ -739,8 +782,10 @@ void CBNodeFullDownloadFromSomePeer(CBNodeFull * self){
 	CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
 }
 void CBNodeFullFinishedWithBlock(CBNodeFull * self, CBBlock * block){
+	if (self->addingDirect)
+		return;
 	CBMutexLock(self->pendingBlockDataMutex);
-	CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, CBBlockGetHash(block)).position, true);
+	CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, CBBlockGetHash(block)).position, false);
 	CBAssociativeArrayDelete(&self->blockPeers, CBAssociativeArrayFind(&self->blockPeers, CBBlockGetHash(block)).position, true);
 	CBMutexUnlock(self->pendingBlockDataMutex);
 }
@@ -862,8 +907,8 @@ bool CBNodeFullInvalidBlock(void * vpeer, CBBlock * block){
 		// Disconnect the peer
 		CBNetworkCommunicatorDisconnect(other->nodeObj, other, CB_24_HOURS, false);
 	// Remove block from blockPeers and askedForBlocks, as we are finished with it.
+	CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, CBBlockGetHash(block)).position, false);
 	CBAssociativeArrayDelete(&self->blockPeers, res.position, true);
-	CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, CBBlockGetHash(block)).position, true);
 	CBMutexUnlock(self->pendingBlockDataMutex);
 	return true;
 }
@@ -998,9 +1043,16 @@ void CBNodeFullPeerFree(CBNetworkCommunicator * self, CBPeer * peer){
 			CBMutexUnlock(fullNode->workingMutex);
 		}
 	}
+	// If can download from this peer, decrement numCanDownload
+	if (peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS) {
+		CBMutexLock(fullNode->numCanDownloadMutex);
+		fullNode->numCanDownload--;
+		CBMutexUnlock(fullNode->numCanDownloadMutex);
+	}
 	CBFreeAssociativeArray(&peer->expectedTxs);
 	CBReleaseObject(peer->requestedData);
 	// See if we can download from any other peers
+	peer->downloading = true; // Ensure not this one.
 	CBNodeFullDownloadFromSomePeer(fullNode);
 }
 void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer){
@@ -1035,6 +1087,13 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 	CBValidator * validator = node->validator;
 	switch (message->type) {
 		case CB_MESSAGE_TYPE_VERSION:{
+			// Disconnect if the peer can't give us blocks but we don't have at least CB_MIN_DOWNLOAD peers we can download from.
+			CBMutexLock(self->numCanDownloadMutex);
+			if (CBGetVersion(message)->services | CB_SERVICE_FULL_BLOCKS) {
+				self->numCanDownload++;
+			}else if (self->numCanDownload < CB_MIN_DOWNLOAD)
+				return CB_MESSAGE_ACTION_DISCONNECT;
+			CBMutexUnlock(self->numCanDownloadMutex);
 			// Give our transactions
 			CBInventory * inv = NULL;
 			CBAssociativeArray dependantsProccessed;
@@ -1075,10 +1134,12 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 			CBFreeAssociativeArray(&dependantsProccessed);
 			// Send inventory
-			if (inv != NULL)
+			if (inv != NULL){
+				CBGetMessage(inv)->type = CB_MESSAGE_TYPE_INV;
 				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
+			}
 			CBReleaseObject(inv);
-			// Ask for blocks or headers, unless there is already CB_MAX_BLOCK_QUEUE peers giving us blocks or the peer advertises a block height equal or less than ours.
+			// Ask for blocks, unless there is already CB_MAX_BLOCK_QUEUE peers giving us blocks or the peer advertises a block height equal or less than ours.
 			CBMutexLock(self->numberPeersDownloadMutex);
 			if (CBGetVersion(message)->blockHeight <= CBGetNetworkCommunicator(self)->blockHeight
 				|| self->numberPeersDownload == CB_MAX_BLOCK_QUEUE)
@@ -1097,16 +1158,23 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 		case CB_MESSAGE_TYPE_BLOCK:{
 			// The peer sent us a block
 			CBBlock * block = CBGetBlock(message);
+			char blockStr[CB_BLOCK_HASH_STR_SIZE];
+			CBBlockHashToString(block, blockStr);
+			CBLogVerbose("%s gave us the block %s.", peer->peerStr, blockStr);
 			// See if we expected this block
-			if (memcmp(peer->expectedBlock, CBBlockGetHash(block), 20))
+			if (memcmp(peer->expectedBlock, CBBlockGetHash(block), 20)){
 				// We did not expect this block from this peer.
+				CBLogWarning("%s sent us an unexpected block.", peer->peerStr);
 				return CB_MESSAGE_ACTION_DISCONNECT;
+			}
 			// Do the basic validation
 			CBBlockValidationResult result = CBValidatorBasicBlockValidation(validator, block, CBNetworkAddressManagerGetNetworkTime(CBGetNetworkCommunicator(self)->addresses));
 			switch (result) {
 				case CB_BLOCK_VALIDATION_BAD:
+					CBLogWarning("The block %s did not pass basic validation.", blockStr);
 					return CB_MESSAGE_ACTION_DISCONNECT;
 				case CB_BLOCK_VALIDATION_OK:
+					CBLogVerbose("The block %s passed basic validation.", blockStr);
 					// Queue the block for processing
 					CBValidatorQueueBlock(validator, block, peer);
 				default:
@@ -1130,7 +1198,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 				if (addNum + peer->requestedData->itemNum > 50000)
 					// Adjust to give no more than 50000
 					addNum = 50000 - peer->requestedData->itemNum;
-				for (uint16_t x = 0; x < getData->itemNum; x++)
+				for (uint16_t x = 0; x < addNum; x++)
 					CBInventoryAddInventoryItem(peer->requestedData, CBInventoryGetInventoryItem(getData, x));
 			}
 			break;
@@ -1140,14 +1208,16 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			CBInventory * inv = CBGetInventory(message);
 			// Get data request for objects we want.
 			CBInventory * getData = NULL;
-			uint16_t reqBlockNum;
+			uint16_t reqBlockNum = 0;
 			for (uint16_t x = 0; x < inv->itemNum; x++) {
 				CBInventoryItem * item = CBInventoryGetInventoryItem(inv, x);
 				uint8_t * hash = CBByteArrayGetData(item->hash);
 				if (item->type == CB_INVENTORY_ITEM_BLOCK) {
-					if (peer->expectBlock)
+					if (peer->expectBlock){
 						// We are still obtaining the required blocks from this peer, do not accept any more blocks until we are done getting the previous ones.
+						CBLogVerbose("Ignoring blocks from %s as we are still downloading from them.", peer->peerStr);
 						continue;
+					}
 					// Check if we have the block
 					CBMutexLock(node->blockAndTxMutex);
 					CBErrBool exists = CBBlockChainStorageBlockExists(validator, hash);
@@ -1164,9 +1234,13 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 						CBMutexUnlock(self->pendingBlockDataMutex);
 						continue;
 					}
+					char blockStr[40];
+					CBByteArrayToString(item->hash, 0, 20, blockStr);
+					CBLogVerbose("%s gave us hash of block %s", peer->peerStr, blockStr);
 					// Add block to required blocks from peer
 					memcpy(peer->reqBlocks[reqBlockNum].reqBlock, hash, 20);
-					peer->reqBlocks[reqBlockNum].next = ++reqBlockNum;
+					peer->reqBlocks[reqBlockNum].next = reqBlockNum + 1;
+					reqBlockNum++;
 					// Create or get block peers information
 					CBBlockPeers * blockPeers;
 					res = CBAssociativeArrayFind(&self->blockPeers, hash);
@@ -1208,6 +1282,9 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, hash);
 					if (res.found)
 						continue;
+					char txStr[40];
+					CBByteArrayToString(item->hash, 0, 20, txStr);
+					CBLogVerbose("%s gave us hash of transaction %s", peer->peerStr, txStr);
 					// We do not have the transaction, so add it to getdata
 					if (getData == NULL)
 						getData = CBNewInventory();
@@ -1225,17 +1302,24 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 				peer->reqBlocks[reqBlockNum-1].next = CB_END_REQ_BLOCKS;
 			}
 			// Send getdata if not NULL
-			CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
-			if (getData != NULL)
+			if (getData != NULL){
+				CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
 				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
+			}
+			break;
 		}
 		case CB_MESSAGE_TYPE_TX:{
 			CBTransaction * tx = CBGetTransaction(message);
+			char txStr[CB_TX_HASH_STR_SIZE];
+			CBTransactionHashToString(tx, txStr);
+			CBLogVerbose("%s gave us the transaction %s", peer->peerStr, txStr);
 			// Ensure we expected this transaction
 			CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, CBTransactionGetHash(tx));
-			if (!res.found)
+			if (!res.found){
 				// Did not expect this transaction
+				CBLogWarning("%s gave us an unexpected transaction.", peer->peerStr);
 				return CB_MESSAGE_ACTION_DISCONNECT;
+			}
 			CBMutexLock(node->blockAndTxMutex);
 			// Ensure inbetween requesting this transaction and receiving it, we have not found it yet.
 			CBErrBool has = CBNodeFullHasTransaction(self, CBTransactionGetHash(tx));
@@ -1255,18 +1339,23 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			#define breakMutex CBMutexUnlock(node->blockAndTxMutex); break
 			// Check is standard
 			if (node->flags & CB_NODE_CHECK_STANDARD
-				&& !CBTransactionIsStandard(tx))
+				&& !CBTransactionIsStandard(tx)){
 				// Ignore
+				CBLogVerbose("Transaction %s is non-standard.", txStr);
 				breakMutex;
+			}
 			CBBlockBranch * mainBranch = &validator->branches[validator->mainBranch];
 			uint32_t lastHeight = mainBranch->startHeight + mainBranch->lastValidation;
 			// Check that the transaction is final, else ignore
-			if (! CBTransactionIsFinal(tx, CBNetworkAddressManagerGetNetworkTime(CBGetNetworkCommunicator(self)->addresses), lastHeight))
+			if (! CBTransactionIsFinal(tx, CBNetworkAddressManagerGetNetworkTime(CBGetNetworkCommunicator(self)->addresses), lastHeight)){
+				CBLogVerbose("Transaction %s is not final.", txStr);
 				breakMutex;
+			}
 			// Check sigops
 			uint32_t sigOps = CBTransactionGetSigOps(tx);
 			if (sigOps > CB_MAX_SIG_OPS){
 				CBMutexUnlock(node->blockAndTxMutex);
+				CBLogWarning("Transaction %s has an invalid sig-op count", txStr);
 				return CB_MESSAGE_ACTION_DISCONNECT;
 			}
 			// Look for unspent outputs being spent
@@ -1295,19 +1384,23 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			#define CBTxReturnContinue CBFreeOrphanData return CB_MESSAGE_ACTION_CONTINUE;
 			#define CBTxReturnError(x) CBFreeOrphanData return CBNodeReturnError(node, x);
 			for (uint32_t x = 0; x < tx->inputNum; x++) {
-				uint8_t prevHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
+				uint8_t * prevHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
 				// First look for unconfirmed unspent outputs
 				CBFoundTransaction * prevTx = CBNodeFullGetFoundTransaction(self, prevHash);
 				CBTransactionOutput * output;
 				if (prevTx != NULL) {
 					// Found transaction as unconfirmed, check for output
-					if (prevTx->utx.tx->outputNum < tx->inputs[x]->prevOut.index + 1)
+					if (prevTx->utx.tx->outputNum < tx->inputs[x]->prevOut.index + 1){
 						// Not enough outputs
+						CBLogWarning("Transaction %s, input %u references an output that does not exist.", txStr, x);
 						CBTxReturnDisconnect
+					}
 					output = prevTx->utx.tx->outputs[tx->inputs[x]->prevOut.index];
 					// Ensure not spent, else ignore.
-					if (output->spent)
+					if (output->spent){
+						CBLogVerbose("Transaction %s, input %u references an output that is spent. Ignoring.", txStr, x);
 						CBTxReturnContinue
+					}
 					// Increase the amount of unconfirmed dependencies this transaction has
 					utx.numUnconfDeps++;
 					// Dependency is found unconf
@@ -1321,12 +1414,22 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					if (exists == CB_ERROR)
 						CBTxReturnError("Could not determine if an unspent output exists.")
 					if (exists == CB_FALSE){
-						// No unspent output, request the dependency in get data. This is an orphan transaction
+						// No unspent output, request the dependency in get data. This is an orphan transaction.
+						// UNLESS the transaction was there and the output index was bad. Check for the transaction
+						exists = CBBlockChainStorageTransactionExists(validator, prevHash);
+						if (exists == CB_ERROR)
+							CBTxReturnError("Could not determine if a transaction exists.")
+						if (exists == CB_TRUE)
+							CBLogWarning("Transaction %s, input %u references an output that does not exist in the chain.", txStr, x);
+							CBTxReturnDisconnect
 						wouldBeOrphan = true;
 						if (orphanGetData == NULL || orphanGetData->itemNum < 50000) {
 							// Do not request transaction if we already expect it from this peer
 							CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, prevHash);
 							if (!res.found) {
+								char depTxStr[40];
+								CBByteArrayToString(tx->inputs[x]->prevOut.hash, 0, 20, depTxStr);
+								CBLogVerbose("Requiring dependency transaction %s from %s", depTxStr, peer->peerStr);
 								// Create getdata if not already
 								if (orphanGetData == NULL)
 									orphanGetData = CBNewInventory();
@@ -1346,19 +1449,23 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					CBErrBool ok = CBValidatorLoadUnspentOutputAndCheckMaturity(validator, tx->inputs[x]->prevOut, lastHeight, &output);
 					if (ok == CB_ERROR)
 						CBTxReturnError("There was an error getting an unspent output from storage.")
-					if (ok == CB_FALSE)
+					if (ok == CB_FALSE){
 						// Not mature so ignore
+						CBLogVerbose("Transaction %s is not mature.", txStr);
 						CBTxReturnContinue
+					}
 					// Dependency is on chain
 					depData[x].type = CB_DEP_CHAIN;
 				}
 				CBInputCheckResult inRes = CBValidatorVerifyScripts(validator, tx, x, output, &sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
 				if (inRes == CB_INPUT_BAD) {
 					if (!res.found) CBReleaseObject(output);
+					CBLogWarning("Transaction %s, input %u is invalid.", txStr, x);
 					CBTxReturnDisconnect
 				}
 				if (inRes == CB_INPUT_NON_STD) {
 					if (!res.found) CBReleaseObject(output);
+					CBLogVerbose("Transaction %s, input %u is non-standard. Ignoring transaction.", txStr, x);
 					CBTxReturnContinue
 				}
 				// Add to input value
@@ -1367,8 +1474,10 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 				if (!res.found) CBReleaseObject(output);
 			}
 			// Check that the input value is equal or more than the output value
-			if (inputValue < outputValue)
+			if (inputValue < outputValue){
+				CBLogWarning("Transaction %s has an invalid output value.", txStr);
 				CBTxReturnDisconnect
+			}
 			CBUnconfTransaction * uTx; // Will be set for insertion to unconf, unfound and chain dependencies.
 			if (wouldBeOrphan) {
 				// This transaction depends upon outputs that do not exist yet, add to orphans and send getdata for dependencies.
@@ -1399,6 +1508,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					// Add orphan to array
 					CBAssociativeArrayInsert(&self->orphanTxs, orphan, CBAssociativeArrayFind(&self->orphanTxs, orphan).position, NULL);
 					uTx = (CBUnconfTransaction *)orphan;
+					CBLogVerbose("Added transaction %s as orphan", txStr);
 				}else
 					break;
 			}else{
@@ -1406,7 +1516,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 				CBProcessQueueItem * queue = &(CBProcessQueueItem){
 					.next = NULL
 				};
-				CBErrBool res = CBNodeFullAddTransactionAsFound(self, utx, &queue->item);
+				CBErrBool res = CBNodeFullAddTransactionAsFound(self, utx, (CBFoundTransaction **)&queue->item, inputValue);
 				uTx = (CBUnconfTransaction *)queue->item;
 				if (res == CB_ERROR)
 					return CBNodeReturnError(node, "Could not add a transaction as found.");
@@ -1452,7 +1562,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 										if (outputValue <= orphanDep->orphan->inputValue){
 											// The orphan is OK, so add it to ours or other and the queue.
 											CBFoundTransaction * fndTx;
-											CBErrBool res = CBNodeFullAddTransactionAsFound(self, orphanDep->orphan->utx, &fndTx);
+											CBErrBool res = CBNodeFullAddTransactionAsFound(self, orphanDep->orphan->utx, &fndTx, orphanDep->orphan->inputValue);
 											if (res == CB_ERROR) {
 												// Free data
 												while (queue != NULL) {
@@ -1607,11 +1717,11 @@ bool CBNodeFullRemoveLostUnconfTxs(CBNodeFull * self){
 			// If ours call doubleSpend and remove from storage
 			if (tx->type == CB_TX_OURS){
 				CBGetNode(self)->callbacks.doubleSpend(CBGetNode(self), CBTransactionGetHash(tx->tx));
-				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->accounterStorage, tx->tx)) {
+				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->nodeStorage, tx->tx)) {
 					CBLogError("Could not remove our lost transaction.");
 					return false;
 				}
-			}else if (tx->type == CB_TX_OTHER && !CBNodeStorageRemoveOtherTx(CBGetNode(self)->accounterStorage, tx->tx)) {
+			}else if (tx->type == CB_TX_OTHER && !CBNodeStorageRemoveOtherTx(CBGetNode(self)->nodeStorage, tx->tx)) {
 				CBLogError("Could not remove other lost transaction.");
 				return false;
 			}
@@ -1698,6 +1808,12 @@ bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer){
 		CBLogError("There was an error when trying to retrieve the block-chain descriptor.");
 		return false;
 	}
+	char blockStr[40];
+	if (chainDesc->hashNum == 0)
+		strcpy(blockStr, "genesis");
+	else
+		CBByteArrayToString(chainDesc->hashes[0], 0, 20, blockStr);
+	CBLogVerbose("Sending getblocks to %s with block %s as the latest.", peer->peerStr, blockStr);
 	CBGetBlocks * getBlocks = CBNewGetBlocks(CB_MIN_PROTO_VERSION, chainDesc, NULL);
 	CBReleaseObject(chainDesc);
 	CBGetMessage(getBlocks)->type = CB_MESSAGE_TYPE_GETBLOCKS;
@@ -1724,9 +1840,11 @@ bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){
 			// Look at all unconfirmed transactions
 			// Change the comparison function to accept a hash in place of a transaction object.
 			CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, CBByteArrayGetData(item->hash));
-			if (fndTx != NULL)
+			if (fndTx != NULL){
 				// The peer was requesting an unconfirmed transaction
+				CBGetMessage(fndTx->utx.tx)->type = CB_MESSAGE_TYPE_TX;
 				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(fndTx->utx.tx), CBNodeFullSendRequestedDataVoid);
+			}
 			// Else the peer was requesting something we do not have as unconfirmed so ignore.
 			break;
 		}
@@ -1835,8 +1953,9 @@ bool CBNodeFullValidatorFinish(void * vpeer, CBBlock * block){
 	}
 	// Finished with the block chain
 	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
-	// Finished with this block
-	CBNodeFullFinishedWithBlock(self, block);
+	// Return if adding direct
+	if (self->addingDirect)
+		return true;
 	// Get the next required block
 	CBMutexLock(self->pendingBlockDataMutex);
 	// Get the next block or ask for new blocks only if not up to date

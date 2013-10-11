@@ -12,21 +12,11 @@
 //  or distributed except according to the terms contained in the
 //  LICENSE file.
 
-#include <stdio.h>
 #include "CBDatabase.h"
-#include "CBDependencies.h"
+#include <stdio.h>
 #include <time.h>
-#include "stdarg.h"
+#include <stdarg.h>
 #include <sys/time.h>
-
-void CBLogError(char * format, ...);
-void CBLogError(char * format, ...){
-	va_list argptr;
-    va_start(argptr, format);
-    vfprintf(stderr, format, argptr);
-    va_end(argptr);
-	printf("\n");
-}
 
 uint64_t CBGetMilliseconds(void){
 	struct timeval tv;
@@ -39,15 +29,15 @@ int main(){
 	printf("Session = %ui\n", s);
 	srand(s);
 	// Test
-	remove("./testDb/del.dat");
-	remove("./testDb/log.dat");
-	remove("./testDb/val_0.dat");
-	remove("./testDb/idx_0_0.dat");
-	remove("./testDb/idx_1_0.dat");
-	remove("./testDb/idx_2_0.dat");
-	remove("./testDb/idx_3_0.dat");
-	remove("./testDb/idx_4_0.dat");
-	rmdir("./testDb/");
+	remove("./testdel.dat");
+	remove("./testlog.dat");
+	remove("./testval_0.dat");
+	remove("./testidx_0_0.dat");
+	remove("./testidx_1_0.dat");
+	remove("./testidx_2_0.dat");
+	remove("./testidx_3_0.dat");
+	remove("./testidx_4_0.dat");
+	rmdir("./test");
 	CBDatabase * storage = CBNewDatabase(".", "testDb", 10, 10000000, 10000000);
 	if (! storage) {
 		printf("NEW STORAGE FAIL\n");
@@ -79,7 +69,7 @@ int main(){
 	CBFreeIndex(index);
 	// Check index files are OK
 	CBDepObject file;
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	uint8_t data[141];
 	if (! CBFileRead(file, data, 12)) {
 		printf("INDEX CREATE FAIL\n");
@@ -97,7 +87,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 4)) {
 		printf("DELETION INDEX CREATE FAIL\n");
 		return 1;
@@ -107,7 +97,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/val_0.dat", false);
+	CBFileOpen(&file, "./testval_0.dat", false);
 	if (! CBFileRead(file, data, 6)) {
 		printf("VALUE FILE CREATE FAIL\n");
 		return 1;
@@ -166,7 +156,7 @@ int main(){
 		printf("INSERT SINGLE VAL LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 33)) {
 		printf("INSERT SINGLE VAL INDEX READ FAIL\n");
 		return 1;
@@ -187,7 +177,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 4)) {
 		printf("INSERT SINGLE VAL DELETION INDEX READ FAIL\n");
 		return 1;
@@ -197,7 +187,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 82)) {
 		printf("INSERT SINGLE VAL LOG FILE READ FAIL\n");
 		return 1;
@@ -277,7 +267,7 @@ int main(){
 		printf("INSERT 2ND VAL LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 53)) {
 		printf("INSERT 2ND VAL INDEX READ FAIL\n");
 		return 1;
@@ -303,7 +293,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 4)) {
 		printf("INSERT 2ND VAL DELETION INDEX READ FAIL\n");
 		return 1;
@@ -313,7 +303,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 141)) {
 		printf("INSERT 2ND VAL LOG FILE READ FAIL\n");
 		return 1;
@@ -377,7 +367,7 @@ int main(){
 		printf("DELETE 1ST 2ND VALUE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 53)) {
 		printf("DELETE 1ST VAL INDEX READ FAIL\n");
 		return 1;
@@ -403,7 +393,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file,"./testDb/del.dat", false);
+	CBFileOpen(&file,"./testdel.dat", false);
 	if (! CBFileRead(file, data, 15)) {
 		printf("DELETE 1ST VAL DELETION INDEX READ FAIL\n");
 		return 1;
@@ -419,7 +409,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 44)) {
 		printf("DELETE 1ST VAL LOG FILE READ FAIL\n");
 		return 1;
@@ -459,7 +449,7 @@ int main(){
 		printf("INCREASE 2ND VALUE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 53)) {
 		printf("INCREASE 2ND VAL INDEX READ FAIL\n");
 		return 1;
@@ -485,7 +475,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file,"./testDb/del.dat", false);
+	CBFileOpen(&file,"./testdel.dat", false);
 	if (! CBFileRead(file, data, 26)) {
 		printf("INCREASE 2ND VAL DELETION INDEX READ FAIL\n");
 		return 1;
@@ -505,7 +495,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 101)) {
 		printf("INCREASE 2ND VAL LOG FILE READ FAIL\n");
 		return 1;
@@ -567,7 +557,7 @@ int main(){
 	CBFreeDatabase(storage);
 	CBFreeIndex(index);
 	// Activate log file
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	data[0] = 1;
 	CBFileOverwrite(file, data, 1);
 	CBFileClose(file);
@@ -597,7 +587,7 @@ int main(){
 		return 1;
 	}
 	// Check files
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 53)) {
 		printf("INCREASE 2ND VAL INDEX READ FAIL\n");
 		return 1;
@@ -623,7 +613,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file,"./testDb/del.dat", false);
+	CBFileOpen(&file,"./testdel.dat", false);
 	if (! CBFileRead(file, data, 26)) {
 		printf("INCREASE 2ND VAL DELETION INDEX READ FAIL\n");
 		return 1;
@@ -643,7 +633,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/val_0.dat", false);
+	CBFileOpen(&file, "./testval_0.dat", false);
 	if (! CBFileRead(file, data, 33)) {
 		printf("RECOVERY DATA FILE READ FAIL\n");
 		return 1;
@@ -667,7 +657,7 @@ int main(){
 		printf("SMALLER LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file, "./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file, "./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 44)) {
 		printf("SMALLER INDEX READ FAIL\n");
 		return 1;
@@ -693,7 +683,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 26)) {
 		printf("SMALLER DELETION INDEX READ FAIL\n");
 		return 1;
@@ -713,7 +703,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 77)) {
 		printf("SMALLER DELETION LOG FILE READ FAIL\n");
 		return 1;
@@ -783,7 +773,7 @@ int main(){
 		printf("CHANGE KEY LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file,"./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file,"./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 73)) {
 		printf("CHANGE KEY INDEX READ FAIL\n");
 		return 1;
@@ -814,7 +804,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 26)) {
 		printf("CHANGE KEY DELETION INDEX READ FAIL\n");
 		return 1;
@@ -834,7 +824,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 132)) {
 		printf("CHANGE KEY LOG FILE READ FAIL\n");
 		return 1;
@@ -927,7 +917,7 @@ int main(){
 		printf("OVERWRITE WITH SMALLER LAST SIZE FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file,"./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file,"./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 73)) {
 		printf("OVERWRITE WITH SMALLER INDEX READ FAIL\n");
 		return 1;
@@ -958,7 +948,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 26)) {
 		printf("OVERWRITE WITH SMALLER DELETION INDEX READ FAIL\n");
 		return 1;
@@ -978,7 +968,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 74)) {
 		printf("OVERWRITE WITH SMALLER LOG FILE READ FAIL\n");
 		return 1;
@@ -1042,7 +1032,7 @@ int main(){
 		printf("CHANGE KEY TO EXISTING KEY VALUE DISK FAIL\n");
 		return 1;
 	}
-	CBFileOpen(&file,"./testDb/idx_0_0.dat", false);
+	CBFileOpen(&file,"./testidx_0_0.dat", false);
 	if (! CBFileRead(file, data, 73)) {
 		printf("CHANGE KEY TO EXISTING KEY INDEX READ FAIL\n");
 		return 1;
@@ -1073,7 +1063,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/del.dat", false);
+	CBFileOpen(&file, "./testdel.dat", false);
 	if (! CBFileRead(file, data, 37)) {
 		printf("CHANGE KEY TO EXISTING KEY DELETION INDEX READ FAIL\n");
 		return 1;
@@ -1097,7 +1087,7 @@ int main(){
 		return 1;
 	}
 	CBFileClose(file);
-	CBFileOpen(&file, "./testDb/log.dat", false);
+	CBFileOpen(&file, "./testlog.dat", false);
 	if (! CBFileRead(file, data, 73)) {
 		printf("CHANGE KEY TO EXISTING KEY LOG FILE READ FAIL\n");
 		return 1;
@@ -1729,7 +1719,7 @@ int main(){
 	CBFreeDatabaseRangeIterator(&it);
 	// Test two indexes at once.
 	CBDatabaseWriteValue(index, (uint8_t []){251,9,8,7,6,5,4,3,2,1}, (uint8_t *)"one1", 5);
-	CBDatabaseWriteValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)"two2", 5);
+	CBDatabaseWriteValue(index2, (uint8_t []){0xFF,0xFF,0xFF}, (uint8_t *)"two2", 5);
 	// Check current
 	if (CBDatabaseReadValue(index, (uint8_t []){251,9,8,7,6,5,4,3,2,1}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		printf("TWO INDEXES FIRST INDEX READ CURRENT FAIL\n");
@@ -1739,7 +1729,7 @@ int main(){
 		printf("TWO INDEXES FIRST INDEX READ DATA CURRENT FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		printf("TWO INDEXES SECOND INDEX READ CURRENT FAIL\n");
 		return 1;
 	}
@@ -1757,7 +1747,7 @@ int main(){
 		printf("TWO INDEXES FIRST INDEX READ DATA STAGED FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		printf("TWO INDEXES SECOND INDEX READ STAGED FAIL\n");
 		return 1;
 	}
@@ -1775,7 +1765,7 @@ int main(){
 		printf("TWO INDEXES FIRST INDEX READ DATA DISK FAIL\n");
 		return 1;
 	}
-	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(index2, (uint8_t []){0xFF,0xFF, 0xFF}, (uint8_t *)readStr, 5, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		printf("TWO INDEXES SECOND INDEX READ DISK FAIL\n");
 		return 1;
 	}

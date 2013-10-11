@@ -49,7 +49,6 @@ void CBDestroyBlockHeaders(void * vself){
 	for (uint16_t x = 0; x < self->headerNum; x++) {
 		CBReleaseObject(self->blockHeaders[x]);
 	}
-	free(self->blockHeaders);
 	CBDestroyMessage(self);
 }
 void CBFreeBlockHeaders(void * self){

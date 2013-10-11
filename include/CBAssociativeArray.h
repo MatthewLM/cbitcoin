@@ -34,7 +34,7 @@
 #define CB_BTREE_HALF_ELEMENTS (CB_BTREE_ELEMENTS/2)
 #define CBAssociativeArrayForEach(el, arr) \
 	for (struct CBAssociativeArrayForEachData s = {.first = true, .enterNested = true}; \
-		s.enterNested && (s.first && CBAssociativeArrayGetFirst(arr, &s.it) || !s.first && !CBAssociativeArrayIterate(arr, &s.it)) ; \
+		s.enterNested && ((s.first && CBAssociativeArrayGetFirst(arr, &s.it)) || (!s.first && !CBAssociativeArrayIterate(arr, &s.it))) ; \
 		s.first = false, s.enterNested = !s.enterNested) \
 		for (el = s.it.node->elements[s.it.index];s.enterNested;s.enterNested = !s.enterNested)
 #define CBCurrentPosition s.it

@@ -25,6 +25,7 @@
 // Constants and Macros
 
 #define CBGetNodeFull(x) ((CBNodeFull *)x)
+#define CB_MIN_DOWNLOAD 4
 
 typedef enum{
 	CB_TX_ORPHAN,
@@ -67,6 +68,7 @@ typedef struct{
 	CBAssociativeArray dependants;
 	uint64_t nextRelay; /**< The time when afterwards this transaction can be relayed. */
 	uint64_t timeFound;
+	uint64_t inputValue;
 } CBFoundTransaction;
 
 typedef struct{
@@ -114,6 +116,8 @@ typedef struct CBNodeFull{
 	uint32_t otherTxsSize; /**< The size of all of the transactions stored by otherTxs. */
 	uint32_t otherTxsSizeLimit; /**< The limit of the size for other transactions. Should be at least the maximum transaction size. */
 	uint8_t numberPeersDownload; /**< The number of peers we are downloading blocks from. */
+	uint32_t numCanDownload;
+	bool addingDirect;
 	CBAssociativeArray askedForBlocks; /**< Blocks we have asked for with getdata with CBGetBlockInfo */
 	CBAssociativeArray blockPeers; /**< For each block that has not been received this contains peers that supposedly have the block. */
 	CBAssociativeArray ourLostTxs; /**< During a reoganisation this keeps track of our transactions which are taken off the block-chain. */
@@ -130,6 +134,7 @@ typedef struct CBNodeFull{
 	uint32_t forkPoint;
 	CBDepObject pendingBlockDataMutex;
 	CBDepObject numberPeersDownloadMutex;
+	CBDepObject numCanDownloadMutex;
 	CBDepObject workingMutex;
 } CBNodeFull;
 
@@ -178,12 +183,13 @@ void CBFreeTransactionDependency(void * vtxDep);
 CBCompare CBHashCompare(CBAssociativeArray * foo, void * hash1, void * hash2);
 bool CBNodeFullAcceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessageType type);
 bool CBNodeFullAddBlock(void *, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType addType);
-CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, CBUnconfTransaction utx, CBFoundTransaction ** fndTx);
+bool CBNodeFullAddBlockDirectly(CBNodeFull * self, CBBlock * block);
+CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, CBUnconfTransaction utx, CBFoundTransaction ** fndTx, uint64_t txInputValue);
 void CBNodeFullAddToDependency(CBAssociativeArray * deps, uint8_t * hash, void * el, CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *));
-CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction utx, CBFoundTransaction ** fndTx);
-bool CBNodeFullAlreadyValidated(void * vpeer, CBTransaction * tx);
+CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction utx, CBFoundTransaction ** fndTx, uint64_t txInputValue);
+uint64_t CBNodeFullAlreadyValidated(void * vpeer, CBTransaction * tx);
 void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash);
-bool CBNodeFullBroadcastTransaction(CBNodeFull * self, CBTransaction * tx, uint32_t numUnconfDeps);
+bool CBNodeFullBroadcastTransaction(CBNodeFull * self, CBTransaction * tx, uint32_t numUnconfDeps, uint64_t txInputValue);
 void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer);
 bool CBNodeFullDeleteBranchCallback(void * node, uint8_t branch);
 void CBNodeFullDeleteOrphanFromDependencies(CBNodeFull * self, CBOrphan * orphan);

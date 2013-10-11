@@ -29,7 +29,6 @@
 #pragma weak CBFileAppend
 #pragma weak CBFileClose
 #pragma weak CBFileGetLength
-#pragma weak CBFileMkPath
 #pragma weak CBFileOpen
 #pragma weak CBFileOverwrite
 #pragma weak CBFileRead

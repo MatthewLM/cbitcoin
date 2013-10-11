@@ -135,7 +135,7 @@ bool CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, uint64_t * ou
 		length = CBTransactionCalculateLength(tx);
 	if (length > CB_BLOCK_MAX_SIZE)
 		return false;
-	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the C++ client on this where an attacker could overflow very large outputs to equal small inputs.
+	// Check that outputs do not overflow by ensuring they do not go over 21 million bitcoins. There was once an vulnerability in the satoshi client on this where an attacker could overflow very large outputs to equal small inputs.
 	*outputValue = 0;
 	for (uint32_t x = 0; x < tx->outputNum; x++) {
 		if (tx->outputs[x]->value > CB_MAX_MONEY)

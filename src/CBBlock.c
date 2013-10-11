@@ -93,7 +93,6 @@ void CBDestroyBlock(void * vself){
 			if(self->transactions[x]) CBReleaseObject(self->transactions[x]);
 		free(self->transactions);
 	}
-	if(self->hash) CBReleaseObject(self->hash);
 	CBDestroyMessage(CBGetObject(self));
 }
 void CBFreeBlock(void * self){
@@ -211,6 +210,12 @@ uint8_t * CBBlockGetHash(CBBlock * self){
 		self->hashSet = true;
 	}
 	return self->hash;
+}
+void CBBlockHashToString(CBBlock * self, char output[CB_BLOCK_HASH_STR_SIZE]){
+	uint8_t * hash = CBBlockGetHash(self);
+	for (uint8_t x = 0; x < 20; x++)
+		sprintf(output + x*2, "%02x", hash[x]);
+	output[40] = '\0';
 }
 uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;

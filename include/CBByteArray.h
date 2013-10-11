@@ -26,6 +26,7 @@
 #include "CBDependencies.h"
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 // Getter
 
@@ -294,5 +295,6 @@ CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t l
  @returns The new CBByteArray.
  */
 CBByteArray * CBByteArraySubReference(CBByteArray * self, uint32_t offset, uint32_t length);
+void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output);
 
 #endif

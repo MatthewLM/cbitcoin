@@ -54,3 +54,55 @@ void CBFreeMessage(void * self){
 
 //  Functions
 
+void CBMessageTypeToString(CBMessageType type, char output[CB_MESSAGE_TYPE_STR_SIZE]){
+	switch (type) {
+		case CB_MESSAGE_TYPE_ADDR:
+			strcpy(output, "addr");
+			break;
+		case CB_MESSAGE_TYPE_ALERT:
+			strcpy(output, "alert");
+			break;
+		case CB_MESSAGE_TYPE_ALT:
+			strcpy(output, "alt");
+			break;
+		case CB_MESSAGE_TYPE_BLOCK:
+			strcpy(output, "block");
+			break;
+		case CB_MESSAGE_TYPE_GETADDR:
+			strcpy(output, "getaddr");
+			break;
+		case CB_MESSAGE_TYPE_GETBLOCKS:
+			strcpy(output, "getblocks");
+			break;
+		case CB_MESSAGE_TYPE_GETHEADERS:
+			strcpy(output, "getheaders");
+			break;
+		case CB_MESSAGE_TYPE_GETDATA:
+			strcpy(output, "getdata");
+			break;
+		case CB_MESSAGE_TYPE_HEADERS:
+			strcpy(output, "headers");
+			break;
+		case CB_MESSAGE_TYPE_INV:
+			strcpy(output, "inv");
+			break;
+		case CB_MESSAGE_TYPE_PING:
+			strcpy(output, "ping");
+			break;
+		case CB_MESSAGE_TYPE_PONG:
+			strcpy(output, "pong");
+			break;
+		case CB_MESSAGE_TYPE_TX:
+			strcpy(output, "tx");
+			break;
+		case CB_MESSAGE_TYPE_VERACK:
+			strcpy(output, "verack");
+			break;
+		case CB_MESSAGE_TYPE_VERSION:
+			strcpy(output, "version");
+			break;
+		default:
+			strcpy(output, "unknown");
+			break;
+	}
+}

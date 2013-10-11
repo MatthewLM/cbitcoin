@@ -13,7 +13,7 @@
 //  LICENSE file.
 
 #include <stdio.h>
-#include "CBNetworkAddress.h"
+#include "CBNetworkAddressList.h"
 #include <time.h>
 #include "stdarg.h"
 
@@ -44,8 +44,8 @@ int main(){
 		0x5F, 0x2E, // Port 24366
 	};
 	CBByteArray * bytes = CBNewByteArrayWithDataCopy(data, 61);
-	CBNetworkAddress * add = CBNewNetworkAddressFromData(bytes, true);
-	if(CBNetworkAddressDeserialise(add) != 61){
+	CBNetworkAddressList * add = CBNewNetworkAddressListFromData(bytes, true);
+	if(CBNetworkAddressListDeserialise(add) != 61){
 		printf("DESERIALISATION LEN FAIL\n");
 		return 1;
 	}
@@ -109,7 +109,7 @@ int main(){
 	add->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
 	CBReleaseObject(add->addresses[1]->ip);
 	add->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
-	if (CBNetworkAddressSerialise(add, true) != 61){
+	if (CBNetworkAddressListSerialise(add, true) != 61){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
 	}
@@ -138,8 +138,8 @@ int main(){
 		0x5F, 0x2E, // Port 24366
 	};
 	bytes = CBNewByteArrayWithDataCopy(data2, 53);
-	add = CBNewNetworkAddressFromData(bytes, false);
-	if(CBNetworkAddressDeserialise(add) != 53){
+	add = CBNewNetworkAddressListFromData(bytes, false);
+	if(CBNetworkAddressListDeserialise(add) != 53){
 		printf("DESERIALISATION NO TIME LEN FAIL\n");
 		return 1;
 	}
@@ -195,7 +195,7 @@ int main(){
 	add->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
 	CBReleaseObject(add->addresses[1]->ip);
 	add->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
-	if(CBNetworkAddressSerialise(add, true) != 53){
+	if(CBNetworkAddressListSerialise(add, true) != 53){
 		printf("SERIALISATION NO TIME LEN FAIL\n");
 		return 1;
 	}

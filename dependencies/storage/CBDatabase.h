@@ -41,6 +41,7 @@
 #define CB_ACCOUNTER_EXTRA_SIZE (24 + CB_MAX_BRANCH_CACHE*9 + CB_MAX_BRANCH_SECTIONS*5)
 #define CB_ADDRESS_EXTRA_SIZE 4
 #define CB_NODE_EXTRA_SIZE 8
+#define CB_DATABASE_NO_LAST_FILE UINT16_MAX
 #define CB_DATABASE_EXTRA_DATA_SIZE CB_BLOCK_CHAIN_EXTRA_SIZE + CB_ACCOUNTER_EXTRA_SIZE + CB_ADDRESS_EXTRA_SIZE + CB_NODE_EXTRA_SIZE
 
 typedef enum{
@@ -150,9 +151,7 @@ typedef struct{
 	// Files
 	CBDepObject deletionIndexFile;
 	CBDepObject fileObjectCache; /**< Stores last used file object for reuse until new file is needed */
-	uint16_t lastUsedFileID; /**< The last used file number or CB_DATABASE_FILE_TYPE_NONE if none. */
-	CBDatabaseFileType lastUsedFileType; /**< The last used file type. */
-	uint8_t lastUsedFileIndexID; /**< The last used index ID. */
+	uint16_t lastUsedFileID; /**< The last used data file number. */
 	CBDepObject logFile;
 	uint8_t * extraDataOnDisk;
 	uint32_t extraDataSize; /**< The size of the extra data to store in the database. */
@@ -180,6 +179,8 @@ typedef struct{
 	uint32_t lastSize; /**< Size of last index file */
 	uint16_t newLastFile; /** Used to store the new last file number during a commit. */
 	uint32_t newLastSize; /** Used to store the new last file size during a commit. */
+	CBDepObject indexFile;
+	uint16_t lastUsedFileID;
 } CBDatabaseIndex;
 
 typedef struct{
@@ -321,14 +322,14 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
  @brief Add an overwrite operation.
  @param self The storage object.
  @param fileType The type of the file.
- @param indexID The index ID used if the type is an index.
+ @param index The index used if the type is an index.
  @param fileID The file ID
  @param data The data to write.
  @param offset The offset to begin writting.
  @param dataLen The length of the data to write.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, uint8_t indexID, uint16_t fileID, uint8_t * data, uint32_t offset, uint32_t dataLen);
+bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint8_t * data, uint32_t offset, uint32_t dataLen);
 /**
  @brief Adds a value to the database without overwriting previous indexed data.
  @param self The storage object.
@@ -355,7 +356,7 @@ void CBDatabaseAddWriteValueNoMutex(uint8_t * writeValue, CBDatabaseIndex * inde
  @param dataLen The length of the data to write.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAppend(CBDatabase * self, CBDatabaseFileType fileType, uint8_t indexID, uint16_t fileID, uint8_t * data, uint32_t dataLen);
+bool CBDatabaseAppend(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint8_t * data, uint32_t dataLen);
 /**
  @brief Add an append operation of zeros.
  @param self The database object.
@@ -365,7 +366,7 @@ bool CBDatabaseAppend(CBDatabase * self, CBDatabaseFileType fileType, uint8_t in
  @param amount Number of zero bytes to append.
  @retruns true on success and false on failure
  */
-bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, uint8_t indexID, uint16_t fileID, uint32_t amount);
+bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint32_t amount);
 /**
  @brief Replaces a key for a value with a key of the same length.
  @param self The database object.
@@ -388,6 +389,7 @@ void CBDatabaseClearCurrent(CBDatabase * self);
  @returns true on success and false on failure, and thus the database needs to be recovered with CBDatabaseEnsureConsistent.
  */
 bool CBDatabaseCommit(CBDatabase * tx);
+bool CBDatabaseCommitNoMutex(CBDatabase * tx);
 /**
  @brief Ensure the database is consistent and recover the database if it is not.
  @param self The database object.
@@ -409,7 +411,7 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length);
  @param fileID The id of the file to get an object for. Not needed for CB_DATABASE_FILE_TYPE_DELETION_INDEX.
  @returns true on success and false on failure.
  */
-bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType type, uint8_t indexID, uint16_t fileID);
+bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType type, CBDatabaseIndex * index, uint16_t fileID);
 /**
  @brief Gets the length of a value in the database or CB_DOESNT_EXIST if it does not exist.
  @param index The database index.

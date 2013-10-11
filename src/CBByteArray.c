@@ -215,3 +215,9 @@ CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t l
 CBByteArray * CBByteArraySubReference(CBByteArray * self, uint32_t offset, uint32_t length){
 	return CBNewByteArraySubReference(self, offset, length);
 }
+void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output){
+	for (uint32_t x = offset; x < offset + length; x++) {
+		sprintf(output, "%02x", CBByteArrayGetByte(self, x));
+		output += 2;
+	}
+}

@@ -24,6 +24,7 @@
 
 #include "CBMessage.h"
 #include "CBNetworkAddress.h"
+#include <inttypes.h>
 #include <assert.h>
 
 // Constants and Macros
@@ -105,5 +106,7 @@ uint32_t CBVersionCalculateLength(CBVersion * self);
  @returns The length written on success, 0 on failure.
  */
 uint32_t CBVersionSerialise(CBVersion * self, bool force);
+uint16_t CBVersionStringMaxSize(CBVersion * self);
+void CBVersionToString(CBVersion * self, char output[]);
 
 #endif

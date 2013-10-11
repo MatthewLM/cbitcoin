@@ -187,25 +187,25 @@ uint64_t CBNetworkAddressManagerGetGroup(CBNetworkAddressManager * self, CBNetwo
 			break;
 		case CB_IP_SITT:
 		case CB_IP_RFC6052:
-			group = CB_IP_IPv4;
+			group = CB_IP_IP4;
 			start = 12;
 			break;
 		case CB_IP_6TO4:
-			group = CB_IP_IPv4;
+			group = CB_IP_IP4;
 			start = 2;
 			break;
 		case CB_IP_TEREDO:
-			return CB_IP_IPv4 | ((CBByteArrayGetByte(addr->ip, 12) ^ 0xFF) << 8) | ((CBByteArrayGetByte(addr->ip, 13) ^ 0xFF) << 16);
+			return CB_IP_IP4 | ((CBByteArrayGetByte(addr->ip, 12) ^ 0xFF) << 8) | ((CBByteArrayGetByte(addr->ip, 13) ^ 0xFF) << 16);
 		case CB_IP_HENET:
-			group = CB_IP_IPv6;
+			group = CB_IP_IP6;
 			bits = 36;
 			break;
-		case CB_IP_IPv6:
-			group = CB_IP_IPv6;
+		case CB_IP_IP6:
+			group = CB_IP_IP6;
 			bits = 32;
 			break;
-		case CB_IP_IPv4:
-			group = CB_IP_IPv4;
+		case CB_IP_IP4:
+			group = CB_IP_IP4;
 			start = 12;
 			break;
 		default:

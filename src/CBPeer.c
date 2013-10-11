@@ -49,4 +49,6 @@ void CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->messageReceived = false;
 	self->requestedData = NULL;
 	self->branchWorkingOn = CB_PEER_NO_WORKING;
+	self->allowRelay = true;
+	strcpy(self->peerStr, "unknown");
 }

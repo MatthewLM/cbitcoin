@@ -52,6 +52,7 @@ uint32_t getLen(CBBTreeNode * self){
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %ui\n", s);
+	puts("You may need to move your mouse around if this test stalls.");
 	srand(s);
 	CBNetworkAddressManager * addrMan = CBNewNetworkAddressManager(onBadTime);
 	if (! addrMan) {

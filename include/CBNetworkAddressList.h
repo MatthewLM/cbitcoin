@@ -103,6 +103,8 @@ uint32_t CBNetworkAddressListDeserialise(CBNetworkAddressList * self);
  @returns The length written on success, 0 on failure.
 */
 uint32_t CBNetworkAddressListSerialise(CBNetworkAddressList * self, bool force);
+uint16_t CBNetworkAddressListStringMaxSize(CBNetworkAddressList * self);
+void CBNetworkAddressListToString(CBNetworkAddressList * self, char * output);
 /**
  @brief Takes a CBNetworkAddress to the list for broadcasting. This does not retain the CBNetworkAddress so you can pass an CBNetworkAddress into this while releasing control in the calling function.
  @param self The CBNetworkAddressList object

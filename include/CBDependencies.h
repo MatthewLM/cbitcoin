@@ -28,6 +28,11 @@
 
 // Weak linking for cryptographic functions.
 
+#pragma weak CBNewKeyPair
+#pragma weak CBKeyPairGetPublicKeySize
+#pragma weak CBKeyPairGetSigSize
+#pragma weak CBKeyPairGetPublicKey
+#pragma weak CBKeyPairSign
 #pragma weak CBSha256
 #pragma weak CBRipemd160
 #pragma weak CBSha160
@@ -41,6 +46,7 @@
 #pragma weak CBSocketListen
 #pragma weak CBSocketAccept
 #pragma weak CBNewEventLoop
+#pragma weak CBRunOnEventLoop
 #pragma weak CBSocketCanAcceptEvent
 #pragma weak CBSocketDidConnectEvent
 #pragma weak CBSocketCanSendEvent
@@ -108,6 +114,8 @@
 // Weak linking for logging dependencies
 
 #pragma weak CBLogError
+#pragma weak CBLogWarning
+#pragma weak CBLogVerbose
 
 // Weak linking for timing dependencies
 
@@ -166,7 +174,8 @@ bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const ui
 typedef enum{
 	CB_TIMEOUT_CONNECT,
 	CB_TIMEOUT_SEND,
-	CB_TIMEOUT_RECEIVE
+	CB_TIMEOUT_RECEIVE,
+	CB_TIMEOUT_CONNECT_ERROR
 } CBTimeOutType;
 
 typedef enum{
@@ -889,8 +898,8 @@ bool CBNodeStorageAddOtherTx(CBDepObject storage, void * tx);
 
 // THREADING DEPENDENCIES
 
-void CBNewThread(CBDepObject * thread, void * (*function)(void *), void * arg);
-void * CBThreadJoin(CBDepObject thread);
+void CBNewThread(CBDepObject * thread, void (*function)(void *), void * arg);
+void CBThreadJoin(CBDepObject thread);
 void CBNewMutex(CBDepObject * mutex);
 void CBFreeMutex(CBDepObject mutex);
 void CBMutexLock(CBDepObject mutex);
@@ -907,6 +916,8 @@ void CBConditionSignal(CBDepObject cond);
  @param error The error message followed by arguments displayed by the printf() format.
  */
 void CBLogError(char * error, ...);
+void CBLogWarning(char * warning, ...);
+void CBLogVerbose(char * message, ...);
 
 // TIME DEPENDENCIES
 

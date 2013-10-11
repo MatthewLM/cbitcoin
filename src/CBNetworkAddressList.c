@@ -162,6 +162,20 @@ uint32_t CBNetworkAddressListSerialise(CBNetworkAddressList * self, bool force){
 	CBGetMessage(self)->serialised = true;
 	return cursor;
 }
+uint16_t CBNetworkAddressListStringMaxSize(CBNetworkAddressList * self){
+	return 3 + 49*self->addrNum;
+}
+void CBNetworkAddressListToString(CBNetworkAddressList * self, char * output){
+	*(output++) = '(';
+	for (uint8_t x = 0; x < self->addrNum; x++) {
+		output = CBNetworkAddressToString(self->addresses[x], output);
+		if (x != self->addrNum - 1) {
+			memcpy(output, ", ", 2);
+			output += 2;
+		}
+	}
+	strcpy(output, ")");
+}
 void CBNetworkAddressListTakeNetworkAddress(CBNetworkAddressList * self, CBNetworkAddress * address){
 	self->addrNum++;
 	CBNetworkAddress ** temp = realloc(self->addresses, sizeof(*self->addresses) * self->addrNum);

@@ -177,7 +177,7 @@ uint8_t * CBTransactionGetHash(CBTransaction * self){
 	return self->hash;
 }
 bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType, uint8_t * hash){
-	CBTransaction * self= vself;
+	CBTransaction * self = vself;
 	if (self->inputNum < input + 1)
 		return false;
 	uint8_t last5Bits = (signType & 0x1f); // For some reason this is what the C++ client does.
@@ -291,6 +291,12 @@ bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSu
 	CBSha256(firstHash, 32, hash);
 	CBReleaseObject(data);
 	return true;
+}
+void CBTransactionHashToString(CBTransaction * self, char output[CB_TX_HASH_STR_SIZE]){
+	uint8_t * hash = CBTransactionGetHash(self);
+	for (uint8_t x = 0; x < 20; x++)
+		sprintf(output + x*2, "%02x", hash[x]);
+	output[40] = '\0';
 }
 bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutput * prevOut, CBScript * p2sh){
 	// Get the number of stack items

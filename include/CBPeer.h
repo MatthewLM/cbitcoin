@@ -72,7 +72,7 @@ typedef struct{
 	uint32_t messageSent; /**< Used by a CBNetworkCommunicator to store the message length send. When the header is sent, 24 bytes are taken off. */
 	bool sentHeader; /**< True if the sending message's header has been sent. */
 	uint8_t * sendingHeader; /**< Stores header to send */
-	bool getAddresses; /* True is asked for addresses, false otherwise. */
+	bool allowRelay; /* True if we can relay addresses from this node or false otherwise. */
 	CBDepObject receiveEvent; /**< Event for receving data from this peer */
 	CBDepObject sendEvent; /**< Event for sending data from this peer */
 	CBDepObject connectEvent; /**< Event for connecting to the peer. */
@@ -110,6 +110,7 @@ typedef struct{
 	uint16_t reqBlockCursor; /**< The index of the next block to ask for. */
 	void * nodeObj; /**< The node object. */
 	CBDepObject invResponseTimer;
+	char peerStr[CB_NETWORK_ADDR_STR_SIZE];
 } CBPeer;
 
 /**

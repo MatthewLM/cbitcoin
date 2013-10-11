@@ -50,14 +50,6 @@ bool CBFileGetLength(CBDepObject file, uint32_t * length){
 }
 bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 	file->ptr = fopen(filename, new ? "wb+" : "rb+");
-	// Set F_FULLFSYNC
-	// F_FULLFSYNC will ensure writes are stored on disk in-order. It is not necessarily important that writes are written immediately but they must be written in order to avoid data corruption. Unfortunately this makes IO operations extremely slow. ??? How to ensure in-order disk writes on other systems?
-#ifdef F_FULLFSYNC
-	/* if (fcntl(fileno(file->ptr), F_FULLFSYNC)){
-		CBFileClose(*file);
-		return false;
-	} ??? Uncomment */
-#endif
 	return true;
 }
 bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
@@ -72,6 +64,7 @@ bool CBFileSeek(CBDepObject file, uint32_t pos){
 bool CBFileSync(CBDepObject file){
 	if (fflush(file.ptr))
 		return false;
+	return true;
 	if (fsync(fileno(file.ptr)))
 		return false;
 	return true;

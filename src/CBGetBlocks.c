@@ -38,7 +38,7 @@ void CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * c
 	self->chainDescriptor = chainDescriptor;
 	CBRetainObject(chainDescriptor);
 	self->stopAtHash = stopAtHash;
-	CBRetainObject(stopAtHash);
+	if (self->stopAtHash) CBRetainObject(stopAtHash);
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data){
@@ -89,10 +89,15 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 		CBLogError("Attempting to deserialise a CBGetBlocks with less bytes than required for the stopAtHash.");
 		return 0;
 	}
+	// Determine if stop at hash is null
 	self->stopAtHash = CBNewByteArraySubReference(bytes, len + 4, 32);
 	if (! self->stopAtHash) {
 		CBLogError("Cannot create new CBByteArray in CBGetBlocksDeserialise\n");
 		CBReleaseObject(self->chainDescriptor);
+	}
+	if (CBByteArrayIsNull(self->stopAtHash)) {
+		CBReleaseObject(self->stopAtHash);
+		self->stopAtHash = NULL;
 	}
 	return len + 36;
 }
@@ -139,8 +144,11 @@ uint16_t CBGetBlocksSerialise(CBGetBlocks * self, bool force){
 		len = CBGetMessage(self->chainDescriptor)->bytes->length;
 	}
 	// Serialise stopAtHash
-	CBByteArrayCopyByteArray(bytes, len + 4, self->stopAtHash);
-	CBByteArrayChangeReference(self->stopAtHash, bytes, len + 4);
+	if (self->stopAtHash != NULL){
+		CBByteArrayCopyByteArray(bytes, len + 4, self->stopAtHash);
+		CBByteArrayChangeReference(self->stopAtHash, bytes, len + 4);
+	}else
+		memset(CBByteArrayGetData(bytes) + len + 4, 0, 32);
 	// Ensure length is correct
 	bytes->length = len + 36;
 	// Is now serialised.

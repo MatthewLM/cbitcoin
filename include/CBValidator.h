@@ -111,7 +111,7 @@ typedef struct{
  */
 typedef struct{
 	bool (*start)(void *); /**< Begins validating blocks. */
-	bool (*alreadyValidated)(void *, CBTransaction *); /**< Return true if the transaction has already been validated. */
+	uint64_t (*alreadyValidated)(void *, CBTransaction *); /**< Return the total input value if the transaction has already been validated or else 0. */
 	bool (*isOrphan)(void *, CBBlock *); /**< Callback for when a block is an orphan. */
 	bool (*deleteBranchCallback)(void *, uint8_t branch); /**< Callback for deleting a branch. "branch" is the index of the branch to delete. */
 	bool (*workingOnBranch)(void *, uint8_t branch); /**< The branch to be worked on. Return true if this branch is OK or false if the validator should consider the block invalid. */
@@ -182,7 +182,7 @@ void CBFreeValidator(void * vself);
 // Functions
 
 CBCompare CBPtrCompare(CBAssociativeArray *, void * ptr1, void * ptr2);
-bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block);
+bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block, void * callbackObj);
 /**
  @brief Adds a block to a branch.
  @param self The CBValidator object.
@@ -208,7 +208,7 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block);
  */
 CBBlockValidationResult CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime);
 CBErrBool CBValidatorBlockExists(CBValidator * self, uint8_t * hash);
-void * CBValidatorBlockProcessThread(void * validator);
+void CBValidatorBlockProcessThread(void * validator);
 /**
  @brief Completes the validation for a block during main branch extention or reorganisation.
  @param self The CBValidator object.
@@ -309,7 +309,7 @@ bool CBValidatorSaveLastValidatedBlocks(CBValidator * self, uint8_t branches);
  @param blockIndex The block index in the branch.
  @returns true on successful execution or false on error.
  */
-bool CBValidatorUpdateUnspentOutputsBackward(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
+bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
 /**
  @brief Updates the unspent outputs and transaction index for a branch, for adding a block's transaction information.
  @param self The CBValidator object.
@@ -317,9 +317,10 @@ bool CBValidatorUpdateUnspentOutputsBackward(CBValidator * self, CBBlock * block
  @param branch The branch the block is for.
  @param blockIndex The block index in the branch.
  @param addType @see CBAddBlockType
+ @param callbackObj The callback object for calling the validator newBlock callback.
  @returns true on successful execution or false on error.
  */
-bool CBValidatorUpdateUnspentOutputsForward(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType);
+bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType, void * callbackObj);
 /**
  @brief Updates the unspent outputs and transaction index for a branch in reverse and loads a block to do this.
  @param self The CBValidator object.
@@ -329,7 +330,7 @@ bool CBValidatorUpdateUnspentOutputsForward(CBValidator * self, CBBlock * block,
  @param forward If true the indices will be updated when adding blocks, else it will be updated removing blocks for re-organisation.
  @returns true on successful execution or false on error.
  */
-bool CBValidatorUpdateUnspentOutputsAndLoad(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward);
+bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward);
 bool CBValidatorVerifyScripts(CBValidator * self, CBTransaction * tx, uint32_t inputIndex, CBTransactionOutput * output, uint32_t * sigOps, bool checkStandard);
 
 #endif

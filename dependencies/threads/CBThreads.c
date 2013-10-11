@@ -14,21 +14,47 @@
 
 // Includes
 
-#include "CBDependencies.h"
-#include <pthread.h>
-#include <stdlib.h>
-#include <assert.h>
+#include "CBThreads.h"
 
 // Implementation
 
-void CBNewThread(CBDepObject * thread, void * (*function)(void *), void * arg){
-	thread->ptr = malloc(sizeof(pthread_t));
-	assert(pthread_create(thread->ptr, NULL, function, arg) == 0);
+pthread_mutex_t idMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_key_t key;
+bool keyCreated = false;
+uint16_t nextId = 1;
+
+uint16_t CBGetTID(void){
+	CBThread * thread = pthread_getspecific(key);
+	return (thread == NULL)? 0 : thread->ID;
 }
-void * CBThreadJoin(CBDepObject thread){
-	void * returnPtr;
-	assert(pthread_join(*(pthread_t *)thread.ptr, &returnPtr) == 0);
-	return returnPtr;
+void CBNewThread(CBDepObject * uthread, void (*function)(void *), void * arg){
+	CBThread * thread = malloc(sizeof(CBThread));
+	thread->func = function;
+	thread->arg = arg;
+	// Create thread attributes explicitly for portability reasons.
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); // May need to be joinable.
+	// Create joinable thread
+	assert(pthread_create(&thread->thread, &attr, CBRunThread, thread) == 0);
+	pthread_attr_destroy(&attr);
+	assert(pthread_mutex_lock(&idMutex) == 0);
+	thread->ID = nextId++;
+	if (!keyCreated) {
+		keyCreated = true;
+		pthread_key_create(&key, NULL);
+	}
+	assert(pthread_mutex_unlock(&idMutex) == 0);
+	uthread->ptr = thread;
+}
+void * CBRunThread(void * vthread){
+	CBThread * thread = vthread;
+	pthread_setspecific(key, thread);
+	thread->func(thread->arg);
+	return NULL;
+}
+void CBThreadJoin(CBDepObject thread){
+	assert(pthread_join(*(pthread_t *)thread.ptr, NULL) == 0);
 }
 void CBNewMutex(CBDepObject * mutex){
 	mutex->ptr = malloc(sizeof(pthread_mutex_t));

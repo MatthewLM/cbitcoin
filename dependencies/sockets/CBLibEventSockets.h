@@ -18,6 +18,7 @@
  */
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
+#include "CBThreads.h"
 #include <pthread.h> // POSIX threads
 #include <event2/event.h> // libevent CBLogError
 #include <string.h>
@@ -46,7 +47,7 @@
 #endif
 
 void event_base_add_virtual(struct event_base *); // Add virtual event.
-void * CBStartEventLoop(void *);
+void CBStartEventLoop(void *);
 void CBCanAccept(evutil_socket_t socketID, short eventNum, void * arg);
 void CBDidConnect(evutil_socket_t socketID, short eventNum, void * arg);
 void CBCanSend(evutil_socket_t socketID, short eventNum, void * arg);
@@ -59,7 +60,7 @@ typedef struct{
 	void (*onError)(void *);
 	void (*onTimeOut)(void *, void *, CBTimeOutType); /**< Callback for timeouts */
 	void * communicator;
-	pthread_t loopThread; /**< The thread ID for the event loop. */
+	CBDepObject loopThread; /**< The thread for the event loop. */
 	void  (*userCallback)(void *);
 	void * userArg;
 	struct event * userEvent;

@@ -237,3 +237,23 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 	CBGetMessage(self)->serialised = true;
 	return bytes->length;
 }
+uint16_t CBVersionStringMaxSize(CBVersion * self){
+	return 143 + CB_NETWORK_ADDR_STR_SIZE + self->userAgent->length;
+}
+void CBVersionToString(CBVersion * self, char output[]){
+	char receiveStr[CB_NETWORK_ADDR_STR_SIZE];
+	CBNetworkAddressToString(self->addRecv, receiveStr);
+	sprintf(output, "Version        = %i\n"
+					"Full blocks    = %u\n"
+					"Timestamp      = %" PRId64 "\n"
+					"Our addr       = %s\n"
+					"User agent     = ",
+					self->version,
+					self->services | CB_SERVICE_FULL_BLOCKS,
+					self->time,
+					receiveStr);
+	output = strchr(output, '\0');
+	memcpy(output, CBByteArrayGetData(self->userAgent), self->userAgent->length);
+	output += self->userAgent->length;
+	sprintf(output, "\nBlock height = %i", self->blockHeight);
+}
