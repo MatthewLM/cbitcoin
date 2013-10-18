@@ -58,7 +58,7 @@
 #define CB_SEND_FLAGS 0
 #endif
 
-void * CBStartEventLoop(void *);
+void CBStartEventLoop(void *);
 void CBCanAccept(struct ev_loop * loop,struct ev_io * watcher,int eventID);
 void CBDidConnect(struct ev_loop * loop,struct ev_io * watcher,int eventID);
 void CBDidConnectTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID);
@@ -85,14 +85,14 @@ typedef struct{
 	void (*onError)(void *);
 	void (*onTimeOut)(void *,void *,CBTimeOutType); /**< Callback for timeouts */
 	void * communicator;
-	pthread_t loopThread; /**< The thread ID for the event loop. */
+	CBDepObject loopThread; /**< The thread ID for the event loop. */
 	void  (*userCallback)(void *);
 	void * userArg;
 	CBAsyncEvent * userEvent;
 }CBEventLoop;
 
 union CBOnEvent{
-	void (*i)(void *,uint64_t);
+	void (*i)(void *,CBDepObject);
 	void (*ptr)(void *,void *);
 };
 
@@ -108,7 +108,7 @@ typedef struct{
 	struct ev_io base; /**< libev event. */
 	CBEventLoop * loop; /**< For getting timeout events */
 	union CBOnEvent onEvent;
-	int socket;
+	CBDepObject socket;
 	void * peer;
 	void (*timerCallback)(struct ev_loop *,struct ev_timer *,int);
 	CBTimer * timeout;

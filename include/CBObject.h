@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "CBConstants.h"
+#include "CBDependencies.h"
 
 // Getter
 
@@ -39,16 +40,22 @@
 /**
  @brief Base structure for all other structures. @see CBObject.h
  */
-typedef struct CBObject{
+typedef struct{
 	void (*free)(void *); /**< Pointer to the function to free the object. */
 	uint32_t references; /**< Keeps a count of the references to an object for memory management. */
+	bool usesMutex;
 } CBObject;
+
+typedef struct{
+	CBObject base;
+	CBDepObject refMutex;
+} CBObjectMutex;
 
 /**
  @brief Initialises a CBObject
  @param self The CBObject to initialise
  */
-void CBInitObject(CBObject * self);
+void CBInitObject(CBObject * self, bool useMutex);
 
 //  Functions
 

@@ -31,7 +31,7 @@ CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags, CBVali
 //  Initialiser
 
 bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags flags, CBValidatorCallbacks callbacks){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	self->storage = storage;
 	self->flags = flags;
 	self->callbacks = callbacks;
@@ -320,6 +320,7 @@ void CBValidatorBlockProcessThread(void * validator){
 		// Now we have finished with the block, remove it from the queue
 		CBMutexLock(self->blockQueueMutex);
 		CBReleaseObject(block);
+		if (callbackObj) CBReleaseObject(callbackObj);
 		if (++self->queueFront == CB_MAX_BLOCK_QUEUE)
 			self->queueFront = 0;
 		self->queueSize--;
@@ -1021,6 +1022,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackObj){
 	// Schedule the block for complete processing.
 	CBRetainObject(block);
+	if (callbackObj) CBRetainObject(callbackObj);
 	CBMutexLock(self->blockQueueMutex);
 	if (self->queueSize == CB_MAX_BLOCK_QUEUE)
 		return false;

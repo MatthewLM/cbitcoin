@@ -17,6 +17,7 @@
 // ??? And range deletion? Delete a range of key values?
 
 #include "CBDatabase.h"
+#include <assert.h>
 
 bool CBNewStorageDatabase(CBDepObject * database, char * dataDir, uint32_t commitGap, uint32_t cacheLimit){
 	database->ptr = CBNewDatabase(dataDir, "cbitcoin", CB_DATABASE_EXTRA_DATA_SIZE, commitGap, cacheLimit);
@@ -207,7 +208,7 @@ CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySiz
 		// Load memory cache
 		index->indexCache.cached = true;
 		index->indexCache.diskNodeLoc.indexFile = CBArrayToInt16(data, 6);
-		index->indexCache.diskNodeLoc.offset = CBArrayToInt16(data, 8);
+		index->indexCache.diskNodeLoc.offset = CBArrayToInt32(data, 8);
 		// Allocate memory for the root node.
 		index->indexCache.cachedNode = malloc(sizeof(*index->indexCache.cachedNode));
 		if (! CBDatabaseLoadIndexNode(index, index->indexCache.cachedNode, index->indexCache.diskNodeLoc.indexFile, index->indexCache.diskNodeLoc.offset)) {
@@ -224,7 +225,7 @@ CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySiz
 		CBIndexNode * parentStack[7];
 		uint8_t parentStackNum = 0;
 		if (node->children[0].diskNodeLoc.offset != 0
-			|| node->children[0].diskNodeLoc.indexFile != 0) for (uint32_t x = 0;; x++) {
+			|| node->children[0].diskNodeLoc.indexFile != 0) for (uint32_t x = 0;;) {
 			// For each child in the node, create a cache upto the cache limit.
 			bool reached = false;
 			for (uint8_t y = 0; y <= node->numElements; y++) {
@@ -255,7 +256,7 @@ CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySiz
 			if (x == numNodes - 1) {
 				// Move to next level
 				x = 0;
-				numNodes = node->numElements;
+				numNodes = node->numElements + 1;
 				parentStack[parentStackNum++] = node;
 				node = first;
 				// See if this node has any children
@@ -264,7 +265,7 @@ CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySiz
 					break;
 			}else
 				// Move to the next node in this level
-				node = (parentStackNum ? parentStack[parentStackNum - 1] : index->indexCache.cachedNode)->children[x].cachedNode;
+				node = (parentStackNum ? parentStack[parentStackNum - 1] : index->indexCache.cachedNode)->children[++x].cachedNode;
 		}
 	}else{
 		// Cannot be read. Make initial data
@@ -288,7 +289,7 @@ CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySiz
 		index->indexCache.cached = true;
 		memset(index->indexCache.cachedNode->children, 0, sizeof(index->indexCache.cachedNode->children));
 		// Write to disk initial data
-		CBInt16ToArray(data, 0, index->lastSize);
+		CBInt32ToArray(data, 0, index->lastSize);
 		if (! CBFileAppend(indexFile, (uint8_t [12]){
 			0,0, // First file is zero
 			data[0],data[1],0,0, // Size of file is 12 plus the node length
@@ -557,7 +558,7 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 	CBInt32ToArray(dataTemp, 4, offset);
 	// Write data size
 	CBInt32ToArray(dataTemp, 8, dataLen);
-	// Write old data
+	// Write old data ??? Change to have old data as input to function
 	if (! CBFileSeek(file, offset)){
 		CBLogError("Could not seek to the read position for previous data in a file to be overwritten.");
 		free(dataTemp);
@@ -574,16 +575,6 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 		return false;
 	}
 	free(dataTemp);
-	// Sync log file
-	if (! CBFileSync(self->logFile)){
-		CBLogError("Failed to sync the log file");
-		return false;
-	}
-	// Sync directory for log file
-	if (! CBFileSyncDir(self->dataDir)) {
-		CBLogError("Failed to synchronise the directory for the log file when overwritting a file.");
-		return false;
-	}
 	// Execute overwrite
 	if (! CBFileSeek(file, offset)){
 		CBLogError("Could not seek the file to overwrite data.");
@@ -806,7 +797,7 @@ bool CBDatabaseChangeKeyNoMutex(CBDatabaseIndex * index, uint8_t * previousKey, 
 				foundPrev = true;
 		}
 		if (! foundPrev) {
-			CBIndexFindResult fres = CBDatabaseIndexFind(index, previousKey);
+			CBIndexFindWithParentsResult fres = CBDatabaseIndexFindWithParents(index, previousKey);
 			if (fres.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error whilst trying to find a previous key in the index to see if a change key entry should be made.");
 				return false;
@@ -959,18 +950,6 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 			return false;
 		}
 	}
-	// Sync log file, so that it is now active with the information of the previous file sizes.
-	if (! CBFileSync(self->logFile)){
-		CBLogError("Failed to sync the log file");
-		CBFileClose(self->logFile);
-		return false;
-	}
-	// Sync directory for log file
-	if (! CBFileSyncDir(self->dataDir)) {
-		CBLogError("Failed to synchronise the directory during a commit for the log file.");
-		CBFileClose(self->logFile);
-		return false;
-	}
 	uint32_t lastFileSize = self->lastSize;
 	uint32_t prevDeletionEntryNum = self->numDeletionValues;
 	// Loop through indexes
@@ -979,7 +958,7 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 		CBAssociativeArrayForEach(uint8_t * oldKeyPtr, &indexTxData->changeKeysOld){
 			uint8_t * newKeyPtr = oldKeyPtr + indexTxData->index->keySize;
 			// Find index entry
-			CBIndexFindResult res = CBDatabaseIndexFind(indexTxData->index, oldKeyPtr);
+			CBIndexFindWithParentsResult res = CBDatabaseIndexFindWithParents(indexTxData->index, oldKeyPtr);
 			if (res.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error while attempting to find an index key for changing.");
 				CBMutexUnlock(self->databaseMutex);
@@ -1008,7 +987,7 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 			memcpy(newIndexValue->key, newKeyPtr, indexTxData->index->keySize);
 			// Find position for index entry
 			CBFreeIndexElementPos(res.el);
-			res = CBDatabaseIndexFind(indexTxData->index, newKeyPtr);
+			res = CBDatabaseIndexFindWithParents(indexTxData->index, newKeyPtr);
 			if (res.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("Failed to find the position for a new key replacing an old one.");
 				CBMutexUnlock(self->databaseMutex);
@@ -1067,7 +1046,7 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 			uint32_t dataSize = *(uint32_t *)(keyPtr + indexTxData->index->keySize + 4);
 			uint8_t * dataPtr = keyPtr + indexTxData->index->keySize + 8;
 			// Check for key in index
-			CBIndexFindResult res = CBDatabaseIndexFind(indexTxData->index, keyPtr);
+			CBIndexFindWithParentsResult res = CBDatabaseIndexFindWithParents(indexTxData->index, keyPtr);
 			if (res.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error while searching an index for a key.");
 				CBMutexUnlock(self->databaseMutex);
@@ -1176,7 +1155,7 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 		// Delete values
 		CBAssociativeArrayForEach(uint8_t * keyPtr, &indexTxData->deleteKeys) {
 			// Find index entry
-			CBIndexFindResult res = CBDatabaseIndexFind(indexTxData->index, keyPtr);
+			CBIndexFindWithParentsResult res = CBDatabaseIndexFindWithParents(indexTxData->index, keyPtr);
 			if (res.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error attempting to find an index key-value for deletion.");
 				CBMutexUnlock(self->databaseMutex);
@@ -1212,6 +1191,13 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 				CBFileClose(self->logFile);
 				return false;
 			}
+		}
+		// Sync index
+		if (! CBFileSync(indexTxData->index->indexFile)) {
+			CBLogError("Failed to synchronise index file for index with ID %u", indexTxData->index->ID);
+			CBMutexUnlock(self->databaseMutex);
+			CBFileClose(self->logFile);
+			return false;
 		}
 	}
 	// Update the data last file information
@@ -1262,6 +1248,12 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 		|| ! CBFileSync(self->deletionIndexFile)) {
 		CBLogError("Failed to synchronise the files during a commit.");
 		CBMutexUnlock(self->databaseMutex);
+		CBFileClose(self->logFile);
+		return false;
+	}
+	// Sync log file, so that it is now active with the information of the previous file sizes.
+	if (! CBFileSync(self->logFile)){
+		CBLogError("Failed to sync the log file");
 		CBFileClose(self->logFile);
 		return false;
 	}
@@ -1460,6 +1452,7 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length){
 	return res;
 }
 bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType type, CBDatabaseIndex * index, uint16_t fileID){
+	assert(fileID == 0);
 	if (type == CB_DATABASE_FILE_TYPE_DATA){
 		if (fileID == self->lastUsedFileID){
 			*file = self->fileObjectCache;
@@ -1550,7 +1543,7 @@ bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t
 			break;
 	}
 	// Look in index for value
-	CBIndexFindResult indexRes = CBDatabaseIndexFind(index, diskKey);
+	CBIndexFindWithParentsResult indexRes = CBDatabaseIndexFindWithParents(index, diskKey);
 	if (indexRes.status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error when attempting to find a key in an index to get the data length.");
 		return false;
@@ -1602,7 +1595,7 @@ CBIndexTxData * CBDatabaseGetIndexTxData(CBDatabaseTransactionChanges * tx, CBDa
 		indexTxData = CBFindResultToPointer(res);
 	return indexTxData;
 }
-bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindResult * res){
+bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindWithParentsResult * res){
 	// Create deletion entry for the data
 	CBIndexValue * indexValue = &res->el.nodeLoc.cachedNode->elements[res->el.index];
 	if (! CBDatabaseAddDeletionEntry(index->database, indexValue->fileID, indexValue->pos, indexValue->length)) {
@@ -1622,14 +1615,39 @@ bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindResult * res){
 	return true;
 }
 CBIndexFindResult CBDatabaseIndexFind(CBDatabaseIndex * index, uint8_t * key){
-	CBIndexFindResult result;
-	CBIndexNodeLocation nodeLoc;
-	nodeLoc = index->indexCache;
+	CBIndexFindResult result = {.data.node = index->indexCache};
+	for (;;) {
+		// Do binary search on node
+		if (result.data.node.cached) {
+			// Do in-memory
+			uint8_t pos;
+			CBDatabaseIndexNodeBinarySearchMemory(index, result.data.node.cachedNode, key, &result.status, &pos);
+			if (result.status == CB_DATABASE_INDEX_FOUND)
+				result.data.el = result.data.node.cachedNode->elements[pos];
+			else
+				result.data.node = result.data.node.cachedNode->children[pos];
+		}else
+			// Do from disk without loading all of the node unnecessarily.
+			CBDatabaseIndexNodeSearchDisk(index, key, &result);
+		if (result.status != CB_DATABASE_INDEX_NOT_FOUND)
+			// Error or found
+			return result;
+		// Not found
+		if (!result.data.node.cached
+			&& result.data.node.diskNodeLoc.indexFile == 0
+			&& result.data.node.diskNodeLoc.offset == 0)
+			// The child doesn't exist. Return as not found.
+			return result;
+	}
+}
+CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * index, uint8_t * key){
+	CBIndexFindWithParentsResult result;
+	CBIndexNodeLocation nodeLoc = index->indexCache;
 	result.el.parentStack.num = 0;
 	result.el.parentStack.cursor = 0;
 	for (;;) {
 		// Do binary search on node
-		CBDatabaseIndexNodeBinarySearch(index, nodeLoc.cachedNode, key, &result);
+		CBDatabaseIndexNodeBinarySearchMemory(index, nodeLoc.cachedNode, key, &result.status, &result.el.index);
 		if (result.status == CB_DATABASE_INDEX_FOUND){
 			// Found the data on this node.
 			result.el.nodeLoc = nodeLoc;
@@ -1911,29 +1929,94 @@ bool CBDatabaseIndexMoveElements(CBDatabaseIndex * index, CBIndexNodeLocation * 
 		memmove(dest->cachedNode->elements + endPos, source->cachedNode->elements + startPos, amount * sizeof(*source->cachedNode->elements));
 	return true;
 }
-void CBDatabaseIndexNodeBinarySearch(CBDatabaseIndex * index, CBIndexNode * node, uint8_t * key, CBIndexFindResult * result){
+void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBIndexFindResult * result){
+	CBDepObject file;
+	if (! CBDatabaseGetFile(index->database, &file, CB_DATABASE_FILE_TYPE_INDEX, index, result->data.node.diskNodeLoc.indexFile)) {
+		CBLogError("Could not open an index file when loading a node.");
+		result->status = CB_DATABASE_INDEX_ERROR;
+		return;
+	}
+	uint32_t offset = result->data.node.diskNodeLoc.offset;
+	if (! CBFileSeek(file, offset)){
+		CBLogError("Could seek to the node position in an index file when loading a node.");
+		result->status = CB_DATABASE_INDEX_ERROR;
+		return;
+	}
+	//  First get the number of elements
+	uint8_t elNum;
+	if (! CBFileRead(file, &elNum, 1)) {
+		CBLogError("Could not read the number of elements for an index node.");
+		result->status = CB_DATABASE_INDEX_ERROR;
+		return;
+	}
 	result->status = CB_DATABASE_INDEX_NOT_FOUND;
+	uint8_t pos = 0;
+	uint8_t data[MAX(index->keySize, 10)];
+	CBIndexValue val = {.key = data};
+	if (elNum) {
+		int cmp;
+		for(;pos < elNum; pos++) {
+			// Read element at position
+			if (! CBFileRead(file, data, 10)) {
+				CBLogError("Could not read the data for an index element.");
+				result->status = CB_DATABASE_INDEX_ERROR;
+				return;
+			}
+			val.fileID = CBArrayToInt16(data, 0);
+			val.length = CBArrayToInt32(data, 2);
+			val.pos = CBArrayToInt32(data, 6);
+			if (! CBFileRead(file, val.key, index->keySize)) {
+				CBLogError("Could not read the key of an element in an index node.");
+				result->status = CB_DATABASE_INDEX_ERROR;
+				return;
+			}
+			cmp = memcmp(key, val.key, index->keySize);
+			if (cmp == 0) {
+				result->status = CB_DATABASE_INDEX_FOUND;
+				result->data.el = val;
+				return;
+			}else if (cmp < 0)
+				break;
+		}
+	}
+	// Not found, read child location.
+	if (! CBFileSeek(file, offset + 1 + CB_DATABASE_BTREE_ELEMENTS * (index->keySize + 10) + pos * 6)) {
+		CBLogError("Could not seek to a child in an index node.");
+		result->status = CB_DATABASE_INDEX_ERROR;
+		return;
+	}
+	result->data.node.cached = false;
+	if (! CBFileRead(file, data, 6)) {
+		CBLogError("Could not read the location of an index child.");
+		result->status = CB_DATABASE_INDEX_ERROR;
+		return;
+	}
+	result->data.node.diskNodeLoc.indexFile = CBArrayToInt16(data, 0);
+	result->data.node.diskNodeLoc.offset = CBArrayToInt32(data, 2);
+}
+void CBDatabaseIndexNodeBinarySearchMemory(CBDatabaseIndex * index, CBIndexNode * node, uint8_t * key, CBIndexFindStatus * status, uint8_t * pos){
+	*status = CB_DATABASE_INDEX_NOT_FOUND;
 	if (node->numElements) {
 		uint8_t left = 0;
 		uint8_t right = node->numElements - 1;
 		int cmp;
 		while (left <= right) {
-			result->el.index = (right+left)/2;
-			cmp = memcmp(key, node->elements[result->el.index].key, index->keySize);
+			*pos = (right+left)/2;
+			cmp = memcmp(key, node->elements[*pos].key, index->keySize);
 			if (cmp == 0) {
-				result->status = CB_DATABASE_INDEX_FOUND;
+				*status = CB_DATABASE_INDEX_FOUND;
 				break;
 			}else if (cmp < 0){
-				if (! result->el.index)
+				if (! *pos)
 					break;
-				right = result->el.index - 1;
+				right = *pos - 1;
 			}else
-				left = result->el.index + 1;
+				left = *pos + 1;
 		}
 		if (cmp > 0)
-			result->el.index++;
+			(*pos)++;
 	}else
-		result->el.index = 0;
+		*pos = 0;
 }
 bool CBDatabaseIndexSetBlankChildren(CBDatabaseIndex * index, CBIndexNodeLocation * dest, uint8_t offset, uint8_t amount){
 	if (! CBDatabaseAppendZeros(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, dest->diskNodeLoc.indexFile, amount * 6)) {
@@ -2003,6 +2086,7 @@ void CBDatabaseIndexSetNewNodePosition(CBDatabaseIndex * index, CBIndexNodeLocat
 	}
 }
 bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation * node, uint8_t numElements, bool append){
+	assert(numElements <= CB_DATABASE_BTREE_ELEMENTS);
 	if (node->cached)
 		node->cachedNode->numElements = numElements;
 	if (append) {
@@ -2030,7 +2114,7 @@ CBIndexFindStatus CBDatabaseRangeIteratorFirstNoMutex(CBDatabaseRangeIterator * 
 	CBIndexItData * indexItData = CBDatabaseGetIndexItData(it->index->database, it->index, false);
 	it->gotTxEl = indexItData ? CBAssociativeArrayRangeIteratorStart(&indexItData->txKeys, &it->txIt) : false;
 	// Try to find the minimum index element
-	CBIndexFindResult res = CBDatabaseIndexFind(it->index, it->minElement);
+	CBIndexFindWithParentsResult res = CBDatabaseIndexFindWithParents(it->index, it->minElement);
 	it->foundIndex = false;
 	if (res.status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error when attempting to find the first index element in a range.");
@@ -2096,7 +2180,7 @@ CBIndexFindStatus CBDatabaseRangeIteratorLastNoMutex(CBDatabaseRangeIterator * i
 	CBIndexItData * indexItData = CBDatabaseGetIndexItData(it->index->database, it->index, false);
 	it->gotTxEl = indexItData ? CBAssociativeArrayRangeIteratorLast(&indexItData->txKeys, &it->txIt) : false;
 	// Try to find the maximum index element
-	CBIndexFindResult res = CBDatabaseIndexFind(it->index, it->maxElement);
+	CBIndexFindWithParentsResult res = CBDatabaseIndexFindWithParents(it->index, it->maxElement);
 	it->foundIndex = false;
 	if (res.status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error when attempting to find the first index element in a range.");
@@ -2344,8 +2428,7 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 								CBLogError("Could not find an index value for reading.");
 								return CB_DATABASE_INDEX_ERROR;
 							}
-							idxVal = res.el.nodeLoc.cachedNode->elements[res.el.index];
-							CBFreeIndexElementPos(res.el);
+							idxVal = res.data.el;
 							if (! CBDatabaseGetFile(index->database, &file, CB_DATABASE_FILE_TYPE_DATA, 0, idxVal.fileID)) {
 								CBLogError("Could not open file for reading part of a value.");
 								return CB_DATABASE_INDEX_ERROR;
@@ -2395,12 +2478,9 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 				CBLogError("Could not find an index value for reading.");
 				return CB_DATABASE_INDEX_ERROR;
 			}
-			if (res.status != CB_DATABASE_INDEX_FOUND){
-				CBFreeIndexElementPos(res.el);
+			if (res.status != CB_DATABASE_INDEX_FOUND)
 				return res.status;
-			}
-			idxVal = res.el.nodeLoc.cachedNode->elements[res.el.index];
-			CBFreeIndexElementPos(res.el);
+			idxVal = res.data.el;
 			// If deleted not found
 			if (idxVal.length == CB_DELETED_VALUE)
 				return CB_DATABASE_INDEX_NOT_FOUND;
@@ -2464,7 +2544,7 @@ bool CBDatabaseRemoveValueNoMutex(CBDatabaseIndex * index, uint8_t * key, bool s
 			}
 		}
 		if (! foundKey) {
-			CBIndexFindResult fres = CBDatabaseIndexFind(index, key);
+			CBIndexFindWithParentsResult fres = CBDatabaseIndexFindWithParents(index, key);
 			if (fres.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error whilst trying to find a previous key in the index to see if a change key entry should be made.");
 				return false;

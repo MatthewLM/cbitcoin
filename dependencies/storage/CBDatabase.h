@@ -43,6 +43,7 @@
 #define CB_NODE_EXTRA_SIZE 8
 #define CB_DATABASE_NO_LAST_FILE UINT16_MAX
 #define CB_DATABASE_EXTRA_DATA_SIZE CB_BLOCK_CHAIN_EXTRA_SIZE + CB_ACCOUNTER_EXTRA_SIZE + CB_ADDRESS_EXTRA_SIZE + CB_NODE_EXTRA_SIZE
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 typedef enum{
 	CB_DATABASE_FILE_TYPE_INDEX,
@@ -131,6 +132,14 @@ typedef struct{
 typedef struct{
 	CBIndexFindStatus status;
 	CBIndexElementPos el;
+} CBIndexFindWithParentsResult;
+
+typedef struct{
+	CBIndexFindStatus status;
+	union{
+		CBIndexValue el;
+		CBIndexNodeLocation node;
+	} data;
 } CBIndexFindResult;
 
 typedef struct{
@@ -443,14 +452,15 @@ CBIndexTxData * CBDatabaseGetIndexTxData(CBDatabaseTransactionChanges * changes,
  @param res The information of the node we are inserting to.
  @returns true on success and false on failure.
  */
-bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindResult * res);
+bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindWithParentsResult * res);
+CBIndexFindResult CBDatabaseIndexFind(CBDatabaseIndex * index, uint8_t * key);
 /**
  @brief Finds an index entry, or where the index should be inserted.
  @param index The index object.
  @param key The key to find.
  @returns @see CBIndexFindResult
  */
-CBIndexFindResult CBDatabaseIndexFind(CBDatabaseIndex * index, uint8_t * key);
+CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * index, uint8_t * key);
 /**
  @brief Inserts an index value into an index.
  @param index The index object.
@@ -484,14 +494,14 @@ bool CBDatabaseIndexMoveChildren(CBDatabaseIndex * index, CBIndexNodeLocation * 
  @param true on success or false on failure.
  */
 bool CBDatabaseIndexMoveElements(CBDatabaseIndex * index, CBIndexNodeLocation * dest, CBIndexNodeLocation * source, uint8_t startPos, uint8_t endPos, uint8_t amount, bool append);
+void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBIndexFindResult * result);
 /**
  @brief Does a binary search on a node in the cache and returns the location and index data.
  @param index The index object.
  @param node The node to search.
  @param key The key to search for.
- @param result @see CBIndexFindResult.
  */
-void CBDatabaseIndexNodeBinarySearch(CBDatabaseIndex * index, CBIndexNode * node, uint8_t * key, CBIndexFindResult * result);
+void CBDatabaseIndexNodeBinarySearchMemory(CBDatabaseIndex * index, CBIndexNode * node, uint8_t * key, CBIndexFindStatus * status, uint8_t * pos);
 /**
  @brief Sets blank children
  @param index The index object.

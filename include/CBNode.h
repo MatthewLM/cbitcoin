@@ -107,7 +107,7 @@ void CBFreeNode(void * self);
 // Functions
 
 void CBNodeDisconnectNode(void * vpeer);
-CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer);
+CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * message);
 void CBNodeOnValidatorError(void *);
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert);
 void CBNodeProcessMessages(void * node);

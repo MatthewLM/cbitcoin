@@ -54,13 +54,14 @@ typedef enum{
 	CB_MESSAGE_TYPE_ALT = 16384, /**< The message was defined by "alternativeMessages" in a CBNetworkCommunicator */
 	CB_MESSAGE_TYPE_ADDRMAN = 32768, /**< @see CBNetworkAddressManager.h */
 	CB_MESSAGE_TYPE_CHAINDESC = 65536, /**< @see CBChainDescriptor.h */
+	CB_MESSAGE_TYPE_NOT_GIVEN_INV = 65537,
 }CBMessageType;
 
 /**
  @brief Structure for CBMessage objects. @see CBMessage.h
  */
 typedef struct CBMessage{
-	CBObject base; /**< CBObject base structure */
+	CBObjectMutex base; /**< CBObjectMutex base structure */
 	CBMessageType type; /**< The type of the message */
 	uint8_t * altText; /**< For an alternative message: This is the type text. */
 	CBByteArray * bytes; /**< Raw message data minus the message header. When serialising this should be assigned to a CBByteArray large enough to hold the serialised data. */

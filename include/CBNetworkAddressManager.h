@@ -14,7 +14,7 @@
 
 /**
  @file
- @brief Stores addresses both unconnected and connected. It also proves serialisation and deserialisation so that addresses can be stored in binary format. Credit largely goes to the addrman.cpp code in the original client, although the code here has differences. Inherits CBMessage. The binary format contains a 32 bit integer for the cbitcoin version, followed by CB_BUCKET_NUM buckets. Each of these buckets is written as a 16 bit integer for the number of addresses and then the serialised CBNetworkAddresses one after the other. After the buckets is the 64 bit integer secret.
+ @brief Stores addresses both unconnected and connected. It also proves serialisation and deserialisation so that addresses can be stored in binary format. Credit largely goes to the addrman.cpp code in the original client, although the code here has differences. Inherits CBObject. The binary format contains a 32 bit integer for the cbitcoin version, followed by CB_BUCKET_NUM buckets. Each of these buckets is written as a 16 bit integer for the number of addresses and then the serialised CBNetworkAddresses one after the other. After the buckets is the 64 bit integer secret.
 */
 
 #ifndef CBADDRESSMANAGERH
@@ -37,7 +37,7 @@
  @brief Structure for CBNetworkAddressManager objects. @see CBNetworkAddressManager.h
 */
 typedef struct{
-	CBMessage base; /**< CBMessage base structure */
+	CBObject base; /**< CBObject base structure */
 	CBAssociativeArray addresses[CB_BUCKET_NUM]; /**< Unconnected addresses, seperated into buckets. */
 	CBAssociativeArray addressScores[CB_BUCKET_NUM]; /**< Addresses, seperated into buckets and ordered by CBNetworkAddressCompare. */
 	uint32_t addrNum; /**< Number of addresses. */
@@ -205,6 +205,8 @@ void CBNetworkAddressManagerTakePeerTimeOffset(CBNetworkAddressManager * self, C
  @returns If the first address has a higher time offset then CB_COMPARE_MORE_THAN is returned. If the first address has a lower time offset CB_COMPARE_LESS_THAN is returned. If the time offset are equal then the ip/ports are compared in the same way. If they are equal then CB_COMPARE_EQUAL is returned.
  */
 CBCompare CBPeerCompareByTime(CBAssociativeArray * array, void * peer1, void * peer2);
+CBCompare CBPeerIPPortCompare(CBAssociativeArray * array, void * peer1, void * peer2);
+CBCompare CBPeerCompareWithAddr(CBAssociativeArray * array, void * peer, void * addr);
 /**
  @brief Compares two network addresses.
  @param address1 The first CBNetworkAddress.

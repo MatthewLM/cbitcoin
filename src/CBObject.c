@@ -18,22 +18,42 @@
 
 //  Initialiser
 
-void CBInitObject(CBObject * self){
+void CBInitObject(CBObject * self, bool useMutex){
 	self->references = 1;
+	self->usesMutex = useMutex;
+	if (useMutex)
+		CBNewMutex(&((CBObjectMutex *)self)->refMutex);
 }
 
 //  Functions
 
 void CBReleaseObject(void * self){
 	CBObject * obj = self;
-	if (self == NULL)
-		return;
+	CBDepObject refMutex;
+	bool usesMutex = obj->usesMutex;
+	if (usesMutex){
+		refMutex = ((CBObjectMutex *)self)->refMutex;
+		CBMutexLock(refMutex);
+	}
 	// Decrement reference counter. Free if no more references.
 	obj->references--;
-	if (obj->references < 1)
+	if (obj->references < 1){
 		obj->free(obj);
+		if (usesMutex) {
+			CBMutexUnlock(refMutex);
+			CBFreeMutex(refMutex);
+		}
+	}else if (usesMutex)
+		CBMutexUnlock(refMutex);
 }
 void CBRetainObject(void * self){
 	// Increment reference counter.
-	((CBObject *)self)->references++;
+	CBObject * obj = self;
+	if (obj->usesMutex){
+		CBDepObject mutex = ((CBObjectMutex *)self)->refMutex;
+		CBMutexLock(mutex);
+		obj->references++;
+		CBMutexUnlock(mutex);
+	}else
+		obj->references++;
 }

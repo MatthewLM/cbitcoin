@@ -28,13 +28,13 @@ CBMessage * CBNewMessageByObject(){
 //  Initialiser
 
 void CBInitMessageByObject(CBMessage * self){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), true);
 	self->bytes = NULL;
 	self->expectResponse = false;
 	self->serialised = false;
 }
 void CBInitMessageByData(CBMessage * self, CBByteArray * data){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), true);
 	self->bytes = data;
 	CBRetainObject(data); // Retain data for this object.
 	self->expectResponse = false;

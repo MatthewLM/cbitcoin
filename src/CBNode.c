@@ -100,10 +100,11 @@ void CBNodeDisconnectNode(void * vpeer){
 	CBNetworkCommunicator * comm = peer->nodeObj;
 	CBNetworkCommunicatorDisconnect(comm, peer, CB_24_HOURS, false);
 }
-CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer){
+CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * message){
 	CBNode * self = CBGetNode(comm);
 	// Add message to queue
-	CBRetainObject(peer->receive);
+	CBRetainObject(message);
+	CBRetainObject(peer);
 	CBMutexLock(self->messageProcessMutex);
 	if (self->messageQueue == NULL)
 		self->messageQueue = self->messageQueueBack = malloc(sizeof(*self->messageQueueBack));
@@ -112,7 +113,7 @@ CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, 
 		self->messageQueueBack = self->messageQueueBack->next;
 	}
 	self->messageQueueBack->peer = peer;
-	self->messageQueueBack->message = peer->receive;
+	self->messageQueueBack->message = message;
 	self->messageQueueBack->next = NULL;
 	// Wakeup thread if this is the first in the queue
 	if (self->messageQueue == self->messageQueueBack)

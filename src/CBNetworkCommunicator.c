@@ -28,7 +28,7 @@ CBNetworkCommunicator * CBNewNetworkCommunicator(CBNetworkCommunicatorCallbacks 
 //  Initialiser
 
 void CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBNetworkCommunicatorCallbacks callbacks){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	CBNewMutex(&self->peersMutex);
 	CBNewMutex(&self->sendMessageMutex);
 	// Set fields.
@@ -60,6 +60,7 @@ void CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBNetworkCommunicat
 	self->flags = 0;
 	self->connectionTimeOut = 5000;
 	self->services = 0;
+	self->blockHeight = 0;
 }
 
 //  Destructor
@@ -95,8 +96,10 @@ void CBNetworkCommunicatorAcceptConnection(void * vself, CBDepObject socket){
 	CBByteArray * ip = CBNewByteArrayOfSize(16);
 	CBByteArraySetInt64(ip, 0, self->pendingIP);
 	CBByteArraySetInt64(ip, 8, 0);
-	CBPeer * peer = CBNewPeerByTakingNetworkAddress(CBNewNetworkAddress(0, ip, 0, 0, false));
+	CBNetworkAddress * addr = CBNewNetworkAddress(0, ip, 0, 0, false);
 	CBReleaseObject(ip);
+	CBPeer * peer = CBNewPeer(addr, self->callbacks.freePeer);
+	CBReleaseObject(addr);
 	// Increment the pendingIP for the next incomming connection
 	self->pendingIP++;
 	peer->incomming = true;
@@ -136,15 +139,15 @@ void CBNetworkCommunicatorAcceptConnection(void * vself, CBDepObject socket){
 	CBLogError("Failure setting up events for incoming peer.");
 }
 CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPeer * peer){
-	if (! CBNetworkCommunicatorIsReachable(self, CBGetNetworkAddress(peer)->type))
+	if (! CBNetworkCommunicatorIsReachable(self, peer->addr->type))
 		return CB_CONNECT_NO_SUPPORT;
-	bool isIPv6 = CBGetNetworkAddress(peer)->type & CB_IP_IP6
-				  || CBGetNetworkAddress(peer)->type & CB_IP_TOR
-				  || CBGetNetworkAddress(peer)->type & CB_IP_I2P;
+	bool isIPv6 = peer->addr->type & CB_IP_IP6
+				  || peer->addr->type & CB_IP_TOR
+				  || peer->addr->type & CB_IP_I2P;
 	// Make socket
 	CBSocketReturn res = CBNewSocket(&peer->socketID, isIPv6);
 	if(res == CB_SOCKET_NO_SUPPORT){
-		CBNetworkCommunicatorSetReachability(self, CBGetNetworkAddress(peer)->type, false);
+		CBNetworkCommunicatorSetReachability(self, peer->addr->type, false);
 		if (! CBNetworkCommunicatorIsReachable(self, CB_IP_IP6 | CB_IP_IP4 | CB_IP_I2P | CB_IP_TOR)){
 			// No networks reachable.
 			CBLogError("No networks are reachable.");
@@ -157,7 +160,7 @@ CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPee
 		return CB_CONNECT_ERROR;
 	}
 	// Connect
-	if (CBSocketConnect(peer->socketID, CBByteArrayGetData(CBGetNetworkAddress(peer)->ip), isIPv6, CBGetNetworkAddress(peer)->port)){
+	if (CBSocketConnect(peer->socketID, CBByteArrayGetData(peer->addr->ip), isIPv6, peer->addr->port)){
 		// Add event for connection
 		if (CBSocketDidConnectEvent(&peer->connectEvent, self->eventLoop, peer->socketID, CBNetworkCommunicatorDidConnect, peer)) {
 			if (CBSocketAddEvent(peer->connectEvent, self->connectionTimeOut)) {
@@ -180,7 +183,7 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 	CBPeer * peer = vpeer;
 	CBSocketFreeEvent(peer->connectEvent); // No longer need this event.
 	// Check to see if in the meantime, that we have not been connected to by the peer. Double connections are bad m'kay.
-	if (! CBNetworkAddressManagerGotPeer(self->addresses, CBGetNetworkAddress(peer))){
+	if (! CBNetworkAddressManagerGotPeer(self->addresses, peer->addr)){
 		// Make receive event
 		if (CBSocketCanReceiveEvent(&peer->receiveEvent, self->eventLoop, peer->socketID, CBNetworkCommunicatorOnCanReceive, peer)) {
 			// Make send event
@@ -195,7 +198,7 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 					peer->connectionWorking = true;
 					// Connection OK, so begin handshake if auto handshaking is enabled.
 					if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE){
-						CBVersion * version = CBNetworkCommunicatorGetVersion(self, CBGetNetworkAddress(peer));
+						CBVersion * version = CBNetworkCommunicatorGetVersion(self, peer->addr);
 						CBGetMessage(version)->expectResponse = CB_MESSAGE_TYPE_VERACK; // Expect a response for this message.
 						CBGetMessage(version)->type = CB_MESSAGE_TYPE_VERSION;
 						CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(version), NULL);
@@ -213,9 +216,8 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 		CBCloseSocket(peer->socketID);
 		// Add the address back to the addresses listwith no penalty here since it was definitely our fault.
 		// Do not return the address if we have the peer already.
-		CBNetworkAddress * addr = realloc(peer, sizeof(CBNetworkAddress));
-		if (addr)
-			CBNetworkAddressManagerTakeAddress(self->addresses, addr);
+		CBNetworkAddressManagerAddAddress(self->addresses, peer->addr);
+		CBReleaseObject(peer);
 		CBLogVerbose("Failed to setup events for the peer %s which we connected to", peer->peerStr);
 	}else{
 		CBCloseSocket(peer->socketID);
@@ -227,6 +229,8 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 }
 void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer, uint32_t penalty, bool stopping){
 	CBLogVerbose("Disconnecting from %s", peer->peerStr);
+	bool wasWorking = peer->connectionWorking;
+	peer->connectionWorking = false;
 	// Close the socket
 	CBCloseSocket(peer->socketID);
 	// If incomming, lower the incomming connections number
@@ -238,8 +242,7 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 	// Lower the attempting or working connections number
 	self->attemptingOrWorkingConnections--;
 	// If this is a working connection, remove from the address manager peer's list.
-	if (peer->connectionWorking){
-		self->callbacks.onPeerDisconnection(self, peer);
+	if (wasWorking){
 		// Release data created when connection was working
 		if (peer->requestedData) CBReleaseObject(peer->requestedData);
 		CBSocketFreeEvent(peer->receiveEvent);
@@ -247,8 +250,11 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 		// Release the receiving message object if it exists.
 		if (peer->receive) CBReleaseObject(peer->receive);
 		// Release all messages in the send queue
+		// Ensure the send queue is not being modified by mutex
+		CBMutexLock(self->sendMessageMutex);
 		for (uint8_t x = 0; x < peer->sendQueueSize; x++)
 			CBReleaseObject(peer->sendQueue[(peer->sendQueueFront + x) % CB_SEND_QUEUE_MAX_SIZE].message);
+		CBMutexUnlock(self->sendMessageMutex);
 		// If not stopping we can remove the peer.
 		if (! stopping){
 			// Retain the peer in case we continue to need it
@@ -258,16 +264,12 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 			CBNetworkAddressManagerRemovePeer(self->addresses, peer);
 			CBMutexUnlock(self->peersMutex);
 		}
-		if (CBGetNetworkAddress(peer)->isPublic) {
+		if (peer->addr->isPublic) {
 			// Public peer, return to addresses list.
 			// Apply the penalty given
-			CBGetNetworkAddress(peer)->penalty += penalty;
-			CBNetworkAddress * temp = realloc(peer, sizeof(CBNetworkAddress));
-			if (temp)
-				// Got reallocated memory. 
-				peer = CBGetPeer(temp);
+			peer->addr->penalty += penalty;
 			// Adding the address may fail. If it does, we just ignore it and lose the address.
-			CBNetworkAddressManagerAddAddress(self->addresses, CBGetNetworkAddress(peer));
+			CBNetworkAddressManagerAddAddress(self->addresses, peer->addr);
 		}
 		// Release the peer from out control if we are not stopping, or release the peer from the peers array if we are stopping
 		CBReleaseObject(peer);
@@ -492,6 +494,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 			}
 		}
 		// Remove message from queue.
+		CBMutexLock(self->sendMessageMutex);
 		peer->sendQueueSize--;
 		CBReleaseObject(toSend);
 		if (peer->sendQueueSize) {
@@ -504,6 +507,7 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 		// Now call the callback, since the message was sent, unless the callback is NULL
 		if (peer->sendQueue[peer->sendQueueFront].callback)
 			peer->sendQueue[peer->sendQueueFront].callback(self, peer);
+		CBMutexUnlock(self->sendMessageMutex);
 	}
 }
 void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer * peer){
@@ -725,7 +729,7 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 			break;
 		case CB_MESSAGE_TYPE_ADDR:
 			peer->receive = realloc(peer->receive, sizeof(CBNetworkAddress));
-			CBGetObject(peer->receive)->free = CBFreeNetworkAddress;
+			CBGetObject(peer->receive)->free = CBFreeNetworkAddressList;
 			CBGetNetworkAddressList(peer->receive)->timeStamps = peer->versionMessage->version > 31401; // Timestamps start version 31402 and up.
 			len = CBNetworkAddressListDeserialise(CBGetNetworkAddressList(peer->receive));
 			break;
@@ -790,7 +794,7 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 	}
 	// Deserialisation was sucessful.
 	// Call event callback
-	CBOnMessageReceivedAction action = self->callbacks.onMessageReceived(self, peer);
+	CBOnMessageReceivedAction action = self->callbacks.onMessageReceived(self, peer, peer->receive);
 	if (action == CB_MESSAGE_ACTION_CONTINUE){
 		// Automatic responses
 		if (peer->handshakeStatus == CB_HANDSHAKE_DONE) {
@@ -824,7 +828,7 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 			CBNetworkAddressManagerRemovePeer(self->addresses, peer);
 			CBMutexUnlock(self->peersMutex);
 			// Update lastSeen
-			CBGetNetworkAddress(peer)->lastSeen = time(NULL);
+			peer->addr->lastSeen = time(NULL);
 			CBNetworkAddressManagerTakePeer(self->addresses, peer);
 			// Reset variables for receiving the next message
 			peer->receivedHeader = false;
@@ -867,7 +871,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 				if (addrs->addresses[x]->type & CB_IP_INVALID)
 					// Address broadcasts should not contain invalid addresses.
 					return CB_MESSAGE_ACTION_DISCONNECT;
-				if (addrs->addresses[x]->type & CB_IP_LOCAL && ! (CBGetNetworkAddress(peer)->type & CB_IP_LOCAL))
+				if (addrs->addresses[x]->type & CB_IP_LOCAL && ! (peer->addr->type & CB_IP_LOCAL))
 					// Do not allow peers to send local addresses to non-local peers.
 					return CB_MESSAGE_ACTION_DISCONNECT;
 				// Else leave the time
@@ -922,10 +926,10 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 				}
 			}else{
 				// We have an advertised peer. This means it is public and should return to the address store.
-				CBGetNetworkAddress(peerB)->isPublic = true;
+				peerB->addr->isPublic = true;
 				// Add the address to storage
 				if (self->useAddrStorage)
-					CBAddressStorageSaveAddress(self->addrStorage, CBGetNetworkAddress(peerB));
+					CBAddressStorageSaveAddress(self->addrStorage, peerB->addr);
 				// We do not want to relay this address
 				removeAddr = true;
 			}
@@ -984,10 +988,10 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 			// Get the peer
 			CBPeer * peerToInclude = CBNetworkAddressManagerGetPeer(self->addresses, y);
 			if (peerToInclude != peer // Not the peer we are sending to
-				&& CBGetNetworkAddress(peerToInclude)->isPublic // Public
-				&& (CBGetNetworkAddress(peerToInclude)->type != CB_IP_LOCAL // OK if not local
-					|| CBGetNetworkAddress(peerToInclude)->type == CB_IP_LOCAL)) { // Or if the peer we are sending to is local
-				CBNetworkAddressListAddNetworkAddress(addr, CBGetNetworkAddress(peerToInclude));
+				&& peerToInclude->addr->isPublic // Public
+				&& (peerToInclude->addr->type != CB_IP_LOCAL // OK if not local
+					|| peerToInclude->addr->type == CB_IP_LOCAL)) { // Or if the peer we are sending to is local
+				CBNetworkAddressListAddNetworkAddress(addr, peerToInclude->addr);
 				peersSent++;
 			}
 			// Release peer
@@ -999,7 +1003,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNet
 		numAddrs = CBNetworkAddressManagerGetAddresses(self->addresses, numAddrs, addrs);
 		for (uint8_t x = 0; x < numAddrs; x++){
 			if (addrs[x]->type != CB_IP_LOCAL
-				|| CBGetNetworkAddress(peer)->type == CB_IP_LOCAL)
+				|| peer->addr->type == CB_IP_LOCAL)
 				CBNetworkAddressListAddNetworkAddress(addr, addrs[x]);
 			CBReleaseObject(addrs[x]);
 		}
@@ -1067,28 +1071,34 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
 			if (peer->versionMessage->version == 10300)
 				peer->versionMessage->version = 300;
 			// Copy over reported version and services for the CBNetworkAddress.
-			CBGetNetworkAddress(peer)->version = peer->versionMessage->version;
-			CBGetNetworkAddress(peer)->services = peer->versionMessage->services;
-			// Remove the peer from the arrays so that it is repositioned with the updated data
-			CBRetainObject(peer);
-			CBMutexLock(self->peersMutex);
-			CBNetworkAddressManagerRemovePeer(self->addresses, peer);
-			CBMutexUnlock(self->peersMutex);
-			// Change port and IP number to the port and IP the peer wants us to recognise them with.
-			CBGetNetworkAddress(peer)->port = peer->versionMessage->addSource->port;
-			if (CBByteArrayCompare(CBGetNetworkAddress(peer)->ip, peer->versionMessage->addSource->ip) != CB_COMPARE_EQUAL) {
-				// The IP is different so change it.
-				CBReleaseObject(CBGetNetworkAddress(peer)->ip);
-				CBGetNetworkAddress(peer)->ip = peer->versionMessage->addSource->ip;
+			peer->addr->version = peer->versionMessage->version;
+			peer->addr->services = peer->versionMessage->services;
+			// See if the network address changed.
+			bool portChange = peer->addr->port != peer->versionMessage->addSource->port;
+			bool ipChange = CBByteArrayCompare(peer->addr->ip, peer->versionMessage->addSource->ip) != CB_COMPARE_EQUAL;
+			if (portChange || ipChange) {
+				// Remove the peer from the arrays so that it is repositioned with the updated data
+				CBRetainObject(peer);
+				CBMutexLock(self->peersMutex);
+				CBNetworkAddressManagerRemovePeer(self->addresses, peer);
+				CBMutexUnlock(self->peersMutex);
+				// Change port and IP number to the port and IP the peer wants us to recognise them with.
+				peer->addr->port = peer->versionMessage->addSource->port;
+				if (ipChange) {
+					// The IP is different so change it.
+					CBReleaseObject(peer->addr->ip);
+					peer->addr->ip = peer->versionMessage->addSource->ip;
+					CBRetainObject(peer->addr->ip);
+				}
+				// Now re-insert the peer with the new information
+				CBMutexLock(self->peersMutex);
+				CBNetworkAddressManagerTakePeer(self->addresses, peer);
+				CBMutexUnlock(self->peersMutex);
 			}
-			// Now re-insert the peer with the new information
-			CBMutexLock(self->peersMutex);
-			CBNetworkAddressManagerTakePeer(self->addresses, peer);
-			CBMutexUnlock(self->peersMutex);
 			// Set the IP type
-			CBGetNetworkAddress(peer)->type = CBGetIPType(CBByteArrayGetData(CBGetNetworkAddress(peer)->ip));
+			peer->addr->type = CBGetIPType(CBByteArrayGetData(peer->addr->ip));
 			// Set the peer address string
-			CBNetworkAddressToString(CBGetNetworkAddress(peer), peer->peerStr);
+			CBNetworkAddressToString(peer->addr, peer->peerStr);
 			// Adjust network time
 			peer->timeOffset = peer->versionMessage->time - time(NULL); // Set the time offset for this peer.
 			// Now we have the network time, add the peer for the time offset. Ignore on failure
@@ -1104,7 +1114,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
 				return CB_MESSAGE_ACTION_DISCONNECT; // If we cannot send an acknowledgement, exit.
 			// Send version next if we have not already.
 			if (! (peer->handshakeStatus & CB_HANDSHAKE_SENT_VERSION)) {
-				CBVersion * version = CBNetworkCommunicatorGetVersion(self, CBGetNetworkAddress(peer));
+				CBVersion * version = CBNetworkCommunicatorGetVersion(self, peer->addr);
 				if (version) {
 					CBGetMessage(version)->expectResponse = CB_MESSAGE_TYPE_VERACK; // Expect a response for this message.
 					CBGetMessage(version)->type = CB_MESSAGE_TYPE_VERSION;
@@ -1155,8 +1165,10 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetw
 }
 bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *)){
 	CBMutexLock(self->sendMessageMutex);
-	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE)
+	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking){
+		CBMutexUnlock(self->sendMessageMutex);
 		return false;
+	}
 	char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
 	CBMessageTypeToString(message->type, typeStr);
 	CBLogVerbose("Sending message of type %s (%u) to %s.", typeStr, message->type, peer->peerStr);
@@ -1266,7 +1278,7 @@ void CBNetworkCommunicatorSendPings(void * vself){
 			if (peer->handshakeStatus == CB_HANDSHAKE_DONE){
 				if (peer->versionMessage->version >= CB_PONG_VERSION){
 					CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(pingPong), NULL);
-					CBGetMessage(peer)->expectResponse = CB_MESSAGE_TYPE_PONG; // Expect a pong.
+					CBGetMessage(ping)->expectResponse = CB_MESSAGE_TYPE_PONG; // Expect a pong.
 				}else
 					CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(ping), NULL);
 			}
@@ -1323,18 +1335,23 @@ void CBNetworkCommunicatorStartListening(CBNetworkCommunicator * self){
 			if (CBSocketBind(&self->ipData[x].listeningSocket, (x == CB_IP4_NETWORK) ? false :  true, self->ipData[x].ourAddress->port)){
 				// Add event for accepting connection for both sockets
 				if (CBSocketCanAcceptEvent(&self->ipData[x].acceptEvent, self->eventLoop, self->ipData[x].listeningSocket, CBNetworkCommunicatorAcceptConnection)) {
-					if(CBSocketAddEvent(self->ipData[x].acceptEvent, 0)) // No timeout for listening for incomming connections.
+					if(CBSocketAddEvent(self->ipData[x].acceptEvent, 0)){ // No timeout for listening for incomming connections.
 						// Start listening
 						if (CBSocketListen(self->ipData[x].listeningSocket, self->maxIncommingConnections)){
 							// Is listening
 							self->ipData[x].isListening = true;
 							CBLogVerbose("Now listening on the %s network on port %u.", networkStrs[x], self->ipData[x].ourAddress->port);
 							continue;
-						}
+						}else
+							CBLogError("Unable to start listening on the %s network on port %u.", networkStrs[x], self->ipData[x].ourAddress->port);
+					}else
+						CBLogError("Unable to add an accept event for the %s network on port %u.", networkStrs[x], self->ipData[x].ourAddress->port);
 					// Failure to add event
 					CBSocketFreeEvent(self->ipData[x].acceptEvent);
-				}
-			}
+				}else
+					CBLogError("Unable to create an accept event for the %s network on port %u.", networkStrs[x], self->ipData[x].ourAddress->port);
+			}else
+				CBLogError("Unable to bind a socket for listening on the %s network on port %u.", networkStrs[x], self->ipData[x].ourAddress->port);
 			// Failure to create event
 			CBCloseSocket(self->ipData[x].listeningSocket);
 		}
@@ -1385,26 +1402,21 @@ void CBNetworkCommunicatorTryConnections(CBNetworkCommunicator * self){
 		CBNetworkAddressManagerRemoveAddress(self->addresses, addrs[x]);
 		// We haven't got the address as a peer.
 		// Convert network address into peer
-		CBPeer * peer = CBNewPeerByTakingNetworkAddress(addrs[x]);
+		CBPeer * peer = CBNewPeer(addrs[x], self->callbacks.freePeer);
+		CBReleaseObject(addrs[x]);
 		char addrStr[CB_NETWORK_ADDR_STR_SIZE];
-		CBNetworkAddressToString(CBGetNetworkAddress(peer), addrStr);
+		CBNetworkAddressToString(peer->addr, addrStr);
 		strcpy(peer->peerStr, addrStr);
 		peer->incomming = false;
 		CBConnectReturn res = CBNetworkCommunicatorConnect(self, peer);
 		if (res == CB_CONNECT_ERROR || res == CB_CONNECT_FAILED) {
-			// Convert back to address.
-			CBNetworkAddress * temp = realloc(peer, sizeof(*temp));
-			CBNetworkAddress * addr;
-			if (temp)
-				// Reallocation worked
-				addr = temp;
-			else
-				addr = CBGetNetworkAddress(peer);
+			// Add address back to manager
 			if (res == CB_CONNECT_FAILED)
 				// Add penalty if failed
-				addr->lastSeen -= 3600;
+				peer->addr->lastSeen -= 3600;
 			// Re-insert into the address manager, since we could not connect this time. If it fails, ignore and the address will not be added.
-			CBNetworkAddressManagerTakeAddress(self->addresses, addr);
+			CBNetworkAddressManagerAddAddress(self->addresses, peer->addr);
+			CBReleaseObject(peer);
 			CBLogWarning("Unable to connect to the address: %s", addrStr);
 		}else if (res == CB_CONNECT_OK)
 			CBLogVerbose("Made a connection to peer %s", addrStr);

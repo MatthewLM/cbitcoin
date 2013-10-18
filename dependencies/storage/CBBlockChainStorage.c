@@ -153,7 +153,7 @@ bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t 
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
 	CB_KEY_ARRAY[0] = branch;
 	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, hash, 20, CB_BLOCK_HASH, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, hash, 32, CB_BLOCK_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read the hash for a block.");
 		return false;
 	}

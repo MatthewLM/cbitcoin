@@ -9,3 +9,5 @@ bin
 config.log
 config.status
 *.dat
+socketdebug/
+databaseprofile/

@@ -183,14 +183,13 @@ bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSu
 	uint8_t last5Bits = (signType & 0x1f); // For some reason this is what the C++ client does.
 	CBVarInt prevOutputSubScriptVarInt = CBVarIntFromUInt64(prevOutSubScript->length);
 	uint32_t sizeOfData = 12 + prevOutSubScript->length + prevOutputSubScriptVarInt.size; // Version, lock time and the sign type make up 12 bytes.
-	if (signType & CB_SIGHASH_ANYONECANPAY) {
+	if (signType & CB_SIGHASH_ANYONECANPAY)
 		sizeOfData += 41; // Just this one input. 32 bytes for outPointerHash, 4 for outPointerIndex, 4 for sequence and one for the *inputNum* var int
-	}else{
+	else
 		sizeOfData += CBVarIntSizeOf(self->inputNum) + self->inputNum * 41 - 1; // All inputs with 1 byte var int except one.
-	}
-	if (last5Bits == CB_SIGHASH_NONE){
+	if (last5Bits == CB_SIGHASH_NONE)
 		sizeOfData++; // Just for the CBVarInt and no outputs.
-	}else if ((signType & 0x1f) == CB_SIGHASH_SINGLE){
+	else if ((signType & 0x1f) == CB_SIGHASH_SINGLE){
 		if (self->outputNum < input + 1)
 			return false;
 		sizeOfData += CBVarIntSizeOf(input + 1) + input * 9; // For outputs up to the input index

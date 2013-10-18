@@ -20,16 +20,16 @@ CBSocketReturn CBNewSocket(CBDepObject * socketID, bool IPv6){
 	// You need to use PF_INET for IPv4 mapped IPv6 addresses despite using the IPv6 format.
 	socketID->i = socket(IPv6 ? PF_INET6 : PF_INET, SOCK_STREAM, 0);
 	if (socketID->i == -1) {
-		if (errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT) {
+		if (errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT)
 			return CB_SOCKET_NO_SUPPORT;
-		}
 		return CB_SOCKET_BAD;
 	}
 	// Stop SIGPIPE annoying us.
-	if (CB_NOSIGPIPE) {
-		int i = 1;
+	int i = 1;
+	if (CB_NOSIGPIPE)
 		setsockopt((evutil_socket_t)socketID->i, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
-	}
+	// Make address reusable
+	setsockopt((evutil_socket_t)socketID->i, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
 	// Make socket non-blocking
 	evutil_make_socket_nonblocking((evutil_socket_t)socketID->i);
 	return CB_SOCKET_OK;
@@ -54,6 +54,7 @@ bool CBSocketBind(CBDepObject * socketID, bool IPv6, uint16_t port){
 		int opt = 1;
 		setsockopt((evutil_socket_t)socketID->i, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 		if (bind((evutil_socket_t)socketID->i, ptr->ai_addr, ptr->ai_addrlen) == -1) {
+			CBLogWarning("Bind gave the error %s for address on port %u.", strerror(errno), port);
 			evutil_closesocket((evutil_socket_t)socketID->i);
 			continue;
 		}
@@ -94,16 +95,14 @@ bool CBSocketConnect(CBDepObject socketID, uint8_t * IP, bool IPv6, uint16_t por
 	return false;
 }
 bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections){
-	if(listen((evutil_socket_t)socketID.i, maxConnections) == -1){
+	if(listen((evutil_socket_t)socketID.i, maxConnections) == -1)
 		return false;
-	}
 	return true;
 }
 bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
 	connectionSocketID->i = accept((evutil_socket_t)socketID.i, NULL, NULL);
-	if (connectionSocketID->i == -1) {
+	if (connectionSocketID->i == -1)
 		return false;
-	}
 	// Make socket non-blocking
 	evutil_make_socket_nonblocking((evutil_socket_t)connectionSocketID->i);
 	// Stop SIGPIPE

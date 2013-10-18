@@ -201,7 +201,7 @@ CBFoundTransaction * CBNodeFullGetFoundTransaction(CBNodeFull * self, uint8_t * 
 CBOrphan * CBNodeFullGetOrphanTransaction(CBNodeFull * self, uint8_t * hash);
 CBFoundTransaction * CBNodeFullGetOtherTransaction(CBNodeFull * self, uint8_t * hash);
 CBFoundTransaction * CBNodeFullGetOurTransaction(CBNodeFull * self, uint8_t * hash);
-void CBNodeFullHasGivenBlockInv(void * vpeer);
+void CBNodeFullHasNotGivenBlockInv(void * vpeer);
 CBErrBool CBNodeFullHasTransaction(CBNodeFull * self, uint8_t * hash);
 bool CBNodeFullInvalidBlock(void *, CBBlock * block);
 bool CBNodeFullIsOrphan(void *, CBBlock * block);
@@ -214,10 +214,9 @@ bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, void * peer);
 void CBNodeFullPeerDownloadEnd(CBNodeFull * self, CBPeer * peer);
 /**
  @brief Frees data associated with the peer.
- @param self The CBNetworkCommunicator object.
  @param peer The peer
  */
-void CBNodeFullPeerFree(CBNetworkCommunicator * self, CBPeer * peer);
+void CBNodeFullPeerFree(void * peer);
 /**
  @brief Setups the peer.
  @param self The CBNetworkCommunicator object.

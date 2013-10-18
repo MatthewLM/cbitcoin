@@ -35,9 +35,7 @@ void CBNewThread(CBDepObject * uthread, void (*function)(void *), void * arg){
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); // May need to be joinable.
-	// Create joinable thread
-	assert(pthread_create(&thread->thread, &attr, CBRunThread, thread) == 0);
-	pthread_attr_destroy(&attr);
+	// Set ID and associate data with thread
 	assert(pthread_mutex_lock(&idMutex) == 0);
 	thread->ID = nextId++;
 	if (!keyCreated) {
@@ -45,6 +43,9 @@ void CBNewThread(CBDepObject * uthread, void (*function)(void *), void * arg){
 		pthread_key_create(&key, NULL);
 	}
 	assert(pthread_mutex_unlock(&idMutex) == 0);
+	// Create joinable thread
+	assert(pthread_create(&thread->thread, &attr, CBRunThread, thread) == 0);
+	pthread_attr_destroy(&attr);
 	uthread->ptr = thread;
 }
 void * CBRunThread(void * vthread){

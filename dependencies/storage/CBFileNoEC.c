@@ -18,8 +18,8 @@
 
 bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	long pos = ftell(file.ptr);
-	if (fseek(file.ptr, 0, SEEK_END)
-		|| fwrite(data, 1, dataLen, file.ptr) != dataLen
+	fseek(file.ptr, 0, SEEK_END);
+	if (fwrite(data, 1, dataLen, file.ptr) != dataLen
 		|| fseek(file.ptr, pos, SEEK_SET))
 		return false;
 	return true;
@@ -53,6 +53,9 @@ bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 	return true;
 }
 bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
+	if (ftell(file.ptr) <= 26088 && ftell(file.ptr) > 26088-dataLen) {
+		printf("HERE");
+	}
 	return fwrite(data, 1, dataLen, file.ptr) == dataLen;
 }
 bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
@@ -64,7 +67,6 @@ bool CBFileSeek(CBDepObject file, uint32_t pos){
 bool CBFileSync(CBDepObject file){
 	if (fflush(file.ptr))
 		return false;
-	return true;
 	if (fsync(fileno(file.ptr)))
 		return false;
 	return true;

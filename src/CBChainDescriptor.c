@@ -71,8 +71,8 @@ uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 		CBLogError("Attempting to deserialise a CBChainDescriptor with no bytes.");
 		return 0;
 	}
-	if (bytes->length < 33) {
-		CBLogError("Attempting to deserialise a CBChainDescriptor with less bytes than required for one hash.");
+	if (bytes->length < 1) {
+		CBLogError("Attempting to deserialise a CBChainDescriptor with no bytes");
 		return 0;
 	}
 	CBVarInt hashNum = CBVarIntDecode(bytes, 0);
@@ -117,7 +117,6 @@ uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self){
 }
 void CBChainDescriptorTakeHash(CBChainDescriptor * self, CBByteArray * hash){
 	self->hashNum++;
-	CBByteArray ** temp = realloc(self->hashes, sizeof(*self->hashes) * self->hashNum);
-	self->hashes = temp;
+	self->hashes = realloc(self->hashes, sizeof(*self->hashes) * self->hashNum);
 	self->hashes[self->hashNum-1] = hash;
 }

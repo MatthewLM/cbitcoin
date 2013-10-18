@@ -518,7 +518,7 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 		CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
 		// Release invs
 		for (uint8_t x = 0; x < 4; x++)
-			CBReleaseObject(invs[x]);
+			if (invs[x] != NULL) CBReleaseObject(invs[x]);
 		// Remove old transactions
 		if (!CBNodeFullRemoveLostUnconfTxs(self)) {
 			CBLogError("Could not remove old unconfirmed transactions.");
@@ -860,11 +860,15 @@ CBFoundTransaction * CBNodeFullGetOurTransaction(CBNodeFull * self, uint8_t * ha
 	self->ourTxs.compareFunc = CBTransactionPtrCompare;
 	return (res.found) ? CBFindResultToPointer(res) : NULL;
 }
-void CBNodeFullHasGivenBlockInv(void * vpeer){
+void CBNodeFullHasNotGivenBlockInv(void * vpeer){
+	// Give a NOT_GIVEN_INV message to process queue
 	CBPeer * peer = vpeer;
-	// Timer expired but not given block inventory
-	CBNodeFullPeerDownloadEnd(peer->nodeObj, peer);
-	peer->upToDate = true;
+	CBMutexLock(peer->invResponseMutex);
+	CBMessage * message = CBNewMessageByObject();
+	message->type = CB_MESSAGE_TYPE_NOT_GIVEN_INV;
+	CBNodeOnMessageReceived(peer->nodeObj, peer, message);
+	CBReleaseObject(message);
+	CBMutexUnlock(peer->invResponseMutex);
 }
 CBErrBool CBNodeFullHasTransaction(CBNodeFull * self, uint8_t * hash){
 	if (CBNodeFullGetAnyTransaction(self, hash) != NULL)
@@ -990,7 +994,8 @@ bool CBNodeFullNoNewBranches(void * vpeer, CBBlock * block){
 	return true;
 }
 void CBNodeFullOnNetworkError(CBNetworkCommunicator * comm){
-	return;
+	CBNode * node = CBGetNode(comm);
+	node->callbacks.onFatalNodeError(node);
 }
 bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, void * vpeer){
 	// An expected response timed out.
@@ -1027,8 +1032,15 @@ void CBNodeFullPeerDownloadEnd(CBNodeFull * self, CBPeer * peer){
 	// See if we can download from any other peers
 	CBNodeFullDownloadFromSomePeer(self);
 }
-void CBNodeFullPeerFree(CBNetworkCommunicator * self, CBPeer * peer){
-	CBNodeFull * fullNode = CBGetNodeFull(self);
+void CBNodeFullPeerFree(void * vpeer){
+	CBPeer * peer = vpeer;
+	CBNodeFull * fullNode = peer->nodeObj;
+	if (peer->invResponseTimerStarted)
+		CBEndTimer(peer->invResponseTimer);
+	// Wait until timer callback unlocks
+	CBMutexLock(peer->invResponseMutex);
+	CBMutexUnlock(peer->invResponseMutex);
+	CBFreeMutex(peer->invResponseMutex);
 	if (peer->downloading){
 		// If expected a block from the peer, we should ask another
 		if (peer->expectBlock)
@@ -1039,7 +1051,7 @@ void CBNodeFullPeerFree(CBNetworkCommunicator * self, CBPeer * peer){
 		CBMutexUnlock(fullNode->numberPeersDownloadMutex);
 		if (peer->branchWorkingOn != CB_NO_BRANCH){
 			CBMutexLock(fullNode->workingMutex);
-			CBGetNode(self)->validator->branches[peer->branchWorkingOn].working--;
+			CBGetNode(peer->nodeObj)->validator->branches[peer->branchWorkingOn].working--;
 			CBMutexUnlock(fullNode->workingMutex);
 		}
 	}
@@ -1050,7 +1062,7 @@ void CBNodeFullPeerFree(CBNetworkCommunicator * self, CBPeer * peer){
 		CBMutexUnlock(fullNode->numCanDownloadMutex);
 	}
 	CBFreeAssociativeArray(&peer->expectedTxs);
-	CBReleaseObject(peer->requestedData);
+	if (peer->requestedData != NULL) CBReleaseObject(peer->requestedData);
 	// See if we can download from any other peers
 	peer->downloading = true; // Ensure not this one.
 	CBNodeFullDownloadFromSomePeer(fullNode);
@@ -1062,6 +1074,8 @@ void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer){
 	peer->requestedData = NULL;
 	peer->nodeObj = self;
 	peer->upToDate = false;
+	peer->invResponseTimerStarted = false;
+	CBNewMutex(&peer->invResponseMutex);
 }
 bool CBNodeFullPeerWorkingOnBranch(void * vpeer, uint8_t branch){
 	CBPeer * peer = vpeer;
@@ -1137,8 +1151,8 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			if (inv != NULL){
 				CBGetMessage(inv)->type = CB_MESSAGE_TYPE_INV;
 				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
+				CBReleaseObject(inv);
 			}
-			CBReleaseObject(inv);
 			// Ask for blocks, unless there is already CB_MAX_BLOCK_QUEUE peers giving us blocks or the peer advertises a block height equal or less than ours.
 			CBMutexLock(self->numberPeersDownloadMutex);
 			if (CBGetVersion(message)->blockHeight <= CBGetNetworkCommunicator(self)->blockHeight
@@ -1298,6 +1312,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			if (reqBlockNum != 0) {
 				// Has blocks in inventory
 				CBEndTimer(peer->invResponseTimer);
+				peer->invResponseTimerStarted = false;
 				// Add CB_END_REQ_BLOCKS to last required block
 				peer->reqBlocks[reqBlockNum-1].next = CB_END_REQ_BLOCKS;
 			}
@@ -1657,6 +1672,11 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			}
 			breakMutex;
 		}
+		case CB_MESSAGE_TYPE_NOT_GIVEN_INV:
+			// Timer expired but not given block inventory
+			CBNodeFullPeerDownloadEnd(peer->nodeObj, peer);
+			peer->upToDate = true;
+			break;
 		default:
 			break;
 	}
@@ -1820,7 +1840,8 @@ bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer){
 	CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getBlocks), NULL);
 	CBReleaseObject(getBlocks);
 	// Check in the future that the peer did send us an inv of blocks
-	CBStartTimer(CBGetNetworkCommunicator(self)->eventLoop, &peer->invResponseTimer, CBGetNetworkCommunicator(self)->responseTimeOut, CBNodeFullHasGivenBlockInv, peer);
+	CBStartTimer(CBGetNetworkCommunicator(self)->eventLoop, &peer->invResponseTimer, CBGetNetworkCommunicator(self)->responseTimeOut, CBNodeFullHasNotGivenBlockInv, peer);
+	peer->invResponseTimerStarted = true;
 	return true;
 }
 bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){

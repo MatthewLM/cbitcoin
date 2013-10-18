@@ -30,7 +30,7 @@ CBNetworkAddressManager * CBNewNetworkAddressManager(void (*onBadTime)(void *)){
 //  Initialiser
 
 bool CBInitNetworkAddressManager(CBNetworkAddressManager * self, void (*onBadTime)(void *)){
-	CBInitMessageByObject(CBGetMessage(self));
+	CBInitObject(CBGetObject(self), false);
 	// We start with no peers or addresses.
 	self->peersNum = 0;
 	self->addrNum = 0;
@@ -56,7 +56,7 @@ bool CBInitNetworkAddressManager(CBNetworkAddressManager * self, void (*onBadTim
 	// Generate secret
 	self->secret = CBSecureRandomInteger(self->rndGen);
 	// Initialise arrays for addresses and peers.
-	CBInitAssociativeArray(&self->peers, CBNetworkAddressIPPortCompare, NULL, CBReleaseObject);
+	CBInitAssociativeArray(&self->peers, CBPeerIPPortCompare, NULL, CBReleaseObject);
 	CBInitAssociativeArray(&self->peerTimeOffsets, CBPeerCompareByTime, NULL, NULL);
 	for (uint8_t x = 0; x < CB_BUCKET_NUM; x++){
 		CBInitAssociativeArray(&self->addresses[x], CBNetworkAddressIPPortCompare, NULL, CBReleaseObject);
@@ -79,7 +79,6 @@ void CBDestroyNetworkAddressManager(void * vself){
 		CBFreeAssociativeArray(&self->addresses[x]);
 		CBFreeAssociativeArray(&self->addressScores[x]);
 	}
-	CBDestroyMessage(self);
 }
 void CBFreeNetworkAddressManager(void * self){
 	CBDestroyNetworkAddressManager(self);
@@ -241,7 +240,9 @@ CBNetworkAddress * CBNetworkAddressManagerGotNetworkAddress(CBNetworkAddressMana
 	return NULL;
 }
 CBPeer * CBNetworkAddressManagerGotPeer(CBNetworkAddressManager * self, CBNetworkAddress * addr){
+	self->peers.compareFunc = CBPeerCompareWithAddr;
 	CBFindResult res = CBAssociativeArrayFind(&self->peers, addr);
+	self->peers.compareFunc = CBPeerIPPortCompare;
 	if (res.found){
 		// Retain peer
 		CBPeer * peer = CBFindResultToPointer(res);
@@ -254,9 +255,9 @@ void CBNetworkAddressManagerRemoveAddress(CBNetworkAddressManager * self, CBNetw
 	CBNetworkAddressManagerSetBucketIndex(self, addr);
 	CBFindResult res = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr);
 	if (res.found){
+		// Delete from the score ordered array. Use the pointer given by the find result as the addr argument might not be the same and not contain the score.
+		CBAssociativeArrayDelete(&self->addressScores[addr->bucket], CBAssociativeArrayFind(&self->addressScores[addr->bucket], CBFindResultToPointer(res)).position, false);
 		CBAssociativeArrayDelete(&self->addresses[addr->bucket], res.position, true);
-		// Delete from the score ordered array
-		CBAssociativeArrayDelete(&self->addressScores[addr->bucket], CBAssociativeArrayFind(&self->addressScores[addr->bucket], addr).position, false);
 		// Decrement the number of addresses.
 		self->addrNum--;
 	}
@@ -335,7 +336,13 @@ CBCompare CBPeerCompareByTime(CBAssociativeArray * array, void * peer1, void * p
 		return CB_COMPARE_MORE_THAN;
 	if (peerObj1->timeOffset > peerObj2->timeOffset)
 		return CB_COMPARE_LESS_THAN;
-	return CBNetworkAddressIPPortCompare(array, peer1, peer2);
+	return CBNetworkAddressIPPortCompare(array, peerObj1->addr, peerObj2->addr);
+}
+CBCompare CBPeerIPPortCompare(CBAssociativeArray * array, void * peer1, void * peer2){
+	return CBNetworkAddressIPPortCompare(array, ((CBPeer *)peer1)->addr, ((CBPeer *)peer2)->addr);
+}
+CBCompare CBPeerCompareWithAddr(CBAssociativeArray * array, void * addr, void * peer){
+	return CBNetworkAddressIPPortCompare(array, addr, ((CBPeer *)peer)->addr);
 }
 CBCompare CBNetworkAddressCompare(CBAssociativeArray * array, void * address1, void * address2){
 	CBNetworkAddress * addrObj1 = address1;

@@ -81,6 +81,7 @@ uint32_t CBInventoryDeserialise(CBInventory * self){
 		CBLogError("Attempting to deserialise a CBInventory with a var int over 50000.");
 		return 0;
 	}
+	self->itemNum = 0;
 	// Run through the items and deserialise each one.
 	uint32_t cursor = itemNum.size;
 	for (uint16_t x = 0; x < itemNum.val; x++) {

@@ -18,16 +18,20 @@
 
 //  Constructor
 
-CBPeer * CBNewPeerByTakingNetworkAddress(CBNetworkAddress * addr){
-	CBPeer * self = CBGetPeer(addr);
-	self = realloc(self, sizeof(*self));
-	CBInitPeerByTakingNetworkAddress(self);
+CBPeer * CBNewPeer(CBNetworkAddress * addr, void (*onPeerDestroy)(void *)){
+	CBPeer * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreePeer;
+	CBInitPeer(self, addr, onPeerDestroy);
 	return self;
 }
 
 //  Initialiser
 
-void CBInitPeerByTakingNetworkAddress(CBPeer * self){
+void CBInitPeer(CBPeer * self, CBNetworkAddress * addr, void (*onPeerDestroy)(void *)){
+	CBInitObject(CBGetObject(self), true);
+	CBRetainObject(addr);
+	self->addr = addr;
+	self->onPeerDestroy = onPeerDestroy;
 	self->receive = NULL;
 	self->receivedHeader = false;
 	self->handshakeStatus = CB_HANDSHAKE_NONE;
@@ -51,4 +55,13 @@ void CBInitPeerByTakingNetworkAddress(CBPeer * self){
 	self->branchWorkingOn = CB_PEER_NO_WORKING;
 	self->allowRelay = true;
 	strcpy(self->peerStr, "unknown");
+}
+
+void CBDestroyPeer(CBPeer * peer){
+	peer->onPeerDestroy(peer);
+	CBReleaseObject(peer->addr);
+}
+void CBFreePeer(void * peer){
+	CBDestroyPeer(peer);
+	free(peer);
 }

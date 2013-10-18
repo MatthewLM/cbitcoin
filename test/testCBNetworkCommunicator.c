@@ -71,10 +71,9 @@ bool acceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessageType type)
 
 Tester tester;
 
-CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer);
-CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer){
+CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * theMessage);
+CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * theMessage){
 	pthread_mutex_lock(&tester.testingMutex); // Only one processing of test at a time.
-	CBMessage * theMessage = peer->receive;
 	// Assign peer to tester progress.
 	uint8_t x = 0;
 	for (; x < tester.progNum; x++)
@@ -200,6 +199,11 @@ void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar){
 	return;
 }
 
+void onPeerFree(void * peer);
+void onPeerFree(void * peer){
+	return;
+}
+
 int main(){
 	puts("You may need to move your mouse around if this test stalls.");
 	memset(&tester, 0, sizeof(tester));
@@ -223,7 +227,7 @@ int main(){
 	addrManListen->maxAddressesInBucket = 2;
 	CBNetworkCommunicatorCallbacks callbacks = {
 		onPeerWhatever,
-		onPeerWhatever,
+		onPeerFree,
 		onTimeOut,
 		acceptType,
 		onMessageReceived,
@@ -237,8 +241,9 @@ int main(){
 	commListen->version = CB_PONG_VERSION;
 	commListen->maxConnections = 3;
 	commListen->maxIncommingConnections = 3; // One for connector, one for the other listener and an extra so that we continue to share our address.
-	commListen->heartBeat = 1000;
-	commListen->timeOut = 2000;
+	commListen->heartBeat = 2000;
+	commListen->timeOut = 3000;
+	commListen->recvTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen, NULL, NULL);
 	CBNetworkCommunicatorSetNetworkAddressManager(commListen, addrManListen);
 	CBNetworkCommunicatorSetUserAgent(commListen, userAgent);
@@ -254,8 +259,9 @@ int main(){
 	commListen2->version = CB_PONG_VERSION;
 	commListen2->maxConnections = 3;
 	commListen2->maxIncommingConnections = 3;
-	commListen2->heartBeat = 1000;
-	commListen2->timeOut = 2000;
+	commListen2->heartBeat = 2000;
+	commListen2->timeOut = 3000;
+	commListen2->recvTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commListen2, NULL, NULL);
 	CBNetworkCommunicatorSetNetworkAddressManager(commListen2, addrManListen2);
 	CBNetworkCommunicatorSetUserAgent(commListen2, userAgent2);
@@ -274,8 +280,9 @@ int main(){
 	commConnect->version = CB_PONG_VERSION;
 	commConnect->maxConnections = 2;
 	commConnect->maxIncommingConnections = 0;
-	commConnect->heartBeat = 1000;
-	commConnect->timeOut = 2000;
+	commConnect->heartBeat = 2000;
+	commConnect->timeOut = 3000;
+	commConnect->recvTimeOut = 1000;
 	CBNetworkCommunicatorSetAlternativeMessages(commConnect, NULL, NULL);
 	CBNetworkCommunicatorSetNetworkAddressManager(commConnect, addrManConnect);
 	CBNetworkCommunicatorSetUserAgent(commConnect, userAgent3);

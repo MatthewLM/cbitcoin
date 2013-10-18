@@ -53,7 +53,7 @@ CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data, uint32_t size){
 
 
 void CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	self->length = (uint32_t)(strlen(string) + terminator);
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	self->sharedData->data = malloc(self->length);
@@ -62,7 +62,7 @@ void CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminato
 	memmove(self->sharedData->data, string, self->length);
 }
 void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	self->length = size;
 	self->offset = 0;
 	if (size){
@@ -73,14 +73,14 @@ void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size){
 		self->sharedData = NULL;
 }
 void CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t offset, uint32_t length){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	self->sharedData = ref->sharedData;
 	self->sharedData->references++; // Since a new reference to the shared data is being made, an increase in the reference count must be made.
 	self->length = length;
 	self->offset = ref->offset + offset;
 }
 void CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	self->sharedData->data = data;
 	self->sharedData->references = 1;
@@ -88,7 +88,7 @@ void CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size){
 	self->offset = 0;
 }
 void CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t size){
-	CBInitObject(CBGetObject(self));
+	CBInitObject(CBGetObject(self), false);
 	self->sharedData = malloc(sizeof(*self->sharedData));
 	self->sharedData->data = malloc(size);
 	memmove(self->sharedData->data, data, size);

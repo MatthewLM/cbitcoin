@@ -68,7 +68,7 @@ uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
 		CBLogError("Attempting to deserialise a CBGetBlocks with no bytes.");
 		return 0;
 	}
-	if (bytes->length < 69) { // 4 version bytes, 33 chain descriptor bytes, 32 stop at hash bytes
+	if (bytes->length < 37) { // 4 version bytes, 1 for varint, 32 stop at hash bytes
 		CBLogError("Attempting to deserialise a CBGetBlocks with less bytes than required for one hash.");
 		return 0;
 	}

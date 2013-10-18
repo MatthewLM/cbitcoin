@@ -50,13 +50,13 @@ uint64_t CBGetMilliseconds(void){
 
 void onFatalNodeError(CBNode * node);
 void onFatalNodeError(CBNode * node){
-	printf("ON FATAL NODE ERROR\n");
+	CBLogError("ON FATAL NODE ERROR\n");
 	exit(EXIT_FAILURE);
 }
 
 void onBadTime(void * foo);
 void onBadTime(void * foo){
-	printf("BAD TIME FAIL\n");
+	CBLogError("BAD TIME FAIL\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -88,28 +88,28 @@ void finishReceiveInitialTest(void){
 	for (uint8_t x = 0; x < 3; x++) {
 		CBNodeFull * node = nodes[x];
 		if (CBGetNetworkCommunicator(node)->blockHeight != 1001) {
-			printf("RECEIVE INITIAL BLOCKS AND TXS FINISH BLOCK HEIGHT FAIL\n");
+			CBLogError("RECEIVE INITIAL BLOCKS AND TXS FINISH BLOCK HEIGHT FAIL\n");
 			exit(EXIT_FAILURE);
 		}
 		for (CBAssociativeArray * array = &node->ourTxs;; array = &node->otherTxs) {
 			CBAssociativeArrayForEach(CBFoundTransaction * fndTx, array){
 				if (fndTx->utx.type != (array == &node->ourTxs) ? CB_TX_OURS : CB_TX_OTHER) {
-					printf("RECEIVE INITIAL BLOCKS AND TXS FINISH UTX TYPE FAIL\n");
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS FINISH UTX TYPE FAIL\n");
 					exit(EXIT_FAILURE);
 				}
 				for (uint8_t y = 4;; y++) {
 					if (memcmp(CBTransactionGetHash(fndTx->utx.tx), CBTransactionGetHash(initialTxs[y]), 32) == 0) {
 						if (!((y > 10) ^ (fndTx->utx.numUnconfDeps != 0))) {
-							printf("RECEIVE INITIAL BLOCKS AND TXS FINISH NUM UNCONF DEPS FAIL\n");
+							CBLogError("RECEIVE INITIAL BLOCKS AND TXS FINISH NUM UNCONF DEPS FAIL\n");
 							exit(EXIT_FAILURE);
 						}
 						if (!((array == &node->ourTxs) ^ nodeOwns[x][y])) {
-							printf("RECEIVE INITIAL BLOCKS AND TXS FINISH OWNERSHIP FAIL\n");
+							CBLogError("RECEIVE INITIAL BLOCKS AND TXS FINISH OWNERSHIP FAIL\n");
 							exit(EXIT_FAILURE);
 						}
 					}
 					if (y == 13) {
-						printf("RECEIVE INITIAL BLOCKS AND TXS FINISH UNKNOWN TX\n");
+						CBLogError("RECEIVE INITIAL BLOCKS AND TXS FINISH UNKNOWN TX\n");
 						exit(EXIT_FAILURE);
 					}
 				}
@@ -126,27 +126,27 @@ void newBlock(CBNode * node, CBBlock * block, uint32_t height, uint32_t forkPoin
 	int nodeNum = (nodes[0] == nodeFull)? 0 : ((nodes[1] == nodeFull)? 1 : 2);
 	if (testPhase == RECEIVE_INITIAL_BLOCKS_AND_TXS) {
 		if (nodeNum == 0) {
-			printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK SENDING NODE\n");
+			CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK SENDING NODE\n");
 			exit(EXIT_FAILURE);
 		}
 		if (forkPoint == 500) {
 			if (nodeNum != 1) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK NOT IN NODE 1\n");
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK NOT IN NODE 1\n");
 				exit(EXIT_FAILURE);
 			}
 			receiveInitialBlocksAndTxs |= NODE1_FORK;
 		}else if (forkPoint != CB_NO_FORK) {
-			printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK\n");
+			CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK\n");
 			exit(EXIT_FAILURE);
 		}
 		if (receiveInitialBlocksAndTxs | nodeNum) {
-			printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK AFTER GOT INITAL BLOCKS\n");
+			CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK AFTER GOT INITAL BLOCKS\n");
 			exit(EXIT_FAILURE);
 		}
 		if (height == 1001) {
 			if (nodeNum == 1) {
 				if (! (receiveInitialBlocksAndTxs | NODE1_FORK)) {
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK NODE 1 GOT BEFORE FORK\n");
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK NODE 1 GOT BEFORE FORK\n");
 					exit(EXIT_FAILURE);
 				}
 				receiveInitialBlocksAndTxs |= NODE1_GOT;
@@ -166,7 +166,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 	int nodeNum = (nodes[0] == nodeFull)? 0 : ((nodes[1] == nodeFull)? 1 : 2);
 	if (testPhase == RECEIVE_INITIAL_BLOCKS_AND_TXS) {
 		if (gotTxNum == 14) {
-			printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX TOO MANY TXS\n");
+			CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX TOO MANY TXS\n");
 			exit(EXIT_FAILURE);
 		}
 		uint8_t txNum;
@@ -176,44 +176,44 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 				break;
 			}
 			if (x == 13) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX UNKNOWN TX\n");
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX UNKNOWN TX\n");
 				exit(EXIT_FAILURE);
 			}
 		}
 		if (txNum < 4) {
 			if (blockHeight != 1001) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX BLOCKHEIGHT 1001 FAIL\n");
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX BLOCKHEIGHT 1001 FAIL\n");
 				exit(EXIT_FAILURE);
 			}
 			if (timestamp != 1231470665) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX TIMESTAMP 1231470665 FAIL\n");
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX TIMESTAMP 1231470665 FAIL\n");
 				exit(EXIT_FAILURE);
 			}
 			// Should be got by node (txNum + 1) % 3
 			uint8_t expectedNode = (txNum + 1) % 3;
 			if (nodeNum != expectedNode) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD NODE NUM\n", txNum);
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD NODE NUM\n", txNum);
 				exit(EXIT_FAILURE);
 			}
 			if (details->accountID != expectedNode + 1){
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ACCOUNT ID NUM\n", txNum);
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ACCOUNT ID NUM\n", txNum);
 				exit(EXIT_FAILURE);
 			}
 			if (memcmp(details->accountTxDetails.addrHash, addrs[expectedNode], 20)){
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
 				exit(EXIT_FAILURE);
 			}
 			if (details->accountTxDetails.amount != 625000000) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD AMOUNT\n", txNum);
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD AMOUNT\n", txNum);
 				exit(EXIT_FAILURE);
 			}
 			if (details->next != NULL) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u END FAIL\n", txNum);
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u END FAIL\n", txNum);
 				exit(EXIT_FAILURE);
 			}
 		}else{
 			if (blockHeight != CB_NO_BRANCH) {
-				printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX BLOCKHEIGHT UNCONF FAIL\n");
+				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX BLOCKHEIGHT UNCONF FAIL\n");
 				exit(EXIT_FAILURE);
 			}
 			uint8_t expectedNodes[2] = {(((txNum - 4) % 4) + 1) % 3, (txNum - 4) % 3};
@@ -222,7 +222,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 				if (nodeNum != expectedNodes[x]) {
 					if (x == 1) {
 						if (txNum < 6) {
-							printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u NOT IN EXPECTED NODES\n", txNum);
+							CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u NOT IN EXPECTED NODES\n", txNum);
 							exit(EXIT_FAILURE);
 						}
 						// Check also the unconf dependency
@@ -231,32 +231,32 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 					continue;
 				}
 				if (details->accountID != expectedNodes[x] + 1){
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ACCOUNT ID NUM\n", txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ACCOUNT ID NUM\n", txNum);
 					exit(EXIT_FAILURE);
 				}
 				if (memcmp(details->accountTxDetails.addrHash, addrs[expectedNodes[x]], 20)){
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
 					exit(EXIT_FAILURE);
 				}
 				if (details->accountTxDetails.amount != 312500000*(1-(x == 0)*2)) {
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD AMOUNT\n", txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD AMOUNT\n", txNum);
 					exit(EXIT_FAILURE);
 				}
 				if (x == 0 && txNum >= 4 && txNum <= 7) {
 					if (details->next == NULL) {
-						printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u NOT NEXT IN DETAILS\n", txNum);
+						CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u NOT NEXT IN DETAILS\n", txNum);
 						exit(EXIT_FAILURE);
 					}
 					details = details->next;
 				}else{
 					if (txNum != 6) {
 						if (details->next != NULL) {
-							printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u END FAIL\n", txNum);
+							CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u END FAIL\n", txNum);
 							exit(EXIT_FAILURE);
 						}
 					}else{
 						if (details->next == NULL) {
-							printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u NOT NEXT IN DETAILS\n", txNum);
+							CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u NOT NEXT IN DETAILS\n", txNum);
 							exit(EXIT_FAILURE);
 						}
 						details = details->next;
@@ -267,19 +267,19 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 			if (checkUnconf) {
 				uint8_t expectedNode = (txNum % 2)*2 + 3;
 				if (details->accountID != expectedNode + 1){
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ACCOUNT ID NUM\n", txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ACCOUNT ID NUM\n", txNum);
 					exit(EXIT_FAILURE);
 				}
 				if (memcmp(details->accountTxDetails.addrHash, addrs[expectedNode], 20)){
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ADDR HASH\n",txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ADDR HASH\n",txNum);
 					exit(EXIT_FAILURE);
 				}
 				if (details->accountTxDetails.amount != -156250000) {
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD AMOUNT\n", txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD AMOUNT\n", txNum);
 					exit(EXIT_FAILURE);
 				}
 				if (details->next != NULL) {
-					printf("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF END FAIL\n", txNum);
+					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF END FAIL\n", txNum);
 					exit(EXIT_FAILURE);
 				}
 			}
