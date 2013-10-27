@@ -30,12 +30,12 @@ int main(){
 	CBByteArray * addstr = CBNewByteArrayFromString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", true);
 	CBAddress * add = CBNewAddressFromString(addstr, false);
 	CBReleaseObject(addstr);
-	uint8_t v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	uint8_t v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
 	if (v != CB_PRODUCTION_NETWORK_BYTE) {
 		printf("PRODUCTION NET VERSION DOES NOT MATCH %i != 0\n", v);
 		return 1;
 	}
-	CBByteArray * str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
+	CBByteArray * str = CBChecksumBytesGetString(CBGetChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9")){
 		printf("NOT CACHED STRING WRONG %s != 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9\n", (char *)CBByteArrayGetData(str));
 		return 1;
@@ -45,7 +45,7 @@ int main(){
 	addstr = CBNewByteArrayFromString("mzCk9JXXF9we7MB2Gdt59tcfj6Lr2rSzpu", true);
 	add = CBNewAddressFromString(addstr, false);
 	CBReleaseObject(addstr);
-	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
 	if (v != CB_TEST_NETWORK_BYTE) {
 		printf("TEST NET VERSION DOES NOT MATCH %i != 111\n", v);
 		return 1;
@@ -54,7 +54,7 @@ int main(){
 	addstr = CBNewByteArrayFromString("19tknf38VozS4GfoxHe6vUP3NRghbGGT6H", true);
 	add = CBNewAddressFromString(addstr, true);
 	CBReleaseObject(addstr);
-	str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
+	str = CBChecksumBytesGetString(CBGetChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "19tknf38VozS4GfoxHe6vUP3NRghbGGT6H")){
 		printf("CACHED STRING WRONG %s != 19tknf38VozS4GfoxHe6vUP3NRghbGGT6H\n", (char *)CBByteArrayGetData(str));
 		return 1;
@@ -67,7 +67,7 @@ int main(){
 		hash[x] = rand();
 	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false);
 	free(hash);
-	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
 	if (v != CB_PRODUCTION_NETWORK_BYTE) {
 		printf("PRODUCTION NET VERSION FOR RIPEMD160 TEST DOES NOT MATCH %i != 0\n", v);
 		return 1;
@@ -78,7 +78,7 @@ int main(){
 		hash[x] = rand();
 	add = CBNewAddressFromRIPEMD160Hash(hash, CB_TEST_NETWORK_BYTE, false);
 	free(hash);
-	v = CBVersionChecksumBytesGetVersion(CBGetVersionChecksumBytes(add));
+	v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
 	if (v != CB_TEST_NETWORK_BYTE) {
 		printf("TEST NET VERSION FOR RIPEMD160 TEST DOES NOT MATCH %i != 111\n", v);
 		return 1;
@@ -90,7 +90,7 @@ int main(){
 		hash[x] = x;
 	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false);
 	free(hash);
-	str = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(add));
+	str = CBChecksumBytesGetString(CBGetChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB")){
 		printf("RIPEMD160 TEST STRING WRONG %s != 112D2adLM3UKy4Z4giRbReR6gjWuvHUqB\n", (char *)CBByteArrayGetData(str));
 		return 1;

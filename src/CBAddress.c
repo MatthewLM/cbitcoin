@@ -18,10 +18,10 @@
 
 //  Constructors
 
-CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, uint8_t networkCode, bool cacheString){
+CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBNetwork network, bool cacheString){
 	CBAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeAddress;
-	CBInitAddressFromRIPEMD160Hash(self, networkCode, hash, cacheString);
+	CBInitAddressFromRIPEMD160Hash(self, network, hash, cacheString);
 	return self;
 }
 CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
@@ -35,24 +35,18 @@ CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
 
 //  Initialiser
 
-void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString){
-	// Build address and then complete intitialisation with CBVersionChecksumBytes
+void CBInitAddressFromRIPEMD160Hash(CBAddress * self, CBNetwork network, uint8_t * hash, bool cacheString){
+	// Build address and then complete intitialisation with CBChecksumBytes
 	uint8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
 	// Set network byte
-	data[0] = networkCode;
+	data[0] = (network == CB_NETWORK_PRODUCTION) ? CB_PREFIX_PRODUCTION_ADDRESS : CB_PREFIX_TEST_ADDRESS;
 	// Move hash
 	memmove(data+1, hash, 20);
-	// Make checksum and move it into address
-	uint8_t checksum[32];
-	uint8_t checksum2[32];
-	CBSha256(data, 21, checksum);
-	CBSha256(checksum, 32, checksum2);
-	memmove(data+21, checksum2, 4);
-	// Initialise CBVersionChecksumBytes
-	CBInitVersionChecksumBytesFromBytes(CBGetVersionChecksumBytes(self), data, 25, cacheString);
+	// Initialise CBChecksumBytes
+	CBInitChecksumBytesFromBytes(CBGetChecksumBytes(self), data, 25, cacheString);
 }
 bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheString){
-	if (! CBInitVersionChecksumBytesFromString(CBGetVersionChecksumBytes(self), string, cacheString))
+	if (! CBInitChecksumBytesFromString(CBGetChecksumBytes(self), string, cacheString))
 		return false;
 	return true;
 }
@@ -60,7 +54,7 @@ bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheS
 //  Destructor
 
 void CBDestroyAddress(void * self){
-	CBDestroyVersionChecksumBytes(CBGetVersionChecksumBytes(self));
+	CBDestroyChecksumBytes(CBGetChecksumBytes(self));
 }
 void CBFreeAddress(void * self){
 	CBDestroyAddress(self);

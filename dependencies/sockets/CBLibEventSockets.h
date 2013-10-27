@@ -18,9 +18,11 @@
  */
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
+#include "CBCallbackQueue.h"
 #include "CBThreads.h"
 #include <pthread.h> // POSIX threads
 #include <event2/event.h> // libevent CBLogError
+#include <event2/thread.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -61,8 +63,7 @@ typedef struct{
 	void (*onTimeOut)(void *, void *, CBTimeOutType); /**< Callback for timeouts */
 	void * communicator;
 	CBDepObject loopThread; /**< The thread for the event loop. */
-	void  (*userCallback)(void *);
-	void * userArg;
+	CBCallbackQueue queue;
 	struct event * userEvent;
 }CBEventLoop;
 

@@ -25,6 +25,7 @@
 #include "CBMessage.h"
 #include "CBTransactionInput.h"
 #include "CBTransactionOutput.h"
+#include "CBHDKeys.h"
 
 // Constants and Macros
 
@@ -146,7 +147,7 @@ bool CBTransactionIsStandard(CBTransaction * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionSerialise(CBTransaction * self, bool force);
-bool CBTransactionSignInput(CBTransaction * self, CBDepObject keyPair, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
+bool CBTransactionSignInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.

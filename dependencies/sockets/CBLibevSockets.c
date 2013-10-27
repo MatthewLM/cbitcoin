@@ -129,8 +129,11 @@ bool CBNewEventLoop(CBDepObject * loopID,void (*onError)(void *),void (*onDidTim
 	loop->onTimeOut = onDidTimeout;
 	loop->communicator = communicator;
 	loop->userEvent = malloc(sizeof(*loop->userEvent));
+	loop->userEvent->loop = loop;
 	ev_async_init((struct ev_async *)loop->userEvent, CBDoRun);
 	ev_async_start(base, (struct ev_async *)loop->userEvent);
+	// Create queue
+	CBInitCallbackQueue(&loop->queue);
 	// Create thread
 	CBNewThread(&loop->loopThread, CBStartEventLoop, loop);
 	loopID->ptr = loop;
@@ -144,6 +147,7 @@ void CBStartEventLoop(void * vloop){
 	// Break from loop. Free everything.
 	ev_loop_destroy(loop->base);
 	free(loop->userEvent);
+	CBFreeCallbackQueue(&loop->queue);
 	free(loop);
 }
 bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanAccept)(void *, CBDepObject)){
@@ -302,13 +306,15 @@ void CBEndTimer(CBDepObject timer){
 }
 void CBDoRun(struct ev_loop * loop,struct ev_async * watcher,int event){
 	CBEventLoop * evloop = (CBEventLoop *)((CBAsyncEvent *)watcher)->loop;
-	evloop->userCallback(evloop->userArg);
+	CBCallbackQueueRun(&evloop->queue);
 }
-bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg){
+bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, bool block){
 	CBEventLoop * loop = loopID.ptr;
-	loop->userCallback = callback;
-	loop->userArg = arg;
+	bool done = !block;
+	CBCallbackQueueItem * item = CBCallbackQueueAdd(&loop->queue, callback, arg, &done);
 	ev_async_send(loop->base, (struct ev_async *)loop->userEvent);
+	if (block)
+		CBCallbackQueueWait(item);
 	return true;
 }
 void CBCloseSocket(CBDepObject socketID){

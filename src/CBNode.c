@@ -159,7 +159,7 @@ void CBNodeProcessMessages(void * node){
 		action = self->onMessageReceived(self, toProcess->peer, toProcess->message);
 		if (action == CB_MESSAGE_ACTION_DISCONNECT)
 			// We need to disconnect the node
-			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectNode, toProcess->peer);
+			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectNode, toProcess->peer, false);
 		CBMutexLock(self->messageProcessMutex);
 		// Remove this from queue
 		self->messageQueue = toProcess->next;

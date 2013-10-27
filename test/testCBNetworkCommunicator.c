@@ -170,11 +170,11 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 			// Completed testing
 			CBLogVerbose("DONE");
 			CBLogVerbose("STOPPING COMM L1");
-			CBRunOnEventLoop(tester.comms[0]->eventLoop, stop, tester.comms[0]);
+			CBRunOnEventLoop(tester.comms[0]->eventLoop, stop, tester.comms[0], false);
 			CBLogVerbose("STOPPING COMM L2");
-			CBRunOnEventLoop(tester.comms[1]->eventLoop, stop, tester.comms[1]);
+			CBRunOnEventLoop(tester.comms[1]->eventLoop, stop, tester.comms[1], false);
 			CBLogVerbose("STOPPING COMM CN");
-			CBRunOnEventLoop(tester.comms[2]->eventLoop, stop, tester.comms[2]);
+			CBRunOnEventLoop(tester.comms[2]->eventLoop, stop, tester.comms[2], false);
 			return CB_MESSAGE_ACTION_RETURN;
 		}else{
 			CBLogError("ADDR COMPLETE DURING COMPLETE FAIL");
@@ -204,11 +204,20 @@ void onPeerFree(void * peer){
 	return;
 }
 
+void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
+void CBNetworkCommunicatorTryConnectionsVoid(void * comm){
+	CBNetworkCommunicatorTryConnections(comm);
+}
+
+void CBNetworkCommunicatorStartListeningVoid(void * comm);
+void CBNetworkCommunicatorStartListeningVoid(void * comm){
+	CBNetworkCommunicatorStartListening(comm);
+}
+
 int main(){
 	puts("You may need to move your mouse around if this test stalls.");
 	memset(&tester, 0, sizeof(tester));
 	pthread_mutex_init(&tester.testingMutex, NULL);
-	evthread_use_pthreads();
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
 	CBByteArray * loopBack2 = CBByteArrayCopy(loopBack); // Do not use in more than one thread.
@@ -296,7 +305,7 @@ int main(){
 	// Start listening on first listener. Can start listening on this thread since the event loop will not be doing anything.
 	CBNetworkCommunicatorStart(commListen);
 	CBDepObject listenThread = ((CBEventLoop *) commListen->eventLoop.ptr)->loopThread;
-	CBNetworkCommunicatorStartListening(commListen);
+	CBRunOnEventLoop(commListen->eventLoop, CBNetworkCommunicatorStartListeningVoid, commListen, true);
 	if (! commListen->ipData[CB_IP4_NETWORK].isListening) {
 		CBLogError("FIRST LISTEN FAIL");
 		exit(EXIT_FAILURE);
@@ -304,7 +313,7 @@ int main(){
 	// Start listening on second listener.
 	CBNetworkCommunicatorStart(commListen2);
 	CBDepObject listen2Thread = ((CBEventLoop *) commListen2->eventLoop.ptr)->loopThread;
-	CBNetworkCommunicatorStartListening(commListen2);
+	CBRunOnEventLoop(commListen2->eventLoop, CBNetworkCommunicatorStartListeningVoid, commListen2, true);
 	if (! commListen2->ipData[CB_IP4_NETWORK].isListening) {
 		CBLogError("SECOND LISTEN FAIL");
 		exit(EXIT_FAILURE);
@@ -312,7 +321,7 @@ int main(){
 	// Start connection
 	CBNetworkCommunicatorStart(commConnect);
 	CBDepObject connectThread = ((CBEventLoop *) commConnect->eventLoop.ptr)->loopThread;
-	CBNetworkCommunicatorTryConnections(commConnect);
+	CBRunOnEventLoop(commConnect->eventLoop, CBNetworkCommunicatorTryConnectionsVoid, commConnect, true);
 	// Wait until the network loop ends for all CBNetworkCommunicators.
 	CBThreadJoin(listenThread);
 	CBThreadJoin(listen2Thread);

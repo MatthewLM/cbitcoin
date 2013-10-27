@@ -58,7 +58,9 @@ void CBDecodeBase58(CBBigInt * bi, char * str){
 		bi->length += zeros;
 		CBBigIntRealloc(bi, bi->length);
 		memset(bi->data + bi->length - zeros, 0, zeros);
-	}
+	}else
+		// Reallocate to actual length
+		CBBigIntRealloc(bi, bi->length);
 }
 bool CBDecodeBase58Checked(CBBigInt * bi, char * str){
 	CBDecodeBase58(bi, str);
@@ -119,8 +121,7 @@ char * CBEncodeBase58(CBBigInt * bi){
 		memset(temp, 0, bi->length);
 		CBBigIntEqualsDivisionBy58(bi, temp);
 	}
-	str[x] = base58Characters[bi->data[bi->length-1]];
-	x++;
+	str[x++] = base58Characters[bi->data[bi->length-1]];
 	// Reversal
 	for (uint8_t y = 0; y < (x-zeros) / 2; y++) {
 		char temp = str[y+zeros];

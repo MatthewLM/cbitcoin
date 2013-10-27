@@ -110,6 +110,14 @@ typedef enum{
 } CBOutputAccountsKeyOffsets;
 
 /**
+ @brief The key offsets for accountWatchedHashes
+ */
+typedef enum{
+	CB_ACCOUNT_WATCHED_HASHES_ACCOUNT_ID = 0,
+	CB_ACCOUNT_WATCHED_HASHES_HASH = 8,
+} CBAccountWatchedHashesKeyOffsets;
+
+/**
  @brief The key offsets for watchedHashes
  */
 typedef enum{
@@ -189,12 +197,13 @@ typedef struct{
 	CBDatabaseIndex * branchSectionAccountTimeTx; /**< Entries for the transactions in each accounts ordered by time and 32bit integer that insures transactions with the same time get ordered by the order found. Contains details for on-chain transactions with the balance upto that transaction. Used to fetch balances for accounts and making reorgs easier. */
 	CBDatabaseIndex * branchSectionTxDetails; /**< Contains the height and timestamp of transactions in the branches. */
 	CBDatabaseIndex * outputAccounts; /**< Entries linking outputs with accounts that own them. */
-	CBDatabaseIndex * branchSectionAccountOutputs; /**< Has a value of true when the output is unspent and false when an output is spent. Ordered by height descending. To find unspent outputs go through band find first value for an output, if the first value is unspent then it can be used. */
+	CBDatabaseIndex * branchSectionAccountOutputs; /**< Has a value of true when the output is unspent and false when an output is spent. Ordered by height descending. To find unspent outputs go through and find first value for an output, if the first value is unspent then it can be used. */
 	CBDatabaseIndex * txAccounts; /**< Entries linking transactions to accounts that own them. */
 	CBDatabaseIndex * txHashToID; /**< Contains transaction hashes as keys with the transaction IDs as data. */
 	CBDatabaseIndex * txBranchSectionHeightAndID; /**< Entries that list transaction IDs in order of the height and ID */
 	CBDatabaseIndex * outputHashAndIndexToID; /**< Contains transaction hashes and output indexes as keys with the output IDs as data. */
 	CBDatabaseIndex * watchedHashes; /**< Entries of output identification hashes with account IDs that watch them. */
+	CBDatabaseIndex * accountWatchedHashes; /**< Opposite of watchedHashes, linking account IDs with watched hashes. */
 } CBAccounterStorage;
 
 typedef struct{
@@ -221,6 +230,7 @@ typedef struct{
 
 // Functions
 
+bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint8_t section, uint64_t accountID, int64_t adjustment, uint64_t * last);
 /**
  @brief Adjusts the balance for an account of th unconfirmed transactions.
  @param self The accounter storage object.
@@ -251,7 +261,7 @@ void CBAccounterCursorInit(CBAccounterStorageCursor * cursor, CBAccounterStorage
  @param balance Will be set to the balance
  @returns true on success, false on failure.
  */
-bool CBAccounterGetLastAccountBranchSectionBalance(CBAccounterStorage * self, uint64_t accountID, uint8_t branchSection, uint64_t * balance);
+bool CBAccounterGetLastAccountBranchSectionBalance(CBAccounterStorage * self, uint64_t accountID, uint8_t branchSection, uint64_t maxTime, uint64_t * balance);
 /**
  @brief Gets the ID of the branch data for the last section in the branch, after any forks.
  @param self The accounter storage object.
@@ -275,6 +285,7 @@ uint8_t CBAccounterGetParentBranchSection(CBAccounterStorage * self, uint8_t bra
  @returns true on success, false on failure. 
  */
 bool CBAccounterGetTxAccountValue(CBAccounterStorage * self, uint64_t txID, uint64_t accountID, int64_t * value);
+uint64_t CBAccounterInt64ToUInt64(int64_t value);
 /**
  @brief Removes a transaction's account details from a branch.
  @param storage The accounter storage object.
@@ -286,6 +297,7 @@ bool CBAccounterGetTxAccountValue(CBAccounterStorage * self, uint64_t txID, uint
  @returns true on success, false on failure.
  */
 bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64_t txID, uint8_t * txHash, uint8_t branch, uint8_t * orderNum, uint8_t * height);
+void CBAccounterUInt64ToInt64(uint64_t raw, int64_t * value);
 /**
  @brief Compares 32-bit integers.
  @param int1 A pointer to the first 32-bit integer.

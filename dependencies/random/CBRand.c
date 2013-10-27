@@ -26,8 +26,7 @@ bool CBNewSecureRandomGenerator(CBDepObject * gen){
 	return true;
 }
 bool CBSecureRandomSeed(CBDepObject gen){
-	FILE * f = fopen("/dev/random", "r");
-	return fread(gen.ptr, 1, 32, f) == 32;
+	return CBGet32RandomBytes(gen.ptr);
 }
 void CBRandomSeed(CBDepObject gen, uint64_t seed){
 	memcpy(gen.ptr, &seed, 8);
@@ -41,4 +40,8 @@ uint64_t CBSecureRandomInteger(CBDepObject gen){
 }
 void CBFreeSecureRandomGenerator(CBDepObject gen){
 	free(gen.ptr);
+}
+bool CBGet32RandomBytes(uint8_t * bytes){
+	FILE * f = fopen("/dev/random", "r");
+	return fread(bytes, 1, 32, f) == 32;
 }

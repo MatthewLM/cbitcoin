@@ -96,7 +96,7 @@ int main(){
 		SHA256(pubKey, pubSize, shaHash);
 		RIPEMD160(shaHash, 32, ripemdHash);
 		CBAddress * address = CBNewAddressFromRIPEMD160Hash(ripemdHash, CB_PRODUCTION_NETWORK_BYTE, false, err);
-		CBByteArray * string = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(address));
+		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;
 		uint8_t offset = 1;

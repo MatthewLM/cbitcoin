@@ -255,5 +255,5 @@ void CBVersionToString(CBVersion * self, char output[]){
 	output = strchr(output, '\0');
 	memcpy(output, CBByteArrayGetData(self->userAgent), self->userAgent->length);
 	output += self->userAgent->length;
-	sprintf(output, "\nBlock height = %i", self->blockHeight);
+	sprintf(output, "\nBlock height   = %i", self->blockHeight);
 }

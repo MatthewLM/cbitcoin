@@ -26,6 +26,7 @@
  */
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
+#include "CBCallbackQueue.h"
 #include <pthread.h> // POSIX threads
 #include <ev.h> // libev events
 #include <sys/socket.h>
@@ -68,12 +69,6 @@ void CBCanReceive(struct ev_loop * loop,struct ev_io * watcher,int eventID);
 void CBCanReceiveTimeout(struct ev_loop * loop,struct ev_timer * watcher,int eventID);
 void CBFireTimer(struct ev_loop * loop,struct ev_timer * watcher,int eventID);
 void CBDoRun(struct ev_loop * loop,struct ev_async * watcher,int event);
-/**
- @brief Runs a callback on the network thread.
- @param loopID The loop ID
- @returns true if sucessful, false otherwise.
- */
-bool CBRunOnNetworkThread(uint64_t loopID,void (*callback)(void *),void * arg);
 
 typedef struct{
 	struct ev_async base;
@@ -86,8 +81,7 @@ typedef struct{
 	void (*onTimeOut)(void *,void *,CBTimeOutType); /**< Callback for timeouts */
 	void * communicator;
 	CBDepObject loopThread; /**< The thread ID for the event loop. */
-	void  (*userCallback)(void *);
-	void * userArg;
+	CBCallbackQueue queue;
 	CBAsyncEvent * userEvent;
 }CBEventLoop;
 

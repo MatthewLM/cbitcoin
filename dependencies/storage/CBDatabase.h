@@ -592,6 +592,7 @@ CBIndexFindStatus CBDatabaseRangeIteratorIterateIfDeletion(CBDatabaseRangeIterat
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorIterateIndex(CBDatabaseRangeIterator * it, bool forwards);
+void CBDatabaseRangeIteratorNextMinimum(CBDatabaseRangeIterator * it);
 /**
  @brief Reads from the iterator at the current position and does not iterate.
  @param it The iterator.

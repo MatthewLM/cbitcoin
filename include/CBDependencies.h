@@ -28,11 +28,10 @@
 
 // Weak linking for cryptographic functions.
 
-#pragma weak CBNewKeyPair
-#pragma weak CBKeyPairGetPublicKeySize
-#pragma weak CBKeyPairGetSigSize
-#pragma weak CBKeyPairGetPublicKey
-#pragma weak CBKeyPairSign
+#pragma weak CBAddPoints
+#pragma weak CBKeyGetSigSize
+#pragma weak CBKeyGetPublicKey
+#pragma weak CBKeySign
 #pragma weak CBSha256
 #pragma weak CBRipemd160
 #pragma weak CBSha160
@@ -130,11 +129,10 @@ typedef union{
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
-bool CBNewKeyPair(CBDepObject * keyPair);
-uint8_t CBKeyPairGetPublicKeySize(CBDepObject keyPair);
-uint8_t CBKeyPairGetSigSize(CBDepObject keyPair);
-bool CBKeyPairGetPublicKey(CBDepObject keyPair, uint8_t * pubKey);
-bool CBKeyPairSign(CBDepObject keyPair, uint8_t * hash, uint8_t * signature, uint8_t sigSize);
+void CBAddPoints(uint8_t * point1, uint8_t * point2);
+uint8_t CBKeyGetSigSize(uint8_t * privKey);
+void CBKeyGetPublicKey(uint8_t * privKey, uint8_t * pubKey);
+void CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature, uint8_t sigSize);
 /**
  @brief SHA-256 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -142,6 +140,13 @@ bool CBKeyPairSign(CBDepObject keyPair, uint8_t * hash, uint8_t * signature, uin
  @param output A pointer to hold a 32-byte hash.
  */
 void CBSha256(uint8_t * data, uint16_t length, uint8_t * output);
+/**
+ @brief SHA-512 cryptographic hash function.
+ @param data A pointer to the byte data to hash.
+ @param length The length of the data to hash.
+ @param output A pointer to hold a 64-byte hash.
+ */
+void CBSha512(uint8_t * data, uint16_t len, uint8_t * output);
 /**
  @brief RIPEMD-160 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -165,7 +170,7 @@ void CBSha160(uint8_t * data, uint16_t length, uint8_t * output);
  @param keyLen The length of the public key bytes.
  @returns true if the signature is valid and false if invalid.
  */
-bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, const uint8_t * pubKey, uint8_t keyLen);
+bool CBEcdsaVerify(uint8_t * signature, uint8_t sigLen, uint8_t * hash, uint8_t * pubKey, uint8_t keyLen);
 
 // NETWORKING DEPENDENCIES
 
@@ -239,9 +244,10 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 /**
  @brief Runs a callback on the event loop.
  @param loopID The loop ID
+ @param block If true, do not return until the callback has been executed.
  @returns true if sucessful, false otherwise.
  */
-bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg);
+bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, bool block);
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
  @param eventID The event object to set.
@@ -371,6 +377,7 @@ uint64_t CBSecureRandomInteger(CBDepObject gen);
  @param gen The generator.
  */
 void CBFreeSecureRandomGenerator(CBDepObject gen);
+bool CBGet32RandomBytes(uint8_t * bytes);
 
 // BLOCK CHAIN AND ACOUNTER STORAGE DEPENDENCIES
 
@@ -868,6 +875,14 @@ CBErrBool CBAccounterIsOurs(CBDepObject self, uint8_t * txHash);
  @returns true on success and false on failure.
  */
 bool CBAccounterLostBranchlessTransaction(CBDepObject self, void * tx);
+/**
+ @brief Merges a source account into destination account. The source account remains as it was before and the destination account gains all of the watched hashes, transactions and unspent outputs of the source account.
+ @param self The accounter object.
+ @param accountDest The destination account.
+ @param accountSrc The source account.
+ @returns true on success and false on failure.
+ */
+bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, uint64_t accountSrc);
 /**
  @brief Gets the object for a new account.
  @param self The accounter object.

@@ -1,5 +1,5 @@
 //
-//  CBVersionChecksumBytes.c
+//  CBChecksumBytes.c
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 03/05/2012.
@@ -14,28 +14,28 @@
 
 //  SEE HEADER FILE FOR DOCUMENTATION
 
-#include "CBVersionChecksumBytes.h"
+#include "CBChecksumBytes.h"
 
 //  Constructors
 
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromString(CBByteArray * string, bool cacheString){
-	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	if(CBInitVersionChecksumBytesFromString(self, string, cacheString))
+CBChecksumBytes * CBNewChecksumBytesFromString(CBByteArray * string, bool cacheString){
+	CBChecksumBytes * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeChecksumBytes;
+	if(CBInitChecksumBytesFromString(self, string, cacheString))
 		return self;
 	free(self);
 	return NULL;
 }
-CBVersionChecksumBytes * CBNewVersionChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString){
-	CBVersionChecksumBytes * self = malloc(sizeof(*self));
-	CBGetObject(self)->free = CBFreeVersionChecksumBytes;
-	CBInitVersionChecksumBytesFromBytes(self, bytes, size, cacheString);
+CBChecksumBytes * CBNewChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString){
+	CBChecksumBytes * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeChecksumBytes;
+	CBInitChecksumBytesFromBytes(self, bytes, size, cacheString);
 	return self;
 }
 
 //  Initialisers
 
-bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteArray * string, bool cacheString){
+bool CBInitChecksumBytesFromString(CBChecksumBytes * self, CBByteArray * string, bool cacheString){
 	// Cache string if needed
 	if (cacheString) {
 		self->cachedString = string;
@@ -45,7 +45,7 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteA
 	self->cacheString = cacheString;
 	// Get bytes from string conversion
 	CBBigInt bytes;
-	CBBigIntAlloc(&bytes, 25); // 25 is the number of bytes for bitcoin addresses.
+	CBBigIntAlloc(&bytes, string->length-2); // Posible that the string is two more than the number of bytes.
 	if (! CBDecodeBase58Checked(&bytes, (char *)CBByteArrayGetData(string)))
 		return false;
 	// Take over the bytes with the CBByteArray
@@ -53,30 +53,36 @@ bool CBInitVersionChecksumBytesFromString(CBVersionChecksumBytes * self, CBByteA
 	CBByteArrayReverseBytes(CBGetByteArray(self)); // CBBigInt is in little-endian. Conversion needed to make bitcoin address the right way.
 	return true;
 }
-void CBInitVersionChecksumBytesFromBytes(CBVersionChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString){
+void CBInitChecksumBytesFromBytes(CBChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString){
 	self->cacheString = cacheString;
 	self->cachedString = NULL;
+	// Make checksum and move it into bytes
+	uint8_t checksum[32];
+	uint8_t checksum2[32];
+	CBSha256(bytes, size-4, checksum);
+	CBSha256(checksum, 32, checksum2);
+	memmove(bytes+size-4, checksum2, 4);
 	CBInitByteArrayWithData(CBGetByteArray(self), bytes, size);
 }
 
 //  Destructor
 
-void CBDestroyVersionChecksumBytes(void * vself){
-	CBVersionChecksumBytes * self = vself;
+void CBDestroyChecksumBytes(void * vself){
+	CBChecksumBytes * self = vself;
 	if (self->cachedString) CBReleaseObject(self->cachedString);
 	CBDestroyByteArray(CBGetByteArray(self));
 }
-void CBFreeVersionChecksumBytes(void * self){
-	CBDestroyVersionChecksumBytes(self);
+void CBFreeChecksumBytes(void * self){
+	CBDestroyChecksumBytes(self);
 	free(self);
 }
 
 //  Functions
 
-uint8_t CBVersionChecksumBytesGetVersion(CBVersionChecksumBytes * self){
+uint8_t CBChecksumBytesGetVersion(CBChecksumBytes * self){
 	return CBByteArrayGetByte(CBGetByteArray(self), 0);
 }
-CBByteArray * CBVersionChecksumBytesGetString(CBVersionChecksumBytes * self){
+CBByteArray * CBChecksumBytesGetString(CBChecksumBytes * self){
 	if (self->cachedString) {
 		// Return cached string
 		CBRetainObject(self->cachedString);

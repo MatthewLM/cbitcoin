@@ -123,13 +123,17 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 	loop->onTimeOut = onDidTimeout;
 	loop->communicator = communicator;
 	loop->userEvent = event_new(loop->base, 0, 0, CBDoRun, loop);
+	// Create queue
+	CBInitCallbackQueue(&loop->queue);
 	// Create thread
 	CBNewThread(&loop->loopThread, CBStartEventLoop, loop);
 	loopID->ptr = loop;
-	return loop;
+	return true;
 }
 void CBStartEventLoop(void * vloop){
 	CBEventLoop * loop = vloop;
+	// Use threads
+	evthread_use_pthreads();
 	// Start event loop
 	CBLogVerbose("Starting network event loop.");
 	if(event_base_dispatch(loop->base) == -1){
@@ -138,6 +142,7 @@ void CBStartEventLoop(void * vloop){
 	}
 	// Break from loop. Free everything.
 	event_base_free(loop->base);
+	CBFreeCallbackQueue(&loop->queue);
 	free(loop);
 }
 bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanAccept)(void *, CBDepObject)){
@@ -286,13 +291,15 @@ void CBEndTimer(CBDepObject timer){
 }
 void CBDoRun(evutil_socket_t socketID, short eventNum, void * arg){
 	CBEventLoop * loop = arg;
-	loop->userCallback(loop->userArg);
+	CBCallbackQueueRun(&loop->queue);
 }
-bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg){
+bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, bool block){
 	CBEventLoop * loop = loopID.ptr;
-	loop->userCallback = callback;
-	loop->userArg = arg;
+	bool done = !block;
+	CBCallbackQueueItem * item = CBCallbackQueueAdd(&loop->queue, callback, arg, &done);
 	event_active(loop->userEvent, 0, 0);
+	if (block)
+		CBCallbackQueueWait(item);
 	return true;
 }
 void CBCloseSocket(CBDepObject socketID){
@@ -304,6 +311,8 @@ void CBExitEventLoop(CBDepObject loopID){
 		// Error occured. No choice but to do a dirty closure.
 		pthread_cancel(((CBThread *)loop->loopThread.ptr)->thread);
 		event_base_free(loop->base);
+		// Destory queue
+		CBFreeCallbackQueue(&loop->queue);
 		free(loop);
 	}
 }

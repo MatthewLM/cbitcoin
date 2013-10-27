@@ -450,12 +450,11 @@ uint32_t CBTransactionSerialise(CBTransaction * self, bool force){
 	self->hashSet = false;
 	return cursor + 4;
 }
-bool CBTransactionSignInput(CBTransaction * self, CBDepObject keyPair, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
-	// Get public key and signature sizes
-	uint8_t pubKeySize = CBKeyPairGetPublicKeySize(keyPair);
-	uint8_t sigSize = CBKeyPairGetSigSize(keyPair);
+bool CBTransactionSignInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+	// Get signature size
+	uint8_t sigSize = CBKeyGetSigSize(key->privkey);
 	// Initilialise script data
-	self->inputs[input]->scriptObject = CBNewScriptOfSize(pubKeySize + sigSize + 3);
+	self->inputs[input]->scriptObject = CBNewScriptOfSize(CB_PUBKEY_SIZE + sigSize + 3);
 	// Add push data size for signature
 	CBByteArraySetByte(self->inputs[input]->scriptObject, 0, sigSize + 1); // Can do this, no more than 74 bytes
 	// Obtain the signature hash
@@ -465,18 +464,12 @@ bool CBTransactionSignInput(CBTransaction * self, CBDepObject keyPair, CBByteArr
 		return false;
 	}
 	// Now produce the signature.
-	if (!CBKeyPairSign(keyPair, hash, CBByteArrayGetData(self->inputs[input]->scriptObject) + 1, sigSize)){
-		CBLogError("There was an error producing the signature for a transaction input.");
-		return false;
-	}
+	CBKeySign(key->privkey, hash, CBByteArrayGetData(self->inputs[input]->scriptObject) + 1, sigSize);
 	// Add the sign type
 	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 1, signType);
 	// Add the public key
-	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 2, pubKeySize);
-	if (!CBKeyPairGetPublicKey(keyPair, CBByteArrayGetData(self->inputs[input]->scriptObject) + sigSize + 3)){
-		CBLogError("There was an error adding a public key to an input.");
-		return false;
-	}
+	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 2, CB_PUBKEY_SIZE);
+	memcpy(CBByteArrayGetData(self->inputs[input]->scriptObject) + sigSize + 3, key->pubkey.key, CB_PUBKEY_SIZE);
 	return true;
 }
 void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input){

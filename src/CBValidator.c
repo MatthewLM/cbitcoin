@@ -117,10 +117,9 @@ void CBDestroyValidator(void * vself){
 	CBValidator * self = vself;
 	self->shutDownThread = true;
 	CBMutexLock(self->blockQueueMutex);
-	if (self->queueSize == 0){
+	if (self->queueSize == 0)
 		// The thread is waiting for blocks so wake it.
 		CBConditionSignal(self->blockProcessWaitCond);
-	}
 	CBMutexUnlock(self->blockQueueMutex);
 	CBThreadJoin(self->blockProcessThread);
 	for (uint8_t x = 0; x < self->queueSize; x++)

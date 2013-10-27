@@ -20,6 +20,7 @@
 #include "stdarg.h"
 #include <sys/stat.h>
 #include "CBDependencies.h"
+#include "CBHDKeys.h"
 
 enum{
 	CREATING_INITIAL_BLOCKS,
@@ -35,8 +36,7 @@ enum{
 int gotTxNum = 0;
 
 CBNodeFull * nodes[3];
-CBDepObject keyPairs[3];
-uint8_t addrs[3][20];
+CBKeyPair keys[3];
 CBTransaction * initialTxs[14];
 
 pthread_mutex_t completeProcessMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -199,7 +199,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ACCOUNT ID NUM\n", txNum);
 				exit(EXIT_FAILURE);
 			}
-			if (memcmp(details->accountTxDetails.addrHash, addrs[expectedNode], 20)){
+			if (memcmp(details->accountTxDetails.addrHash, CBKeyPairGetHash(keys + expectedNode), 20)){
 				CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
 				exit(EXIT_FAILURE);
 			}
@@ -234,7 +234,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ACCOUNT ID NUM\n", txNum);
 					exit(EXIT_FAILURE);
 				}
-				if (memcmp(details->accountTxDetails.addrHash, addrs[expectedNodes[x]], 20)){
+				if (memcmp(details->accountTxDetails.addrHash, CBKeyPairGetHash(keys + expectedNodes[x]), 20)){
 					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u BAD ADDR HASH\n",txNum);
 					exit(EXIT_FAILURE);
 				}
@@ -270,7 +270,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ACCOUNT ID NUM\n", txNum);
 					exit(EXIT_FAILURE);
 				}
-				if (memcmp(details->accountTxDetails.addrHash, addrs[expectedNode], 20)){
+				if (memcmp(details->accountTxDetails.addrHash, CBKeyPairGetHash(keys + expectedNode), 20)){
 					CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW TX %u UNCONF BAD ADDR HASH\n",txNum);
 					exit(EXIT_FAILURE);
 				}
@@ -414,14 +414,9 @@ int main(){
 	}
 	// Create three keys and add watched hash to the accounters
 	for (uint8_t x = 0; x < 3; x++) {
-		CBNewKeyPair(keyPairs + x);
-		uint8_t keySize = CBKeyPairGetPublicKeySize(keyPairs[x]);
-		uint8_t pubKey[keySize];
-		CBKeyPairGetPublicKey(keyPairs[x], pubKey);
-		uint8_t hash[32];
-		CBSha256(pubKey, keySize, hash);
-		CBSha160(hash, 32, addrs[x]);
-		CBAccounterAddWatchedOutputToAccount(CBGetNode(nodes[x])->accounterStorage, addrs[x], CBAccounterNewAccount(CBGetNode(nodes[x])->accounterStorage));
+		CBInitKeyPair(keys + x);
+		CBKeyPairGenerate(keys + x);
+		CBAccounterAddWatchedOutputToAccount(CBGetNode(nodes[x])->accounterStorage, CBKeyPairGetHash(keys + x), CBAccounterNewAccount(CBGetNode(nodes[x])->accounterStorage));
 	}
 	// Add block with fours additional transactions for node 0
 	block->prevBlockHash = lastNode0BlockHash;
@@ -434,7 +429,7 @@ int main(){
 		CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0}, 1);
 		CBTransactionTakeInput(block->transactions[x], CBNewTransactionInput(script, CB_TX_INPUT_FINAL, firstCoinbase, x-1));
 		CBReleaseObject(script);
-		script = CBNewScriptPubKeyHash(addrs[x % 3]);
+		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys + x % 3));
 		for (uint8_t y = 0; y < 4; y++)
 			CBTransactionTakeOutput(block->transactions[x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
@@ -465,14 +460,14 @@ int main(){
 			CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, x/2));
 			CBReleaseObject(prev);
 		}
-		script = CBNewScriptPubKeyHash(addrs[x % 3]);
+		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys + x % 3));
 		CBTransactionTakeOutput(tx, CBNewTransactionOutput(156250000*(1 + (x >= 6)), script));
 		CBTransactionTakeOutput(tx, CBNewTransactionOutput(156250000*(1 + (x >= 6)), script));
 		CBReleaseObject(script);
 		// Sign transaction
-		CBTransactionSignInput(tx, keyPairs[(x % 4 + 1) % 3], block->transactions[x % 4 + 1]->outputs[x/4]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignInput(tx, keys + (x % 4 + 1) % 3, block->transactions[x % 4 + 1]->outputs[x/4]->scriptObject, 0, CB_SIGHASH_ALL);
 		if (x >= 6)
-			CBTransactionSignInput(tx, keyPairs[(x % 2)*2], deps[x % 2]->outputs[(x-6)/2]->scriptObject, 1, CB_SIGHASH_ALL);
+			CBTransactionSignInput(tx, keys + (x % 2)*2, deps[x % 2]->outputs[(x-6)/2]->scriptObject, 1, CB_SIGHASH_ALL);
 		CBGetMessage(tx)->bytes = CBNewByteArrayOfSize(CBTransactionCalculateLength(tx));
 		CBTransactionSerialise(tx, false);
 		CBNodeFullBroadcastTransaction(nodes[0], tx, x >= 6, 312500000 + (x >= 6)*156250000);

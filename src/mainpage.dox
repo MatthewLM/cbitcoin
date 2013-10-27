@@ -2,7 +2,7 @@
 \mainpage 
 Refer to the following list of files for cbitcoin features:
 
-CBAddress.h - An extension on CBVersionChecksumBytes for bitcoin addresses.\n
+CBAddress.h - An extension on CBChecksumBytes for bitcoin addresses.\n
 CBNetworkAddressList.h - This is the "addr" message structure with functions.\n
 CBNetworkAddressManager.h - A structure with functions for managing CBNetworkAddress objects and CBPeer objects.\n
 CBAlert.h - This is the "alert" message structure with functions.\n
@@ -31,5 +31,5 @@ CBTransactionOutput.h - Transaction output structure and functions for CBTransac
 CBValidationFunctions.h - Contains basic validation functions useful for validating transactions and blocks.\n
 CBVarInt.h - A structure for representing bitcoin varints.\n
 CBVersion.h - This is the "version" message structure with functions.\n
-CBVersionChecksumBytes.h - A structure with functions for base-58 encoded data in a format used by bitcoin.\n
+CBChecksumBytes.h - A structure with functions for base-58 encoded data in a format used by bitcoin.\n
 */

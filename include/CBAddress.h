@@ -14,7 +14,7 @@
 
 /**
  @file
- @brief Based upon an ECDSA public key and a network version code. Used for receiving bitcoins. Inherits CBVersionChecksumBytes.
+ @brief Based upon an ECDSA public key and a network version code. Used for receiving bitcoins. Inherits CBChecksumBytes.
  @details Here is a diagram of how a bitcoin address is structured created by Alan Reiner, developer of Bitcoin Armory (http://bitcoinarmory.com/):
  \image html CBAddress.png
 */
@@ -28,21 +28,21 @@
 
 //  Includes
 
-#include "CBVersionChecksumBytes.h"
+#include "CBChecksumBytes.h"
 
 /**
- @brief Structure for CBAddress objects. @see CBAddress.h Alias of CBVersionChecksumBytes
+ @brief Structure for CBAddress objects. @see CBAddress.h Alias of CBChecksumBytes
 */
-typedef CBVersionChecksumBytes CBAddress;
+typedef CBChecksumBytes CBAddress;
 
 /**
  @brief Creates a new CBAddress object from a RIPEMD-160 hash.
- @param network A CBNetworkParameters object with the network information.
+ @param network @see CBNetwork
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  @returns A new CBAddress object.
  */
-CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, uint8_t networkCode, bool cacheString);
+CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBNetwork network, bool cacheString);
 /**
  @brief Creates a new CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
@@ -55,11 +55,11 @@ CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString);
 /**
  @brief Initialises a CBAddress object from a RIPEMD-160 hash.
  @param self The CBAddress object to initialise.
- @param network A CBNetworkParameters object with the network information.
+ @param network @see CBNetwork
  @param hash The RIPEMD-160 hash. Must be 20 bytes.
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  */
-void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t networkCode, uint8_t * hash, bool cacheString);
+void CBInitAddressFromRIPEMD160Hash(CBAddress * self, CBNetwork network, uint8_t * hash, bool cacheString);
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.

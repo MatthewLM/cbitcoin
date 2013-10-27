@@ -2357,6 +2357,12 @@ CBIndexFindStatus CBDatabaseRangeIteratorIterateIndex(CBDatabaseRangeIterator * 
 	// If the element is to be deleted, iterate again.
 	return CBDatabaseRangeIteratorIterateIfDeletion(it, true);
 }
+void CBDatabaseRangeIteratorNextMinimum(CBDatabaseRangeIterator * it){
+	memcpy(it->minElement, CBDatabaseRangeIteratorGetKey(it), it->index->keySize);
+	for (uint8_t x = it->index->keySize; x--;)
+		if (++((uint8_t *)it->minElement)[x] != 0)
+			break;
+}
 bool CBDatabaseRangeIteratorRead(CBDatabaseRangeIterator * it, uint8_t * data, uint32_t dataLen, uint32_t offset){
 	// ??? We already have found the element in the transaction or index, no need to find twice. Should be changed
 	return CBDatabaseReadValue(it->index, CBDatabaseRangeIteratorGetKey(it), data, dataLen, offset, false) == CB_DATABASE_INDEX_FOUND;

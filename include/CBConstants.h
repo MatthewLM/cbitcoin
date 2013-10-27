@@ -24,8 +24,6 @@
 #define CB_LIBRARY_VERSION 5 // Goes up in increments
 #define CB_LIBRARY_VERSION_STRING "2.0 pre-alpha" // Non-compatible.Compatibile pre-alpha/alpha/beta
 #define CB_USER_AGENT_SEGMENT "/cbitcoin:2.0(pre-alpha)/"
-#define CB_PRODUCTION_NETWORK_BYTE 0 // The normal network for trading
-#define CB_TEST_NETWORK_BYTE 111 // The network for testing
 #define CB_PRODUCTION_NETWORK_BYTES 0xD9B4BEF9 // The normal network for trading
 #define CB_TEST_NETWORK_BYTES 0xDAB5BFFA // The network for testing
 #define CB_ONE_BITCOIN 100000000LL // Each bitcoin has 100 million satoshis (individual units).
@@ -87,5 +85,18 @@ typedef enum{
 	CB_TRUE,
 	CB_ERROR,
 } CBErrBool;
+
+typedef enum{
+	CB_NETWORK_PRODUCTION,
+	CB_NETWORK_TEST,
+	CB_NETWORK_UNKNOWN
+} CBNetwork;
+
+typedef enum{
+	CB_PREFIX_PRODUCTION_ADDRESS = 0,
+	CB_PREFIX_TEST_ADDRESS = 111,
+	CB_PREFIX_PRODUCTION_PRIVATE_KEY = 128,
+	CB_PREFIX_TEST_PRIVATE_KEY = 239
+} CBBase58Prefix;
 
 #endif
