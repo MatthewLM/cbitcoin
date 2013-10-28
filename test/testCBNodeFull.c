@@ -305,6 +305,16 @@ void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
 	
 }
 
+void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
+void CBNetworkCommunicatorTryConnectionsVoid(void * comm){
+	CBNetworkCommunicatorTryConnections(comm);
+}
+
+void CBNetworkCommunicatorStartListeningVoid(void * comm);
+void CBNetworkCommunicatorStartListeningVoid(void * comm){
+	CBNetworkCommunicatorStartListening(comm);
+}
+
 int main(){
 	puts("You may need to move your mouse around if this test stalls.");
 	// Create three nodes to talk to each other
@@ -343,12 +353,13 @@ int main(){
 		comm->networkID = CB_PRODUCTION_NETWORK_BYTES;
 		comm->maxConnections = 3;
 		comm->maxIncommingConnections = 3;
-		comm->heartBeat = 1000;
-		comm->timeOut = 2000;
+		comm->recvTimeOut = 16000;
+		comm->responseTimeOut = 16000;
+		comm->sendTimeOut = 16000;
 		CBNetworkCommunicatorSetUserAgent(comm, userAgent);
 		CBNetworkCommunicatorSetOurIPv4(comm, addr);
 		CBNetworkCommunicatorSetReachability(comm, CB_IP_IP4 | CB_IP_LOCAL, true);
-		// Disbable POW check
+		// Disable POW check
 		CBGetNode(nodes[x])->validator->flags |= CB_VALIDATOR_DISABLE_POW_CHECK;
 	}
 	// Give node 0 the addresses for node 1 and 2
@@ -478,9 +489,10 @@ int main(){
 	for (uint8_t x = 3; x--;) {
 		CBNetworkCommunicatorStart(CBGetNetworkCommunicator(nodes[x]));
 		if (x > 0)
-			CBNetworkCommunicatorStartListening(CBGetNetworkCommunicator(nodes[x]));
+			// Block, thus ensuring nodes are listening before we try to connect.
+			CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[x])->eventLoop, CBNetworkCommunicatorStartListeningVoid, nodes[x], true);
 		else
-			CBNetworkCommunicatorTryConnections(CBGetNetworkCommunicator(nodes[x]));
+			CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[x])->eventLoop, CBNetworkCommunicatorTryConnectionsVoid, nodes[x], false);
 	}
 	pthread_exit(NULL);
 }

@@ -24,7 +24,7 @@
 
 // Constants and Macros
 
-#define CBGetNode(x) ((CBNode *)x)
+#define CBGetNodeHeadersOnly(x) ((CBNodeHeadersOnly *)x)
 #define CB_NONE_SCANNED UINT32_MAX
 
 typedef struct CBNodeHeadersOnly CBNodeHeadersOnly;

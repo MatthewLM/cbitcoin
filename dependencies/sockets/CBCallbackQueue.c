@@ -27,6 +27,7 @@ CBCallbackQueueItem * CBCallbackQueueAdd(CBCallbackQueue * queue, void (*callbac
 		queue->first = queue->last = item;
 	else
 		queue->last = queue->last->next = item;
+	item->next = NULL;
 	CBCallbackQueueItemBlocking * blockingItem;
 	queue->last->blocking = !*nblock;
 	if (!*nblock) {

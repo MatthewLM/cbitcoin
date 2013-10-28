@@ -59,7 +59,7 @@ void CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminato
 	self->sharedData->data = malloc(self->length);
 	self->sharedData->references = 1;
 	self->offset = 0;
-	memmove(self->sharedData->data, string, self->length);
+	memcpy(self->sharedData->data, string, self->length);
 }
 void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size){
 	CBInitObject(CBGetObject(self), false);

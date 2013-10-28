@@ -291,10 +291,13 @@ void CBValidatorBlockProcessThread(void * validator){
 		}
 		// Get the block
 		CBBlock * block = self->blockQueue[self->queueFront];
+		char blockStr[41];
+		CBBlockHashToString(block, blockStr);
 		CBMutexUnlock(self->blockQueueMutex);
 		void * callbackObj = self->callbackQueue[self->queueFront];
 		switch (CBValidatorProcessBlock(self, block)) {
 			case CB_BLOCK_VALIDATION_BAD:
+				CBLogWarning("Block %s is bad.", blockStr);
 				if (!self->callbacks.invalidBlock(callbackObj, block)) {
 					CBLogError("invalidBlock returned false");
 					self->callbacks.onValidatorError(callbackObj);
@@ -304,12 +307,14 @@ void CBValidatorBlockProcessThread(void * validator){
 				self->callbacks.onValidatorError(callbackObj);
 				break;
 			case CB_BLOCK_VALIDATION_NO_NEW:
+				CBLogWarning("There are no more branches available for block %s.", blockStr);
 				if (!self->callbacks.noNewBranches(callbackObj, block)) {
 					CBLogError("noNewBranches returned false");
 					self->callbacks.onValidatorError(callbackObj);
 				}
 				break;
 			default:
+				CBLogWarning("Block %s finished processing.", blockStr);
 				if (!self->callbacks.finish(callbackObj, block)) {
 					CBLogError("finish returned false");
 					self->callbacks.onValidatorError(callbackObj);

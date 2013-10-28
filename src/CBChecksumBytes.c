@@ -79,7 +79,7 @@ void CBFreeChecksumBytes(void * self){
 
 //  Functions
 
-uint8_t CBChecksumBytesGetVersion(CBChecksumBytes * self){
+CBBase58Prefix CBChecksumBytesGetPrefix(CBChecksumBytes * self){
 	return CBByteArrayGetByte(CBGetByteArray(self), 0);
 }
 CBByteArray * CBChecksumBytesGetString(CBChecksumBytes * self){

@@ -113,6 +113,8 @@ bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
 	return true;
 }
 bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator){
+	// Use threads
+	evthread_use_pthreads();
 	struct event_base * base = event_base_new();
 	// Create dummy event to maintain loop. When libevent 2.1 is released as stable EVLOOP_NO_EXIT_ON_EMPTY can be used. For now there is a hack solution.
 	event_base_add_virtual(base);
@@ -132,8 +134,6 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 }
 void CBStartEventLoop(void * vloop){
 	CBEventLoop * loop = vloop;
-	// Use threads
-	evthread_use_pthreads();
 	// Start event loop
 	CBLogVerbose("Starting network event loop.");
 	if(event_base_dispatch(loop->base) == -1){

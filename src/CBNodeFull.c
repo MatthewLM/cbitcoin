@@ -510,7 +510,7 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 		CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
 		CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers){
 			if (peer->handshakeStatus | CB_HANDSHAKE_GOT_VERSION)
-				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(invs[currentInv]), NULL);
+				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(invs[currentInv]), NULL);
 			// Rotate through invs
 			if (currentInv == 3 || invs[++currentInv] == NULL)
 				currentInv = 0;
@@ -602,7 +602,7 @@ CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, 
 	CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
 	CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers)
 	if (peer->handshakeStatus | CB_HANDSHAKE_GOT_VERSION)
-		CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
+		CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
 	CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
 	CBReleaseObject(inv);
 	return true;
@@ -648,7 +648,7 @@ void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash){
 	CBReleaseObject(hashObj);
 	CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
 	// Send getdata
-	CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
+	CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
 }
 bool CBNodeFullBroadcastTransaction(CBNodeFull * self, CBTransaction * tx, uint32_t numUnconfDeps, uint64_t txInputValue){
 	// Add to accounter
@@ -1006,6 +1006,7 @@ bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, void * vpeer){
 		// Must be expecting verack or pong so disconnect the node.
 		return true;
 	if (peer->typesExpected[0] == CB_MESSAGE_TYPE_BLOCK) {
+		CBLogWarning("%s has not given us the requested block in time.", peer->peerStr);
 		// The peer has not given us the block in time.
 		CBNodeFullPeerDownloadEnd(self, peer);
 		CBNodeFullCancelBlock(self, peer);
@@ -1150,7 +1151,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			// Send inventory
 			if (inv != NULL){
 				CBGetMessage(inv)->type = CB_MESSAGE_TYPE_INV;
-				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
+				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
 				CBReleaseObject(inv);
 			}
 			// Ask for blocks, unless there is already CB_MAX_BLOCK_QUEUE peers giving us blocks or the peer advertises a block height equal or less than ours.
@@ -1169,6 +1170,8 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			peer->downloading = true;
 			break;
 		}
+		case CB_MESSAGE_TYPE_GETBLOCKS:
+			return CBNodeSendBlocksInvOrHeaders(CBGetNode(self), peer, CBGetGetBlocks(message), true);
 		case CB_MESSAGE_TYPE_BLOCK:{
 			// The peer sent us a block
 			CBBlock * block = CBGetBlock(message);
@@ -1227,7 +1230,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 				CBInventoryItem * item = CBInventoryGetInventoryItem(inv, x);
 				uint8_t * hash = CBByteArrayGetData(item->hash);
 				if (item->type == CB_INVENTORY_ITEM_BLOCK) {
-					if (peer->expectBlock){
+					if (reqBlockNum == 0 && peer->expectBlock){
 						// We are still obtaining the required blocks from this peer, do not accept any more blocks until we are done getting the previous ones.
 						CBLogVerbose("Ignoring blocks from %s as we are still downloading from them.", peer->peerStr);
 						continue;
@@ -1254,7 +1257,6 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					// Add block to required blocks from peer
 					memcpy(peer->reqBlocks[reqBlockNum].reqBlock, hash, 20);
 					peer->reqBlocks[reqBlockNum].next = reqBlockNum + 1;
-					reqBlockNum++;
 					// Create or get block peers information
 					CBBlockPeers * blockPeers;
 					res = CBAssociativeArrayFind(&self->blockPeers, hash);
@@ -1266,10 +1268,13 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 						CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
 						CBAssociativeArrayInsert(&self->blockPeers, blockPeers, res.position, NULL);
 					}
-					if (reqBlockNum == 0) {
+					if (reqBlockNum++ == 0) {
 						// Ask for first block
 						memcpy(peer->expectedBlock, hash, 20);
 						peer->expectBlock = true;
+						// Create getdata message if not already and then add this block hash as an item.
+						if (getData == NULL)
+							getData = CBNewInventory();
 						CBInventoryAddInventoryItem(getData, item);
 						// Record that this block has been asked for
 						// Thus we will not require this from any other peers, unless there is a timeout
@@ -1319,7 +1324,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			// Send getdata if not NULL
 			if (getData != NULL){
 				CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
-				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
+				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
 			}
 			break;
 		}
@@ -1498,7 +1503,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 				// This transaction depends upon outputs that do not exist yet, add to orphans and send getdata for dependencies.
 				if (orphanGetData) {
 					CBGetMessage(orphanGetData)->type = CB_MESSAGE_TYPE_GETDATA;
-					CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(orphanGetData), NULL);
+					CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(orphanGetData), NULL);
 					CBReleaseObject(orphanGetData);
 				}
 				bool room = true;
@@ -1828,8 +1833,8 @@ bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer){
 		CBLogError("There was an error when trying to retrieve the block-chain descriptor.");
 		return false;
 	}
-	char blockStr[40];
-	if (chainDesc->hashNum == 0)
+	char blockStr[41];
+	if (chainDesc->hashNum == 1)
 		strcpy(blockStr, "genesis");
 	else
 		CBByteArrayToString(chainDesc->hashes[0], 0, 20, blockStr);
@@ -1837,7 +1842,7 @@ bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer){
 	CBGetBlocks * getBlocks = CBNewGetBlocks(CB_MIN_PROTO_VERSION, chainDesc, NULL);
 	CBReleaseObject(chainDesc);
 	CBGetMessage(getBlocks)->type = CB_MESSAGE_TYPE_GETBLOCKS;
-	CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(getBlocks), NULL);
+	CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getBlocks), NULL);
 	CBReleaseObject(getBlocks);
 	// Check in the future that the peer did send us an inv of blocks
 	CBStartTimer(CBGetNetworkCommunicator(self)->eventLoop, &peer->invResponseTimer, CBGetNetworkCommunicator(self)->responseTimeOut, CBNodeFullHasNotGivenBlockInv, peer);
@@ -1864,7 +1869,7 @@ bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){
 			if (fndTx != NULL){
 				// The peer was requesting an unconfirmed transaction
 				CBGetMessage(fndTx->utx.tx)->type = CB_MESSAGE_TYPE_TX;
-				CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(fndTx->utx.tx), CBNodeFullSendRequestedDataVoid);
+				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(fndTx->utx.tx), CBNodeFullSendRequestedDataVoid);
 			}
 			// Else the peer was requesting something we do not have as unconfirmed so ignore.
 			break;
@@ -1894,7 +1899,7 @@ bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){
 				return true;
 			}
 			CBGetMessage(block)->type = CB_MESSAGE_TYPE_BLOCK;
-			CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, CBGetMessage(block), CBNodeFullSendRequestedDataVoid);
+			CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(block), CBNodeFullSendRequestedDataVoid);
 		}
 		case CB_INVENTORY_ITEM_ERROR:
 			return false;

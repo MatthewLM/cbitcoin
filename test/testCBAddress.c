@@ -30,8 +30,8 @@ int main(){
 	CBByteArray * addstr = CBNewByteArrayFromString("1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9", true);
 	CBAddress * add = CBNewAddressFromString(addstr, false);
 	CBReleaseObject(addstr);
-	uint8_t v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
-	if (v != CB_PRODUCTION_NETWORK_BYTE) {
+	CBBase58Prefix v = CBChecksumBytesGetPrefix(CBGetChecksumBytes(add));
+	if (v != CB_PREFIX_PRODUCTION_ADDRESS) {
 		printf("PRODUCTION NET VERSION DOES NOT MATCH %i != 0\n", v);
 		return 1;
 	}
@@ -45,8 +45,8 @@ int main(){
 	addstr = CBNewByteArrayFromString("mzCk9JXXF9we7MB2Gdt59tcfj6Lr2rSzpu", true);
 	add = CBNewAddressFromString(addstr, false);
 	CBReleaseObject(addstr);
-	v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
-	if (v != CB_TEST_NETWORK_BYTE) {
+	v = CBChecksumBytesGetPrefix(CBGetChecksumBytes(add));
+	if (v != CB_PREFIX_TEST_ADDRESS) {
 		printf("TEST NET VERSION DOES NOT MATCH %i != 111\n", v);
 		return 1;
 	}
@@ -65,10 +65,10 @@ int main(){
 	uint8_t * hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_NETWORK_PRODUCTION, false);
 	free(hash);
-	v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
-	if (v != CB_PRODUCTION_NETWORK_BYTE) {
+	v = CBChecksumBytesGetPrefix(CBGetChecksumBytes(add));
+	if (v != CB_PREFIX_PRODUCTION_ADDRESS) {
 		printf("PRODUCTION NET VERSION FOR RIPEMD160 TEST DOES NOT MATCH %i != 0\n", v);
 		return 1;
 	}
@@ -76,10 +76,10 @@ int main(){
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_TEST_NETWORK_BYTE, false);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_NETWORK_TEST, false);
 	free(hash);
-	v = CBChecksumBytesGetVersion(CBGetChecksumBytes(add));
-	if (v != CB_TEST_NETWORK_BYTE) {
+	v = CBChecksumBytesGetPrefix(CBGetChecksumBytes(add));
+	if (v != CB_PREFIX_TEST_ADDRESS) {
 		printf("TEST NET VERSION FOR RIPEMD160 TEST DOES NOT MATCH %i != 111\n", v);
 		return 1;
 	}
@@ -88,7 +88,7 @@ int main(){
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = x;
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PRODUCTION_NETWORK_BYTE, false);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_NETWORK_PRODUCTION, false);
 	free(hash);
 	str = CBChecksumBytesGetString(CBGetChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB")){

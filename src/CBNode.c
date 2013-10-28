@@ -148,15 +148,13 @@ void CBNodeProcessMessages(void * node){
 		// Process next message on queue
 		CBMessageQueue * toProcess = self->messageQueue;
 		CBMutexUnlock(self->messageProcessMutex);
-		// Handle alerts and getblocks
+		// Handle alerts
 		CBOnMessageReceivedAction action;
-		if (toProcess->message->type == CB_MESSAGE_TYPE_GETBLOCKS)
-			// The peer is requesting blocks
-			action = CBNodeSendBlocksInvOrHeaders(self, toProcess->peer, true);
-		else if (toProcess->message->type == CB_MESSAGE_TYPE_ALERT)
+		if (toProcess->message->type == CB_MESSAGE_TYPE_ALERT)
 			// The peer sent us an alert message
 			action = CBNodeProcessAlert(self, toProcess->peer, CBGetAlert(toProcess->message));
-		action = self->onMessageReceived(self, toProcess->peer, toProcess->message);
+		else
+			action = self->onMessageReceived(self, toProcess->peer, toProcess->message);
 		if (action == CB_MESSAGE_ACTION_DISCONNECT)
 			// We need to disconnect the node
 			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectNode, toProcess->peer, false);
@@ -172,8 +170,7 @@ CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err){
 	CBReleaseObject(self);
 	return CB_MESSAGE_ACTION_RETURN;
 }
-CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, bool full){
-	CBGetBlocks * getBlocks = CBGetGetBlocks(peer->receive);
+CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, CBGetBlocks * getBlocks, bool full){
 	CBChainDescriptor * chainDesc = getBlocks->chainDescriptor;
 	if (chainDesc->hashNum == 0)
 		// Why do this?
@@ -256,11 +253,20 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 	}
 	CBMutexUnlock(self->blockAndTxMutex);
 	// Send the message
-	CBNetworkCommunicatorSendMessage(CBGetNetworkCommunicator(self), peer, message, NULL);
+	CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, message, NULL);
 	CBReleaseObject(message);
 	// We are uploading to the peer
 	peer->upload = true;
 	return CB_MESSAGE_ACTION_CONTINUE;
+}
+bool CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *)){
+	CBSendMessageData data = {self,peer,message,callback};
+	CBRunOnEventLoop(self->eventLoop, CBNodeSendMessageOnNetworkThreadVoid, &data, true);
+	return data.result;
+}
+void CBNodeSendMessageOnNetworkThreadVoid(void * vdata){
+	CBSendMessageData * data = vdata;
+	data->result = CBNetworkCommunicatorSendMessage(data->self, data->peer, data->message, data->callback);
 }
 CBCompare CBTransactionPtrCompare(CBAssociativeArray * foo, void * tx1, void * tx2){
 	CBTransaction ** tx1Obj = tx1;

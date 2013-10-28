@@ -85,11 +85,11 @@ void CBFreeChecksumBytes(void * self);
 //  Functions
 
 /**
- @brief Gets the version for a CBChecksumBytes object.
+ @brief Gets the prefix for a CBChecksumBytes object.
  @param self The CBChecksumBytes object.
- @returns The version code. The Macros CB_PRODUCTION_NETWORK and CB_TEST_NETWORK should correspond to this. 
+ @returns The prefix code. @see CBBase58Prefix
  */
-uint8_t CBChecksumBytesGetVersion(CBChecksumBytes * self);
+CBBase58Prefix CBChecksumBytesGetPrefix(CBChecksumBytes * self);
 /**
  @brief Gets the string representation for a CBChecksumBytes object as a base-58 encoded CBString.
  @param self The CBChecksumBytes object.

@@ -184,7 +184,7 @@ void CBDidConnect(struct ev_loop * loop, struct ev_io * watcher, int eventID){
 	getsockopt(event->socket.i, SOL_SOCKET, SO_ERROR, &optval, &optlen);
 	if (optval)
 		// Act as timeout
-		event->loop->onTimeOut(event->loop->communicator, event->peer, CB_TIMEOUT_CONNECT);
+		event->loop->onTimeOut(event->loop->communicator, event->peer, CB_TIMEOUT_CONNECT_ERROR);
 	else
 		// Connection successful
 		event->onEvent.ptr(event->loop->communicator, event->peer);

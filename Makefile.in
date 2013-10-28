@@ -119,10 +119,13 @@ build/CBRand.o: dependencies/random/CBRand.c
 
 # Network library target linking
 
-network : build/CBLibEventSockets.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-network$(LIBRARY_EXTENSION) build/CBLibEventSockets.o -levent_core
+network : build/CBLibEventSockets.o build/CBCallbackQueue.o | bin
+	$(CC) $(LFLAGS) -o bin/libcbitcoin-network$(LIBRARY_EXTENSION) build/CBLibEventSockets.o build/CBCallbackQueue.o -levent_core
 
 # Network library compile
+
+build/CBCallbackQueue.o: dependencies/sockets/CBCallbackQueue.c dependencies/sockets/CBCallbackQueue.h
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 build/CBLibEventSockets.o: dependencies/sockets/CBLibEventSockets.c dependencies/sockets/CBLibEventSockets.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@

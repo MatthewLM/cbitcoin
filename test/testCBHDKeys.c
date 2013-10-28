@@ -278,7 +278,7 @@ int main(){
 	}
 	for (uint8_t x = 0; x < NUM_TEST_VECTORS; x++) {
 		// Deserialise private key
-		CBByteArray * masterString = CBNewByteArrayFromString(testVectors[x][0].privString, false);
+		CBByteArray * masterString = CBNewByteArrayFromString(testVectors[x][0].privString, true);
 		CBChecksumBytes * masterData = CBNewChecksumBytesFromString(masterString, false);
 		CBReleaseObject(masterString);
 		CBHDKey * key = CBNewHDKeyFromData(CBByteArrayGetData(CBGetByteArray(masterData)));

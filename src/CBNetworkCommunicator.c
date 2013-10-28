@@ -30,7 +30,6 @@ CBNetworkCommunicator * CBNewNetworkCommunicator(CBNetworkCommunicatorCallbacks 
 void CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBNetworkCommunicatorCallbacks callbacks){
 	CBInitObject(CBGetObject(self), false);
 	CBNewMutex(&self->peersMutex);
-	CBNewMutex(&self->sendMessageMutex);
 	// Set fields.
 	self->callbacks = callbacks;
 	self->attemptingOrWorkingConnections = 0;
@@ -76,7 +75,6 @@ void CBDestroyNetworkCommunicator(void * vself){
 			CBReleaseObject(self->ipData[x].ourAddress);
 	free(self->altMaxSizes);
 	CBFreeMutex(self->peersMutex);
-	CBFreeMutex(self->sendMessageMutex);
 }
 void CBFreeNetworkCommunicator(void * self){
 	CBDestroyNetworkCommunicator(self);
@@ -107,7 +105,7 @@ void CBNetworkCommunicatorAcceptConnection(void * vself, CBDepObject socket){
 	// Set up receive event
 	if (CBSocketCanReceiveEvent(&peer->receiveEvent, self->eventLoop, peer->socketID, CBNetworkCommunicatorOnCanReceive, peer)) {
 		// The event works
-		if(CBSocketAddEvent(peer->receiveEvent, self->responseTimeOut)){ // Begin receive event.
+		if (CBSocketAddEvent(peer->receiveEvent, self->responseTimeOut)){ // Begin receive event.
 			// Success
 			if (CBSocketCanSendEvent(&peer->sendEvent, self->eventLoop, peer->socketID, CBNetworkCommunicatorOnCanSend, peer)) {
 				// Both events work. Take the peer.
@@ -251,10 +249,8 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 		if (peer->receive) CBReleaseObject(peer->receive);
 		// Release all messages in the send queue
 		// Ensure the send queue is not being modified by mutex
-		CBMutexLock(self->sendMessageMutex);
 		for (uint8_t x = 0; x < peer->sendQueueSize; x++)
 			CBReleaseObject(peer->sendQueue[(peer->sendQueueFront + x) % CB_SEND_QUEUE_MAX_SIZE].message);
-		CBMutexUnlock(self->sendMessageMutex);
 		// If not stopping we can remove the peer.
 		if (! stopping){
 			// Retain the peer in case we continue to need it
@@ -494,7 +490,6 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 			}
 		}
 		// Remove message from queue.
-		CBMutexLock(self->sendMessageMutex);
 		peer->sendQueueSize--;
 		CBReleaseObject(toSend);
 		if (peer->sendQueueSize) {
@@ -507,7 +502,6 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 		// Now call the callback, since the message was sent, unless the callback is NULL
 		if (peer->sendQueue[peer->sendQueueFront].callback)
 			peer->sendQueue[peer->sendQueueFront].callback(self, peer);
-		CBMutexUnlock(self->sendMessageMutex);
 	}
 }
 void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer * peer){
@@ -1164,11 +1158,8 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetw
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
 bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *)){
-	CBMutexLock(self->sendMessageMutex);
-	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking){
-		CBMutexUnlock(self->sendMessageMutex);
+	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking)
 		return false;
-	}
 	char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
 	CBMessageTypeToString(message->type, typeStr);
 	CBLogVerbose("Sending message of type %s (%u) to %s.", typeStr, message->type, peer->peerStr);
@@ -1262,7 +1253,6 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * pee
 		&& !CBSocketAddEvent(peer->sendEvent, self->sendTimeOut))
 		return false;
 	peer->sendQueueSize++;
-	CBMutexUnlock(self->sendMessageMutex);
 	CBRetainObject(message);
 	return true;
 }

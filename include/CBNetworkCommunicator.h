@@ -136,7 +136,6 @@ struct CBNetworkCommunicator {
 	CBDepObject addrStorage; /**< The object for address storage. If not 0 and if the CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY flag is given, broadcast addresses will be recorded into the storage. */
 	bool useAddrStorage; /**< Set to true if using addrStorage */
 	CBDepObject peersMutex;
-	CBDepObject sendMessageMutex;
 	CBNetworkCommunicatorCallbacks callbacks;
 };
 

@@ -35,6 +35,14 @@ typedef enum{
 	CB_NODE_CHECK_STANDARD,
 } CBNodeFlags;
 
+typedef struct{
+	CBNetworkCommunicator * self;
+	CBPeer * peer;
+	CBMessage * message;
+	void (*callback)(void *, void *);
+	bool result;
+} CBSendMessageData;
+
 typedef struct CBNode CBNode;
 
 typedef struct{
@@ -112,7 +120,9 @@ void CBNodeOnValidatorError(void *);
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert);
 void CBNodeProcessMessages(void * node);
 CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err);
-CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, bool full);
+CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, CBGetBlocks * getBlocks, bool full);
+bool CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *));
+void CBNodeSendMessageOnNetworkThreadVoid(void * data);
 /**
  @brief Compares two transactions by their hash
  @param tx1 A pointer to the first transaction pointer.
