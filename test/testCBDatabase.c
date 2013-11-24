@@ -1606,25 +1606,59 @@ int main(){
 	}
 	// Create new index
 	CBDatabaseIndex * index2 = CBLoadIndex(storage, 1, 3, 10000);
-	for (uint16_t x = 0; x <= 500; x += 2){
-		data[0] = 1;
+	for (uint16_t x = 0; x <= 500; x++) {
+		data[0] = x >= 200 && x <= 300;
 		data[1] = x >> 8;
 		data[2] = x;
 		CBDatabaseWriteValue(index2, data, data, 3);
+		if (x == 250) {
+			CBDatabaseStage(storage);
+			CBDatabaseCommit(storage);
+		}
+	}
+	// Add staged change keys
+	for (uint16_t x = 250; x <= 300; x++) {
+		data[0] = 1;
+		data[1] = x >> 8;
+		data[2] = x;
+		data[3] = 0;
+		data[4] = x >> 8;
+		data[5] = x;
+		CBDatabaseChangeKey(index2, data, data + 3, false);
+	}
+	// Add other staged change keys, to be changed again
+	for (uint16_t x = 350; x <= 400; x++) {
+		data[0] = 1;
+		data[1] = x >> 8;
+		data[2] = x;
+		data[3] = 2;
+		data[4] = x >> 8;
+		data[5] = x;
+		CBDatabaseChangeKey(index2, data, data + 3, false);
 	}
 	CBDatabaseStage(storage);
-	CBDatabaseCommit(storage);
+	// Add current writes
 	for (uint16_t x = 0; x <= 500; x++){
 		if (x % 2 == 0)
 			continue;
-		data[0] = 1;
+		data[0] = x >= 200 && x < 250;
 		data[1] = x >> 8;
 		data[2] = x;
 		CBDatabaseWriteValue(index2, data, data, 3);
 	}
 	// Add change keys
-	for (uint16_t x = 0; x <= 500; x++){
+	for (uint16_t x = 200; x < 250; x++){
 		data[0] = 1;
+		data[1] = x >> 8;
+		data[2] = x;
+		data[3] = 0;
+		data[4] = x >> 8;
+		data[5] = x;
+		CBDatabaseChangeKey(index2, data, data + 3, false);
+	}
+	// Add second change keys
+	for (uint16_t x = 350; x <= 400; x++) {
+		data[0] = 2;
 		data[1] = x >> 8;
 		data[2] = x;
 		data[3] = 0;
@@ -1640,7 +1674,7 @@ int main(){
 		CBDatabaseRemoveValue(index2, data, false);
 	}
 	// Test iterator
-	CBDatabaseRangeIterator it = {(uint8_t []){0,0,0}, (uint8_t []){1,1,244}, index2};
+	CBDatabaseRangeIterator it = {(uint8_t []){0,0,0}, (uint8_t []){2,1,244}, index2};
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		printf("ITERATOR ALL FIRST FAIL\n");
 		return 1;

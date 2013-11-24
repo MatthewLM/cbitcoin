@@ -363,6 +363,8 @@ void CBScriptStackPushItem(CBScriptStack * stack, CBScriptStackItem item);
  @param stack A pointer to the stack to remove the data.
  */
 void CBScriptStackRemoveItem(CBScriptStack * stack);
+uint32_t CBScriptStringMaxSize(CBScript * self);
+void CBScriptToString(CBScript * self, char * output);
 /**
  @brief Converts a int64_t to a CBScriptStackItem
  @param item Pass in a CBScriptStackItem for reallocating data.

@@ -16,10 +16,6 @@
 
 #include "CBAccounterStorage.h"
 
-uint8_t CB_KEY_ARRAY[36];
-uint8_t CB_NEW_KEY_ARRAY[36];
-uint8_t CB_DATA_ARRAY[64];
-
 bool CBNewAccounterStorage(CBDepObject * storage, CBDepObject database) {
 	CBAccounterStorage * self = malloc(sizeof(*self));
 	self->database = database.ptr;
@@ -84,7 +80,7 @@ bool CBNewAccounterStorageUnspentOutputCursor(CBDepObject * ucursor, CBDepObject
 	CBInt64ToArray(self->branchSectionAccountOutputsMax, CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, accountID);
 	memset(self->branchSectionAccountOutputsMin + CB_ACCOUNT_OUTPUTS_HEIGHT, 0, 12);
 	memset(self->branchSectionAccountOutputsMax + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 12);
-	CBInitAssociativeArray(&self->spentOutputs, CBTransactionKeysCompare, storage->outputDetails, NULL);
+	CBInitAssociativeArray(&self->spentOutputs, CBTransactionKeysCompare, storage->outputDetails, CBFreeSpentOutputKeyPointer);
 	ucursor->ptr = self;
 	return true;
 }
@@ -114,14 +110,18 @@ void CBFreeAccounterStorageUnspentOutputCursor(CBDepObject self){
 	CBFreeDatabaseRangeIterator(&CBGetAccounterCursor(self.ptr)->it);
 	free(self.ptr);
 }
+void CBFreeSpentOutputKeyPointer(void * key){
+	free((uint8_t *)key - CB_ACCOUNT_OUTPUTS_OUTPUT_ID);
+}
 bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint64_t accountID){
 	CBAccounterStorage * storage = self.ptr;
-	memcpy(CB_KEY_ARRAY + CB_WATCHED_HASHES_HASH, hash, 20);
-	CBInt64ToArray(CB_KEY_ARRAY, CB_WATCHED_HASHES_ACCOUNT_ID, accountID);
-	CBDatabaseWriteValue(storage->watchedHashes, CB_KEY_ARRAY, NULL, 0);
-	memcpy(CB_KEY_ARRAY + CB_ACCOUNT_WATCHED_HASHES_HASH, hash, 20);
-	CBInt64ToArray(CB_KEY_ARRAY, CB_ACCOUNT_WATCHED_HASHES_ACCOUNT_ID, accountID);
-	CBDatabaseWriteValue(storage->accountWatchedHashes, CB_KEY_ARRAY, NULL, 0);
+	uint8_t watchedHashKey[28];
+	memcpy(watchedHashKey + CB_WATCHED_HASHES_HASH, hash, 20);
+	CBInt64ToArray(watchedHashKey, CB_WATCHED_HASHES_ACCOUNT_ID, accountID);
+	CBDatabaseWriteValue(storage->watchedHashes, watchedHashKey, NULL, 0);
+	memcpy(watchedHashKey + CB_ACCOUNT_WATCHED_HASHES_HASH, hash, 20);
+	CBInt64ToArray(watchedHashKey, CB_ACCOUNT_WATCHED_HASHES_ACCOUNT_ID, accountID);
+	CBDatabaseWriteValue(storage->accountWatchedHashes, watchedHashKey, NULL, 0);
 	return true;
 }
 bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint8_t section, uint64_t accountID, int64_t adjustment, uint64_t * last){
@@ -155,7 +155,9 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 			if (last)
 				*last = adjustedBal;
 			// Write adjusted balance
-			CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, CBDatabaseRangeIteratorGetKey(&it), data, 8);
+			uint8_t key[33];
+			CBDatabaseRangeIteratorGetKey(&it, key);
+			CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, key, data, 8);
 			// Go to next if possible.
 			CBIndexFindStatus status = CBDatabaseRangeIteratorNext(&it);
 			if (status == CB_DATABASE_INDEX_ERROR) {
@@ -180,7 +182,8 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 				return false;
 			}
 			// Adjust balance
-			*last = CBArrayToInt64(data, 0);
+			if (last)
+				*last = CBArrayToInt64(data, 0);
 		}
 		// Else do not change last
 	}
@@ -194,21 +197,24 @@ bool CBAccounterAdjustUnconfBalance(CBAccounterStorage * self, uint64_t accountI
 		return false;
 	}
 	balance += value;
-	CBInt64ToArray(CB_DATA_ARRAY, 0, labs(balance) | ((balance > 0) ? 0x8000000000000000 : 0));
-	CBDatabaseWriteValue(self->accountUnconfBalance, CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
+	uint8_t accountUnconfBalanceKey[8], data[8];
+	CBInt64ToArray(accountUnconfBalanceKey, 0, accountID);
+	CBInt64ToArray(data, 0, labs(balance) | ((balance > 0) ? 0x8000000000000000 : 0));
+	CBDatabaseWriteValue(self->accountUnconfBalance, accountUnconfBalanceKey, data, 8);
 	return true;
 }
-bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint32_t blockHeight, uint8_t branch){
+bool CBAccounterUnconfirmedTransactionToBranch(CBDepObject self, void * vtx, uint32_t blockHeight, uint8_t branch){
 	CBAccounterStorage * storage = self.ptr;
 	CBTransaction * tx = vtx;
+	uint8_t keyArr[36], newKey[33], data[8];
 	uint8_t branchSectionID = CBAccounterGetLastBranchSectionID(storage, branch);
 	// A previously branchless transaction has been found in a branch.
 	// Loop through inputs and change the spent status key for the branch.
 	for (uint32_t x = 0; x < tx->inputNum; x++) {
 		// Get the output ID
-		memcpy(CB_KEY_ARRAY + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), 32);
-		CBInt32ToArray(CB_KEY_ARRAY, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, tx->inputs[x]->prevOut.index);
-		CBIndexFindStatus stat = CBDatabaseReadValue(storage->outputHashAndIndexToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false);
+		memcpy(keyArr + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), 32);
+		CBInt32ToArray(keyArr, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, tx->inputs[x]->prevOut.index);
+		CBIndexFindStatus stat = CBDatabaseReadValue(storage->outputHashAndIndexToID, keyArr, data, 8, 0, false);
 		if (stat == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("Could not read the ID of an output reference.");
 			return false;
@@ -219,8 +225,8 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 		// Loop through accounts
 		uint8_t outputAccountsMin[21];
 		uint8_t outputAccountsMax[21];
-		memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
-		memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+		memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
+		memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
 		memset(outputAccountsMin + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0, 8);
 		memset(outputAccountsMax + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0xFF, 8);
 		CBDatabaseRangeIterator it = {outputAccountsMin, outputAccountsMax, storage->outputAccounts};
@@ -229,19 +235,20 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 			return false;
 		}
 		// Prepare account output status keys with the branch, zero height and output ID.
-		CB_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = CB_NO_BRANCH;
-		memset(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4);
-		memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
-		CB_NEW_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = branch;
-		CBInt32ToArrayBigEndian(CB_NEW_KEY_ARRAY, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - blockHeight);
-		memcpy(CB_NEW_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+		keyArr[CB_ACCOUNT_OUTPUTS_BRANCH] = CB_NO_BRANCH;
+		memset(keyArr + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4);
+		memcpy(keyArr + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, data, 8);
+		newKey[CB_ACCOUNT_OUTPUTS_BRANCH] = branch;
+		CBInt32ToArrayBigEndian(newKey, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - blockHeight);
+		memcpy(newKey + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, data, 8);
 		for (;;) {
 			// Add the account ID into the keys
-			uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-			memcpy(CB_NEW_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+			uint8_t key[16];
+			CBDatabaseRangeIteratorGetKey(&it, key);
+			memcpy(keyArr + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+			memcpy(newKey + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
 			// Now change the key
-			if (! CBDatabaseChangeKey(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, CB_NEW_KEY_ARRAY, false)) {
+			if (! CBDatabaseChangeKey(storage->branchSectionAccountOutputs, keyArr, newKey, false)) {
 				CBLogError("Could not remove a spent status for removing a branchless transaction.");
 				return false;
 			}
@@ -260,25 +267,24 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 	// Loop through outputs and change references to the new branch
 	for (uint32_t x = 0; x < tx->outputNum; x++) {
 		// Get the output ID of this output, if it exists.
-		memcpy(CB_KEY_ARRAY + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBTransactionGetHash(tx), 32);
-		CBInt32ToArray(CB_KEY_ARRAY, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, x);
+		memcpy(keyArr + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBTransactionGetHash(tx), 32);
+		CBInt32ToArray(keyArr, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, x);
 		uint32_t len;
-		if (! CBDatabaseGetLength(storage->outputHashAndIndexToID, CB_KEY_ARRAY, &len)) {
+		if (! CBDatabaseGetLength(storage->outputHashAndIndexToID, keyArr, &len)) {
 			CBLogError("Unable to obtain length for an outputHashAndIndexToID entry when a tx enters a branch.");
 			return false;
 		}
 		if (len != CB_DOESNT_EXIST) {
 			// The output ID exists so get it
-			if (CBDatabaseReadValue(storage->outputHashAndIndexToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+			if (CBDatabaseReadValue(storage->outputHashAndIndexToID, keyArr, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Could not get the ID of a branchless output so we can move the spent status to a branch");
 				return false;
 			}
-			uint64_t outputID = CBArrayToInt64(CB_DATA_ARRAY, 0);
 			// Loop through the output's accounts and change the unspent output references to the branch the output is being added to.
 			uint8_t outputAccountsMin[16];
 			uint8_t outputAccountsMax[16];
-			CBInt64ToArray(outputAccountsMin, CB_OUTPUT_ACCOUNTS_OUTPUT_ID, outputID);
-			CBInt64ToArray(outputAccountsMax, CB_OUTPUT_ACCOUNTS_OUTPUT_ID, outputID);
+			memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
+			memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
 			memset(outputAccountsMin + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0, 8);
 			memset(outputAccountsMax + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0xFF, 8);
 			CBDatabaseRangeIterator it = {outputAccountsMin, outputAccountsMax, storage->outputAccounts};
@@ -288,33 +294,34 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 			}
 			for (;;) {
 				// Get the output account key
-				uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+				uint8_t key[16];
+				CBDatabaseRangeIteratorGetKey(&it, key);
 				// Create key for unconfirmed output
-				CB_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = CB_NO_BRANCH;
-				memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-				memset(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4); // Height is zero for branchless outputs thus UINT32_MAX minus zero gives 0xFFFFFFFF
-				memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+				keyArr[CB_ACCOUNT_OUTPUTS_BRANCH] = CB_NO_BRANCH;
+				memcpy(keyArr + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+				memset(keyArr + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4); // Height is zero for branchless outputs thus UINT32_MAX minus zero gives 0xFFFFFFFF
+				memcpy(keyArr + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, data, 8); // Output Id is in data and was read above
 				// Get spend status
 				uint8_t unspent;
-				if (CBDatabaseReadValue(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, &unspent, 1, 0, false) != CB_DATABASE_INDEX_FOUND) {
+				if (CBDatabaseReadValue(storage->branchSectionAccountOutputs, keyArr, &unspent, 1, 0, false) != CB_DATABASE_INDEX_FOUND) {
 					CBLogError("Could not get the spend status of an output from an unconfirmed transaction.");
 					return false;
 				}
 				// Create key for new output entry in branch
-				CB_NEW_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionID;
-				memcpy(CB_NEW_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-				CBInt32ToArrayBigEndian(CB_NEW_KEY_ARRAY, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - blockHeight);
-				memcpy(CB_NEW_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+				newKey[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionID;
+				memcpy(newKey + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+				CBInt32ToArrayBigEndian(newKey, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - blockHeight);
+				memcpy(newKey + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, data, 8);
 				if (unspent) {
 					// The output is unspent. We should move it to the branch as unspent.
 					// Change key
-					if (! CBDatabaseChangeKey(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, CB_NEW_KEY_ARRAY, false)) {
+					if (! CBDatabaseChangeKey(storage->branchSectionAccountOutputs, keyArr, newKey, false)) {
 						CBLogError("Could not change an unspent output entry to be on a branch.");
 						return false;
 					}
 				}else
 					// The output was spent by another transaction, so we keep this entry but add an unspent entry to the branch
-					CBDatabaseWriteValue(storage->branchSectionAccountOutputs, CB_NEW_KEY_ARRAY, (uint8_t []){true}, 1);
+					CBDatabaseWriteValue(storage->branchSectionAccountOutputs, newKey, (uint8_t []){true}, 1);
 				// Iterate to the next account if available
 				CBIndexFindStatus status = CBDatabaseRangeIteratorNext(&it);
 				if (status == CB_DATABASE_INDEX_ERROR) {
@@ -329,36 +336,38 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 		}
 	}
 	// Get the transaction ID
-	memcpy(CB_KEY_ARRAY, CBTransactionGetHash(tx), 32);
-	if (CBDatabaseReadValue(storage->txHashToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	memcpy(keyArr, CBTransactionGetHash(tx), 32);
+	if (CBDatabaseReadValue(storage->txHashToID, keyArr, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not get a transaction ID for adding to a branch.");
 		return false;
 	}
-	uint64_t txID = CBArrayToInt64(CB_DATA_ARRAY, 0);
+	uint64_t txID = CBArrayToInt64(data, 0);
 	// Get the next order num
 	uint8_t * nextOrderNumData = storage->database->current.extraData + CB_ACCOUNTER_DETAILS_BRANCH_SECTION_NEXT_ORDER_NUM + branch*8;
 	// Increment the next order
 	CBInt64ToArrayBigEndian(storage->database->current.extraData, CB_ACCOUNTER_DETAILS_BRANCH_SECTION_NEXT_ORDER_NUM + branch*8, CBArrayToInt64BigEndian(nextOrderNumData, 0) + 1);
 	// Get the timestamp of the transaction
 	uint8_t timestamp[8];
-	CBInt64ToArray(CB_KEY_ARRAY, 0, txID);
-	if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, timestamp, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
+	CBInt64ToArray(keyArr, 0, txID);
+	if (CBDatabaseReadValue(storage->txDetails, keyArr, timestamp, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transactions timestamp for moving a branchless transaction into a branch.");
 		return false;
 	}
+	// Record transaction as not being unconfirmed
+	CBDatabaseWriteValueSubSection(storage->txDetails, keyArr, (uint8_t []){false}, 1, CB_TX_DETAILS_IS_UNCONF);
 	// Add branch transaction details
-	CB_KEY_ARRAY[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionID;
-	CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_TX_DETAILS_TX_ID, txID);
-	memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, nextOrderNumData, 8);
-	CBInt32ToArrayBigEndian(CB_DATA_ARRAY, CB_BRANCH_TX_DETAILS_HEIGHT, blockHeight);
-	CBDatabaseWriteValue(storage->branchSectionTxDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 12);
+	keyArr[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionID;
+	CBInt64ToArray(keyArr, CB_BRANCH_TX_DETAILS_TX_ID, txID);
+	memcpy(keyArr + CB_BRANCH_TX_DETAILS_ORDER_NUM, nextOrderNumData, 8);
+	CBInt32ToArrayBigEndian(data, CB_BRANCH_TX_DETAILS_HEIGHT, blockHeight);
+	CBDatabaseWriteValue(storage->branchSectionTxDetails, keyArr, data, 4);
 	// Add branch, height and ID entry.
-	CB_KEY_ARRAY[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionID;
-	CBInt32ToArrayBigEndian(CB_KEY_ARRAY, CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, blockHeight);
-	CBInt64ToArray(CB_KEY_ARRAY, CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, txID);
-	memcpy(CB_KEY_ARRAY + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, nextOrderNumData, 8);
+	keyArr[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionID;
+	CBInt32ToArrayBigEndian(keyArr, CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, blockHeight);
+	CBInt64ToArray(keyArr, CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, txID);
+	memcpy(keyArr + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, nextOrderNumData, 8);
 	// Write the txBranchSectionHeightAndID entry
-	CBDatabaseWriteValue(storage->txBranchSectionHeightAndID, CB_KEY_ARRAY, NULL, 0);
+	CBDatabaseWriteValue(storage->txBranchSectionHeightAndID, keyArr, NULL, 0);
 	// Loop through transaction accounts
 	uint8_t txAccountMin[16];
 	uint8_t txAccountMax[16];
@@ -373,7 +382,8 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 	}
 	for (;;) {
 		// Get the transaction account key
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[16];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Get account ID
 		uint64_t accountID = CBArrayToInt64(key, CB_TX_ACCOUNTS_ACCOUNT_ID);
 		// Get the transaction value
@@ -394,24 +404,24 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 		CBAccounterGetLastAccountBranchSectionBalance(storage, accountID, branchSectionID, UINT64_MAX, &balance);
 		balance += value;
 		// Change the branch account time transaction entry, for the new branch.
-		CB_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = CB_NO_BRANCH;
-		CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestamp, 8);
-		memset(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 0, 8);
-		CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
+		keyArr[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = CB_NO_BRANCH;
+		CBInt64ToArray(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
+		memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestamp, 8);
+		memset(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 0, 8);
+		CBInt64ToArray(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
 		// Make new key
-		CB_NEW_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionID;
-		CBInt64ToArray(CB_NEW_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
-		memcpy(CB_NEW_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestamp, 8);
-		memcpy(CB_NEW_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, nextOrderNumData, 8);
-		CBInt64ToArray(CB_NEW_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
-		if (! CBDatabaseChangeKey(storage->branchSectionAccountTimeTx, CB_KEY_ARRAY, CB_NEW_KEY_ARRAY, false)){
+		newKey[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionID;
+		CBInt64ToArray(newKey, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
+		memcpy(newKey + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestamp, 8);
+		memcpy(newKey + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, nextOrderNumData, 8);
+		CBInt64ToArray(newKey, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
+		if (! CBDatabaseChangeKey(storage->branchSectionAccountTimeTx, keyArr, newKey, false)){
 			CBLogError("Could not change key for the branch account time transaction entry for a transaction entering a branch.");
 			return false;
 		}
 		// Now write balance
-		CBInt64ToArray(CB_DATA_ARRAY, 0, balance);
-		CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, CB_NEW_KEY_ARRAY, CB_DATA_ARRAY, 8);
+		CBInt64ToArray(data, 0, balance);
+		CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, newKey, data, 8);
 		// Iterate if possible
 		CBIndexFindStatus status = CBDatabaseRangeIteratorNext(&it);
 		if (status == CB_DATABASE_INDEX_ERROR) {
@@ -427,10 +437,11 @@ bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * vtx, uint
 }
 bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, uint8_t branch, uint32_t blockHeight, CBAssociativeArray * txInfo){
 	uint8_t branchSectionID = CBAccounterGetLastBranchSectionID(self, branch);
+	uint8_t keyArr[36], data[8];
 	// Make the output hash and index to ID key
-	memcpy(CB_KEY_ARRAY + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBByteArrayGetData(prevOut->hash), 32);
-	CBInt32ToArray(CB_KEY_ARRAY, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, prevOut->index);
-	CBIndexFindStatus stat = CBDatabaseReadValue(self->outputHashAndIndexToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false);
+	memcpy(keyArr + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBByteArrayGetData(prevOut->hash), 32);
+	CBInt32ToArray(keyArr, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, prevOut->index);
+	CBIndexFindStatus stat = CBDatabaseReadValue(self->outputHashAndIndexToID, keyArr, data, 8, 0, false);
 	if (stat == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not read the ID of an output reference.");
 		return false;
@@ -441,8 +452,8 @@ bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, 
 	// For each account that owns the output remove or add from/to the unspent outputs.
 	uint8_t minOutputAccountKey[16];
 	uint8_t maxOutputAccountKey[16];
-	memcpy(minOutputAccountKey + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
-	memcpy(maxOutputAccountKey + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+	memcpy(minOutputAccountKey + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
+	memcpy(maxOutputAccountKey + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
 	memset(minOutputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0, 8);
 	memset(maxOutputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0xFF, 8);
 	CBDatabaseRangeIterator it = {minOutputAccountKey, maxOutputAccountKey, self->outputAccounts};
@@ -451,28 +462,29 @@ bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, 
 		return false;
 	}
 	uint8_t outputIDBuf[8];
-	memcpy(outputIDBuf, CB_DATA_ARRAY, 8);
+	memcpy(outputIDBuf, data, 8);
 	for (;;) {
 		// Get the ouput account key
-		uint8_t * outputAccountKey = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t outputAccountKey[16];
+		CBDatabaseRangeIteratorGetKey(&it, outputAccountKey);
 		// Create the account output key
-		CB_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionID;
-		memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, outputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-		CBInt32ToArrayBigEndian(CB_KEY_ARRAY, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - blockHeight);
-		memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, outputIDBuf, 8);
+		keyArr[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionID;
+		memcpy(keyArr + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, outputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+		CBInt32ToArrayBigEndian(keyArr, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - blockHeight);
+		memcpy(keyArr + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, outputIDBuf, 8);
 		// Write output as spent.
-		CBDatabaseWriteValue(self->branchSectionAccountOutputs, CB_KEY_ARRAY, (uint8_t []){false}, 1);
+		CBDatabaseWriteValue(self->branchSectionAccountOutputs, keyArr, (uint8_t []){false}, 1);
 		// Add txInfo if not NULL
 		if (txInfo){
 			// Add the account outflow information
 			// Get the output value
-			memcpy(CB_KEY_ARRAY, outputIDBuf, 8);
-			if (CBDatabaseReadValue(self->outputDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, CB_OUTPUT_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
+			memcpy(keyArr, outputIDBuf, 8);
+			if (CBDatabaseReadValue(self->outputDetails, keyArr, data, 8, CB_OUTPUT_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Could not read the value of an output.");
 				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
-			uint64_t value = CBArrayToInt64(CB_DATA_ARRAY, 0);
+			uint64_t value = CBArrayToInt64(data, 0);
 			// First look to see if the accountID exists in the transaction flow information
 			uint64_t accountID = CBArrayToInt64(outputAccountKey, CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID);
 			CBFindResult res = CBAssociativeArrayFind(txInfo, &accountID);
@@ -524,6 +536,7 @@ bool CBAccounterDeleteBranch(CBDepObject self, uint8_t branch){
 	// Delete last section data.
 	CBAccounterStorage * storage = self.ptr;
 	uint8_t branchSectionID = CBAccounterGetLastBranchSectionID(storage, branch);
+	uint8_t keyArr[8];
 	// Loop through transactions
 	uint8_t txBranchSectionHeightAndIDMin[21];
 	uint8_t txBranchSectionHeightAndIDMax[21];
@@ -539,12 +552,13 @@ bool CBAccounterDeleteBranch(CBDepObject self, uint8_t branch){
 	}
 	if (res == CB_DATABASE_INDEX_FOUND) for(;;) {
 		// Get the key for the tx branch height and ID
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[21];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Remove the tx from the branch
-		memcpy(CB_KEY_ARRAY, key + CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, 8);
+		memcpy(keyArr, key + CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, 8);
 		// Get the transaction hash
 		uint8_t txHash[32];
-		if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
+		if (CBDatabaseReadValue(storage->txDetails, keyArr, txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not get a transaction hash details.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
@@ -553,7 +567,7 @@ bool CBAccounterDeleteBranch(CBDepObject self, uint8_t branch){
 		uint8_t heightData[4];
 		memcpy(orderNumData, key + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, 8);
 		memcpy(heightData, key + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, 4);
-		if (! CBAccounterRemoveTransactionFromBranch(storage, CBArrayToInt64(CB_KEY_ARRAY, 0), txHash, branch, orderNumData, heightData)) {
+		if (! CBAccounterRemoveTransactionFromBranch(storage, CBArrayToInt64(keyArr, 0), txHash, branch, orderNumData, heightData)) {
 			CBLogError("Could not remove a transaction from a branch.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
@@ -579,6 +593,7 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 	CBTransaction * tx = vtx;
 	CBTransactionAccountDetailList ** curDetails = details;
 	uint8_t branchSectionID = CBAccounterGetLastBranchSectionID(storage, branch);
+	uint8_t keyArr[33], data[64];
 	// Create transaction flow information array.
 	CBAssociativeArray txInfo;
 	CBInitAssociativeArray(&txInfo, CBCompareUInt32, NULL, free);
@@ -629,26 +644,26 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 				// Doesn't exist, get the next ID
 				outputID = storage->nextOutputRefID;
 				// Save the output details
-				CBInt64ToArray(CB_KEY_ARRAY, 0, outputID);
-				CBInt64ToArray(CB_DATA_ARRAY, CB_OUTPUT_DETAILS_VALUE, tx->outputs[x]->value);
-				memcpy(CB_DATA_ARRAY + CB_OUTPUT_DETAILS_TX_HASH, CBTransactionGetHash(tx), 32);
-				CBInt32ToArray(CB_DATA_ARRAY, CB_OUTPUT_DETAILS_INDEX, x);
-				memcpy(CB_DATA_ARRAY + CB_OUTPUT_DETAILS_ID_HASH, hash, 20);
-				CBDatabaseWriteValue(storage->outputDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 64);
+				CBInt64ToArray(keyArr, 0, outputID);
+				CBInt64ToArray(data, CB_OUTPUT_DETAILS_VALUE, tx->outputs[x]->value);
+				memcpy(data + CB_OUTPUT_DETAILS_TX_HASH, CBTransactionGetHash(tx), 32);
+				CBInt32ToArray(data, CB_OUTPUT_DETAILS_INDEX, x);
+				memcpy(data + CB_OUTPUT_DETAILS_ID_HASH, hash, 20);
+				CBDatabaseWriteValue(storage->outputDetails, keyArr, data, 64);
 				// Save the output hash and index to ID entry
-				CBInt64ToArray(CB_DATA_ARRAY, 0, outputID);
-				CBDatabaseWriteValue(storage->outputHashAndIndexToID, outputHashAndIndexToIDKey, CB_DATA_ARRAY, 8);
+				CBInt64ToArray(data, 0, outputID);
+				CBDatabaseWriteValue(storage->outputHashAndIndexToID, outputHashAndIndexToIDKey, data, 8);
 				// Increment the next output reference ID and save it.
 				storage->nextOutputRefID++;
 				CBInt64ToArray(storage->database->current.extraData, CB_ACCOUNTER_DETAILS_OUTPUT_ID, storage->nextOutputRefID);
 			}else{
 				// Get the ID of this output
-				if (CBDatabaseReadValue(storage->outputHashAndIndexToID, outputHashAndIndexToIDKey, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+				if (CBDatabaseReadValue(storage->outputHashAndIndexToID, outputHashAndIndexToIDKey, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 					CBLogError("Could not read the output hash and index to ID entry.");
 					CBFreeDatabaseRangeIterator(&it);
 					return CB_ERROR;
 				}
-				outputID = CBArrayToInt64(CB_DATA_ARRAY, 0);
+				outputID = CBArrayToInt64(data, 0);
 			}
 			// Now loop through accounts. Set outputID to the output accounts key and the outputId and branch/height to the account outputs key so that we don't keep doing it.
 			uint8_t outputAccountsKey[16];
@@ -659,7 +674,8 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 			CBInt64ToArray(accountOutputsKey, CB_ACCOUNT_OUTPUTS_OUTPUT_ID, outputID);
 			for (;;) {
 				// Get accountID
-				uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+				uint8_t key[28];
+				CBDatabaseRangeIteratorGetKey(&it, key);
 				uint64_t accountID = CBArrayToInt64(key, CB_WATCHED_HASHES_ACCOUNT_ID);
 				// Detemine if the output account details exist alredy or not.
 				CBInt64ToArray(outputAccountsKey, CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, accountID);
@@ -713,10 +729,10 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 	CBPosition pos;
 	if (CBAssociativeArrayGetFirst(&txInfo, &pos)){
 		uint64_t txID;
-		memcpy(CB_KEY_ARRAY, CBTransactionGetHash(tx), 32);
+		memcpy(keyArr, CBTransactionGetHash(tx), 32);
 		// Determine if the transaction exists already.
 		uint32_t len;
-		if (! CBDatabaseGetLength(storage->txHashToID, CB_KEY_ARRAY, &len)) {
+		if (! CBDatabaseGetLength(storage->txHashToID, keyArr, &len)) {
 			CBLogError("Could not get length of txHashToID to see if transaction extists.");
 			return CB_ERROR;
 		}
@@ -724,38 +740,42 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 			// It doesn't exist, get the next ID.
 			txID = storage->nextTxID;
 			// Create the transaction hash to ID entry
-			CBInt64ToArray(CB_DATA_ARRAY, 0, txID);
-			CBDatabaseWriteValue(storage->txHashToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
+			CBInt64ToArray(data, 0, txID);
+			CBDatabaseWriteValue(storage->txHashToID, keyArr, data, 8);
 			// Create the transaction details. Copy the txID from CB_DATA_ARRAY.
-			memcpy(CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
-			CB_DATA_ARRAY[CB_TX_DETAILS_BRANCH_INSTANCES] = 1;
-			memcpy(CB_DATA_ARRAY + CB_TX_DETAILS_HASH, CBTransactionGetHash(tx), 32);
-			CBInt64ToArrayBigEndian(CB_DATA_ARRAY, CB_TX_DETAILS_TIMESTAMP, time);
-			CBDatabaseWriteValue(storage->txDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 41);
+			memcpy(keyArr, data, 8);
+			data[CB_TX_DETAILS_BRANCH_INSTANCES] = 1;
+			memcpy(data + CB_TX_DETAILS_HASH, CBTransactionGetHash(tx), 32);
+			CBInt64ToArrayBigEndian(data, CB_TX_DETAILS_TIMESTAMP, time);
+			data[CB_TX_DETAILS_IS_UNCONF] = branch == CB_NO_BRANCH;
+			CBDatabaseWriteValue(storage->txDetails, keyArr, data, 42);
 			// Increment the next ID
 			storage->nextTxID++;
 			CBInt64ToArray(storage->database->current.extraData, CB_ACCOUNTER_DETAILS_TX_ID, storage->nextTxID);
 		}else{
 			// Obtain the transaction ID.
-			if (CBDatabaseReadValue(storage->txHashToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+			if (CBDatabaseReadValue(storage->txHashToID, keyArr, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Couldn't read a transaction ID.");
 				return CB_ERROR;
 			}
-			txID = CBArrayToInt64(CB_DATA_ARRAY, 0);
+			txID = CBArrayToInt64(data, 0);
 			// Increase the number of branches that own this transaction
-			CBInt64ToArray(CB_KEY_ARRAY, 0, txID);
-			if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 1, CB_TX_DETAILS_BRANCH_INSTANCES, false) != CB_DATABASE_INDEX_FOUND) {
+			CBInt64ToArray(keyArr, 0, txID);
+			if (CBDatabaseReadValue(storage->txDetails, keyArr, data, 1, CB_TX_DETAILS_BRANCH_INSTANCES, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Couldn't read the branch instance count for a transaction.");
 				return CB_ERROR;
 			}
-			CB_DATA_ARRAY[0]++;
-			CBDatabaseWriteValueSubSection(storage->txDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 1, CB_TX_DETAILS_BRANCH_INSTANCES);
+			data[0]++;
+			CBDatabaseWriteValueSubSection(storage->txDetails, keyArr, data, 1, CB_TX_DETAILS_BRANCH_INSTANCES);
 			// Get time
-			if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
+			if (CBDatabaseReadValue(storage->txDetails, keyArr, data, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Could not read a transaction's timestamp when getting a transaction time.");
 				return false;
 			}
-			time = CBArrayToInt64BigEndian(CB_DATA_ARRAY, 0);
+			time = CBArrayToInt64BigEndian(data, 0);
+			if (branch == CB_NO_BRANCH)
+				// Write as unconfirmed
+				CBDatabaseWriteValueSubSection(storage->txDetails, keyArr, (uint8_t []){true}, 1, CB_TX_DETAILS_IS_UNCONF);
 		}
 		uint8_t * nextOrderNumData;
 		if (branch != CB_NO_BRANCH) {
@@ -765,17 +785,17 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 			CBInt64ToArrayBigEndian(storage->database->current.extraData, CB_ACCOUNTER_DETAILS_BRANCH_SECTION_NEXT_ORDER_NUM + branch*8,  CBArrayToInt64BigEndian(nextOrderNumData, 0) + 1);
 			// Write the value
 			// Set the block height and timestamp for the branch and this transaction
-			CB_KEY_ARRAY[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionID;
-			CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_TX_DETAILS_TX_ID, txID);
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, nextOrderNumData, 8);
-			CBInt32ToArrayBigEndian(CB_DATA_ARRAY, CB_BRANCH_TX_DETAILS_HEIGHT, blockHeight);
-			CBDatabaseWriteValue(storage->branchSectionTxDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 12);
+			keyArr[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionID;
+			CBInt64ToArray(keyArr, CB_BRANCH_TX_DETAILS_TX_ID, txID);
+			memcpy(keyArr + CB_BRANCH_TX_DETAILS_ORDER_NUM, nextOrderNumData, 8);
+			CBInt32ToArrayBigEndian(data, CB_BRANCH_TX_DETAILS_HEIGHT, blockHeight);
+			CBDatabaseWriteValue(storage->branchSectionTxDetails, keyArr, data, 4);
 			// Create the branch and block height entry for the transaction
-			CB_KEY_ARRAY[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionID;
-			CBInt32ToArrayBigEndian(CB_KEY_ARRAY, CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, blockHeight);
-			memcpy(CB_KEY_ARRAY + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, nextOrderNumData, 8);
-			CBInt64ToArray(CB_KEY_ARRAY, CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, txID);
-			CBDatabaseWriteValue(storage->txBranchSectionHeightAndID, CB_KEY_ARRAY, NULL, 0);
+			keyArr[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionID;
+			CBInt32ToArrayBigEndian(keyArr, CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, blockHeight);
+			memcpy(keyArr + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, nextOrderNumData, 8);
+			CBInt64ToArray(keyArr, CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, txID);
+			CBDatabaseWriteValue(storage->txBranchSectionHeightAndID, keyArr, NULL, 0);
 		}
 		// Add txID to the txAccount and accountTxDetails keys in advance
 		uint8_t txAccountKey[16];
@@ -791,10 +811,12 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 		for (;;) {
 			// Get the transaction information for an account
 			CBTransactionAccountFlow * info = pos.node->elements[pos.index];
-			// Write details to the linked list
-			*curDetails = malloc(sizeof(**curDetails));
-			(*curDetails)->accountID = info->accountID;
-			(*curDetails)->next = NULL;
+			if (curDetails) {
+				// Write details to the linked list
+				*curDetails = malloc(sizeof(**curDetails));
+				(*curDetails)->accountID = info->accountID;
+				(*curDetails)->next = NULL;
+			}
 			// Add the account ID to the txAccount key
 			CBInt64ToArray(txAccountKey, CB_TX_ACCOUNTS_ACCOUNT_ID, info->accountID);
 			CBInt64ToArray(accountTxDetailsKey, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, info->accountID);
@@ -810,47 +832,50 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 				CBDatabaseWriteValue(storage->txAccounts, txAccountKey, NULL, 0);
 				// Set the value
 				valueInt = info->inAmount - info->outAmount;
-				CBInt64ToArray(CB_DATA_ARRAY, CB_ACCOUNT_TX_DETAILS_VALUE, CBAccounterInt64ToUInt64(valueInt));
+				CBInt64ToArray(data, CB_ACCOUNT_TX_DETAILS_VALUE, CBAccounterInt64ToUInt64(valueInt));
 				// Set the address.
 				if (valueInt > 0)
 					// Use inflow address
-					memcpy(CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR, info->inAddr, 20);
+					memcpy(data + CB_ACCOUNT_TX_DETAILS_ADDR, info->inAddr, 20);
 				else{
 					// Find a outflow address if there is one we can use.
 					if (! info->foundInAddr || ! info->inAddrIndexIsZero) {
-						// Try index 0.
-						if (CBTransactionOuputGetHash(tx->outputs[0], CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR))
+						// Try index 0, which should be another address.
+						if (CBTransactionOuputGetHash(tx->outputs[0], data + CB_ACCOUNT_TX_DETAILS_ADDR))
 							// The output is not supported, use zero to represent this.
-							memset(CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
+							memset(data + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
 					}else{
-						// Else we have found a inflow address and it is at the zero index
+						// Else we have found a inflow address of ours and it is at the zero index
 						if (tx->outputNum == 1)
-							// No other outputs, must be wasting money to miners.
-							memset(CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
-						// Try index 1
-						else if (CBTransactionOuputGetHash(tx->outputs[1], CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR))
-							memset(CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
+							// No other outputs, must be wasting money to miners, or transferring money to ourself.
+							memset(data + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
+						// Try index 1 for another address
+						else if (CBTransactionOuputGetHash(tx->outputs[1], data+ CB_ACCOUNT_TX_DETAILS_ADDR))
+							memset(data + CB_ACCOUNT_TX_DETAILS_ADDR, 0, 20);
 					}
 				}
 				// Now save the account's transaction details
-				CBDatabaseWriteValue(storage->accountTxDetails, accountTxDetailsKey, CB_DATA_ARRAY, 28);
-				// Set the address in the account transaction details list.
-				memcpy((*curDetails)->accountTxDetails.addrHash, CB_DATA_ARRAY + CB_ACCOUNT_TX_DETAILS_ADDR, 20);
+				CBDatabaseWriteValue(storage->accountTxDetails, accountTxDetailsKey, data, 28);
+				if (curDetails)
+					// Set the address in the account transaction details list.
+					memcpy((*curDetails)->accountTxDetails.addrHash, data + CB_ACCOUNT_TX_DETAILS_ADDR, 20);
 			}else{
 				// Get the value of the transaction
 				if (! CBAccounterGetTxAccountValue(storage, txID, info->accountID, &valueInt)){
 					CBLogError("Could not obtain the value of a transaction.");
 					CBFoundTransactionReturnError
 				}
-				// Get the address
-				if (CBDatabaseReadValue(storage->accountTxDetails, accountTxDetailsKey, (*curDetails)->accountTxDetails.addrHash, 20, CB_ACCOUNT_TX_DETAILS_ADDR, false) != CB_DATABASE_INDEX_FOUND) {
+				// Get the address for the details
+				if (curDetails && CBDatabaseReadValue(storage->accountTxDetails, accountTxDetailsKey, (*curDetails)->accountTxDetails.addrHash, 20, CB_ACCOUNT_TX_DETAILS_ADDR, false) != CB_DATABASE_INDEX_FOUND) {
 					CBLogError("Could not read the address of a transaction for an account.");
 					CBFoundTransactionReturnError
 				}
 			}
-			(*curDetails)->accountTxDetails.amount = valueInt;
-			// Finished adding data for the account.
-			curDetails = &(*curDetails)->next;
+			if (curDetails) {
+				(*curDetails)->accountTxDetails.amount = valueInt;
+				// Finished adding data for the account.
+				curDetails = &(*curDetails)->next;
+			}
 			// Write the balance
 			if (branch == CB_NO_BRANCH) {
 				// Adust unconf balance
@@ -859,7 +884,7 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 					CBFoundTransactionReturnError
 				}
 				// Set a zero order num for the key array for the branch account time transaction entry.
-				memset(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 0, 8);
+				memset(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 0, 8);
 				// Do not set cumulative balance. Not needed.
 			}else{
 				// Else write the cumulative balance for the transaction and get the next order number
@@ -870,22 +895,22 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 					CBFoundTransactionReturnError
 				}
 				// Set the order num into the key array for the branch account time transaction entry.
-				memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, nextOrderNumData, 8);
+				memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, nextOrderNumData, 8);
 				// Set balance into data array
 				balance += valueInt;
-				CBInt64ToArray(CB_DATA_ARRAY, 0, balance);
+				CBInt64ToArray(data, 0, balance);
 			}
 			// Create the branch account time transaction entry.
-			CB_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionID;
-			CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, info->accountID);
-			CBInt64ToArrayBigEndian(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, time);
-			CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
-			CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
+			keyArr[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionID;
+			CBInt64ToArray(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, info->accountID);
+			CBInt64ToArrayBigEndian(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, time);
+			CBInt64ToArray(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
+			CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, keyArr, data, 8);
 			// Adjust the balances of any future transactions already stored
-			CBInt64ToArrayBigEndian(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, CBArrayToInt64BigEndian(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM) + 1);
+			CBInt64ToArrayBigEndian(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, CBArrayToInt64BigEndian(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM) + 1);
 			uint8_t high[16];
 			memset(high, 0xFF, 16);
-			if (!CBAccounterAdjustBalances(storage, CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, high, branchSectionID, info->accountID, valueInt, NULL)) {
+			if (!CBAccounterAdjustBalances(storage, keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, high, branchSectionID, info->accountID, valueInt, NULL)) {
 				CBLogError("Could not adjust the balances of transactions after one inserted.");
 				return false;
 			}
@@ -901,14 +926,15 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 bool CBAccounterGetBranchAccountBalance(CBDepObject self, uint8_t branch, uint64_t accountID, int64_t * balance){
 	CBAccounterStorage * storage = self.ptr;
 	if (branch == CB_NO_BRANCH) {
-		CBInt64ToArray(CB_KEY_ARRAY, 0, accountID);
-		CBIndexFindStatus res = CBDatabaseReadValue(storage->accountUnconfBalance, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false);
+		uint8_t key[8], data[8];
+		CBInt64ToArray(key, 0, accountID);
+		CBIndexFindStatus res = CBDatabaseReadValue(storage->accountUnconfBalance, key, data, 8, 0, false);
 		if (res == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was an error trying to get the balance of unconfirmed transactions.");
 			return false;
 		}
 		if (res == CB_DATABASE_INDEX_FOUND) {
-			uint64_t txBalanceRaw = CBArrayToInt64(CB_DATA_ARRAY, 0);
+			uint64_t txBalanceRaw = CBArrayToInt64(data, 0);
 			*balance = txBalanceRaw & 0x7FFFFFFFFFFFFFFF;
 			if (! (txBalanceRaw & 0x8000000000000000))
 				*balance = -*balance;
@@ -949,38 +975,40 @@ CBErrBool CBAccounterGetNextTransaction(CBDepObject cursoru, CBTransactionDetail
 		cursor->started = false;
 	}
 	// Get the key
-	uint8_t * key = CBDatabaseRangeIteratorGetKey(&cursor->it);
+	uint8_t key[33];
+	CBDatabaseRangeIteratorGetKey(&cursor->it, key);
 	// Get the transaction hash
-	memcpy(CB_KEY_ARRAY, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
-	if (CBDatabaseReadValue(cursor->storage->txDetails, CB_KEY_ARRAY, details->txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t keyArr[17], data[8];
+	memcpy(keyArr, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
+	if (CBDatabaseReadValue(cursor->storage->txDetails, keyArr, details->txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction's hash.");
 		return CB_ERROR;
 	}
 	// Get the address and value
-	memcpy(CB_KEY_ARRAY + CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, txCursor->branchSectionAccountTimeTxMin + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, 8);
-	memcpy(CB_KEY_ARRAY + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
-	if (CBDatabaseReadValue(cursor->storage->accountTxDetails, CB_KEY_ARRAY, details->accountTxDetails.addrHash, 20, CB_ACCOUNT_TX_DETAILS_ADDR, false) != CB_DATABASE_INDEX_FOUND) {
+	memcpy(keyArr + CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, txCursor->branchSectionAccountTimeTxMin + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, 8);
+	memcpy(keyArr + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
+	if (CBDatabaseReadValue(cursor->storage->accountTxDetails, keyArr, details->accountTxDetails.addrHash, 20, CB_ACCOUNT_TX_DETAILS_ADDR, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction's source/destination address.");
 		return CB_ERROR;
 	}
 	// ??? Here the read is being done on the same key twice. Cache the index search result?
-	if (CBDatabaseReadValue(cursor->storage->accountTxDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(cursor->storage->accountTxDetails, keyArr, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction's value.");
 		return CB_ERROR;
 	}
-	CBAccounterUInt64ToInt64(CBArrayToInt64(CB_DATA_ARRAY, 0), &details->accountTxDetails.amount);
+	CBAccounterUInt64ToInt64(CBArrayToInt64(data, 0), &details->accountTxDetails.amount);
 	// Read height
 	if (key[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] == CB_NO_BRANCH)
 		details->height = 0;
 	else{
-		CB_KEY_ARRAY[CB_BRANCH_TX_DETAILS_BRANCH] = key[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH];
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_TX_ID, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, key + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 8);
-		if (CBDatabaseReadValue(cursor->storage->branchSectionTxDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_BRANCH_TX_DETAILS_HEIGHT, false) != CB_DATABASE_INDEX_FOUND) {
+		keyArr[CB_BRANCH_TX_DETAILS_BRANCH] = key[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH];
+		memcpy(keyArr + CB_BRANCH_TX_DETAILS_ORDER_NUM, key + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 8);
+		memcpy(keyArr + CB_BRANCH_TX_DETAILS_TX_ID, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
+		if (CBDatabaseReadValue(cursor->storage->branchSectionTxDetails, keyArr, data, 4, CB_BRANCH_TX_DETAILS_HEIGHT, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not read the height of a transaction in a branch");
 			return false;
 		}
-		details->height = CBArrayToInt32BigEndian(CB_DATA_ARRAY, 0);
+		details->height = CBArrayToInt32BigEndian(data, 0);
 	}
 	// Add the timestamp
 	details->timestamp = CBArrayToInt64BigEndian(key, CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP);
@@ -1006,7 +1034,8 @@ CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursoru, CBUnspentOutputDe
 		}
 		if (res == CB_DATABASE_INDEX_FOUND){
 			// Get the key
-			uint8_t * key = CBDatabaseRangeIteratorGetKey(&cursor->it);
+			uint8_t * key = malloc(21);
+			CBDatabaseRangeIteratorGetKey(&cursor->it, key);
 			// Ensure unspent
 			bool unspent = true;
 			// See if we have figured this as spent already.
@@ -1015,20 +1044,22 @@ CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursoru, CBUnspentOutputDe
 			if (res.found)
 				unspent = false;
 			// Read the spent status
-			if (unspent && ! CBDatabaseRangeIteratorRead(&cursor->it, CB_DATA_ARRAY, 1, 0)){
+			uint8_t spendStatus;
+			if (unspent && ! CBDatabaseRangeIteratorRead(&cursor->it, &spendStatus, 1, 0)){
 				CBLogError("There was an error trying to read if an unspent output is active or not for an account.");
 				return CB_ERROR;
 			}
-			if (unspent && ! CB_DATA_ARRAY[0])
+			if (unspent && ! spendStatus)
 				unspent = false;
 			if (unspent && cursor->branchSections[cursor->currentSection] != CB_NO_BRANCH) {
 				// Check that this output is not spent in a branchless transaction.
 				uint32_t len;
-				CB_KEY_ARRAY[0] = CB_NO_BRANCH;
-				memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, 8);
-				memset(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4); // Block height is made zero on branchless therefore UINT32_MAX minus zero gives 0xFFFFFFFF
-				memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, key + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, 8);
-				if (! CBDatabaseGetLength(cursor->storage->branchSectionAccountOutputs, CB_KEY_ARRAY, &len)) {
+				uint8_t keyArr[21];
+				keyArr[0] = CB_NO_BRANCH;
+				memcpy(keyArr + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, 8);
+				memset(keyArr + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4); // Block height is made zero on branchless therefore UINT32_MAX minus zero gives 0xFFFFFFFF
+				memcpy(keyArr + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, key + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, 8);
+				if (! CBDatabaseGetLength(cursor->storage->branchSectionAccountOutputs, keyArr, &len)) {
 					CBLogError("Couldn't get the branchless spent status for an output.");
 					return CB_ERROR;
 				}
@@ -1043,14 +1074,17 @@ CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursoru, CBUnspentOutputDe
 				return CBAccounterGetNextUnspentOutput(cursoru, details);
 			}
 			// Unspent. Get output details
-			if (CBDatabaseReadValue(cursor->storage->outputDetails, outputKey, CB_DATA_ARRAY, 64, 0, false)!= CB_DATABASE_INDEX_FOUND) {
+			uint8_t data[64];
+			if (CBDatabaseReadValue(cursor->storage->outputDetails, outputKey, data, 64, 0, false)!= CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Couldn't get the details for an output.");
 				return CB_ERROR;
 			}
-			details->value = CBArrayToInt64(CB_DATA_ARRAY, CB_OUTPUT_DETAILS_VALUE);
-			memcpy(details->txHash, CB_DATA_ARRAY + CB_OUTPUT_DETAILS_TX_HASH, 32);
-			details->index = CBArrayToInt32(CB_DATA_ARRAY, CB_OUTPUT_DETAILS_INDEX);
-			memcpy(details->watchedHash, CB_DATA_ARRAY + CB_OUTPUT_DETAILS_ID_HASH, 20);
+			// Now free the key
+			free(key);
+			details->value = CBArrayToInt64(data, CB_OUTPUT_DETAILS_VALUE);
+			memcpy(details->txHash, data + CB_OUTPUT_DETAILS_TX_HASH, 32);
+			details->index = CBArrayToInt32(data, CB_OUTPUT_DETAILS_INDEX);
+			memcpy(details->watchedHash, data + CB_OUTPUT_DETAILS_ID_HASH, 20);
 			return CB_TRUE;
 		}
 		if (cursor->currentSection == CB_MAX_BRANCH_CACHE - uoCursor->numSections)
@@ -1078,11 +1112,12 @@ bool CBAccounterGetLastAccountBranchSectionBalance(CBAccounterStorage * storage,
 			return false;
 		}
 		if (res == CB_DATABASE_INDEX_FOUND){
-			if (! CBDatabaseRangeIteratorRead(&lastTxIt, CB_DATA_ARRAY, 8, 0)) {
+			uint8_t data[8];
+			if (! CBDatabaseRangeIteratorRead(&lastTxIt, data, 8, 0)) {
 				CBLogError("Could not read the transaction cumulative balance for an account.");
 				return false;
 			}
-			*balance = CBArrayToInt64(CB_DATA_ARRAY, 0);
+			*balance = CBArrayToInt64(data, 0);
 			return true;
 		}
 		CBFreeDatabaseRangeIterator(&lastTxIt);
@@ -1103,14 +1138,15 @@ uint8_t CBAccounterGetParentBranchSection(CBAccounterStorage * self, uint8_t bra
 bool CBAccounterGetTransactionTime(CBDepObject self, uint8_t * txHash, uint64_t * time){
 	CBAccounterStorage * storage = self.ptr;
 	// Get the transaction ID
-	memcpy(CB_KEY_ARRAY, txHash, 32);
-	if (CBDatabaseReadValue(storage->txHashToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[32], data[8];
+	memcpy(key, txHash, 32);
+	if (CBDatabaseReadValue(storage->txHashToID, key, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction ID for a hash when getting a transaction time.");
 		return false;
 	}
 	// Read timestamp
 	uint8_t timestamp[8];
-	if (CBDatabaseReadValue(storage->txDetails, CB_DATA_ARRAY, timestamp, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storage->txDetails, data, timestamp, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction's timestamp when getting a transaction time.");
 		return false;
 	}
@@ -1118,13 +1154,14 @@ bool CBAccounterGetTransactionTime(CBDepObject self, uint8_t * txHash, uint64_t 
 	return true;
 }
 bool CBAccounterGetTxAccountValue(CBAccounterStorage * self, uint64_t txID, uint64_t accountID, int64_t * value){
-	CBInt64ToArray(CB_KEY_ARRAY, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountID);
-	CBInt64ToArray(CB_KEY_ARRAY, CB_ACCOUNT_TX_DETAILS_TX_ID, txID);
-	if (CBDatabaseReadValue(self->accountTxDetails, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[16], data[8];
+	CBInt64ToArray(key, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountID);
+	CBInt64ToArray(key, CB_ACCOUNT_TX_DETAILS_TX_ID, txID);
+	if (CBDatabaseReadValue(self->accountTxDetails, key, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read an accounts transaction value.");
 		return false;
 	}
-	CBAccounterUInt64ToInt64(CBArrayToInt64(CB_DATA_ARRAY, 0), value);
+	CBAccounterUInt64ToInt64(CBArrayToInt64(data, 0), value);
 	return true;
 }
 uint64_t CBAccounterInt64ToUInt64(int64_t value){
@@ -1132,22 +1169,22 @@ uint64_t CBAccounterInt64ToUInt64(int64_t value){
 }
 CBErrBool CBAccounterIsOurs(CBDepObject uself, uint8_t * txHash){
 	CBAccounterStorage * self = uself.ptr;
-	memcpy(CB_KEY_ARRAY, txHash, 32);
 	uint32_t length;
-	if (!CBDatabaseGetLength(self->txHashToID, CB_KEY_ARRAY, &length))
+	if (!CBDatabaseGetLength(self->txHashToID, txHash, &length))
 		return CB_ERROR;
 	return (length == CB_DOESNT_EXIST) ? CB_FALSE : CB_TRUE;
 }
-bool CBAccounterLostBranchlessTransaction(CBDepObject self, void * vtx){
+bool CBAccounterLostUnconfirmedTransaction(CBDepObject self, void * vtx){
 	CBAccounterStorage * storage = self.ptr;
 	CBTransaction * tx = vtx;
+	uint8_t keyArr[36], data[8], txID[8];
 	// Lost a transaction not on any branch.
 	// Loop through inputs looking for spent outputs that would therefore become unspent outputs.
 	for (uint32_t x = 0; x < tx->inputNum; x++) {
 		// Get the output ID
-		memcpy(CB_KEY_ARRAY + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), 32);
-		CBInt32ToArray(CB_KEY_ARRAY, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, tx->inputs[x]->prevOut.index);
-		CBIndexFindStatus stat = CBDatabaseReadValue(storage->outputHashAndIndexToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false);
+		memcpy(keyArr + CB_OUTPUT_HASH_AND_INDEX_TO_ID_HASH, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), 32);
+		CBInt32ToArray(keyArr, CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, tx->inputs[x]->prevOut.index);
+		CBIndexFindStatus stat = CBDatabaseReadValue(storage->outputHashAndIndexToID, keyArr, data, 8, 0, false);
 		if (stat == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("Could not read the ID of an output reference.");
 			return false;
@@ -1155,30 +1192,51 @@ bool CBAccounterLostBranchlessTransaction(CBDepObject self, void * vtx){
 		if (stat == CB_DATABASE_INDEX_NOT_FOUND)
 			// The output reference does not exist, so we can end here and continue to the next input.
 			continue;
-		// Remove output spent status for all accounts
+		// Determine if the transaction is unconfirmed, if unconfirmed then we should change the spent status to unspent, otherwise we should remove the status.
+		// First get transaction ID
+		memcpy(keyArr, CBByteArrayGetData(tx->inputs[x]->prevOut.hash), 32);
+		stat = CBDatabaseReadValue(storage->txHashToID, keyArr, txID, 8, 0, false);
+		if (stat != CB_DATABASE_INDEX_FOUND) {
+			CBLogError("Could not find the ID of a transaction.");
+			return false;
+		}
+		uint8_t unconf;
+		// We have the tx ID, so determine if it is unconfirmed.
+		if (CBDatabaseReadValue(storage->txDetails, txID, &unconf, 1, CB_TX_DETAILS_IS_UNCONF, false) != CB_DATABASE_INDEX_FOUND){
+			CBLogError("Could not determine if a transaction appears as unconfirmed.");
+			return false;
+		}
+		// Loop through account outputs
 		uint8_t outputAccountsMin[21];
 		uint8_t outputAccountsMax[21];
-		memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
-		memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+		memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
+		memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, data, 8);
 		memset(outputAccountsMin + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0, 8);
 		memset(outputAccountsMax + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0xFF, 8);
-		CBDatabaseRangeIterator it = {outputAccountsMin, outputAccountsMax, storage->outputAccounts};
+		CBDatabaseRangeIterator it = (CBDatabaseRangeIterator){outputAccountsMin, outputAccountsMax, storage->outputAccounts};
 		if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not get the first account for an output when removing an output spent status from branchless.");
 			return false;
 		}
 		// Prepare account output status key with the branch, zero height and output ID.
-		CB_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = CB_NO_BRANCH;
-		memset(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4);
-		memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+		keyArr[CB_ACCOUNT_OUTPUTS_BRANCH] = CB_NO_BRANCH;
+		memset(keyArr + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4);
+		memcpy(keyArr + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, data, 8);
 		for (;;) {
 			// Add the account ID into the key
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, CBDatabaseRangeIteratorGetKey(&it) + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-			// Now delete
-			if (! CBDatabaseRemoveValue(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, false)) {
-				CBLogError("Could not remove a spent status for removing a branchless transaction.");
-				return false;
-			}
+			uint8_t key[16];
+			CBDatabaseRangeIteratorGetKey(&it, key);
+			memcpy(keyArr + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, key + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+			// Now delete or change to unspent
+			if (!unconf) {
+				// Delete
+				if (! CBDatabaseRemoveValue(storage->branchSectionAccountOutputs, keyArr, false)) {
+					CBLogError("Could not remove a spent status for removing a branchless transaction.");
+					return false;
+				}
+			}else
+				// Change to unspent
+				CBDatabaseWriteValue(storage->branchSectionAccountOutputs, keyArr, (uint8_t []){true}, 1);
 			// Iterate if possible
 			CBIndexFindStatus status = CBDatabaseRangeIteratorNext(&it);
 			if (status == CB_DATABASE_INDEX_ERROR) {
@@ -1193,15 +1251,15 @@ bool CBAccounterLostBranchlessTransaction(CBDepObject self, void * vtx){
 	}
 	// Remove branch details for the transaction and lower the number of branches owning the transaction by one. If no more ownership remove the transaction details.
 	// First get the transaction ID
-	memcpy(CB_KEY_ARRAY, CBTransactionGetHash(tx), 32);
-	if (CBDatabaseReadValue(storage->txHashToID, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	memcpy(keyArr, CBTransactionGetHash(tx), 32);
+	if (CBDatabaseReadValue(storage->txHashToID, keyArr, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction ID for a hash.");
 		return false;
 	}
 	// Get the transaction ID
-	uint64_t txID = CBArrayToInt64(CB_DATA_ARRAY, 0);
+	uint64_t txIDInt = CBArrayToInt64(data, 0);
 	// Remove the transaction from branchless
-	if (! CBAccounterRemoveTransactionFromBranch(storage, txID, CBTransactionGetHash(tx), CB_NO_BRANCH, NULL, NULL)) {
+	if (! CBAccounterRemoveTransactionFromBranch(storage, txIDInt, CBTransactionGetHash(tx), CB_NO_BRANCH, NULL, NULL)) {
 		CBLogError("Could not remove a transaction as branchless.");
 		return false;
 	}
@@ -1232,19 +1290,21 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		CBLogError("There was a problem finding the first account transaction details entry.");
 		return false;
 	}
+	uint8_t keyArr[33], keyArr2[16];
 	if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
 		// Get key
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[28];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Copy hash for writing to destination account
-		memcpy(CB_KEY_ARRAY + CB_ACCOUNT_WATCHED_HASHES_HASH, key + CB_ACCOUNT_WATCHED_HASHES_HASH, 20);
+		memcpy(keyArr + CB_ACCOUNT_WATCHED_HASHES_HASH, key + CB_ACCOUNT_WATCHED_HASHES_HASH, 20);
 		// Insert destination account ID
-		CBInt64ToArray(CB_KEY_ARRAY, CB_ACCOUNT_WATCHED_HASHES_ACCOUNT_ID, accountDest);
+		CBInt64ToArray(keyArr, CB_ACCOUNT_WATCHED_HASHES_ACCOUNT_ID, accountDest);
 		// Write entry
-		CBDatabaseWriteValue(storage->accountWatchedHashes, CB_KEY_ARRAY, NULL, 0);
+		CBDatabaseWriteValue(storage->accountWatchedHashes, keyArr, NULL, 0);
 		// Now do the same for watchedHashes
-		memcpy(CB_KEY_ARRAY + CB_WATCHED_HASHES_HASH, key + CB_ACCOUNT_WATCHED_HASHES_HASH, 20);
-		CBInt64ToArray(CB_KEY_ARRAY, CB_WATCHED_HASHES_ACCOUNT_ID, accountDest);
-		CBDatabaseWriteValue(storage->watchedHashes, CB_KEY_ARRAY, NULL, 0);
+		memcpy(keyArr + CB_WATCHED_HASHES_HASH, key + CB_ACCOUNT_WATCHED_HASHES_HASH, 20);
+		CBInt64ToArray(keyArr, CB_WATCHED_HASHES_ACCOUNT_ID, accountDest);
+		CBDatabaseWriteValue(storage->watchedHashes, keyArr, NULL, 0);
 		// Go to next first if possible. Make mininum same as key plus one
 		CBDatabaseRangeIteratorNextMinimum(&it);
 		status = CBDatabaseRangeIteratorFirst(&it);
@@ -1279,14 +1339,15 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 			return false;
 		}
 		// Get the key
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[16];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Copy transaction id for writing to destination account
-		memcpy(CB_KEY_ARRAY + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_ACCOUNT_TX_DETAILS_TX_ID, 8);
+		memcpy(keyArr + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_ACCOUNT_TX_DETAILS_TX_ID, 8);
 		// Copy destination account id
-		CBInt64ToArray(CB_KEY_ARRAY, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountDest);
+		CBInt64ToArray(keyArr, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountDest);
 		// See if transaction details for the destination account already exists
 		uint8_t destData[28];
-		CBIndexFindStatus status = CBDatabaseReadValue(storage->accountTxDetails, CB_KEY_ARRAY, destData, 28, 0, false);
+		CBIndexFindStatus status = CBDatabaseReadValue(storage->accountTxDetails, keyArr, destData, 28, 0, false);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was an error trying to determine if account transaction details exists.");
 			return CB_ERROR;
@@ -1304,18 +1365,18 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 			if (srcVal > destVal) {
 				memcpy(destData + CB_ACCOUNT_TX_DETAILS_ADDR, data + CB_ACCOUNT_TX_DETAILS_ADDR, 20);
 				// Write all data
-				CBDatabaseWriteValue(storage->accountTxDetails, CB_KEY_ARRAY, destData, 28);
+				CBDatabaseWriteValue(storage->accountTxDetails, keyArr, destData, 28);
 			}else if (srcVal != 0)
 				// Write value only
-				CBDatabaseWriteValueSubSection(storage->accountTxDetails, CB_KEY_ARRAY, destData, 8, CB_ACCOUNT_TX_DETAILS_VALUE);
+				CBDatabaseWriteValueSubSection(storage->accountTxDetails, keyArr, destData, 8, CB_ACCOUNT_TX_DETAILS_VALUE);
 		}else{
 			// Doesn't exist, simply move details over
 			// Write transaction details
-			CBDatabaseWriteValue(storage->accountTxDetails, CB_KEY_ARRAY, data, 28);
+			CBDatabaseWriteValue(storage->accountTxDetails, keyArr, data, 28);
 			// Write transaction account entry
-			memcpy(CB_KEY_ARRAY + CB_TX_ACCOUNTS_TX_ID, key + CB_ACCOUNT_TX_DETAILS_TX_ID, 8);
-			CBInt64ToArray(CB_KEY_ARRAY, CB_TX_ACCOUNTS_ACCOUNT_ID, accountDest);
-			CBDatabaseWriteValue(storage->txAccounts, CB_KEY_ARRAY, NULL, 0);
+			memcpy(keyArr + CB_TX_ACCOUNTS_TX_ID, key + CB_ACCOUNT_TX_DETAILS_TX_ID, 8);
+			CBInt64ToArray(keyArr, CB_TX_ACCOUNTS_ACCOUNT_ID, accountDest);
+			CBDatabaseWriteValue(storage->txAccounts, keyArr, NULL, 0);
 		}
 		// Go to next first if possible. Make mininum same as key plus one
 		CBDatabaseRangeIteratorNextMinimum(&it);
@@ -1368,20 +1429,21 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 			return false;
 		}
 		// Set last key as zero
-		memset(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, 0, 16);
+		memset(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, 0, 16);
 		if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
 			// Get the key
-			uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+			uint8_t key[33];
+			CBDatabaseRangeIteratorGetKey(&it, key);
 			// Adjust balances for everything between last and this key if addedBalance is not 0
-			if (!CBAccounterAdjustBalances(storage, CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, section, accountDest, addedBalance, &last)) {
+			if (!CBAccounterAdjustBalances(storage, keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, section, accountDest, addedBalance, &last)) {
 				CBLogError("Could not adjust the cumulative balanaces.");
 				return false;
 			}
-			// Adjust addedBalance by the value of the source account transaction details. Use CB_NEW_KEY_ARRAY to do so.
-			memcpy(CB_NEW_KEY_ARRAY + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
-			CBInt64ToArray(CB_NEW_KEY_ARRAY, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountSrc);
+			// Adjust addedBalance by the value of the source account transaction details.
+			memcpy(keyArr2 + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, 8);
+			CBInt64ToArray(keyArr2, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountSrc);
 			uint8_t data[8];
-			if (CBDatabaseReadValue(storage->accountTxDetails, CB_NEW_KEY_ARRAY, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
+			if (CBDatabaseReadValue(storage->accountTxDetails, keyArr2, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Couldn't read the value of a transaction for the source account.");
 				return false;
 			}
@@ -1391,14 +1453,14 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 			last += value;
 			CBInt64ToArray(data, 0, last);
 			// Copy everything from the key except the account ID
-			CB_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = section;
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, 24);
+			keyArr[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = section;
+			memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, 24);
 			// Set the destination account ID
-			CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, accountDest);
+			CBInt64ToArray(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, accountDest);
 			// Write data for destination account
-			CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, CB_KEY_ARRAY, data, 8);
+			CBDatabaseWriteValue(storage->branchSectionAccountTimeTx, keyArr, data, 8);
 			// Increase key by one since we do not want to adjust the value added. Do this with the ordernum
-			CBInt64ToArrayBigEndian(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, CBArrayToInt64BigEndian(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM) + 1);
+			CBInt64ToArrayBigEndian(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, CBArrayToInt64BigEndian(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM) + 1);
 			// Go to next first if possible. Make mininum same as key plus one
 			CBDatabaseRangeIteratorNextMinimum(&it);
 			CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
@@ -1414,7 +1476,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		// Adjust remaining balances.
 		uint8_t max[16];
 		memset(max, 0xFF, 16);
-		if (!CBAccounterAdjustBalances(storage, CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, max, section, accountDest, addedBalance, &last)) {
+		if (!CBAccounterAdjustBalances(storage, keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, max, section, accountDest, addedBalance, &last)) {
 			CBLogError("Could not adjust the remaining cumulative balanaces.");
 			return false;
 		}
@@ -1442,27 +1504,28 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 				return false;
 			}
 			// Get the key
-			uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+			uint8_t key[21];
+			CBDatabaseRangeIteratorGetKey(&it, key);
 			// Copy everything from the key except the account ID
-			CB_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = key[CB_ACCOUNT_OUTPUTS_BRANCH];
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, key + CB_ACCOUNT_OUTPUTS_HEIGHT, 12);
+			keyArr[CB_ACCOUNT_OUTPUTS_BRANCH] = key[CB_ACCOUNT_OUTPUTS_BRANCH];
+			memcpy(keyArr + CB_ACCOUNT_OUTPUTS_HEIGHT, key + CB_ACCOUNT_OUTPUTS_HEIGHT, 12);
 			// Set the destination account ID
-			CBInt64ToArray(CB_KEY_ARRAY, CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, accountDest);
+			CBInt64ToArray(keyArr, CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, accountDest);
 			// See if it exists already. If it is spent then do not write
 			uint8_t unspent;
-			CBIndexFindStatus status = CBDatabaseReadValue(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, &unspent, 1, 0, false);
+			CBIndexFindStatus status = CBDatabaseReadValue(storage->branchSectionAccountOutputs, keyArr, &unspent, 1, 0, false);
 			if (status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("Could not determine the spent status of an output for seeing if we should write from another account during a merge.");
 				return false;
 			}
 			if (status != CB_DATABASE_INDEX_FOUND || (unspent && !data))
 				// Write data for destination account
-				CBDatabaseWriteValue(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, &data, 1);
+				CBDatabaseWriteValue(storage->branchSectionAccountOutputs, keyArr, &data, 1);
 			if (status != CB_DATABASE_INDEX_FOUND) {
 				// The destination account will need the outputAccount entry
-				memcpy(CB_KEY_ARRAY + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, key + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, 8);
-				CBInt64ToArray(CB_KEY_ARRAY, CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, accountDest);
-				CBDatabaseWriteValue(storage->outputAccounts, CB_KEY_ARRAY, NULL, 0);
+				memcpy(keyArr + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, key + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, 8);
+				CBInt64ToArray(keyArr, CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, accountDest);
+				CBDatabaseWriteValue(storage->outputAccounts, keyArr, NULL, 0);
 			}
 			// Go to next first if possible. Make mininum same as key plus one
 			CBDatabaseRangeIteratorNextMinimum(&it);
@@ -1544,19 +1607,21 @@ bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, u
 		return false;
 	}
 	if (res == CB_DATABASE_INDEX_FOUND) for(;;) {
+		uint8_t keyArr[33], newKey[33];
 		// Get the key
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[21];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Get the transaction hash
 		uint8_t txHash[32];
-		memcpy(CB_KEY_ARRAY, key + CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, 8);
-		if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
+		memcpy(keyArr, key + CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, 8);
+		if (CBDatabaseReadValue(storage->txDetails, keyArr, txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not get the transaction hash.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		// Get the transaction timestamp
 		uint8_t timestamp[8];
-		if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, timestamp, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
+		if (CBDatabaseReadValue(storage->txDetails, keyArr, timestamp, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not get the transaction timestamp.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
@@ -1578,16 +1643,17 @@ bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, u
 		}
 		for (;;) {
 			// Get the key
-			uint8_t * txAccountKey = CBDatabaseRangeIteratorGetKey(&it2);
+			uint8_t txAccountKey[16];
+			CBDatabaseRangeIteratorGetKey(&it2, txAccountKey);
 			// Change the branchSectionAccountTimeTx
-			CB_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = parentLastSectionIndex;
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, txAccountKey + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, orderNum, 8);
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestamp, 8);
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txAccountKey + CB_TX_ACCOUNTS_TX_ID, 8);
-			CB_NEW_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionIndex;
-			memcpy(CB_NEW_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, 32);
-			if (! CBDatabaseChangeKey(storage->branchSectionAccountTimeTx, CB_KEY_ARRAY, CB_NEW_KEY_ARRAY, false)){
+			keyArr[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = parentLastSectionIndex;
+			memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, txAccountKey + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
+			memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, orderNum, 8);
+			memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestamp, 8);
+			memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txAccountKey + CB_TX_ACCOUNTS_TX_ID, 8);
+			newKey[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionIndex;
+			memcpy(newKey + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, 32);
+			if (! CBDatabaseChangeKey(storage->branchSectionAccountTimeTx, keyArr, newKey, false)){
 				CBLogError("Could not change the key for an account time transaction entry to a new branch section when creating a new branch.");
 				return false;
 			}
@@ -1611,11 +1677,12 @@ bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, u
 			}
 			if (res == CB_DATABASE_INDEX_FOUND) for (;;) {
 				// Get key
-				uint8_t * branchSectionAccountOutputsKey = CBDatabaseRangeIteratorGetKey(&it3);
+				uint8_t branchSectionAccountOutputsKey[21];
+				CBDatabaseRangeIteratorGetKey(&it3, branchSectionAccountOutputsKey);
 				// Change key
-				CB_NEW_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionIndex;
-				memcpy(CB_NEW_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, branchSectionAccountOutputsKey + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, 20);
-				if (! CBDatabaseChangeKey(storage->branchSectionAccountOutputs, branchSectionAccountOutputsKey, CB_NEW_KEY_ARRAY, false)){
+				newKey[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionIndex;
+				memcpy(newKey + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, branchSectionAccountOutputsKey + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, 20);
+				if (! CBDatabaseChangeKey(storage->branchSectionAccountOutputs, branchSectionAccountOutputsKey, newKey, false)){
 					CBLogError("Could not change the account output key to a new branch section when creating a new branch.");
 					return false;
 				}
@@ -1645,19 +1712,19 @@ bool CBAccounterNewBranch(CBDepObject self, uint8_t newBranch, uint8_t parent, u
 		}
 		CBFreeDatabaseRangeIterator(&it2);
 		// Change the key for the branch section tx details
-		CB_KEY_ARRAY[CB_BRANCH_TX_DETAILS_BRANCH] = parentLastSectionIndex;
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, key + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, 8);
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_TX_ID, key + CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, 8);
-		CB_NEW_KEY_ARRAY[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionIndex;
-		memcpy(CB_NEW_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, 16);
-		if (! CBDatabaseChangeKey(storage->branchSectionTxDetails, CB_KEY_ARRAY, CB_NEW_KEY_ARRAY, false)){
+		keyArr[CB_BRANCH_TX_DETAILS_BRANCH] = parentLastSectionIndex;
+		memcpy(keyArr + CB_BRANCH_TX_DETAILS_ORDER_NUM, key + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, 8);
+		memcpy(keyArr + CB_BRANCH_TX_DETAILS_TX_ID, key + CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, 8);
+		newKey[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionIndex;
+		memcpy(newKey + CB_BRANCH_TX_DETAILS_ORDER_NUM, keyArr + CB_BRANCH_TX_DETAILS_ORDER_NUM, 16);
+		if (! CBDatabaseChangeKey(storage->branchSectionTxDetails, keyArr, newKey, false)){
 			CBLogError("Could not change the branch section tx height key to a new branch section when creating a new branch.");
 			return false;
 		}
 		// Change the branch height and ID entry branch
-		CB_NEW_KEY_ARRAY[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionIndex;
-		memcpy(CB_NEW_KEY_ARRAY + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, key + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, 20);
-		if (! CBDatabaseChangeKey(storage->txBranchSectionHeightAndID, key, CB_NEW_KEY_ARRAY, false)){
+		newKey[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionIndex;
+		memcpy(newKey + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, key + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, 20);
+		if (! CBDatabaseChangeKey(storage->txBranchSectionHeightAndID, key, newKey, false)){
 			CBLogError("Could not change the branch section height ID entry to a new branch section when creating a new branch.");
 			return false;
 		}
@@ -1687,14 +1754,14 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 	uint8_t branchOwners;
 	uint8_t timestampData[8];
 	uint8_t branchSectionIndex = CBAccounterGetLastBranchSectionID(storage, branch);
-	CBInt64ToArray(CB_KEY_ARRAY, 0, txID);
-	if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, &branchOwners, 1, CB_TX_DETAILS_BRANCH_INSTANCES, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t keyArr[33];
+	CBInt64ToArray(keyArr, 0, txID);
+	if (CBDatabaseReadValue(storage->txDetails, keyArr, &branchOwners, 1, CB_TX_DETAILS_BRANCH_INSTANCES, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read the number of branches that own a transaction.");
 		return false;
 	}
 	// Also read timestamp for later
-	CBInt64ToArray(CB_KEY_ARRAY, 0, txID);
-	if (CBDatabaseReadValue(storage->txDetails, CB_KEY_ARRAY, timestampData, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storage->txDetails, keyArr, timestampData, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transactions timestamp.");
 		return false;
 	}
@@ -1702,7 +1769,7 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 	branchOwners--;
 	if (branchOwners == 0) {
 		// No more owners, delete transaction information.
-		if (! CBDatabaseRemoveValue(storage->txDetails, CB_KEY_ARRAY, false)) {
+		if (! CBDatabaseRemoveValue(storage->txDetails, keyArr, false)) {
 			CBLogError("Could not remove transaction details.");
 			return false;
 		}
@@ -1710,24 +1777,28 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 			CBLogError("Could not remove a transaction hash to ID entry.");
 			return false;
 		}
-	}else
-		CBDatabaseWriteValueSubSection(storage->txDetails, CB_KEY_ARRAY, &branchOwners, 1, CB_TX_DETAILS_BRANCH_INSTANCES);
+	}else{
+		CBDatabaseWriteValueSubSection(storage->txDetails, keyArr, &branchOwners, 1, CB_TX_DETAILS_BRANCH_INSTANCES);
+		if (branch == CB_NO_BRANCH)
+			// Make not as unconfirmed
+			CBDatabaseWriteValueSubSection(storage->txDetails, keyArr, (uint8_t []){false}, 1, CB_TX_DETAILS_IS_UNCONF);
+	}
 	// If in a block-chain branch, remove transaction branch data
 	if (branch != CB_NO_BRANCH) {
 		// Only need to delete from last branch section as this only happens when deleting branches
-		CB_KEY_ARRAY[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionIndex;
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_TX_DETAILS_ORDER_NUM, orderNum, 8);
-		CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_TX_DETAILS_TX_ID, txID);
-		if (! CBDatabaseRemoveValue(storage->branchSectionTxDetails, CB_KEY_ARRAY, false)) {
+		keyArr[CB_BRANCH_TX_DETAILS_BRANCH] = branchSectionIndex;
+		memcpy(keyArr + CB_BRANCH_TX_DETAILS_ORDER_NUM, orderNum, 8);
+		CBInt64ToArray(keyArr, CB_BRANCH_TX_DETAILS_TX_ID, txID);
+		if (! CBDatabaseRemoveValue(storage->branchSectionTxDetails, keyArr, false)) {
 			CBLogError("Couldn't remove the branch transaction details");
 			return false;
 		}
 		// Remove txBranchSectionHeightAndID
-		CB_KEY_ARRAY[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionIndex;
-		memcpy(CB_KEY_ARRAY + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, height, 4);
-		CBInt64ToArray(CB_KEY_ARRAY, CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, txID);
-		memcpy(CB_KEY_ARRAY + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, orderNum, 8);
-		if (! CBDatabaseRemoveValue(storage->txBranchSectionHeightAndID, CB_KEY_ARRAY, false)) {
+		keyArr[CB_TX_HEIGHT_BRANCH_AND_ID_BRANCH] = branchSectionIndex;
+		memcpy(keyArr + CB_TX_HEIGHT_BRANCH_AND_ID_HEIGHT, height, 4);
+		CBInt64ToArray(keyArr, CB_TX_HEIGHT_BRANCH_AND_ID_TX_ID, txID);
+		memcpy(keyArr + CB_TX_HEIGHT_BRANCH_AND_ID_ORDER_NUM, orderNum, 8);
+		if (! CBDatabaseRemoveValue(storage->txBranchSectionHeightAndID, keyArr, false)) {
 			CBLogError("Couldn't remove the branch height and transaction ID entry.");
 			return false;
 		}
@@ -1746,7 +1817,8 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 	}
 	for (;;) {
 		// Get the tx account key
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[16];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		uint64_t accountID = CBArrayToInt64(key, CB_TX_ACCOUNTS_ACCOUNT_ID);
 		// Adjust balance for branchless transactions only as transactions are removed from branches which are being deleted completely.
 		int64_t value;
@@ -1763,15 +1835,15 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 			}
 		}
 		// Remove the branch account time transaction entry
-		CB_KEY_ARRAY[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionIndex;
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, key + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
-		memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestampData, 8);
+		keyArr[CB_BRANCH_ACCOUNT_TIME_TX_BRANCH] = branchSectionIndex;
+		memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ACCOUNT_ID, key + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
+		memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_TIMESTAMP, timestampData, 8);
 		if (branch == CB_NO_BRANCH)
-			memset(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 0, 8);
+			memset(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, 0, 8);
 		else
-			memcpy(CB_KEY_ARRAY + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, orderNum, 8);
-		CBInt64ToArray(CB_KEY_ARRAY, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
-		if (! CBDatabaseRemoveValue(storage->branchSectionAccountTimeTx, CB_KEY_ARRAY, false)) {
+			memcpy(keyArr + CB_BRANCH_ACCOUNT_TIME_TX_ORDERNUM, orderNum, 8);
+		CBInt64ToArray(keyArr, CB_BRANCH_ACCOUNT_TIME_TX_TX_ID, txID);
+		if (! CBDatabaseRemoveValue(storage->branchSectionAccountTimeTx, keyArr, false)) {
 			CBLogError("Could not remove an account transaction entry for a branch ordered by time.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
@@ -1780,9 +1852,9 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 		// Remove non-branch-specific details if no more bramches own the transaction
 		if (branchOwners == 0) {
 			// Remove the account transaction details
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, key + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_TX_ACCOUNTS_TX_ID, 8);
-			if (! CBDatabaseRemoveValue(storage->accountTxDetails, CB_KEY_ARRAY, false)) {
+			memcpy(keyArr + CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, key + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
+			memcpy(keyArr + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_TX_ACCOUNTS_TX_ID, 8);
+			if (! CBDatabaseRemoveValue(storage->accountTxDetails, keyArr, false)) {
 				CBLogError("Could not remove account transaction details.");
 				CBFreeDatabaseRangeIterator(&it);
 				return false;
@@ -1825,9 +1897,11 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 	}
 	if (res == CB_DATABASE_INDEX_FOUND) for (;;){
 		// Get the key for this output ID
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+		uint8_t key[36];
+		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Get the output ID
-		if (CBDatabaseReadValue(storage->outputHashAndIndexToID, key, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+		uint8_t outputId[8];
+		if (CBDatabaseReadValue(storage->outputHashAndIndexToID, key, outputId, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not read the ID of an output.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
@@ -1835,8 +1909,8 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 		// Loop through the output accounts
 		uint8_t outputAccountsMin[16];
 		uint8_t outputAccountsMax[16];
-		memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
-		memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
+		memcpy(outputAccountsMin + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, outputId, 8);
+		memcpy(outputAccountsMax + CB_OUTPUT_ACCOUNTS_OUTPUT_ID, outputId, 8);
 		memset(outputAccountsMin + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0, 8);
 		memset(outputAccountsMax + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0xFF, 8);
 		CBDatabaseRangeIterator accountIt = {outputAccountsMin, outputAccountsMax, storage->outputAccounts};
@@ -1847,16 +1921,18 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 		}
 		for (;;) {
 			// Get the key for this account
-			uint8_t * outputAccountKey = CBDatabaseRangeIteratorGetKey(&accountIt);
+			uint8_t outputAccountKey[16];
+			CBDatabaseRangeIteratorGetKey(&accountIt, outputAccountKey);
 			// Remove the output as unspent from the account for this branch, if it exists as so.
-			CB_KEY_ARRAY[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionIndex;
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, outputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
-			if (branch != CB_NO_BRANCH)
-				memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, height, 4);
-			else
-				memset(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_HEIGHT, 0, 4);
-			memcpy(CB_KEY_ARRAY + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, CB_DATA_ARRAY, 8);
-			if (! CBDatabaseRemoveValue(storage->branchSectionAccountOutputs, CB_KEY_ARRAY, false)) {
+			keyArr[CB_ACCOUNT_OUTPUTS_BRANCH] = branchSectionIndex;
+			memcpy(keyArr + CB_ACCOUNT_OUTPUTS_ACCOUNT_ID, outputAccountKey + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 8);
+			if (branch != CB_NO_BRANCH){
+				// We need to ake the height from UINT32_MAX for CB_ACCOUNT_OUTPUTS_HEIGHT due to reverse ordering
+				CBInt32ToArrayBigEndian(keyArr, CB_ACCOUNT_OUTPUTS_HEIGHT, UINT32_MAX - CBArrayToInt32BigEndian(height, 0));
+			}else
+				memset(keyArr + CB_ACCOUNT_OUTPUTS_HEIGHT, 0xFF, 4); // Unconfirmed transactions have block height of zero.
+			memcpy(keyArr + CB_ACCOUNT_OUTPUTS_OUTPUT_ID, outputId, 8);
+			if (! CBDatabaseRemoveValue(storage->branchSectionAccountOutputs, keyArr, false)) {
 				CBLogError("Couldn't remove an output as unspent for an account.");
 				CBFreeDatabaseRangeIterator(&it);
 				CBFreeDatabaseRangeIterator(&accountIt);
@@ -1891,8 +1967,8 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 		CBIndexFindStatus status;
 		if (branchOwners == 0) {
 			// Remove the output details
-			memcpy(CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
-			if (! CBDatabaseRemoveValue(storage->outputDetails, CB_KEY_ARRAY, false)) {
+			memcpy(keyArr, outputId, 8);
+			if (! CBDatabaseRemoveValue(storage->outputDetails, keyArr, false)) {
 				CBLogError("Could not remove the output details.");
 				CBFreeDatabaseRangeIterator(&it);
 				return false;
@@ -1921,9 +1997,8 @@ bool CBAccounterRemoveTransactionFromBranch(CBAccounterStorage * storage, uint64
 }
 CBErrBool CBAccounterTransactionExists(CBDepObject self, uint8_t * hash){
 	CBAccounterStorage * storageObj = self.ptr;
-	memcpy(CB_KEY_ARRAY, hash, 32);
 	uint32_t len;
-	if (! CBDatabaseGetLength(storageObj->txHashToID, CB_KEY_ARRAY, &len)) {
+	if (! CBDatabaseGetLength(storageObj->txHashToID, hash, &len)) {
 		CBLogError("There was an error trying to determine is a transaction exists.");
 		return CB_ERROR;
 	}

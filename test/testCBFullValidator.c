@@ -666,6 +666,11 @@ int main(){
 		return 1;
 	}
 	CBStorageDatabaseStage(database);
+	// Test bad time against network time
+	if (CBValidatorBasicBlockValidation(validator, testBlock, testBlock->time - 7201) != CB_BLOCK_VALIDATION_BAD_TIME) {
+		printf("NETWORK TIME BAD BLOCK TIME FAIL\n");
+		return 1;
+	}
 	// No transactions
 	testBlock->transactionNum = 0;
 	testBlock->time--;
@@ -834,8 +839,18 @@ int main(){
 		return 1;
 	}
 	CBStorageDatabaseStage(database);
-	// Test non-final normal transaction
+	// Test bad time against median time
 	memcpy(CBByteArrayGetData(testBlock->prevBlockHash), CBBlockGetHash(testBlock), 32);
+	testBlock->time -= 7;
+	CBBlockSerialise(testBlock, true, false);
+	CBValidatorQueueBlock(validator, testBlock, NULL);
+	waitForResult();
+	if (validatorResult.valid) {
+		printf("MEDIAN TIME BAD BLOCK TIME FAIL\n");
+		return 1;
+	}
+	testBlock->time++;
+	// Test non-final normal transaction
 	normal->inputs[0]->prevOut.index = 1;
 	normal->lockTime = ++testBlock->time;
 	normal->inputs[0]->sequence = 0;
@@ -1320,22 +1335,7 @@ int main(){
 		printf("P2SH INPUT PUSH FAIL\n");
 		return 1;
 	}
-	// Test bad time against network time
 	testBlock->transactionNum = 1;
-	CBBlockCalculateAndSetMerkleRoot(testBlock);
-	CBBlockSerialise(testBlock, true, false);
-	if (CBValidatorBasicBlockValidation(validator, testBlock, testBlock->time - 7201) != CB_BLOCK_VALIDATION_BAD_TIME) {
-		printf("NETWORK TIME BAD BLOCK TIME FAIL\n");
-		return 1;
-	}
-	// Test bad time against median time
-	testBlock->time -= 7;
-	CBValidatorQueueBlock(validator, testBlock, NULL);
-	waitForResult();
-	if (validatorResult.valid) {
-		printf("MEDIAN TIME BAD BLOCK TIME FAIL\n");
-		return 1;
-	}
 	// Test bad coinbase
 	memset(CBByteArrayGetData(testBlock->transactions[0]->inputs[0]->prevOut.hash), 1, 32);
 	CBTransactionSerialise(testBlock->transactions[0], true);

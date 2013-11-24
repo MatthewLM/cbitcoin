@@ -105,19 +105,20 @@ struct CBAssociativeArray{
  */
 bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeIterator * it);
 /**
- @brief Starts the iteration between two elements
- @param self The array object
- @param it The iterator object.
- @returns true if an initial element has been found, or false if there are no elements to be found.
- */
-bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it);
-/**
  @brief Iterates to the next element.
  @param self The array object
  @param it The iterator object.
  @returns false if an element has been found during iteration, or true if there are no more elements to be found.
  */
 bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeIterator * it);
+bool CBAssociativeArrayRangeIteratorPrev(CBAssociativeArray * self, CBRangeIterator * it);
+/**
+ @brief Starts the iteration between two elements
+ @param self The array object
+ @param it The iterator object.
+ @returns true if an initial element has been found, or false if there are no elements to be found.
+ */
+bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it);
 /**
  @brief Clears an array of all elements.
  @param self The array object
@@ -182,6 +183,7 @@ bool CBAssociativeArrayIsEmpty(CBAssociativeArray * self);
  @returns true if the end of the array has been reached and no iteration could take place. false if the end has not been reached.
  */
 bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it);
+bool CBAssociativeArrayIterateBack(CBAssociativeArray * self, CBPosition * it);
 /**
  @brief Determines if an associative array is empty or not.
  @returns true if not empty and false if empty.

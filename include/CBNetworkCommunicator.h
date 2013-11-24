@@ -275,7 +275,6 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetw
  @param peer The CBPeer.
  @param message The CBMessage to send.
  @param callback The callback for when the send has complete. If NULL, no call is made.
- @returns true if successful, false otherwise.
  */
 bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *));
 /**

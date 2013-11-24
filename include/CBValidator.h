@@ -131,7 +131,7 @@ typedef struct{
 	CBObject base;
 	uint8_t numOrphans; /**< The number of orhpans */
 	CBBlock * orphans[CB_MAX_ORPHAN_CACHE]; /**< The ophan block references */
-	uint8_t firstOrphan; /**< The orphan added first or rather the front of the orhpan queue (for overwriting) */
+	uint8_t firstOrphan; /**< The front of the orhpan queue (for overwriting) */
 	uint8_t mainBranch; /**< The index for the main branch */
 	uint8_t numBranches; /**< The number of block-chain branches. Cannot exceed CB_MAX_BRANCH_CACHE */
 	CBBlockBranch branches[CB_MAX_BRANCH_CACHE]; /**< The block-chain branches. */
@@ -229,7 +229,7 @@ uint32_t CBValidatorGetBlockHeight(CBValidator * self);
  @param self The CBValidator
  @returns The chain descriptor or NULL on failure.
  */
-CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self);
+CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self, uint8_t branch, uint8_t * extraBlock);
 /**
  @brief Determines the point on chain1 where chain2 intersects (The fork point or where the second chain ends).
  @param chain1 The first chain to get the path point for.

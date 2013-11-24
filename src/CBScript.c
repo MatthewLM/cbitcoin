@@ -1293,7 +1293,7 @@ uint32_t CBScriptGetPushAmount(CBScript * self, uint32_t * offset){
 		default:
 			break;
 	}
-	if (*offset + pushAmount >= self->length)
+	if (*offset + pushAmount > self->length)
 		return false;
 	*offset += pushAmount;
 	return pushAmount;
@@ -1514,6 +1514,53 @@ void CBScriptStackRemoveItem(CBScriptStack * stack){
 	stack->length--;
 	free(stack->elements[stack->length].data);
 	// Do not bother reallocing. Data will be freed at the end.
+}
+uint32_t CBScriptStringMaxSize(CBScript * self){
+	uint32_t size = 0, amount;
+	for (uint32_t x = 0; x < self->length;) {
+		if ((amount = CBScriptGetPushAmount(self, &x)) != CB_NOT_A_PUSH_OP)
+			size += amount * 2 + 3; // Need two characters per byte, two for the "0x" and another for potential space.
+		else{
+			size += 23; // CHECKMULTISIGVERIFY is biggest and 19 chars long. Add 3 for OP_ and another for space.
+			x++;
+		}
+	}
+	return size + 1; // Add for termination.
+}
+void CBScriptToString(CBScript * self, char * output){
+	char * opStrs[] = {"1NEGATE", "RESERVED", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "NOP", "VER", "IF", "NOTIF", "VERIF", "VERNOTIF", "ELSE", "ENDIF", "VERIFY", "RETURN", "TOALTSTACK", "FROMALTSTACK", "2DROP", "2DUP", "3DUP", "2OVER", "2ROT", "2SWAP", "IFDUP", "DEPTH", "DROP", "DUP", "NIP", "OVER", "PICK", "ROLL", "ROT", "SWAP", "TUCK", "CAT", "SUBSTR", "LEFT", "RIGHT", "SIZE", "INVERT", "AND", "OR", "XOR", "EQUAL", "EQUALVERIFY", "RESERVED1", "RESERVED2", "1ADD", "1SUB", "2MUL", "2DIV", "NEGATE", "ABS", "NOT", "0NOTEQUAL", "ADD", "SUB", "MUL", "DIV", "MOD", "LSHIFT", "RSHIFT", "BOOLAND", "BOOLOR", "NUMEQUAL", "NUMEQUALVERIFY", "NUMNOTEQUAL", "LESSTHAN", "GREATERTHAN", "LESSTHANOREQUAL", "GREATERTHANOREQUAL", "MIN", "MAX", "WITHIN", "RIPEMD160", "SHA1", "SHA256", "HASH160", "HASH256", "CODESEPARATOR", "CHECKSIG", "CHECKSIGVERIFY", "CHECKMULTISIG", "CHECKMULTISIGVERIFY", "NOP1", "NOP2", "NOP3", "NOP4", "NOP5", "NOP6", "NOP7", "NOP8", "NOP9", "NOP10"};
+	for (uint32_t x = 0; x < self->length;) {
+		if (x != 0)
+			*(output++) = ' ';
+		CBScriptOp op = CBByteArrayGetByte(self, x);
+		if (op == CB_SCRIPT_OP_0) {
+			strcpy(output, "OP_0");
+			output += 4;
+			x++;
+		}else if (op > CB_SCRIPT_OP_PUSHDATA4) {
+			// Non push operation
+			strcpy(output, "OP_");
+			output += 3;
+			char * opStr = opStrs[op-CB_SCRIPT_OP_1NEGATE];
+			strcpy(output, opStr);
+			output += strlen(opStr);
+			x++;
+		}else if (op <= CB_SCRIPT_OP_PUSHDATA4) {
+			// Push opperation
+			uint32_t amount = CBScriptGetPushAmount(self, &x);
+			strcpy(output, "0x");
+			output += 2;
+			x -= amount;
+			for (uint32_t y = 0; y < amount; y++, x++, output += 2)
+				sprintf(output, "%02x", CBByteArrayGetByte(self, x));
+		}else{
+			// Unknown
+			strcpy(output, "OP_INVALIDOPCODE");
+			output += 16;
+			x++;
+		}
+	}
+	*output = '\0';
 }
 CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item, int64_t i){
 	if (i == 0) {

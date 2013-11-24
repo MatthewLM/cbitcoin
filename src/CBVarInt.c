@@ -17,23 +17,25 @@
 #include "CBVarInt.h"
 
 CBVarInt CBVarIntDecode(CBByteArray * bytes, uint32_t offset){
-	uint8_t first = CBByteArrayGetByte(bytes, offset);
+	return CBVarIntDecodeData(CBByteArrayGetData(bytes), offset);
+}
+CBVarInt CBVarIntDecodeData(uint8_t * bytes, uint32_t offset){
 	CBVarInt result;
-	if (first < 253) {
+	if (bytes[offset] < 253) {
 		// 8 bits.
-		result.val = first;
+		result.val = bytes[offset];
 		result.size = 1;
-	} else if (first == 253) { 
+	} else if (bytes[offset] == 253) {
 		// 16 bits.
-		result.val = CBByteArrayReadInt16(bytes, offset + 1);
+		result.val = CBArrayToInt16(bytes, offset + 1);
 		result.size = 3;
-	} else if (first == 254) {
+	} else if (bytes[offset] == 254) {
 		// 32 bits.
-		result.val = CBByteArrayReadInt32(bytes, offset + 1);
+		result.val = CBArrayToInt32(bytes, offset + 1);
 		result.size = 5;
 	} else {
 		// 64 bits.
-		result.val = CBByteArrayReadInt64(bytes, offset + 1);
+		result.val = CBArrayToInt64(bytes, offset + 1);
 		result.size = 9;
 	}
 	return result;

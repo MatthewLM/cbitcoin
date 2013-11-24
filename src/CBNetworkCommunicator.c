@@ -56,8 +56,8 @@ void CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBNetworkCommunicat
 	self->sendTimeOut = 1000;
 	self->timeOut = 5400000;
 	self->heartBeat = 1800000;
-	self->flags = 0;
 	self->connectionTimeOut = 5000;
+	self->flags = 0;
 	self->services = 0;
 	self->blockHeight = 0;
 }
@@ -166,6 +166,7 @@ CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPee
 				// Connection is fine. Retain for waiting for connect.
 				CBRetainObject(peer);
 				self->attemptingOrWorkingConnections++;
+				peer->connecting = true; // In the process of connecting.
 				return CB_CONNECT_OK;
 			}else
 				CBSocketFreeEvent(peer->connectEvent);
@@ -179,6 +180,7 @@ CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPee
 void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 	CBNetworkCommunicator * self = vself;
 	CBPeer * peer = vpeer;
+	peer->connecting = false; // No longer in the process of connecting.
 	CBSocketFreeEvent(peer->connectEvent); // No longer need this event.
 	// Check to see if in the meantime, that we have not been connected to by the peer. Double connections are bad m'kay.
 	if (! CBNetworkAddressManagerGotPeer(self->addresses, peer->addr)){
@@ -234,7 +236,7 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 	// If incomming, lower the incomming connections number
 	if (peer->incomming)
 		self->numIncommingConnections--;
-	if (self->stoppedListening && self->numIncommingConnections < self->maxIncommingConnections)
+	if (!stopping && self->stoppedListening && self->numIncommingConnections < self->maxIncommingConnections)
 		// Start listening again
 		CBNetworkCommunicatorStartListening(self);
 	// Lower the attempting or working connections number
@@ -242,7 +244,6 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 	// If this is a working connection, remove from the address manager peer's list.
 	if (wasWorking){
 		// Release data created when connection was working
-		if (peer->requestedData) CBReleaseObject(peer->requestedData);
 		CBSocketFreeEvent(peer->receiveEvent);
 		CBSocketFreeEvent(peer->sendEvent);
 		// Release the receiving message object if it exists.
@@ -271,7 +272,9 @@ void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer
 		CBReleaseObject(peer);
 	}else{
 		// Else we release the object from control of the CBNetworkCommunicator
-		CBSocketFreeEvent(peer->connectEvent);
+		// Free connectEvent only if we are connecting to it.
+		if (peer->connecting)
+			CBSocketFreeEvent(peer->connectEvent);
 		CBReleaseObject(peer);
 	}
 	if (self->addresses->peersNum == 0 && self->flags & CB_NETWORK_COMMUNICATOR_AUTO_PING)
@@ -310,6 +313,7 @@ void CBNetworkCommunicatorOnCanReceive(void * vself, void * vpeer){
 	if (! peer->receive) {
 		// New message to be received.
 		peer->receive = CBNewMessageByObject();
+		peer->receive->serialised = true;
 		peer->headerBuffer = malloc(24); // Twenty-four bytes for the message header.
 		peer->messageReceived = 0; // So far received nothing.
 		// From now on use timeout for receiving data.
@@ -356,10 +360,9 @@ void CBNetworkCommunicatorOnCanReceive(void * vself, void * vpeer){
 			default:
 				// Did read some bytes
 				peer->messageReceived += num;
-				if (peer->messageReceived == peer->receive->bytes->length){
+				if (peer->messageReceived == peer->receive->bytes->length)
 					// We now have the message.
 					CBNetworkCommunicatorOnMessageReceived(self, peer);
-				}
 				return;
 		}
 	}
@@ -742,11 +745,13 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 		case CB_MESSAGE_TYPE_TX:
 			peer->receive = realloc(peer->receive, sizeof(CBTransaction));
 			CBGetObject(peer->receive)->free = CBFreeTransaction;
+			CBGetTransaction(peer->receive)->hashSet = false;
 			len = CBTransactionDeserialise(CBGetTransaction(peer->receive));
 			break;
 		case CB_MESSAGE_TYPE_BLOCK:
 			peer->receive = realloc(peer->receive, sizeof(CBBlock));
 			CBGetObject(peer->receive)->free = CBFreeBlock;
+			CBGetBlock(peer->receive)->hashSet = false;
 			len = CBBlockDeserialise(CBGetBlock(peer->receive), true); // true -> Including transactions.
 			break;
 		case CB_MESSAGE_TYPE_HEADERS:

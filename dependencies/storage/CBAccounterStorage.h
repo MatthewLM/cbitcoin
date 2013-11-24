@@ -48,7 +48,8 @@ typedef enum{
 typedef enum{
 	CB_TX_DETAILS_BRANCH_INSTANCES = 0, /**< The number of branches owning this transaction or duplicates. */
 	CB_TX_DETAILS_HASH = 1, /**< The transaction hash. */
-	CB_TX_DETAILS_TIMESTAMP = 33 /**< The timestamp of the transaction. Duplicate transactions will have the same timestamp, but so what? */
+	CB_TX_DETAILS_TIMESTAMP = 33, /**< The timestamp of the transaction. Duplicate transactions will have the same timestamp, but so what? */
+	CB_TX_DETAILS_IS_UNCONF = 41, /**< 1 if this transaction exists as unconfirmed or 0. */
 } CBTransactionDetailsOffsets;
 
 /**

@@ -311,6 +311,11 @@ void CBDoRun(struct ev_loop * loop,struct ev_async * watcher,int event){
 bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, bool block){
 	CBEventLoop * loop = loopID.ptr;
 	bool done = !block;
+	if (pthread_equal(((CBThread *)loop->loopThread.ptr)->thread, pthread_self()) != 0){
+		// We are in the event loop already.
+		callback(arg);
+		return true;
+	}
 	CBCallbackQueueItem * item = CBCallbackQueueAdd(&loop->queue, callback, arg, &done);
 	ev_async_send(loop->base, (struct ev_async *)loop->userEvent);
 	if (block)

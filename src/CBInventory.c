@@ -35,10 +35,12 @@ CBInventory * CBNewInventoryFromData(CBByteArray * data){
 
 void CBInitInventory(CBInventory * self){
 	self->itemNum = 0;
+	self->itemFront = NULL;
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitInventoryFromData(CBInventory * self, CBByteArray * data){
 	self->itemNum = 0;
+	self->itemFront = NULL;
 	CBInitMessageByData(CBGetMessage(self), data);
 }
 
@@ -46,10 +48,10 @@ void CBInitInventoryFromData(CBInventory * self, CBByteArray * data){
 
 void CBDestroyInventory(void * vself){
 	CBInventory * self = vself;
-	for (uint16_t x = 0; x < self->itemNum; x++) {
-		CBReleaseObject(self->items[x / 250][x % 250]); // Free item
-		if (x % 250 == 249)
-			free(self->items[x / 250]); // Free item pointer memory block.
+	for (CBInventoryItem * item = self->itemFront; item != NULL;) {
+		CBInventoryItem * next = item->next;
+		CBReleaseObject(item); // Free item
+		item = next;
 	}
 	CBDestroyMessage(self);
 }
@@ -82,6 +84,7 @@ uint32_t CBInventoryDeserialise(CBInventory * self){
 		return 0;
 	}
 	self->itemNum = 0;
+	self->itemFront = NULL;
 	// Run through the items and deserialise each one.
 	uint32_t cursor = itemNum.size;
 	for (uint16_t x = 0; x < itemNum.val; x++) {
@@ -104,8 +107,13 @@ uint32_t CBInventoryDeserialise(CBInventory * self){
 	}
 	return cursor;
 }
-CBInventoryItem * CBInventoryGetInventoryItem(CBInventory * self, uint16_t x){
-	return self->items[x / 250][x % 250];
+CBInventoryItem * CBInventoryPopInventoryItem(CBInventory * self){
+	CBInventoryItem * item = self->itemFront;
+	if (item != NULL){
+		self->itemFront = item->next;
+		self->itemNum--;
+	}
+	return item;
 }
 uint32_t CBInventoryCalculateLength(CBInventory * self){
 	return CBVarIntSizeOf(self->itemNum) + self->itemNum * 36;
@@ -123,10 +131,8 @@ uint32_t CBInventorySerialise(CBInventory * self, bool force){
 	}
 	CBVarIntEncode(bytes, 0, num);
 	uint32_t cursor = num.size;
-	for (uint16_t x = 0; x < num.val; x++) {
-		// Get the item
-		CBInventoryItem * item = CBInventoryGetInventoryItem(self, x);
-		if (! CBGetMessage(item)->serialised  // Serailise if not serialised yet.
+	for (CBInventoryItem * item = self->itemFront; item != NULL; item = item->next) {
+		if (! CBGetMessage(item)->serialised  // Serialise if not serialised yet.
 			// Serialise if force is true.
 			|| force
 			// If the data shares the same data as the inventory boradcast, re-serialise the inventory item, in case it got overwritten.
@@ -140,10 +146,13 @@ uint32_t CBInventorySerialise(CBInventory * self, bool force){
 				return 0;
 			}
 			if (!CBInventoryItemSerialise(item)) {
-				CBLogError("CBInventory cannot be serialised because of an error with the CBInventoryItem number %u.", x);
+				CBLogError("CBInventory cannot be serialised because of an error with an CBInventoryItem.");
 				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
-				for (uint8_t y = 0; y < x + 1; y++)
-					CBReleaseObject(CBGetMessage(self->items[y / 250][y % 250])->bytes);
+				for (CBInventoryItem * item2 = self->itemFront; ; item2 = item->next){
+					CBReleaseObject(item2);
+					if (item2 == item)
+						break;
+				}
 				return 0;
 			}
 		}else{
@@ -162,9 +171,11 @@ uint32_t CBInventorySerialise(CBInventory * self, bool force){
 bool CBInventoryTakeInventoryItem(CBInventory * self, CBInventoryItem * item){
 	if (self->itemNum == 50000)
 		return false;
-	if (self->itemNum % 250 == 0)
-		self->items[self->itemNum / 250] = malloc(sizeof(CBInventoryItem) * 250);
-	self->items[self->itemNum / 250][self->itemNum % 250] = item;
+	if (self->itemFront == NULL)
+		self->itemFront = self->itemBack = item;
+	else
+		self->itemBack = self->itemBack->next = item;
+	item->next = NULL;
 	self->itemNum++;
 	return true;
 }

@@ -140,6 +140,7 @@ bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutpu
  */
 bool CBTransactionIsCoinBase(CBTransaction * self);
 bool CBTransactionIsStandard(CBTransaction * self);
+void CBTransactionMakeBytes(CBTransaction * self);
 /**
  @brief Serialises a CBTransaction to the byte data.
  @param self The CBTransaction object.

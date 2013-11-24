@@ -37,11 +37,14 @@ typedef enum{
 /**
  @brief Structure for CBInventoryItem objects. @see CBInventoryItem.h
 */
-typedef struct{
+typedef struct CBInventoryItem CBInventoryItem;
+
+struct CBInventoryItem{
 	CBMessage base; /**< CBMessage base structure */
 	CBInventoryItemType type; /**< The type of the inventory item. It can be an error, a transaction or a block */
 	CBByteArray * hash; /**< The hash of the inventory item */
-} CBInventoryItem;
+	CBInventoryItem * next; /**< The next inventory item in an inventory */
+};
 
 /**
  @brief Creates a new CBInventoryItem object.

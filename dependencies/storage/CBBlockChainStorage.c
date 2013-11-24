@@ -16,13 +16,10 @@
 
 #include "CBBlockChainStorage.h"
 
-uint8_t CB_KEY_ARRAY[36];
-uint8_t CB_DATA_ARRAY[22];
-
 bool CBNewBlockChainStorage(CBDepObject * storage, CBDepObject database){
 	CBBlockChainStorage * self = malloc(sizeof(*self));
 	// Load indices
-	self->blockHashIndex = CBLoadIndex(database.ptr, CB_INDEX_BLOCK_HASH, 20, 10000);
+	self->blockHashIndex = CBLoadIndex(database.ptr, CB_INDEX_BLOCK_HASH, 32, 10000);
 	if (self->blockHashIndex){
 		self->blockIndex = CBLoadIndex(database.ptr, CB_INDEX_BLOCK, 5, 10000);
 		if (self->blockIndex){
@@ -58,43 +55,41 @@ void CBFreeBlockChainStorage(CBDepObject self){
 }
 CBErrBool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	memcpy(CB_KEY_ARRAY, blockHash, 20);
 	uint32_t len;
-	if (! CBDatabaseGetLength(storageObj->blockHashIndex, CB_KEY_ARRAY, &len)){
+	if (! CBDatabaseGetLength(storageObj->blockHashIndex, blockHash, &len)){
 		CBLogError("There was an error attempting to find the length for a block to see if it exists");
 		return CB_ERROR;
 	}
 	return len != CB_DOESNT_EXIST;
 }
 bool CBBlockChainStorageChangeUnspentOutputsNum(CBBlockChainStorage * storage, uint8_t * txHash, int8_t change){
-	// Place transaction hash into the key
-	memcpy(CB_KEY_ARRAY, txHash, 32);
 	// Read the number of unspent outputs to be decremented
-	if (CBDatabaseReadValue(storage->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_TX_REF_NUM_UNSPENT_OUTPUTS, false) != CB_DATABASE_INDEX_FOUND)
+	uint8_t data[4];
+	if (CBDatabaseReadValue(storage->txIndex, txHash, data, 4, CB_TX_REF_NUM_UNSPENT_OUTPUTS, false) != CB_DATABASE_INDEX_FOUND)
 		return false;
-	CBInt32ToArray(CB_DATA_ARRAY, 0,
-				   CBArrayToInt32(CB_DATA_ARRAY, 0) + change);
+	CBInt32ToArray(data, 0, CBArrayToInt32(data, 0) + change);
 	// Now write the new value
-	CBDatabaseWriteValueSubSection(storage->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_TX_REF_NUM_UNSPENT_OUTPUTS);
+	CBDatabaseWriteValueSubSection(storage->txIndex, txHash, data, 4, CB_TX_REF_NUM_UNSPENT_OUTPUTS);
 	return true;
 }
 bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t blockIndex){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
+	uint8_t key[5], hash[32];
 	// Delete from storage
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
 	// Get hash
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 20, CB_BLOCK_HASH, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, hash, 32, CB_BLOCK_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not obtain a block hash from the block chain database.");
 		return false;
 	}
 	// Remove data
-	if (! CBDatabaseRemoveValue(storageObj->blockIndex, CB_KEY_ARRAY, false)){
+	if (! CBDatabaseRemoveValue(storageObj->blockIndex, key, false)){
 		CBLogError("Could not remove block value from database.");
 		return false;
 	}
 	// Remove hash index reference
-	if (! CBDatabaseRemoveValue(storageObj->blockHashIndex, CB_DATA_ARRAY, false)){
+	if (! CBDatabaseRemoveValue(storageObj->blockHashIndex, hash, false)){
 		CBLogError("Could not remove block hash index reference from database.");
 		return false;
 	}
@@ -102,12 +97,13 @@ bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t b
 }
 bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, bool decrement){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
+	uint8_t key[36];
 	// Place transaction hash into the key
-	memcpy(CB_KEY_ARRAY, txHash, 32);
+	memcpy(key, txHash, 32);
 	// Place output index into the key
-	CBInt32ToArray(CB_KEY_ARRAY, 32, outputIndex);
+	CBInt32ToArray(key, 32, outputIndex);
 	// Remove from storage
-	if (! CBDatabaseRemoveValue(storageObj->unspentOutputIndex, CB_KEY_ARRAY, false)) {
+	if (! CBDatabaseRemoveValue(storageObj->unspentOutputIndex, key, false)) {
 		CBLogError("Could not remove an unspent output reference from storage.");
 		return false;
 	}
@@ -121,23 +117,22 @@ bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, 
 }
 bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	// Place transaction hash into the key
-	memcpy(CB_KEY_ARRAY, txHash, 32);
+	uint8_t data[8];
 	// Read the instance count
-	if (CBDatabaseReadValue(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_TX_REF_INSTANCE_COUNT, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storageObj->txIndex, txHash, data, 4, CB_TX_REF_INSTANCE_COUNT, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction reference from storage.");
 		return false;
 	}
-	uint32_t txInstanceNum = CBArrayToInt32(CB_DATA_ARRAY, 0) - 1;
+	uint32_t txInstanceNum = CBArrayToInt32(data, 0) - 1;
 	if (txInstanceNum != 0) {
 		// There are still more instances of this transaction. Do not remove the transaction, only make the unspent output number equal to zero and decrement the instance count.
-		CBInt32ToArray(CB_DATA_ARRAY, 0, 0);
-		CBInt32ToArray(CB_DATA_ARRAY, 4, txInstanceNum);
+		CBInt32ToArray(data, 0, 0);
+		CBInt32ToArray(data, 4, txInstanceNum);
 		// Write to storage.
-		CBDatabaseWriteValueSubSection(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, CB_TX_REF_NUM_UNSPENT_OUTPUTS);
+		CBDatabaseWriteValueSubSection(storageObj->txIndex, txHash, data, 8, CB_TX_REF_NUM_UNSPENT_OUTPUTS);
 	// Else this was the last instance.
 	// Remove from storage
-	}else if (! CBDatabaseRemoveValue(storageObj->txIndex, CB_KEY_ARRAY, false)) {
+	}else if (! CBDatabaseRemoveValue(storageObj->txIndex, txHash, false)) {
 		CBLogError("Could not remove a transaction reference from storage.");
 		return false;
 	}
@@ -151,9 +146,10 @@ bool CBBlockChainStorageExists(CBDepObject self){
 }
 bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t hash[]){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, hash, 32, CB_BLOCK_HASH, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, hash, 32, CB_BLOCK_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read the hash for a block.");
 		return false;
 	}
@@ -161,10 +157,11 @@ bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t 
 }
 void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint32_t blockIndex){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
+	uint8_t key[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
 	uint32_t blockDataLen;
-	if (! CBDatabaseGetLength(storageObj->blockIndex, CB_KEY_ARRAY, &blockDataLen)) {
+	if (! CBDatabaseGetLength(storageObj->blockIndex, key, &blockDataLen)) {
 		CBLogError("There was an error when checking if a block header exists by getting its length.");
 		return NULL;
 	}
@@ -176,7 +173,7 @@ void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint3
 		blockDataLen = 90;
 	// Get block data
 	CBByteArray * data = CBNewByteArrayOfSize(blockDataLen);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, CBByteArrayGetData(data), blockDataLen, CB_BLOCK_START, false) != CB_DATABASE_INDEX_FOUND){
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, CBByteArrayGetData(data), blockDataLen, CB_BLOCK_START, false) != CB_DATABASE_INDEX_FOUND){
 		CBLogError("Could not read a block from the database.");
 		CBReleaseObject(data);
 		return NULL;
@@ -192,56 +189,57 @@ void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint3
 }
 CBErrBool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	memcpy(CB_KEY_ARRAY, blockHash, 20);
-	CBIndexFindStatus stat = CBDatabaseReadValue(storageObj->blockHashIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 5, 0, false);
+	uint8_t data[5];
+	CBIndexFindStatus stat = CBDatabaseReadValue(storageObj->blockHashIndex, blockHash, data, 5, 0, false);
 	if (stat == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not read a block hash reference from the block chain database.");
 		return CB_ERROR;
 	}
 	if (stat == CB_DATABASE_INDEX_NOT_FOUND)
 		return CB_FALSE;
-	*branch = CB_DATA_ARRAY[CB_BLOCK_HASH_REF_BRANCH];
-	*index = CBArrayToInt32(CB_DATA_ARRAY, CB_BLOCK_HASH_REF_INDEX);
+	*branch = data[CB_BLOCK_HASH_REF_BRANCH];
+	*index = CBArrayToInt32(data, CB_BLOCK_HASH_REF_INDEX);
 	return CB_TRUE;
 }
 uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint32_t blockIndex){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_BLOCK_TIME, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[5], data[4];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, data, 4, CB_BLOCK_TIME, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read the time for a block.");
 		return 0;
 	}
-	return CBArrayToInt32(CB_DATA_ARRAY, 0);
+	return CBArrayToInt32(data, 0);
 }
 uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uint32_t blockIndex){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_BLOCK_TARGET, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[5], data[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, data, 4, CB_BLOCK_TARGET, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read the target for a block.");
 		return 0;
 	}
-	return CBArrayToInt32(CB_DATA_ARRAY, 0);
+	return CBArrayToInt32(data, 0);
 }
 CBErrBool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_t * txHash){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	// Place transaction hash into the key
-	memcpy(CB_KEY_ARRAY, txHash, 32);
+	uint8_t data[4];
 	// See if the transaction exists
 	uint32_t len;
-	if (! CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)){
+	if (! CBDatabaseGetLength(storageObj->txIndex, txHash, &len)){
 		CBLogError("There was an error getting the length of a transaction entry to determine if a transaction exists.");
 		return CB_ERROR;
 	}
 	if (len == CB_DOESNT_EXIST)
 		return CB_FALSE;
 	// Now see if the transaction has unspent outputs
-	if (CBDatabaseReadValue(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 4, CB_TX_REF_NUM_UNSPENT_OUTPUTS, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storageObj->txIndex, txHash, data, 4, CB_TX_REF_NUM_UNSPENT_OUTPUTS, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read the number of unspent outputs for a transaction.");
 		return CB_ERROR;
 	}
-	return CBArrayToInt32(CB_DATA_ARRAY, 0) > 0;
+	return CBArrayToInt32(data, 0) > 0;
 }
 bool CBBlockChainStorageLoadBasicValidator(void * validator){
 	CBValidator * validatorObj = validator;
@@ -254,10 +252,11 @@ bool CBBlockChainStorageLoadBasicValidator(void * validator){
 }
 void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t branch){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockID);
+	uint8_t key[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockID);
 	uint32_t blockDataLen;
-	if (! CBDatabaseGetLength(storageObj->blockIndex, CB_KEY_ARRAY, &blockDataLen)) {
+	if (! CBDatabaseGetLength(storageObj->blockIndex, key, &blockDataLen)) {
 		CBLogError("There was an error getting the length of a block to see if it exists when loading.");
 		return NULL;
 	}
@@ -266,7 +265,7 @@ void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t
 	blockDataLen -= CB_BLOCK_START;
 	// Get block data
 	CBByteArray * data = CBNewByteArrayOfSize(blockDataLen);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, CBByteArrayGetData(data), blockDataLen, CB_BLOCK_START, false) != CB_DATABASE_INDEX_FOUND){
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, CBByteArrayGetData(data), blockDataLen, CB_BLOCK_START, false) != CB_DATABASE_INDEX_FOUND){
 		CBLogError("Could not read a block from the database.");
 		CBReleaseObject(data);
 		return NULL;
@@ -325,23 +324,24 @@ bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum){
 }
 bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t ** data, uint32_t * dataAllocSize, uint32_t * position){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	memcpy(CB_KEY_ARRAY, txHash, 32);
-	if (CBDatabaseReadValue(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 14, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t dataArr[14];
+	if (CBDatabaseReadValue(storageObj->txIndex, txHash, dataArr, 14, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction reference from the transaction index.");
 		return false;
 	}
 	// Set position of outputs
-	*position = CBArrayToInt32(CB_DATA_ARRAY, CB_TX_REF_POSITION_OUPTUTS);
+	*position = CBArrayToInt32(dataArr, CB_TX_REF_POSITION_OUPTUTS);
 	// Get transaction to find position for output in the block
 	// Reallocate transaction data memory if needed.
-	if (CBArrayToInt32(CB_DATA_ARRAY, CB_TX_REF_LENGTH_OUTPUTS) > *dataAllocSize) {
-		*dataAllocSize = CBArrayToInt32(CB_DATA_ARRAY, CB_TX_REF_LENGTH_OUTPUTS);
+	if (CBArrayToInt32(dataArr, CB_TX_REF_LENGTH_OUTPUTS) > *dataAllocSize) {
+		*dataAllocSize = CBArrayToInt32(dataArr, CB_TX_REF_LENGTH_OUTPUTS);
 		*data = realloc(*data, *dataAllocSize);
 	}
 	// Read transaction from the block
-	CB_KEY_ARRAY[0] = CB_DATA_ARRAY[CB_TX_REF_BRANCH];
-	memcpy(CB_KEY_ARRAY + 1, CB_DATA_ARRAY + CB_TX_REF_BLOCK_INDEX, 4);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, *data, CBArrayToInt32(CB_DATA_ARRAY, CB_TX_REF_LENGTH_OUTPUTS), CB_BLOCK_START + *position, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[5];
+	key[0] = dataArr[CB_TX_REF_BRANCH];
+	memcpy(key + 1, dataArr + CB_TX_REF_BLOCK_INDEX, 4);
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, *data, CBArrayToInt32(dataArr, CB_TX_REF_LENGTH_OUTPUTS), CB_BLOCK_START + *position, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction from the block-chain database.");
 		return false;
 	}
@@ -351,31 +351,32 @@ void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, 
 	CBValidator * validatorObj = validator;
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
 	// First read data for the unspent output key.
-	memcpy(CB_KEY_ARRAY, txHash, 32);
-	CBInt32ToArray(CB_KEY_ARRAY, 32, outputIndex);
-	if (CBDatabaseReadValue(storageObj->unspentOutputIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	uint8_t key[36], data[14];
+	memcpy(key, txHash, 32);
+	CBInt32ToArray(key, 32, outputIndex);
+	if (CBDatabaseReadValue(storageObj->unspentOutputIndex, key, data, 8, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Cannot read unspent output information from the block chain database");
 		return NULL;
 	}
-	uint32_t outputPosition = CBArrayToInt32(CB_DATA_ARRAY, CB_UNSPENT_OUTPUT_REF_POSITION);
-	uint32_t outputLength = CBArrayToInt32(CB_DATA_ARRAY, CB_UNSPENT_OUTPUT_REF_LENGTH);
+	uint32_t outputPosition = CBArrayToInt32(data, CB_UNSPENT_OUTPUT_REF_POSITION);
+	uint32_t outputLength = CBArrayToInt32(data, CB_UNSPENT_OUTPUT_REF_LENGTH);
 	// Now read data for the transaction
-	if (CBDatabaseReadValue(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 14, 0, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storageObj->txIndex, key, data, 14, 0, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Cannot read a transaction reference from the transaction index.");
 		return NULL;
 	}
-	uint8_t outputBranch = CB_DATA_ARRAY[CB_TX_REF_BRANCH];
-	uint32_t outputBlockIndex = CBArrayToInt32(CB_DATA_ARRAY, CB_TX_REF_BLOCK_INDEX);
+	uint8_t outputBranch = data[CB_TX_REF_BRANCH];
+	uint32_t outputBlockIndex = CBArrayToInt32(data, CB_TX_REF_BLOCK_INDEX);
 	// Set coinbase
-	*coinbase = CB_DATA_ARRAY[CB_TX_REF_IS_COINBASE];
+	*coinbase = data[CB_TX_REF_IS_COINBASE];
 	// Set output height
 	*outputHeight = validatorObj->branches[outputBranch].startHeight + outputBlockIndex;
 	// Get the output from storage
-	CB_KEY_ARRAY[0] = outputBranch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, outputBlockIndex);
+	key[0] = outputBranch;
+	CBInt32ToArray(key, 1, outputBlockIndex);
 	// Get output data
 	CBByteArray * outputBytes = CBNewByteArrayOfSize(outputLength);
-	if (CBDatabaseReadValue(storageObj->blockIndex, CB_KEY_ARRAY, CBByteArrayGetData(outputBytes), outputLength, CB_BLOCK_START + outputPosition, false) != CB_DATABASE_INDEX_FOUND) {
+	if (CBDatabaseReadValue(storageObj->blockIndex, key, CBByteArrayGetData(outputBytes), outputLength, CB_BLOCK_START + outputPosition, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read an unspent output");
 		CBReleaseObject(outputBytes);
 		return NULL;
@@ -392,12 +393,12 @@ void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, 
 }
 bool CBBlockChainStorageMoveBlock(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t newBranch, uint32_t newIndex){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
-	uint8_t newKey[5];
+	uint8_t key[5], newKey[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
 	newKey[0] = newBranch;
 	CBInt32ToArray(newKey, 1, blockIndex);
-	if (! CBDatabaseChangeKey(storageObj->blockIndex, CB_KEY_ARRAY, newKey, false)){
+	if (! CBDatabaseChangeKey(storageObj->blockIndex, key, newKey, false)){
 		CBLogError("Could not change the key for the location of a block.");
 		return false;
 	}
@@ -420,16 +421,14 @@ bool CBBlockChainStorageSaveBlock(void * validator, void * block, uint8_t branch
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
 	CBBlock * blockObj = block;
 	// Write the block data
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
+	uint8_t key[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
 	uint8_t * dataParts[2] = {CBBlockGetHash(blockObj), CBByteArrayGetData(CBGetMessage(blockObj)->bytes)};
-	uint32_t dataSizes[2] = {20, CBGetMessage(blockObj)->bytes->length};
-	CBDatabaseWriteConcatenatedValue(storageObj->blockIndex, CB_KEY_ARRAY, 2, dataParts, dataSizes);
+	uint32_t dataSizes[2] = {32, CBGetMessage(blockObj)->bytes->length};
+	CBDatabaseWriteConcatenatedValue(storageObj->blockIndex, key, 2, dataParts, dataSizes);
 	// Write to the block hash index
-	memcpy(CB_KEY_ARRAY, CBBlockGetHash(blockObj), 20);
-	CB_DATA_ARRAY[CB_BLOCK_HASH_REF_BRANCH] = branch;
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BLOCK_HASH_REF_INDEX, blockIndex);
-	CBDatabaseWriteValue(storageObj->blockHashIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 5);
+	CBDatabaseWriteValue(storageObj->blockHashIndex, CBBlockGetHash(blockObj), key, 5);
 	return true;
 }
 bool CBBlockChainStorageSaveBlockHeader(void * validator, void * block, uint8_t branch, uint32_t blockIndex){
@@ -437,17 +436,15 @@ bool CBBlockChainStorageSaveBlockHeader(void * validator, void * block, uint8_t 
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
 	CBBlock * blockObj = block;
 	// Write the block data
-	CB_KEY_ARRAY[0] = branch;
-	CBInt32ToArray(CB_KEY_ARRAY, 1, blockIndex);
+	uint8_t key[5];
+	key[0] = branch;
+	CBInt32ToArray(key, 1, blockIndex);
 	uint8_t null = 0;
 	uint8_t * dataParts[3] = {CBBlockGetHash(blockObj), CBByteArrayGetData(CBGetMessage(blockObj)->bytes), &null};
-	uint32_t dataSizes[3] = {20, 80 + CBVarIntDecode(CBGetMessage(blockObj)->bytes, 80).size, 1};
-	CBDatabaseWriteConcatenatedValue(storageObj->blockIndex, CB_KEY_ARRAY, 3, dataParts, dataSizes);
+	uint32_t dataSizes[3] = {32, 80 + CBVarIntDecode(CBGetMessage(blockObj)->bytes, 80).size, 1};
+	CBDatabaseWriteConcatenatedValue(storageObj->blockIndex,key, 3, dataParts, dataSizes);
 	// Write to the block hash index
-	memcpy(CB_KEY_ARRAY, CBBlockGetHash(blockObj), 20);
-	CB_DATA_ARRAY[CB_BLOCK_HASH_REF_BRANCH] = branch;
-	CBInt32ToArray(CB_DATA_ARRAY, CB_BLOCK_HASH_REF_INDEX, blockIndex);
-	CBDatabaseWriteValue(storageObj->blockHashIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 5);
+	CBDatabaseWriteValue(storageObj->blockHashIndex, CBBlockGetHash(blockObj), key, 5);
 	return true;
 }
 bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branchNum){
@@ -491,47 +488,48 @@ bool CBBlockChainStorageSaveOrphanHeader(void * validator, void * block, uint8_t
 bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, uint8_t branch, uint32_t blockIndex, uint32_t outputPos, uint32_t outputsLen, bool coinbase, uint32_t numOutputs){
 	CBValidator * validatorObj = validator;
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	memcpy(CB_KEY_ARRAY, txHash, 32);
 	uint32_t len;
-	if (! CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)) {
+	uint8_t data[22];
+	if (! CBDatabaseGetLength(storageObj->txIndex, txHash, &len)) {
 		CBLogError("There was an error getting the length of a transaction entry to see if it already exists.");
 		return false;
 	}
 	if (len != CB_DOESNT_EXIST) {
 		// We have the transaction already. Thus increase the instance count.
-		if (CBDatabaseReadValue(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY + 4, 4,  CB_TX_REF_NUM_UNSPENT_OUTPUTS, false) != CB_DATABASE_INDEX_FOUND) {
+		if (CBDatabaseReadValue(storageObj->txIndex, txHash, data + 4, 4,  CB_TX_REF_NUM_UNSPENT_OUTPUTS, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not read a transaction reference from the transaction index.");
 			return false;
 		}
 		// Increase the instance count. We change nothing else as we will use the first instance for all other instances.
-		CBInt32ToArray(CB_DATA_ARRAY, 4, CBArrayToInt32(CB_DATA_ARRAY, 4) + 1);
+		CBInt32ToArray(data, 4, CBArrayToInt32(data, 4) + 1);
 		// Set the number of unspent outputs back to the number of outputs in the transaction
-		CBInt32ToArray(CB_DATA_ARRAY,0, numOutputs);
-		CBDatabaseWriteValueSubSection(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 8,  CB_TX_REF_NUM_UNSPENT_OUTPUTS);
+		CBInt32ToArray(data, 0, numOutputs);
+		CBDatabaseWriteValueSubSection(storageObj->txIndex, txHash, data, 8,  CB_TX_REF_NUM_UNSPENT_OUTPUTS);
 	}else{
 		// This transaction has not yet been seen in the block chain.
-		CBInt32ToArray(CB_DATA_ARRAY, CB_TX_REF_BLOCK_INDEX, blockIndex);
-		CB_DATA_ARRAY[CB_TX_REF_BRANCH] = branch;
-		CBInt32ToArray(CB_DATA_ARRAY, CB_TX_REF_POSITION_OUPTUTS, outputPos);
-		CBInt32ToArray(CB_DATA_ARRAY, CB_TX_REF_LENGTH_OUTPUTS, outputsLen);
-		CB_DATA_ARRAY[CB_TX_REF_IS_COINBASE] = coinbase;
+		CBInt32ToArray(data, CB_TX_REF_BLOCK_INDEX, blockIndex);
+		data[CB_TX_REF_BRANCH] = branch;
+		CBInt32ToArray(data, CB_TX_REF_POSITION_OUPTUTS, outputPos);
+		CBInt32ToArray(data, CB_TX_REF_LENGTH_OUTPUTS, outputsLen);
+		data[CB_TX_REF_IS_COINBASE] = coinbase;
 		// We start with an instance count of one
-		CBInt32ToArray(CB_DATA_ARRAY, CB_TX_REF_INSTANCE_COUNT, 1);
+		CBInt32ToArray(data, CB_TX_REF_INSTANCE_COUNT, 1);
 		// Set the number of unspent outputs back to the number of outputs in the transaction
-		CBInt32ToArray(CB_DATA_ARRAY, CB_TX_REF_NUM_UNSPENT_OUTPUTS, numOutputs);
+		CBInt32ToArray(data, CB_TX_REF_NUM_UNSPENT_OUTPUTS, numOutputs);
 		// Write to the transaction index.
-		CBDatabaseWriteValue(storageObj->txIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 22);
+		CBDatabaseWriteValue(storageObj->txIndex, txHash, data, 22);
 	}
 	return true;
 }
 bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, uint32_t position, uint32_t length, bool increment){
 	CBBlockChainStorage * storageObj = ((CBValidator *)validator)->storage.ptr;
-	memcpy(CB_KEY_ARRAY, txHash, 32);
-	CBInt32ToArray(CB_KEY_ARRAY, 32, outputIndex);
-	CBInt32ToArray(CB_DATA_ARRAY, CB_UNSPENT_OUTPUT_REF_POSITION, position);
-	CBInt32ToArray(CB_DATA_ARRAY, CB_UNSPENT_OUTPUT_REF_LENGTH, length);
+	uint8_t key[36], data[8];
+	memcpy(key, txHash, 32);
+	CBInt32ToArray(key, 32, outputIndex);
+	CBInt32ToArray(data, CB_UNSPENT_OUTPUT_REF_POSITION, position);
+	CBInt32ToArray(data, CB_UNSPENT_OUTPUT_REF_LENGTH, length);
 	// Add to storage
-	CBDatabaseWriteValue(storageObj->unspentOutputIndex, CB_KEY_ARRAY, CB_DATA_ARRAY, 8);
+	CBDatabaseWriteValue(storageObj->unspentOutputIndex, key, data, 8);
 	if (increment
 		// For the transaction, increment the number of unspent outputs
 		&& ! CBBlockChainStorageChangeUnspentOutputsNum(storageObj, txHash, +1)) {
@@ -543,9 +541,8 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
 CBErrBool CBBlockChainStorageTransactionExists(void * validator, uint8_t * txHash){
 	CBValidator * validatorObj = validator;
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	memcpy(CB_KEY_ARRAY, txHash, 32);
 	uint32_t len;
-	if (! CBDatabaseGetLength(storageObj->txIndex, CB_KEY_ARRAY, &len)) {
+	if (! CBDatabaseGetLength(storageObj->txIndex, txHash, &len)) {
 		CBLogError("There was an error trying to obtain the length of a transaction entry");
 		return CB_ERROR;
 	}
@@ -554,10 +551,11 @@ CBErrBool CBBlockChainStorageTransactionExists(void * validator, uint8_t * txHas
 CBErrBool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txHash, uint32_t outputIndex){
 	CBValidator * validatorObj = validator;
 	CBBlockChainStorage * storageObj = validatorObj->storage.ptr;
-	memcpy(CB_KEY_ARRAY, txHash, 32);
-	CBInt32ToArray(CB_KEY_ARRAY, 32, outputIndex);
+	uint8_t key[36];
+	memcpy(key, txHash, 32);
+	CBInt32ToArray(key, 32, outputIndex);
 	uint32_t len;
-	if (! CBDatabaseGetLength(storageObj->unspentOutputIndex, CB_KEY_ARRAY, &len)) {
+	if (! CBDatabaseGetLength(storageObj->unspentOutputIndex, key, &len)) {
 		CBLogError("There was an error trying to obtain the length of an unspent output entry");
 		return CB_ERROR;
 	}

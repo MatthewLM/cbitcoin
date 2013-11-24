@@ -58,8 +58,12 @@ void CBThreadJoin(CBDepObject thread){
 	assert(pthread_join(*(pthread_t *)thread.ptr, NULL) == 0);
 }
 void CBNewMutex(CBDepObject * mutex){
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	mutex->ptr = malloc(sizeof(pthread_mutex_t));
-	assert(pthread_mutex_init(mutex->ptr, NULL) == 0);
+	assert(pthread_mutex_init(mutex->ptr, &attr) == 0);
+	pthread_mutexattr_destroy(&attr);
 }
 void CBFreeMutex(CBDepObject mutex){
 	assert(pthread_mutex_destroy(mutex.ptr) == 0);

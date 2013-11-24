@@ -40,14 +40,13 @@ typedef struct{
 	CBPeer * peer;
 	CBMessage * message;
 	void (*callback)(void *, void *);
-	bool result;
 } CBSendMessageData;
 
 typedef struct CBNode CBNode;
 
 typedef struct{
 	void (*onFatalNodeError)(CBNode *);
-	void (*newBlock)(CBNode *, CBBlock * block, uint32_t height, uint32_t forkPoint);
+	void (*newBlock)(CBNode *, CBBlock * block, uint32_t forkPoint);
 	void (*newTransaction)(CBNode *, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details);
 	void (*transactionConfirmed)(CBNode *, uint8_t * txHash, uint32_t blockHeight);
 	void (*doubleSpend)(CBNode *, uint8_t * txHash);
@@ -114,21 +113,22 @@ void CBFreeNode(void * self);
 
 // Functions
 
-void CBNodeDisconnectNode(void * vpeer);
+void CBNodeDisconnectPeer(void * vpeer);
 CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * message);
 void CBNodeOnValidatorError(void *);
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert);
 void CBNodeProcessMessages(void * node);
 CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err);
 CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, CBGetBlocks * getBlocks, bool full);
-bool CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *));
+void CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *));
 void CBNodeSendMessageOnNetworkThreadVoid(void * data);
 /**
  @brief Compares two transactions by their hash
- @param tx1 A pointer to the first transaction pointer.
- @param tx2 A pointer to the second transaction pointer.
+ @param tx1 The first transaction
+ @param tx2 The second transaction
  @returns A CBCompare value corresponding to the transaction hashes.
  */
+CBCompare CBTransactionCompare(CBAssociativeArray * foo, void * tx1, void * tx2);
 CBCompare CBTransactionPtrCompare(CBAssociativeArray * foo, void * tx1, void * tx2);
 /**
  @brief Compares a hash with a transaction's hash.

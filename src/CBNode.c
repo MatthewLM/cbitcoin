@@ -54,12 +54,15 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
 	CBNewThread(&self->messageProcessThread, CBNodeProcessMessages, self);
 	// Initialise the storage objects
 	if (CBNewBlockChainStorage(&self->blockChainStorage, database)) {
-		if (CBNewAccounterStorage(&self->accounterStorage, database))
-			if (CBNewNodeStorage(&self->nodeStorage, database))
-				return true;
-			else
+		if (CBNewAccounterStorage(&self->accounterStorage, database)){
+			if (CBNewNodeStorage(&self->nodeStorage, database)){
+				if (CBAccounterNewBranch(self->accounterStorage, 0, CB_NO_PARENT, 0))
+					return true;
+				else
+					CBLogError("Could not create initial branch information for accounter.");
+			}else
 				CBLogError("Could not create the node storage object for a node");
-		else
+		}else
 			CBLogError("Could not create the accounter storage object for a node");
 		CBFreeBlockChainStorage(self->blockChainStorage);
 	}else
@@ -95,7 +98,7 @@ void CBFreeNode(void * self){
 
 //  Functions
 
-void CBNodeDisconnectNode(void * vpeer){
+void CBNodeDisconnectPeer(void * vpeer){
 	CBPeer * peer = vpeer;
 	CBNetworkCommunicator * comm = peer->nodeObj;
 	CBNetworkCommunicatorDisconnect(comm, peer, CB_24_HOURS, false);
@@ -116,9 +119,11 @@ CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, 
 	self->messageQueueBack->message = message;
 	self->messageQueueBack->next = NULL;
 	// Wakeup thread if this is the first in the queue
-	if (self->messageQueue == self->messageQueueBack)
+	if (self->messageQueue == self->messageQueueBack){
 		// We have just added a block to the queue when there was not one before so wake-up the processing thread.
 		CBConditionSignal(self->messageProcessWaitCond);
+		CBLogVerbose("Woken message process thread");
+	}
 	CBMutexUnlock(self->messageProcessMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
@@ -137,9 +142,11 @@ void CBNodeProcessMessages(void * node){
 	CBNode * self = node;
 	CBMutexLock(self->messageProcessMutex);
 	for (;;) {
-		if (self->messageQueue == NULL && !self->shutDownThread)
+		if (self->messageQueue == NULL && !self->shutDownThread){
 			// Wait for more messages
 			CBConditionWait(self->messageProcessWaitCond, self->messageProcessMutex);
+			CBLogVerbose("Process thread as been woken");
+		}
 		// Check to see if the thread should terminate
 		if (self->shutDownThread){
 			CBMutexUnlock(self->messageProcessMutex);
@@ -157,7 +164,7 @@ void CBNodeProcessMessages(void * node){
 			action = self->onMessageReceived(self, toProcess->peer, toProcess->message);
 		if (action == CB_MESSAGE_ACTION_DISCONNECT)
 			// We need to disconnect the node
-			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectNode, toProcess->peer, false);
+			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectPeer, toProcess->peer, false);
 		CBMutexLock(self->messageProcessMutex);
 		// Remove this from queue
 		self->messageQueue = toProcess->next;
@@ -183,9 +190,11 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 	CBMutexLock(self->blockAndTxMutex);
 	for (uint16_t x = 0; x < chainDesc->hashNum; x++) {
 		CBErrBool exists = CBBlockChainStorageGetBlockLocation(CBGetNode(self)->validator, CBByteArrayGetData(chainDesc->hashes[x]), &branch, &blockIndex);
-		if (exists == CB_ERROR)
+		if (exists == CB_ERROR) {
+			CBMutexUnlock(self->blockAndTxMutex);
 			return CBNodeReturnError(self, "Could not look for block with chain descriptor hash.");
-		if (exists == CB_TRUE){
+		}
+		if (exists == CB_TRUE) {
 			// We have a block that we own.
 			found = true;
 			break;
@@ -200,19 +209,23 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 		// Determine where the intersection is on the main chain
 		intersection = CBValidatorGetChainIntersection(&mainChainPath, &peerChainPath);
 	}else{
-		// Start at block 1
-		intersection.blockIndex = 1;
-		intersection.chainPathIndex = mainChainPath.numBranches - 1;
+		// Bad chain?
+		CBMutexUnlock(self->blockAndTxMutex);
+		return CB_MESSAGE_ACTION_DISCONNECT;
 	}
 	CBMessage * message;
 	// Now provide headers from this intersection up to 2000 blocks or block inventory items up to 500, the last one we have or the stopAtHash.
-	for (uint8_t x = 0; x < (full ? 500 : 2000); x++) {
+	for (uint16_t x = 0; x < (full ? 500 : 2000); x++) {
 		// Check to see if we reached the last block in the main chain.
 		if (intersection.chainPathIndex == 0
 			&& intersection.blockIndex == mainChainPath.points[0].blockIndex) {
-			if (x == 0)
+			if (x == 0){
 				// The intersection is at the last block. The peer is up-to-date with us
+				peer->upload = false;
+				peer->upToDate = true;
+				CBMutexUnlock(self->blockAndTxMutex);
 				return CB_MESSAGE_ACTION_CONTINUE;
+			}
 			break;
 		}
 		// Move to the next block
@@ -220,15 +233,23 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 			// Move to next branch
 			intersection.chainPathIndex--;
 			intersection.blockIndex = 0;
-		}else{
+		}else
 			// Move to the next block
 			intersection.blockIndex++;
-		}
 		// Get the hash
 		uint8_t hash[32];
 		if (! CBBlockChainStorageGetBlockHash(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex, hash)) {
 			if (x != 0) CBReleaseObject(message);
+			CBMutexUnlock(self->blockAndTxMutex);
 			return CBNodeReturnError(self, "Could not obtain a hash for a block.");
+		}
+		// Check to see if we are at stopAtHash
+		if (getBlocks->stopAtHash && memcmp(hash, CBByteArrayGetData(getBlocks->stopAtHash), 32) == 0){
+			if (x == 0) {
+				CBMutexUnlock(self->blockAndTxMutex);
+				return CB_MESSAGE_ACTION_CONTINUE;
+			}
+			break;
 		}
 		if (x == 0){
 			// Create inventory or block headers object to send to peer.
@@ -243,13 +264,13 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 		// Add block header or add inventory item
 		if (full) {
 			CBByteArray * hashObj = CBNewByteArrayWithDataCopy(hash, 32);
+			char blkStr[CB_BLOCK_HASH_STR_SIZE];
+			CBByteArrayToString(hashObj, 0, CB_BLOCK_HASH_STR_BYTES, blkStr);
+			CBLogVerbose("Giving block %s to %s", blkStr, peer->peerStr);
 			CBInventoryTakeInventoryItem(CBGetInventory(message), CBNewInventoryItem(CB_INVENTORY_ITEM_BLOCK, hashObj));
 			CBReleaseObject(hashObj);
 		}else
 			CBBlockHeadersTakeBlockHeader(CBGetBlockHeaders(message), CBBlockChainStorageGetBlockHeader(self->validator, mainChainPath.points[intersection.chainPathIndex].branch, intersection.blockIndex));
-		// Check to see if we are at stopAtHash
-		if (getBlocks->stopAtHash && memcmp(hash, CBByteArrayGetData(getBlocks->stopAtHash), 32) == 0)
-			break;
 	}
 	CBMutexUnlock(self->blockAndTxMutex);
 	// Send the message
@@ -259,26 +280,35 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 	peer->upload = true;
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
-bool CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *)){
-	CBSendMessageData data = {self,peer,message,callback};
-	CBRunOnEventLoop(self->eventLoop, CBNodeSendMessageOnNetworkThreadVoid, &data, true);
-	return data.result;
+void CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *)){
+	CBSendMessageData * data = malloc(sizeof(*data));
+	*data = (CBSendMessageData){self,peer,message,callback};
+	CBRetainObject(message);
+	CBRetainObject(peer);
+	// Shouldn't block in the cases where this thread already has a mutex used by the CBNetworkCommunicator code.
+	CBRunOnEventLoop(self->eventLoop, CBNodeSendMessageOnNetworkThreadVoid, data, false);
 }
 void CBNodeSendMessageOnNetworkThreadVoid(void * vdata){
 	CBSendMessageData * data = vdata;
-	data->result = CBNetworkCommunicatorSendMessage(data->self, data->peer, data->message, data->callback);
+	CBNetworkCommunicatorSendMessage(data->self, data->peer, data->message, data->callback);
+	CBReleaseObject(data->message);
+	CBReleaseObject(data->peer);
+	free(data);
 }
-CBCompare CBTransactionPtrCompare(CBAssociativeArray * foo, void * tx1, void * tx2){
-	CBTransaction ** tx1Obj = tx1;
-	CBTransaction ** tx2Obj = tx2;
-	int res = memcmp(CBTransactionGetHash(*tx1Obj), CBTransactionGetHash(*tx2Obj), 32);
+CBCompare CBTransactionCompare(CBAssociativeArray * foo, void * tx1, void * tx2){
+	CBTransaction * tx1Obj = tx1;
+	CBTransaction * tx2Obj = tx2;
+	int res = memcmp(CBTransactionGetHash(tx1Obj), CBTransactionGetHash(tx2Obj), 32);
 	if (res > 0)
 		return CB_COMPARE_MORE_THAN;
 	if (res == 0)
 		return CB_COMPARE_EQUAL;
 	return CB_COMPARE_LESS_THAN;
 }
-CBCompare CBTransactionPtrAndHashCompare(CBAssociativeArray * foo,void * hash, void * tx){
+CBCompare CBTransactionPtrCompare(CBAssociativeArray * foo, void * tx1, void * tx2){
+	return CBTransactionCompare(foo, *(CBTransaction **) tx1, *(CBTransaction **) tx2);
+}
+CBCompare CBTransactionPtrAndHashCompare(CBAssociativeArray * foo, void * hash, void * tx){
 	CBTransaction ** txObj = tx;
 	int res = memcmp((uint8_t *)hash, CBTransactionGetHash(*txObj), 32);
 	if (res > 0)

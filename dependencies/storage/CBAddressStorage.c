@@ -16,9 +16,6 @@
 
 #include "CBAddressStorage.h"
 
-uint8_t CB_KEY_ARRAY[18];
-uint8_t CB_DATA_ARRAY[20];
-
 bool CBNewAddressStorage(CBDepObject * storage, CBDepObject database){
 	CBAddressStorage * self = malloc(sizeof(*self));
 	self->database = database.ptr;
@@ -37,10 +34,11 @@ void CBFreeAddressStorage(CBDepObject self){
 bool CBAddressStorageDeleteAddress(CBDepObject uself, void * address){
 	CBAddressStorage * self = uself.ptr;
 	CBNetworkAddress * addrObj = address;
-	memcpy(CB_KEY_ARRAY, CBByteArrayGetData(addrObj->ip), 16);
-	CBInt16ToArray(CB_KEY_ARRAY, 16, addrObj->port);
+	uint8_t key[18];
+	memcpy(key, CBByteArrayGetData(addrObj->ip), 16);
+	CBInt16ToArray(key, 16, addrObj->port);
 	// Remove address
-	if (! CBDatabaseRemoveValue(self->addrs, CB_KEY_ARRAY, false)) {
+	if (! CBDatabaseRemoveValue(self->addrs, key, false)) {
 		CBLogError("Could not remove an address from storage.");
 		return false;
 	}
@@ -66,19 +64,21 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 		return false;
 	}
 	while(status == CB_DATABASE_INDEX_FOUND) {
-		uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
-		if (! CBDatabaseRangeIteratorRead(&it, CB_DATA_ARRAY, 20, 0)) {
+		uint8_t key[18];
+		CBDatabaseRangeIteratorGetKey(&it, key);
+		uint8_t data[20];
+		if (! CBDatabaseRangeIteratorRead(&it, data, 20, 0)) {
 			CBLogError("Could not read address data from database.");
 			return false;
 		}
 		// Create network address object and add to the address manager.
 		CBByteArray * ip = CBNewByteArrayWithDataCopy(key, 16);
-		CBNetworkAddress * addr = CBNewNetworkAddress(CBArrayToInt64(CB_DATA_ARRAY, 0),
+		CBNetworkAddress * addr = CBNewNetworkAddress(CBArrayToInt64(data, 0),
 													  ip,
 													  CBArrayToInt16(key, 16),
-													  (CBVersionServices) CBArrayToInt64(CB_DATA_ARRAY, 8),
+													  (CBVersionServices) CBArrayToInt64(data, 8),
 													  true);
-		addr->penalty = CBArrayToInt32(CB_DATA_ARRAY, 16);
+		addr->penalty = CBArrayToInt32(data, 16);
 		CBNetworkAddressManagerTakeAddress(addrManObj, addr);
 		CBReleaseObject(ip);
 		status = CBDatabaseRangeIteratorNext(&it);
@@ -92,15 +92,16 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 bool CBAddressStorageSaveAddress(CBDepObject uself, void * address){
 	CBAddressStorage * self = uself.ptr;
 	CBNetworkAddress * addrObj = address;
+	uint8_t key[18], data[20];
 	// Create key
-	memcpy(CB_KEY_ARRAY, CBByteArrayGetData(addrObj->ip), 16);
-	CBInt16ToArray(CB_KEY_ARRAY, 16, addrObj->port);
+	memcpy(key, CBByteArrayGetData(addrObj->ip), 16);
+	CBInt16ToArray(key, 16, addrObj->port);
 	// Create data
-	CBInt64ToArray(CB_DATA_ARRAY, 0, addrObj->lastSeen);
-	CBInt64ToArray(CB_DATA_ARRAY, 8, (uint64_t) addrObj->services);
-	CBInt32ToArray(CB_DATA_ARRAY, 16, addrObj->penalty);
+	CBInt64ToArray(data, 0, addrObj->lastSeen);
+	CBInt64ToArray(data, 8, (uint64_t) addrObj->services);
+	CBInt32ToArray(data, 16, addrObj->penalty);
 	// Write data
-	CBDatabaseWriteValue(self->addrs, CB_KEY_ARRAY, CB_DATA_ARRAY, 20);
+	CBDatabaseWriteValue(self->addrs, key, data, 20);
 	// Increase the number of addresses
 	CBInt32ToArray(self->database->current.extraData, CB_NUM_ADDRS, CBArrayToInt32(self->database->current.extraData, CB_NUM_ADDRS) + 1);
 	// Commit changes

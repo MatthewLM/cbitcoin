@@ -89,6 +89,7 @@ typedef struct{
 	CBMessageType typesExpected[CB_MAX_RESPONSES_EXPECTED]; /**< List of expected responses */
 	uint8_t typesExpectedNum; /**< Number of expected responses */
 	bool incomming; /**< Node from an incomming connection if true */
+	bool connecting;
 	uint64_t downloadTime; /**< Download time for this peer (in millisconds), not taking the latency into account. Use for determining effeciency. */
 	uint64_t downloadAmount; /**< Downloaded bytes measured for this peer. */
 	uint32_t latencyTime; /**< Total measured response time (in millisconds) */
@@ -97,7 +98,7 @@ typedef struct{
 	uint64_t downloadTimerStart; /**< Used to measure download time (in millisconds). */
 	CBMessageType latencyExpected; /**< Message expected for the latency measurement */
 	CBInventory * requestedData; /**< Data which is requested by this node */
-	uint16_t sendDataIndex; /**< The index of the inventory broadcast to send data to a peer. */
+	CBDepObject requestedDataMutex;
 	CBAssociativeArray expectedTxs; /**< 20 bytes of the hashes for the tx we expect the peer to provide us with and nothing else (ie. After get data requests). */
 	bool expectHeaders; /**< True if we expect headers from the peer. */
 	bool expectBlock; /**< True if we expect blocks from the peer */

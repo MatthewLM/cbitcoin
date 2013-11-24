@@ -170,7 +170,7 @@ bool CBNodeCheckInputs(CBNode * self){
 				if (res == CB_FALSE){
 					// There exists no unspent outputs in the block-chain storage for this transaction input. Therefore this transaction is no longer valid.
 					// Lose the transaction from the accounter if it is ours
-					if (array == &self->ourTxs && !CBAccounterLostBranchlessTransaction(self->accounterStorage, tx)) {
+					if (array == &self->ourTxs && !CBAccounterLostUnconfirmedTransaction(self->accounterStorage, tx)) {
 						CBLogError("Could not lose a transaction with missing inputs as one of our unconfirmed transactions.");
 						return false;
 					}
@@ -607,7 +607,7 @@ bool CBNodeScanBlock(CBNode * self, CBBlock * block, uint32_t blockHeight, uint8
 			// Remove the transaction from the array as it is now in a block.
 			CBAssociativeArrayDelete(&self->ourTxs, res.position, true);
 			// Move the unconfirmed transaction accounter infomation to the branch.
-			if (!CBAccounterBranchlessTransactionToBranch(self->accounterStorage, block->transactions[x], blockHeight, branch)){
+			if (!CBAccounterUnconfirmedTransactionToBranch(self->accounterStorage, block->transactions[x], blockHeight, branch)){
 				CBLogError("Could not move a branchless transaction's account information to a branch.");
 				return false;
 			}

@@ -70,6 +70,15 @@ typedef enum{
 	CB_INDEX_ACCOUNTER_START,
 } CBIndexIDs;
 
+typedef enum{
+	CB_KEY_NONE,
+	CB_KEY_CURRENT_VALUE,
+	CB_KEY_CURRENT_CHANGE,
+	CB_KEY_STAGED_VALUE,
+	CB_KEY_STAGED_CHANGE,
+	CB_KEY_DISK
+} CBIteratorWhatKey;
+
 /**
  @brief An index value which references the value's data position with a key.
  */
@@ -171,7 +180,6 @@ typedef struct{
 	uint32_t stagedSize; /**< The rough size of the staged changes. */
 	uint64_t lastCommit; /**< Time of last commit */
 	bool hasStaged; /**< True if there are changes to commit */
-	CBAssociativeArray itData; /** Contains the iteration keys @see CBIndexItData */
 	uint8_t numIndexes; /**< The number indexes that are involved in the transaction */
 	CBAssociativeArray valueWritingIndexes; /**< An array of index objects which have value writes in the staged changes. */
 	CBDepObject databaseMutex; /**< Mutex allowing for reading of data on different threads */
@@ -200,12 +208,6 @@ typedef struct{
 	CBAssociativeArray changeKeysNew; /**< An array of keys to change with the old key followed imediately by the new key, ordered by the new key. */
 } CBIndexTxData;
 
-typedef struct{
-	CBDatabaseIndex * index;
-	CBAssociativeArray txKeys; /** Array of all keys for iteration in memory for this index. */
-	CBAssociativeArray currentAddedKeys; /** Additonal keys from the current changes which are to be removed from txKeys when clearing current. */
-} CBIndexItData;
-
 /**
  @brief Allows iteration between a min element and a max element in an index. ??? Do NULL for no minimum or maximum?
  */
@@ -213,9 +215,15 @@ typedef struct{
 	void * minElement;
 	void * maxElement;
 	CBDatabaseIndex * index;
+	CBRangeIterator currentIt; /**< Iterator of current value writes */
+	CBRangeIterator stagedIt; /**< Iterator of staged value writes. Those which are to be changed are ignored. */
+	CBRangeIterator currentChangedIt; /**< Iterator over change key entrys to find staged/commited values that are to be changed by current data. */
+	CBRangeIterator stagedChangedIt; /**< Iterator over change key entrys to find committed values that are to be changed by staged data. */
 	CBIndexElementPos indexPos; /**< Position in the index */
-	CBRangeIterator txIt;
-	bool gotTxEl;
+	bool gotCurrentEl;
+	bool gotStagedEl;
+	bool gotCurrentChangedEl;
+	bool gotStagedChangedEl;
 	bool gotIndEl;
 	bool foundIndex;
 } CBDatabaseRangeIterator;
@@ -308,7 +316,6 @@ void CBFreeIndexNode(CBIndexNode * node);
  */
 void CBFreeIndex(CBDatabaseIndex * index);
 void CBFreeIndexElementPos(CBIndexElementPos pos);
-void CBFreeIndexItData(void * indexItData);
 void CBFreeIndexTxData(void * indexTxData);
 /**
  @brief Free a database range iterator. Only use after CBDatabaseRangeIteratorFirst or CBDatabaseRangeIteratorLast returns found.
@@ -431,14 +438,6 @@ bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType
 bool CBDatabaseGetLength(CBDatabaseIndex * index, uint8_t * key, uint32_t * length);
 bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t * length);
 /**
- @brief Gets a pointer to the CBIndexItData for a database index.
- @param database The database object.
- @param index The index object.
- @param create If true, create if not found, else return NULL if not found.
- @returns @see CBIndexItData or NULL if read is true and no index data is available.
- */
-CBIndexItData * CBDatabaseGetIndexItData(CBDatabase * database, CBDatabaseIndex * index, bool create);
-/**
  @brief Gets a pointer to the CBIndexTxData for a database index.
  @param changes The database transaction changes object.
  @param index The index object.
@@ -554,18 +553,24 @@ bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation 
 CBIndexFindStatus CBDatabaseRangeIteratorFirst(CBDatabaseRangeIterator * it);
 CBIndexFindStatus CBDatabaseRangeIteratorFirstNoMutex(CBDatabaseRangeIterator * it);
 /**
- @brief Returns a pointer to the key at the current position and does not iterate.
+ @brief Copies the key at the current position into "key" and does not iterate.
  @param it The iterator.
- @returns A pointer to the key at the current position.
+ @returns true if a key exists, or false
  */
-uint8_t * CBDatabaseRangeIteratorGetKey(CBDatabaseRangeIterator * it);
+bool CBDatabaseRangeIteratorGetKey(CBDatabaseRangeIterator * it, uint8_t * key);
 bool CBDatabaseRangeIteratorGetLength(CBDatabaseRangeIterator * it, uint32_t * length);
 /**
- @brief Goes to the first elment of the iterator.
  @param it The iterator.
- @returns -1 if the transaction key is least, or 1 if the index key is least, or 0 is both are the same.
+ @returns the highest key
  */
-int CBDatabaseRangeIteratorGetLesser(CBDatabaseRangeIterator * it);
+CBIteratorWhatKey CBDatabaseRangeIteratorGetHigher(CBDatabaseRangeIterator * it);
+/**
+ @param it The iterator.
+ @returns the lowest key
+ */
+CBIteratorWhatKey CBDatabaseRangeIteratorGetLesser(CBDatabaseRangeIterator * it);
+bool CBDatabaseRangeIteratorKeyIfHigher(uint8_t ** highestKey, CBRangeIterator * it, uint8_t keySize, bool changed);
+bool CBDatabaseRangeIteratorKeyIfLesser(uint8_t ** lowestKey, CBRangeIterator * it, uint8_t keySize, bool changed);
 /**
  @brief Goes to the last element of the iterator.
  @param it The iterator.
@@ -580,18 +585,20 @@ CBIndexFindStatus CBDatabaseRangeIteratorLastNoMutex(CBDatabaseRangeIterator * i
  */
 CBIndexFindStatus CBDatabaseRangeIteratorNext(CBDatabaseRangeIterator * it);
 /**
- @brief Goes to the next element of the iterator if the current key is to be deleted.
- @param it The iterator.
- @param If true go forwards, else backwards.
- @returns @see CBIndexFindStatus
- */
-CBIndexFindStatus CBDatabaseRangeIteratorIterateIfDeletion(CBDatabaseRangeIterator * it, bool forwards);
-/**
  @brief Goes to the next or previous index element of the iterator. Does not iterate the transaction iterator.
  @param it The iterator.
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorIterateIndex(CBDatabaseRangeIterator * it, bool forwards);
+/**
+ @brief Goes to the next element of the iterator if the current key is deleted.
+ @param it The iterator.
+ @param If true go forwards, else backwards.
+ @returns @see CBIndexFindStatus
+ */
+CBIndexFindStatus CBDatabaseRangeIteratorIterateIndexIfDeleted(CBDatabaseRangeIterator * it, bool forwards);
+void CBDatabaseRangeIteratorIterateStagedIfInvalid(CBDatabaseRangeIterator * it, CBIndexTxData * currentIndexTxData, CBIndexTxData * stagedIndexTxData, bool forward);
+void CBDatabaseRangeIteratorIterateStagedIfInvalidParticular(CBIndexTxData * currentIndexTxData, CBRangeIterator * it, CBAssociativeArray * arr, bool * got, bool forward);
 void CBDatabaseRangeIteratorNextMinimum(CBDatabaseRangeIterator * it);
 /**
  @brief Reads from the iterator at the current position and does not iterate.

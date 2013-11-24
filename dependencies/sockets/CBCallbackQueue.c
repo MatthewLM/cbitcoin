@@ -15,11 +15,11 @@
 #include "CBCallbackQueue.h"
 
 void CBInitCallbackQueue(CBCallbackQueue * queue){
-	pthread_mutex_init(&queue->queueMutex, NULL);
+	CBNewMutex(&queue->queueMutex);
 	queue->first = NULL;
 }
 CBCallbackQueueItem * CBCallbackQueueAdd(CBCallbackQueue * queue, void (*callback)(void *), void * arg, bool * nblock){
-	pthread_mutex_lock(&queue->queueMutex);
+	CBMutexLock(queue->queueMutex);
 	CBCallbackQueueItem * item = malloc(!*nblock ? sizeof(CBCallbackQueueItemBlocking) : sizeof(CBCallbackQueueItem));
 	item->userArg = arg;
 	item->userCallback = callback;
@@ -33,52 +33,52 @@ CBCallbackQueueItem * CBCallbackQueueAdd(CBCallbackQueue * queue, void (*callbac
 	if (!*nblock) {
 		blockingItem = (CBCallbackQueueItemBlocking *)queue->last;
 		blockingItem->done = nblock;
-		pthread_cond_init(&blockingItem->cond, NULL);
-		pthread_mutex_init(&blockingItem->mutex, NULL);
+		CBNewCondition(&blockingItem->cond);
+		CBNewMutex(&blockingItem->mutex);
 	}
-	pthread_mutex_unlock(&queue->queueMutex);
+	CBMutexUnlock(queue->queueMutex);
 	return item;
 }
 void CBCallbackQueueWait(CBCallbackQueueItem * item){
 	CBCallbackQueueItemBlocking * blockingItem = (CBCallbackQueueItemBlocking *)item;
-	pthread_mutex_lock(&blockingItem->mutex);
+	CBMutexLock(blockingItem->mutex);
 	if (!*blockingItem->done)
-		pthread_cond_wait(&blockingItem->cond, &blockingItem->mutex);
-	pthread_mutex_unlock(&blockingItem->mutex);
+		CBConditionWait(blockingItem->cond, blockingItem->mutex);
+	CBMutexUnlock(blockingItem->mutex);
 	// Free mutex and condition
-	pthread_mutex_destroy(&blockingItem->mutex);
-	pthread_cond_destroy(&blockingItem->cond);
+	CBFreeMutex(blockingItem->mutex);
+	CBFreeCondition(blockingItem->cond);
 	// Free item
 	free(item);
 }
 void CBCallbackQueueRun(CBCallbackQueue * queue){
-	pthread_mutex_lock(&queue->queueMutex);
+	CBMutexLock(queue->queueMutex);
 	while (queue->first != NULL) {
 		CBCallbackQueueItem * item = queue->first;
-		queue->first = queue->first->next;
+		queue->first = item->next;
 		item->userCallback(item->userArg);
 		// If blocking signal condition and make done
 		if (item->blocking) {
-			CBCallbackQueueItemBlocking * blockingItem = (CBCallbackQueueItemBlocking *)queue->last;
-			pthread_mutex_lock(&blockingItem->mutex);
+			CBCallbackQueueItemBlocking * blockingItem = (CBCallbackQueueItemBlocking *)item;
+			CBMutexLock(blockingItem->mutex);
 			*blockingItem->done = true;
-			pthread_cond_signal(&blockingItem->cond);
-			pthread_mutex_unlock(&blockingItem->mutex);
+			CBConditionSignal(blockingItem->cond);
+			CBMutexUnlock(blockingItem->mutex);
 		}else
 			// Free item
 			free(item);
 	}
-	pthread_mutex_unlock(&queue->queueMutex);
+	CBMutexUnlock(queue->queueMutex);
 }
 void CBFreeCallbackQueue(CBCallbackQueue * queue){
-	pthread_mutex_destroy(&queue->queueMutex);
+	CBFreeMutex(queue->queueMutex);
 	while (queue->first != NULL) {
 		CBCallbackQueueItem * item = queue->first;
 		queue->first = queue->first->next;
 		if (item->blocking) {
 			CBCallbackQueueItemBlocking * blockingItem = (CBCallbackQueueItemBlocking *)queue->last;
-			pthread_mutex_destroy(&blockingItem->mutex);
-			pthread_cond_destroy(&blockingItem->cond);
+			CBFreeMutex(blockingItem->mutex);
+			CBFreeCondition(blockingItem->cond);
 		}
 		// Free item
 		free(item);

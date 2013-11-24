@@ -58,7 +58,8 @@ bool CBNodeStorageLoadUnconfTxs(void * vnode){
 			return false;
 		}
 		while (res == CB_DATABASE_INDEX_FOUND) {
-			uint8_t * key = CBDatabaseRangeIteratorGetKey(&it);
+			uint8_t key[32];
+			CBDatabaseRangeIteratorGetKey(&it, key);
 			// Get the transaction size
 			uint32_t len;
 			if (! CBDatabaseRangeIteratorGetLength(&it, &len)) {

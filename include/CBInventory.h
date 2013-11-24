@@ -36,7 +36,8 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	uint16_t itemNum; /**< Number of items in the inventory. */
-	CBInventoryItem ** items[200]; /**< The items. This should be made of memory blocks of pointers to CBInventoryItems with 250 CBInventoryItems per block. */
+	CBInventoryItem * itemFront; /**< The items. */
+	CBInventoryItem * itemBack;
 } CBInventory;
 
 /**
@@ -89,7 +90,7 @@ uint32_t CBInventoryCalculateLength(CBInventory * self);
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBInventoryDeserialise(CBInventory * self);
-CBInventoryItem * CBInventoryGetInventoryItem(CBInventory * self, uint16_t x);
+CBInventoryItem * CBInventoryPopInventoryItem(CBInventory * self);
 /**
  @brief Serialises a CBInventory to the byte data.
  @param self The CBInventory object

@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "CBNode.h"
 
 #ifndef CBCallbackQueueH
 #define CBCallbackQueueH
@@ -31,14 +32,14 @@ struct CBCallbackQueueItem{
 typedef struct{
 	CBCallbackQueueItem item;
 	bool * done;
-	pthread_cond_t cond;
-	pthread_mutex_t mutex;
+	CBDepObject cond;
+	CBDepObject mutex;
 } CBCallbackQueueItemBlocking;
 
 typedef struct{
 	CBCallbackQueueItem * first;
 	CBCallbackQueueItem * last;
-	pthread_mutex_t queueMutex;
+	CBDepObject queueMutex;
 }CBCallbackQueue;
 
 void CBInitCallbackQueue(CBCallbackQueue * queue);

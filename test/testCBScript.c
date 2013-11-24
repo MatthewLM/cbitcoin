@@ -58,21 +58,32 @@ int main(){
 			if (!script) {
 				printf("%i: {%s} INVALID\n", x, line);
 				return 1;
-			}else{
-				CBScriptStack stack = CBNewEmptyScriptStack();
-				CBScriptExecuteReturn res = CBScriptExecute(script, &stack, NULL, NULL, 0, true);
-				CBFreeScriptStack(stack);
-				char c = fgetc(f);
-				if ((c == '1' && res != CB_SCRIPT_TRUE)
-					|| (c == '0' && (res != CB_SCRIPT_INVALID && res != CB_SCRIPT_FALSE))) {
-					printf("%i: {%s} FAIL\n", x, line);
-					return 1;
-				}else{
-					printf("%i: {%s} OK\n", x, line);
-				}
-				CBReleaseObject(script);
-				fseek(f, 1, SEEK_CUR);
 			}
+			CBScriptStack stack = CBNewEmptyScriptStack();
+			CBScriptExecuteReturn res = CBScriptExecute(script, &stack, NULL, NULL, 0, true);
+			CBFreeScriptStack(stack);
+			char c = fgetc(f);
+			if ((c == '1' && res != CB_SCRIPT_TRUE)
+				|| (c == '0' && (res != CB_SCRIPT_INVALID && res != CB_SCRIPT_FALSE))) {
+				printf("%i: {%s} FAIL\n", x, line);
+				return 1;
+			}else{
+				printf("%i: {%s} OK\n", x, line);
+			}
+			// Test CBScriptToString
+			uint32_t size = CBScriptStringMaxSize(script);
+			if (size < strlen(line) + 1) {
+				printf("%i: {%s} STR SIZE FAIL\n", x, line);
+				return EXIT_FAILURE;
+			}
+			char scriptStr[size];
+			CBScriptToString(script, scriptStr);
+			if (strcmp(scriptStr, line) != 0) {
+				printf("%i: {%s} STR FAIL\n", x, line);
+				return EXIT_FAILURE;
+			}
+			CBReleaseObject(script);
+			fseek(f, 1, SEEK_CUR);
 		}
 		free(line);
 	}
@@ -84,12 +95,23 @@ int main(){
 		printf("PUSHDATA TEST 1 FAIL\n");
 		return 1;
 	}
+	char scriptStr[46];
+	CBScriptToString(script, scriptStr);
+	if (strcmp(scriptStr, "0x47 OP_DUP 0x47 OP_EQUALVERIFY 0x47 OP_EQUAL") != 0) {
+		printf("PUSHDATA TEST 1 STR FAIL\n");
+		return EXIT_FAILURE;
+	}
 	CBReleaseObject(script);
 	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_PUSHDATA1, 0x01, 0x00, CB_SCRIPT_OP_DUP, CB_SCRIPT_OP_PUSHDATA2, 0x01, 0x00, 0x00, CB_SCRIPT_OP_EQUALVERIFY, CB_SCRIPT_OP_PUSHDATA4, 0x01, 0x00, 0x00, 0x00, 0x00, CB_SCRIPT_OP_EQUAL}, 16);
 	stack = CBNewEmptyScriptStack();
 	if(CBScriptExecute(script, &stack, NULL, NULL, 0, true) != CB_SCRIPT_TRUE){
 		printf("PUSHDATA TEST 2 FAIL\n");
 		return 1;
+	}
+	CBScriptToString(script, scriptStr);
+	if (strcmp(scriptStr, "0x00 OP_DUP 0x00 OP_EQUALVERIFY 0x00 OP_EQUAL") != 0) {
+		printf("PUSHDATA TEST 2 STR FAIL\n");
+		return EXIT_FAILURE;
 	}
 	CBReleaseObject(script);
 	// Test stack length limit

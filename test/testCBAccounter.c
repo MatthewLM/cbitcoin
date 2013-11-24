@@ -239,7 +239,7 @@ int main(){
 		return 1;
 	}
 	// Move transaction into branch
-	if (! CBAccounterBranchlessTransactionToBranch(storage, tx1, 1000, 0)) {
+	if (! CBAccounterUnconfirmedTransactionToBranch(storage, tx1, 1000, 0)) {
 		printf("MOVE TX TO BRANCH FAIL\n");
 		return 1;
 	}
@@ -297,7 +297,7 @@ int main(){
 		printf("TX2 SERAILISE FAIL\n");
 		return 1;
 	}
-	// Find transaction on UNCONF
+	// Find transaction on unconfirmed
 	if (! CBAccounterFoundTransaction(storage, tx2, 0, 2000, CB_NO_BRANCH, &details)) {
 		printf("FOUND TX2 FAIL\n");
 		return 1;
@@ -322,7 +322,7 @@ int main(){
 	}
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
-	// Check UNCONF balance
+	// Check unconfirmed balance
 	checkBalance(storage, CB_NO_BRANCH, account1, 50);
 	printf("CHECKING BRANCH 0 OUTPUTS\n");
 	// Check unspent outputs for branch 0
@@ -330,16 +330,16 @@ int main(){
 	checkUnspentOutputs(cursor, (CBTestUOutDetails [1]){
 		{300, CBTransactionGetHash(tx1), 1, hash1}
 	}, 1);
-	// Check unspent outputs for UNCONF
+	// Check unspent outputs for unconfirmed
 	printf("CHECKING UNCONF OUTPUTS\n");
 	CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, CB_NO_BRANCH, account1);
 	checkUnspentOutputs(cursor, (CBTestUOutDetails [2]){
 		{50, CBTransactionGetHash(tx2), 0, hash1},
 		{100, CBTransactionGetHash(tx2), 1, hash2},
 	}, 2);
-	// Test loosing UNCONF transaction
+	// Test loosing unconfirmed transaction
 	printf("CHECKING LOST TX2\n");
-	if (! CBAccounterLostBranchlessTransaction(storage, tx2)) {
+	if (! CBAccounterLostUnconfirmedTransaction(storage, tx2)) {
 		printf("LOOSE UNCONF TX FAIL\n");
 		return 1;
 	}
@@ -348,7 +348,7 @@ int main(){
 	checkBalance(storage, CB_NO_BRANCH, account1, 0);
 	printf("CHECKING BRANCH 0 BALANCE\n");
 	checkBalance(storage, 0, account1, 400);
-	// Check we can't get transaction as UNCONF
+	// Check we can't get transaction as unconfirmed
 	printf("CHECKING UNCONF TRANSACTIONS\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, CB_NO_BRANCH, account1, 1000, 2000);
 	checkTransactions(cursor, NULL, 0);
@@ -487,7 +487,7 @@ int main(){
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
 	// Move over tx3
-	if (! CBAccounterBranchlessTransactionToBranch(storage, tx3, 4000, 0)) {
+	if (! CBAccounterUnconfirmedTransactionToBranch(storage, tx3, 4000, 0)) {
 		printf("MOVE TX3 INTO BRANCH 0\n");
 		return 1;
 	}
@@ -617,7 +617,7 @@ int main(){
 	}, 1);
 	// Now test adding to branch
 	printf("CHECKING TX5 TO BRANCH\n");
-	if (! CBAccounterBranchlessTransactionToBranch(storage, tx5, 5000, 0)) {
+	if (! CBAccounterUnconfirmedTransactionToBranch(storage, tx5, 5000, 0)) {
 		CBLogError("TX5 TO BRANCH 0 FAIL\n");
 		return 1;
 	}
@@ -828,11 +828,11 @@ int main(){
 	}, 1);
 	// Test adding the two transactions to branch 1
 	printf("CHECKING TX6 AND TX7 TO BRANCH 1\n");
-	if (! CBAccounterBranchlessTransactionToBranch(storage, tx6, 6000, 1)) {
+	if (! CBAccounterUnconfirmedTransactionToBranch(storage, tx6, 6000, 1)) {
 		printf("TX6 TO BRANCH 1 FAIL\n");
 		return 1;
 	}
-	if (! CBAccounterBranchlessTransactionToBranch(storage, tx7, 7000, 1)) {
+	if (! CBAccounterUnconfirmedTransactionToBranch(storage, tx7, 7000, 1)) {
 		printf("TX7 TO BRANCH 1 FAIL\n");
 		return 1;
 	}
@@ -1141,7 +1141,35 @@ int main(){
 	// Verify account 2 had change in balance
 	printf("CHECKING ACCOUNT 2 GOT WATCHED HASH FROM ACCOUNT 1\n");
 	checkBalance(storage, CB_NO_BRANCH, account2, -150);
-	// ??? Add tests for duplicate transactions added and then removed as unconfimed? Also duplicate txs moved from UNCONF to a branch.
+	// Add another transaction as unconfirmed spending tx9, then remove it. Does the tx9 outputs then exist as unspent?
+	CBTransaction * tx10 = CBNewTransaction(0, 1);
+	CBByteArray * prevOutTx9 = CBNewScriptOfSize(32);
+	memcpy(CBByteArrayGetData(prevOutTx9), CBTransactionGetHash(tx9), 32);
+	CBTransactionTakeInput(tx10, CBNewTransactionInput(inScript, CB_TX_INPUT_FINAL, prevOutTx9, 0)); // -50 from account 2
+	CBTransactionTakeOutput(tx10, CBNewTransactionOutput(50, outScript3)); // 50 for account 2
+	// Serialise transaction
+	CBGetMessage(tx10)->bytes = CBNewByteArrayOfSize(CBTransactionCalculateLength(tx10));
+	if (CBTransactionSerialise(tx10, false) != CBTransactionCalculateLength(tx10)){
+		printf("TX10 SERAILISE FAIL\n");
+		return 1;
+	}
+	// Find tx as unconf
+	if (! CBAccounterFoundTransaction(storage, tx10, 0, 10000, CB_NO_BRANCH, &details)) {
+		printf("FOUND TX10 FAIL\n");
+		return 1;
+	}
+	// Remove
+	if (! CBAccounterLostUnconfirmedTransaction(storage, tx10)){
+		printf("LOST TX10 FAIL\n");
+		return 1;
+	}
+	// Check we can get tx9 output
+	CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, CB_NO_BRANCH, account2);
+	checkUnspentOutputs(cursor, (CBTestUOutDetails [2]){
+		{400, CBTransactionGetHash(tx8), 0, hash3},
+		{50, CBTransactionGetHash(tx9), 0, hash1},
+	}, 2);
+	// ??? Add tests for duplicate transactions added and then removed as unconfimed? Also duplicate txs moved from unconfirmed to a branch.
 	CBReleaseObject(tx1);
 	CBReleaseObject(tx2);
 	CBReleaseObject(tx3);

@@ -48,6 +48,28 @@ bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeItera
 	it->pos = res.position;
 	return true;
 }
+bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeIterator * it){
+	// Try iterating
+	if (CBAssociativeArrayIterate(self, &it->pos))
+		// Couldn't iterate, meaning we have reach the end of the array already
+		return true;
+	// Check the range
+	if (self->compareFunc(self, it->maxElement, CBRangeIteratorGetPointer(it)) == CB_COMPARE_LESS_THAN)
+		// The next element goes out of range.
+		return true;
+	return false;
+}
+bool CBAssociativeArrayRangeIteratorPrev(CBAssociativeArray * self, CBRangeIterator * it){
+	// Try iterating
+	if (CBAssociativeArrayIterateBack(self, &it->pos))
+		// Couldn't iterate, meaning we have reach the start of the array already
+		return true;
+	// Check the range
+	if (self->compareFunc(self, it->minElement, CBRangeIteratorGetPointer(it)) == CB_COMPARE_MORE_THAN)
+		// The next element goes out of range.
+		return true;
+	return false;
+}
 bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it){
 	// Try to find the minimum element
 	CBFindResult res = CBAssociativeArrayFind(self, it->minElement);
@@ -71,17 +93,6 @@ bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIter
 	}
 	it->pos = res.position;
 	return true;
-}
-bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeIterator * it){
-	// Try iterating
-	if (CBAssociativeArrayIterate(self, &it->pos))
-		// Couldn't iterate, meaning we have reach the end of the array already
-		return true;
-	// Check the range
-	if (self->compareFunc(self, it->maxElement, it->pos.node->elements[it->pos.index]) == CB_COMPARE_LESS_THAN)
-		// The next element goes out of range.
-		return true;
-	return false;
 }
 void CBAssociativeArrayClear(CBAssociativeArray * self){
 	CBFreeBTreeNode(self->root, self->onFree, true);
@@ -342,6 +353,7 @@ bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it){
 	it->index = it->node->numElements - 1;
 	return true;
 }
+#include <stdio.h>
 void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right){
 	// See if we can insert data in this node
 	if (pos.node->numElements < CB_BTREE_ELEMENTS) {
@@ -461,29 +473,69 @@ bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it){
 			it->node = it->node->children[0];
 		}
 		it->index = 0;
-	}else{
-		if (it->index == it->node->numElements - 1) {
-			for(;;){
-				// If root then it is the end
-				if (it->node == self->root)
-					return true;
-				// Move to parent
-				if (it->parentIndex)
-					it->node = it->parentNodes[it->parentIndex-1];
-				else
-					it->node = self->root;
-				it->index = it->parentPositions[it->parentIndex];
-				if (it->parentIndex)
-					it->parentIndex--;
-				if (it->index < it->node->numElements)
-					// We can use this
-					break;
-				// Else continue onto next parent and so on in the loop
+	}else if (it->index == it->node->numElements - 1) {
+		for(;;){
+			// If root then it is the end
+			if (it->node == self->root)
+				return true;
+			// Move to parent
+			if (it->parentIndex)
+				it->node = it->parentNodes[it->parentIndex-1];
+			else
+				it->node = self->root;
+			it->index = it->parentPositions[it->parentIndex];
+			if (it->parentIndex)
+				it->parentIndex--;
+			if (it->index < it->node->numElements)
+				// We can use this
+				break;
+			// Else continue onto next parent and so on in the loop
+		}
+	}else
+		// Move along one
+		it->index++;
+	return false;
+}
+bool CBAssociativeArrayIterateBack(CBAssociativeArray * self, CBPosition * it){
+	// Look for child
+	if (it->node->children[0]) {
+		// Go to right-most in child
+		if (it->node != self->root){
+			it->parentNodes[it->parentIndex++] = it->node;
+			it->parentCursor++;
+		}
+		it->parentPositions[it->parentIndex] = it->index;
+		it->node = it->node->children[it->index];
+		while (it->node->children[0]){
+			if (it->node != self->root){
+				it->parentNodes[it->parentIndex++] = it->node;
+				it->parentCursor++;
 			}
-		}else
-			// Move along one
-			it->index++;
-	}
+			it->parentPositions[it->parentIndex] = it->node->numElements;
+			it->node = it->node->children[it->node->numElements];
+		}
+		it->index = it->node->numElements - 1;
+	}else if (it->index == 0) {
+		for(;;){
+			// If root then it is the end
+			if (it->node == self->root)
+				return true;
+			// Move to parent
+			if (it->parentIndex)
+				it->node = it->parentNodes[it->parentIndex-1];
+			else
+				it->node = self->root;
+			it->index = it->parentPositions[it->parentIndex];
+			if (it->parentIndex)
+				it->parentIndex--;
+			if (it->index-- != 0)
+				// We can use this
+				break;
+			// Else continue onto next parent and so on in the loop
+		}
+	}else
+		// Move down one
+		it->index--;
 	return false;
 }
 bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self){

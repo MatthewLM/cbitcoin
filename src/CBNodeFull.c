@@ -54,8 +54,9 @@ bool CBInitNodeFull(CBNodeFull * self, CBDepObject database, CBNodeFlags flags, 
 	self->deleteOrphanTime = CBGetMilliseconds();
 	self->initialisedFoundUnconfTxsNew = false;
 	self->initialisedFoundUnconfTxsPrev = false;
+	self->initialisedUnconfirmedTxs = false;
 	self->initialisedLostUnconfTxs = false;
-	self->initialisedOurLostTxs = false;
+	self->initialisedLostChainTxs = false;
 	self->newTransactions = NULL;
 	self->addingDirect = false;
 	// Initialise the validator
@@ -144,6 +145,11 @@ void CBFreeTransactionDependency(void * vtxDep){
 	CBFreeAssociativeArray(&dep->dependants);
 	free(dep);
 }
+void CBFreeTransactionOfType(void * vtx){
+	CBTransactionOfType * tx = vtx;
+	CBReleaseObject(tx->tx);
+	free(tx);
+}
 
 //  Functions
 
@@ -175,25 +181,29 @@ bool CBNodeFullAcceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage
 	}
 	return true;
 }
-bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType addType){
+bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType addType) {
 	CBNodeFull * self = CBGetPeer(vpeer)->nodeObj;
 	// If last block call newBlock
-	if (addType == CB_ADD_BLOCK_LAST)
-		CBGetNode(self)->callbacks.newBlock(CBGetNode(self), block, blockHeight, self->forkPoint);
+	if (addType == CB_ADD_BLOCK_LAST) {
+		// Update block height
+		CBGetNetworkCommunicator(self)->blockHeight = blockHeight;
+		// Call newBlock
+		CBGetNode(self)->callbacks.newBlock(CBGetNode(self), block, self->forkPoint);
+	}
 	// Loop through and process transactions.
-	for (uint32_t x = 1; x < block->transactionNum; x++) {
+	for (uint32_t x = 0; x < block->transactionNum; x++) {
 		CBTransaction * tx = block->transactions[x];
 		// If the transaction is ours, check for lost transactions from the other chain.
-		if (self->initialisedOurLostTxs) {
-			// Take out this transaction from the ourLostTxs array if it exists in there
-			CBFindResult res = CBAssociativeArrayFind(&self->ourLostTxs, tx);
+		if (self->initialisedUnconfirmedTxs) {
+			// Take out this transaction from the lostTxs array if it exists in there
+			CBFindResult res = CBAssociativeArrayFind(&self->unconfirmedTxs, &tx);
 			if (res.found){
-				// Remove dependencies and then the lost tx
+				// Remove dependencies and then the unconfirmed tx, as it it now on the chain again
 				for (uint32_t y = 0; y < tx->inputNum; y++)
-					CBNodeFullRemoveFromDependency(&self->ourLostTxDependencies, CBByteArrayGetData(tx->inputs[y]->prevOut.hash), tx);
-				CBAssociativeArrayDelete(&self->ourLostTxs, res.position, true);
-				// We refound a transaction of ours we lost on the other chain. If this is a new block, add the transaction to the accounter.
-				if (addType != CB_ADD_BLOCK_PREV) {
+					CBNodeFullRemoveFromDependency(&self->unconfirmedTxDependencies, CBByteArrayGetData(tx->inputs[y]->prevOut.hash), &tx);
+				// We refound a transaction we lost from the other chain. If this is a new block, add the transaction to the accounter, if it is ours.
+				CBTransactionOfType * txOfType = CBFindResultToPointer(res);
+				if (txOfType->ours && addType != CB_ADD_BLOCK_PREV) {
 					// Get timestamp
 					uint64_t time;
 					if (!CBAccounterGetTransactionTime(CBGetNode(self)->accounterStorage, CBTransactionGetHash(tx), &time)) {
@@ -201,154 +211,181 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 						return false;
 					}
 					// Add transaction
-					if (CBNodeFullFoundTransaction(self, tx, time, blockHeight, branch, addType == CB_ADD_BLOCK_LAST) != CB_TRUE) {
-						CBLogError("Could not process a found transaction that was a lost transaction of ours.");
+					CBErrBool ours = CBAccounterFoundTransaction(CBGetNode(self)->accounterStorage, tx, blockHeight, time, branch, NULL);
+					if (ours == CB_ERROR) {
+						CBLogError("Could not process a transaction with the accounter that was a lost transactions of ours.");
 						return false;
 					}
 				}
-				// We can end here for one of our transactions moving from one chain to another.
+				// Remove from unconfirmedTxs
+				CBAssociativeArrayDelete(&self->unconfirmedTxs, res.position, true);
+				// We can end here for a transaction is moving from one chain to another and nothing else.
 				continue;
 			}
 		}
-		// We will record unconfirmed transactions found on the chain, but only remove when we finish.
-		// THIS IS IMPORTANT so that if there is a failed reorganisation the unconfirmed transactions will remain in place.
-		CBUnconfTransaction * uTx = CBNodeFullGetAnyTransaction(self, CBTransactionGetHash(tx));
-		if (uTx != NULL) {
-			if (addType == CB_ADD_BLOCK_LAST){
-				// As this is the last block, we know it is certain. Therefore process moving from unconfirmed to chain.
-				if (! CBNodeFullUnconfToChain(self, uTx, blockHeight, branch, true))
-					return false;
-			}else{
-				// Else we will need to record this for processing later as this block is tentative
-				CBTransactionToBranch * txToBranch = malloc(sizeof(*txToBranch));
-				txToBranch->uTx = uTx;
-				txToBranch->blockHeight = blockHeight;
-				txToBranch->branch = branch;
-				if (addType == CB_ADD_BLOCK_NEW) {
-					// Record transaction to foundUnconfTxsNew
-					if (! self->initialisedFoundUnconfTxsNew)
-						CBInitAssociativeArray(&self->foundUnconfTxsNew, CBPtrCompare, NULL, free);
-					CBAssociativeArrayInsert(&self->foundUnconfTxsNew, txToBranch, CBAssociativeArrayFind(&self->foundUnconfTxsNew, txToBranch).position, NULL);
+		if (x != 0) {
+			// We will record unconfirmed transactions found on the chain, but only remove when we finish.
+			// This is important so that if there is a failed reorganisation the unconfirmed transactions will remain in place.
+			CBUnconfTransaction * uTx = CBNodeFullGetAnyTransaction(self, CBTransactionGetHash(tx));
+			if (uTx != NULL) {
+				if (addType == CB_ADD_BLOCK_LAST){
+					// As this is the last block, we know it is certain. Therefore process moving from unconfirmed to chain.
+					if (! CBNodeFullUnconfToChain(self, uTx, blockHeight, block->time, branch, true))
+						return false;
 				}else{
-					// Record transaction to foundUnconfTxsPrev
-					if (! self->initialisedFoundUnconfTxsPrev)
-						CBInitAssociativeArray(&self->foundUnconfTxsPrev, CBPtrCompare, NULL, free);
-					CBAssociativeArrayInsert(&self->foundUnconfTxsPrev, txToBranch, CBAssociativeArrayFind(&self->foundUnconfTxsPrev, txToBranch).position, NULL);
-				}
-			}
-		}else{
-			// This transaction is not one of the unconfirmed ones we have
-			// If this transaction spends a chain dependency of an unconfirmed transaction or one of our lost txs, then we should lose that transaction as a double spend, as well as any further dependants, including unconfirmed transactions (unless it was ours).
-			for (uint32_t y = 0; y < tx->inputNum; y++) {
-				uint8_t * prevHash = CBByteArrayGetData(tx->inputs[y]->prevOut.hash);
-				// See if it's a chain dependency of at least one unconfirmed transaction
-				CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, prevHash);
-				if (res.found) {
-					// Yes it is. Now look for a dependant spending the same output by looping through them.
-					// ??? Could be optimised by placing additional information with chain dependencies. Is it worth it though?
-					CBTransactionDependency * dep = CBFindResultToPointer(res);
-					CBAssociativeArrayForEach(CBUnconfTransaction * dependant, &dep->dependants){
-						bool found = false;
-						for (uint32_t z = 0; z < dependant->tx->inputNum; z++) {
-							if (!memcmp(prevHash, CBByteArrayGetData(dependant->tx->inputs[z]->prevOut.hash), 32)
-								&& tx->inputs[y]->prevOut.index == dependant->tx->inputs[z]->prevOut.index) {
-								// The prevouts are the same! Add this to the lostUnconfTxs if the block is tentative, otherwise we can remove the unconfirmed transaction straight away.
-								if (addType == CB_ADD_BLOCK_LAST) {
-									// Remove now.
-									if (! CBNodeFullRemoveUnconfTx(self, dependant))
-										return false;
-								}else{
-									// Remove upon completion of reorg
-									if (! self->initialisedLostUnconfTxs)
-										CBInitAssociativeArray(&self->lostUnconfTxs, CBTransactionPtrCompare, NULL, NULL);
-									CBAssociativeArrayInsert(&self->lostUnconfTxs, dependant, CBAssociativeArrayFind(&self->lostUnconfTxs, dependant).position, NULL);
-								}
-								// We have found the dependant that spends the same output.
-								found = true;
-								break;
-							}
-						}
-						// If we have found the dependant that spends the same output, no other dependant can, so end the loop here.
-						if (found)
-							break;
+					// Else we will need to record this for processing later as this block is tentative
+					CBTransactionToBranch * txToBranch = malloc(sizeof(*txToBranch));
+					txToBranch->uTx = uTx;
+					txToBranch->blockHeight = blockHeight;
+					txToBranch->blockTime = block->time;
+					txToBranch->branch = branch;
+					// Record transaction to foundUnconfTxsNew or foundUnconfTxsPrev
+					bool * initialised = addType == CB_ADD_BLOCK_NEW ? &self->initialisedFoundUnconfTxsNew : &self->initialisedFoundUnconfTxsPrev;
+					CBAssociativeArray * array = addType == CB_ADD_BLOCK_NEW ? &self->foundUnconfTxsNew : &self->foundUnconfTxsPrev;
+					if (! *initialised){
+						*initialised = true;
+						CBInitAssociativeArray(array, CBPtrCompare, NULL, free);
 					}
+					CBAssociativeArrayInsert(array, txToBranch, CBAssociativeArrayFind(array, txToBranch).position, NULL);
 				}
-				// Now for our lost txs
-				if (self->initialisedOurLostTxs) {
-					CBFindResult res = CBAssociativeArrayFind(&self->ourLostTxDependencies, prevHash);
+			}else{
+				// This transaction is not one of the unconfirmed ones we have
+				// If this transaction spends a chain dependency of an unconfirmed transaction or one of the lost txs, then we should lose that transaction as a double spend, as well as any further dependants, including unconfirmed transactions (unless it was ours).
+				for (uint32_t y = 0; y < tx->inputNum; y++) {
+					uint8_t * prevHash = CBByteArrayGetData(tx->inputs[y]->prevOut.hash);
+					// See if it's a chain dependency of at least one unconfirmed transaction
+					CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, prevHash);
 					if (res.found) {
-						// We need to loop through the dependants and see if they also spend from the same output
+						// Yes it is. Now look for a dependant spending the same output by looping through them.
+						// ??? Could be optimised by placing additional information with chain dependencies. Is it worth it though?
 						CBTransactionDependency * dep = CBFindResultToPointer(res);
-						// The dependants of ourLostTxDependencies can only be CBTransaction
-						CBAssociativeArrayForEach(CBTransaction * dependant, &dep->dependants) {
+						CBAssociativeArrayForEach(CBUnconfTransaction * dependant, &dep->dependants){
 							bool found = false;
-							for (uint32_t z = 0; z < dependant->inputNum; z++) {
-								if (!memcmp(prevHash, CBByteArrayGetData(dependant->inputs[z]->prevOut.hash), 32)
-									&& tx->inputs[y]->prevOut.index == dependant->inputs[z]->prevOut.index) {
-									// Yes this transaction of ours that we lost cannot be made unconfirmed sue to double spend.
-									// Remove it and any further dependant transactions of ours.
-									CBNodeFullLoseOurDependants(self, CBTransactionGetHash(dependant));
-									// And the unconf dependants 
-									CBNodeFullLoseUnconfDependants(self, CBTransactionGetHash(dependant));
-									// Remove the dependant from the dependency.
-									CBAssociativeArrayDelete(&dep->dependants, CBCurrentPosition, true);
-									// Remove dependency if it is empty
-									if (dep->dependants.root->numElements == 0)
-										CBAssociativeArrayDelete(&self->ourLostTxDependencies, res.position, true);
-									// Remove transaction from ourLostTxs
-									CBAssociativeArrayDelete(&self->ourLostTxs, CBAssociativeArrayFind(&self->ourLostTxs, dependant).position, true);
+							for (uint32_t z = 0; z < dependant->tx->inputNum; z++) {
+								if (!memcmp(prevHash, CBByteArrayGetData(dependant->tx->inputs[z]->prevOut.hash), 32)
+									&& tx->inputs[y]->prevOut.index == dependant->tx->inputs[z]->prevOut.index) {
+									// The prevouts are the same! Add this to the lostTxs if the block is tentative, otherwise we can remove the unconfirmed transaction straight away.
+									if (! CBNodeFullLostUnconfTransaction(self, dependant, addType == CB_ADD_BLOCK_LAST))
+										return false;
+									// We have found the dependant that spends the same output.
 									found = true;
 									break;
 								}
 							}
+							// If we have found the dependant that spends the same output, no other dependant can, so end the loop here.
 							if (found)
 								break;
 						}
 					}
+					// Now for our unconfirmed lost txs. It can't double spend any other transaction.
+					if (self->initialisedUnconfirmedTxs) {
+						CBFindResult res = CBAssociativeArrayFind(&self->unconfirmedTxDependencies, prevHash);
+						if (res.found) {
+							// We need to loop through the dependants and see if they also spend from the same output
+							CBTransactionDependency * dep = CBFindResultToPointer(res);
+							// The dependants of ourLostTxDependencies can only be CBTransaction
+							CBAssociativeArrayForEach(CBTransactionOfType * dependant, &dep->dependants) {
+								bool found = false;
+								for (uint32_t z = 0; z < dependant->tx->inputNum; z++) {
+									if (!memcmp(prevHash, CBByteArrayGetData(dependant->tx->inputs[z]->prevOut.hash), 32)
+										&& tx->inputs[y]->prevOut.index == dependant->tx->inputs[z]->prevOut.index) {
+										// Yes this transaction that we lost cannot be made unconfirmed due to double spend.
+										// Remove it and any further dependant transactions of ours.
+										if (!CBNodeFullLoseChainTxDependants(self, CBTransactionGetHash(dependant->tx), addType == CB_ADD_BLOCK_LAST))
+											return false;
+										// Remove the dependant from the dependency.
+										CBAssociativeArrayDelete(&dep->dependants, CBCurrentPosition, false);
+										// Remove dependency if it is empty
+										if (dep->dependants.root->numElements == 0)
+											CBAssociativeArrayDelete(&self->unconfirmedTxDependencies, res.position, true);
+										if (! CBNodeFullMakeLostChainTransaction(self, dependant, addType == CB_ADD_BLOCK_LAST))
+											return false;
+										found = true;
+										break;
+									}
+								}
+								if (found)
+									break;
+							}
+						}
+					}
+				}
+				// Give to accounter if not previously validated
+				if (addType != CB_ADD_BLOCK_PREV) {
+					if (CBNodeFullFoundTransaction(self, tx, block->time, blockHeight, branch, addType == CB_ADD_BLOCK_LAST, true) == CB_ERROR) {
+						CBLogError("Could not process a found transaction found in a block.");
+						return false;
+					}
 				}
 			}
-			// Give to accounter if not previously validated
-			if (addType != CB_ADD_BLOCK_PREV) {
-				if (CBNodeFullFoundTransaction(self, tx, block->time, blockHeight, branch, addType == CB_ADD_BLOCK_LAST) == CB_ERROR) {
-					CBLogError("Could not process a found transaction found in a block.");
-					return false;
-				}
+		}else if (addType != CB_ADD_BLOCK_PREV) {
+			// Coinbase not previously validated, so add to accounter
+			if (CBNodeFullFoundTransaction(self, tx, block->time, blockHeight, branch, addType == CB_ADD_BLOCK_LAST, true) == CB_ERROR) {
+				CBLogError("Could not process a found transaction found in a block.");
+				return false;
 			}
 		}
 	}
 	if (addType == CB_ADD_BLOCK_LAST) {
-		// We can process through recorded double spends and found unconf transactions
-		if (self->initialisedOurLostTxs) {
-			// Start with our lost transactions, adding them back to unconfirmed
-			CBAssociativeArrayForEach(CBTransaction * tx, &self->ourLostTxs) {
+		// We can finalise processing for the blocks
+		// Process the removed unconf transactions
+		if (!CBNodeFullRemoveLostUnconfTxs(self)) {
+			CBLogError("Could not remove lost unconfirmed transactions from double spends in the chain.");
+			return false;
+		}
+		// Process the removed chain transactions
+		if (self->initialisedLostChainTxs) {
+			CBAssociativeArrayForEach(CBTransactionOfType * tx, &self->lostChainTxs)
+				CBGetNode(self)->callbacks.doubleSpend(CBGetNode(self), CBTransactionGetHash(tx->tx));
+			// Free lostChainTxs
+			CBFreeAssociativeArray(&self->lostChainTxs);
+			self->initialisedLostChainTxs = false;
+		}
+		if (self->initialisedUnconfirmedTxs) {
+			// Add lost transactions back to unconfirmed
+			CBAssociativeArrayForEach(CBTransactionOfType * tx, &self->unconfirmedTxs) {
 				// Make found transaction
 				CBFoundTransaction * fndTx = malloc(sizeof(*fndTx));
-				fndTx->utx.tx = tx;
+				fndTx->utx.tx = tx->tx;
 				fndTx->utx.numUnconfDeps = 0;
-				fndTx->utx.type = CB_TX_OURS;
+				fndTx->utx.type = tx->ours ? CB_TX_OURS : CB_TX_OTHER;
 				// Calculate input value.
 				fndTx->inputValue = 0;
-				for (uint32_t x = 0; x < tx->inputNum; x++) {
+				for (uint32_t x = 0; x < tx->tx->inputNum; x++) {
 					// We need to get the previous output value
-					uint8_t * prevOutHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
-					// See if we have this transaction as unconfirmed.
-					CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, prevOutHash);
-					if (fndTx == NULL) {
-						// Load from chain
-						bool coinbase;
-						uint32_t height;
-						CBTransactionOutput * output = CBBlockChainStorageLoadUnspentOutput(CBGetNode(self)->validator, prevOutHash, tx->inputs[x]->prevOut.index, &coinbase, &height);
-						if (output == NULL) {
-							CBLogError("Could not load an output for counting the input value for a transaction of ours becomind unconfirmed.");
-							return false;
+					uint8_t * prevOutHash = CBByteArrayGetData(tx->tx->inputs[x]->prevOut.hash);
+					uint32_t prevOutIndex = tx->tx->inputs[x]->prevOut.index;
+					// See if we have this transaction as unconfirmed, ie. a dependency that was also made unconfirmed.
+					CBFoundTransaction * prevFndTx = CBNodeFullGetFoundTransaction(self, prevOutHash);
+					if (prevFndTx == NULL) {
+						// Before we try the chain, take a look for the depedency in unconfirmedTxs, as a run of transaction may become unconfirmed
+						self->unconfirmedTxs.compareFunc = CBTransactionPtrAndHashCompare;
+						CBFindResult res = CBAssociativeArrayFind(&self->unconfirmedTxs, prevOutHash);
+						self->unconfirmedTxs.compareFunc = CBTransactionPtrCompare;
+						if (res.found) {
+							// The data type used is CBTransactionOfType which contains a CBTransaction pointer as the first member.
+							CBTransaction ** prevTx = CBFindResultToPointer(res);
+							fndTx->inputValue += (*prevTx)->outputs[prevOutIndex]->value;
+						}else{
+							// Load from chain
+							bool coinbase;
+							uint32_t height;
+							CBTransactionOutput * output = CBBlockChainStorageLoadUnspentOutput(CBGetNode(self)->validator, prevOutHash, prevOutIndex, &coinbase, &height);
+							if (output == NULL) {
+								CBLogError("Could not load an output for counting the input value for a transaction of ours becomind unconfirmed.");
+								return false;
+							}
+							fndTx->inputValue += output->value;
+							CBReleaseObject(output);
 						}
-						fndTx->inputValue += output->value;
-						CBReleaseObject(output);
 					}else
-						fndTx->inputValue += fndTx->utx.tx->outputs[tx->inputs[x]->prevOut.index]->value;
+						fndTx->inputValue += prevFndTx->utx.tx->outputs[prevOutIndex]->value;
 				}
-				CBRetainObject(fndTx);
-				CBAssociativeArrayInsert(&self->ourTxs, fndTx, CBAssociativeArrayFind(&self->ourTxs, fndTx).position, NULL);
+				fndTx->timeFound = CBGetMilliseconds();
+				fndTx->nextRelay = fndTx->timeFound + 1800000;
+				CBRetainObject(fndTx->utx.tx);
+				CBAssociativeArray * txArray = tx->ours ? &self->ourTxs : &self->otherTxs;
+				CBAssociativeArrayInsert(txArray, fndTx, CBAssociativeArrayFind(txArray, fndTx).position, NULL);
 				// If this was a chain dependency, move dependency data to CBFoundTransaction, else init empty dependant's array
 				CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, CBTransactionGetHash(fndTx->utx.tx));
 				if (res.found) {
@@ -363,35 +400,37 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 							CBAssociativeArrayDelete(&self->allChainFoundTxs, CBAssociativeArrayFind(&self->allChainFoundTxs, dependant).position, false);
 				}else
 					CBInitAssociativeArray(&fndTx->dependants, CBTransactionPtrCompare, NULL, NULL);
-				// Remove our tx from the node storage.
-				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->nodeStorage, fndTx->utx.tx)) {
-					CBLogError("Could not remove our transaction moving onto the chain.");
+				// Add our tx to the node storage.
+				if (!(tx->ours ? CBNodeStorageAddOurTx : CBNodeStorageAddOtherTx)(CBGetNode(self)->nodeStorage, fndTx->utx.tx)) {
+					CBLogError("Could not add our transaction made unconfirmed.");
 					return false;
 				}
-				// Get time of the transaction
-				uint64_t time;
-				if (!CBAccounterGetTransactionTime(CBGetNode(self)->accounterStorage, CBTransactionGetHash(fndTx->utx.tx), &time)) {
-					CBLogError("Could not get the time of a transaction.");
-					return false;
+				if (tx->ours) {
+					// Get time of the transaction
+					uint64_t time;
+					if (!CBAccounterGetTransactionTime(CBGetNode(self)->accounterStorage, CBTransactionGetHash(fndTx->utx.tx), &time)) {
+						CBLogError("Could not get the time of a transaction.");
+						return false;
+					}
+					// Add to accounter again.
+					if (CBAccounterFoundTransaction(CBGetNode(self)->accounterStorage, fndTx->utx.tx, 0, time, CB_NO_BRANCH, NULL) == CB_ERROR) {
+						CBLogError("Could not process one of our lost transactions that should become unconfirmed.");
+						return false;
+					}
+					// Call transactionUnconfirmed
+					CBGetNode(self)->callbacks.transactionUnconfirmed(CBGetNode(self), CBTransactionGetHash(fndTx->utx.tx));
 				}
-				// Add to accounter again.
-				if (CBNodeFullFoundTransaction(self, fndTx->utx.tx, time, 0, CB_NO_BRANCH, true) == CB_ERROR) {
-					CBLogError("Could not process one of our lost transactions that should become unconfirmed.");
-					return false;
-				}
-				// Call transactionUnconfirmed
-				CBGetNode(self)->callbacks.transactionUnconfirmed(CBGetNode(self), CBTransactionGetHash(fndTx->utx.tx));
 			}
 			// Now add dependencies of our transactions.
-			CBAssociativeArrayForEach(CBTransactionDependency * dep, &self->ourLostTxDependencies) {
+			CBAssociativeArrayForEach(CBTransactionDependency * dep, &self->unconfirmedTxDependencies) {
 				// See if this dependency was one of our transactions we added back as unconfirmed
 				CBFoundTransaction * fndTx = CBNodeFullGetOurTransaction(self, dep->hash);
 				if (fndTx) {
 					// Add these dependants to the CBFoundTransaction of our transaction we added back as unconfirmed.
 					// Loop though dependants
-					CBAssociativeArrayForEach(CBTransaction * dependant, &dep->dependants) {
+					CBAssociativeArrayForEach(CBTransactionOfType * dependant, &dep->dependants) {
 						// Add into the dependants of the CBFoundTransaction
-						CBFoundTransaction * fndDep = CBNodeFullGetOurTransaction(self, CBTransactionGetHash(dependant));
+						CBFoundTransaction * fndDep = CBNodeFullGetFoundTransaction(self, CBTransactionGetHash(dependant->tx));
 						CBAssociativeArrayInsert(&fndTx->dependants, fndDep, CBAssociativeArrayFind(&fndTx->dependants, fndDep).position, NULL);
 						// Add to the number of unconf dependencies
 						fndDep->utx.numUnconfDeps++;
@@ -399,31 +438,31 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 				}else{
 					// Add these dependants to the chain dependency
 					// Loop though dependants
-					CBAssociativeArrayForEach(CBTransaction * dependant, &dep->dependants) {
+					CBAssociativeArrayForEach(CBTransactionOfType * dependant, &dep->dependants) {
 						// Add into the dependants of the CBTransactionDependency
-						CBFoundTransaction * fndDep = CBNodeFullGetOurTransaction(self, CBTransactionGetHash(dependant));
+						CBFoundTransaction * fndDep = CBNodeFullGetFoundTransaction(self, CBTransactionGetHash(dependant->tx));
 						CBNodeFullAddToDependency(&self->chainDependencies, dep->hash, fndDep, CBTransactionPtrCompare);
 					}
 				}
 			}
-			// Loop through ourLostTxs again and find those with no unconf dependencies
-			CBAssociativeArrayForEach(CBTransaction * tx, &self->ourLostTxs) {
-				CBFoundTransaction * fndTx = CBNodeFullGetOurTransaction(self, CBTransactionGetHash(tx));
+			// Loop through unconfirmedTxs again and find those with no unconf dependencies
+			CBAssociativeArrayForEach(CBTransactionOfType * tx, &self->unconfirmedTxs) {
+				CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, CBTransactionGetHash(tx->tx));
 				if (fndTx->utx.numUnconfDeps == 0)
 					// All chain deperencies so add to allChainFoundTxs
 					CBAssociativeArrayInsert(&self->allChainFoundTxs, fndTx, CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx).position, NULL);
 			}
-			// Free ourLostsTxs and ourLostTxDependencies
-			CBFreeAssociativeArray(&self->ourLostTxs);
-			CBFreeAssociativeArray(&self->ourLostTxDependencies);
-			self->initialisedOurLostTxs = false;
+			// Free unconfirmedTxs and unconfirmedTxDependencies
+			CBFreeAssociativeArray(&self->unconfirmedTxs);
+			CBFreeAssociativeArray(&self->unconfirmedTxDependencies);
+			self->initialisedUnconfirmedTxs = false;
 		}
 		// Next process found unconf transactions which were previously validated on the block chain.
 		for (uint8_t x = 0; x < 2; x++) {
 			if ((x == 0) ? self->initialisedFoundUnconfTxsPrev : self->initialisedFoundUnconfTxsNew) {
 				CBAssociativeArray * array = (x == 0) ? &self->foundUnconfTxsPrev : &self->foundUnconfTxsNew;
 				CBAssociativeArrayForEach(CBTransactionToBranch * txToBranch, array)
-					if (!CBNodeFullUnconfToChain(self, txToBranch->uTx, txToBranch->blockHeight, txToBranch->branch, x == 1)) {
+					if (!CBNodeFullUnconfToChain(self, txToBranch->uTx, txToBranch->blockHeight, txToBranch->blockTime, txToBranch->branch, x == 1)) {
 						CBLogError("Could not process an unconfirmed transaction moving onto the chain.");
 						return false;
 					}
@@ -433,15 +472,14 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 		}
 		self->initialisedFoundUnconfTxsPrev = false;
 		self->initialisedFoundUnconfTxsNew = false;
-		// Process the removed unconf transactions
-		if (!CBNodeFullRemoveLostUnconfTxs(self)) {
-			CBLogError("Could not remove lost unconfirmed transactions from double spends in the chain.");
-			return false;
-		}
 		// Process new transactions
 		while (self->newTransactions != NULL) {
 			// Call newTransaction
-			CBGetNode(self)->callbacks.newTransaction(CBGetNode(self), self->newTransactions->tx, self->newTransactions->time, self->newTransactions->blockHeight, self->newTransactions->accountDetailList);
+			if (!CBNodeFullProcessNewTransaction(self, self->newTransactions->tx, self->newTransactions->time, self->newTransactions->blockHeight, self->newTransactions->accountDetailList, true, self->newTransactions->ours))
+				return false;
+			CBReleaseObject(self->newTransactions->tx);
+			if (self->newTransactions->ours)
+				CBFreeTransactionAccountDetailList(self->newTransactions->accountDetailList);
 			// Get next details
 			CBNewTransactionDetails * temp = self->newTransactions;
 			self->newTransactions = self->newTransactions->next;
@@ -500,55 +538,71 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 				queue = next;
 			}
 			// Move to the next inv
-			if (currentInv == 3)
-				currentInv = 0;
-			else
-				currentInv++;
+			if (invs[currentInv] != NULL) {
+				if (currentInv == 3)
+					currentInv = 0;
+				else
+					currentInv++;
+			}
 		}
 		CBFreeAssociativeArray(&dependantsProccessed);
 		// Loop through and send invs to peers
-		CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
-		CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers){
-			if (peer->handshakeStatus | CB_HANDSHAKE_GOT_VERSION)
-				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(invs[currentInv]), NULL);
-			// Rotate through invs
-			if (currentInv == 3 || invs[++currentInv] == NULL)
-				currentInv = 0;
+		if (invs[0] != NULL) {
+			CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
+			CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers){
+				if (peer->handshakeStatus | CB_HANDSHAKE_GOT_VERSION)
+					CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(invs[currentInv]), NULL);
+				// Rotate through invs
+				if (currentInv == 3 || invs[++currentInv] == NULL)
+					currentInv = 0;
+			}
+			CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
+			// Release invs
+			for (uint8_t x = 0; x < 4; x++)
+				if (invs[x] != NULL) CBReleaseObject(invs[x]);
 		}
-		CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
-		// Release invs
-		for (uint8_t x = 0; x < 4; x++)
-			if (invs[x] != NULL) CBReleaseObject(invs[x]);
 		// Remove old transactions
 		if (!CBNodeFullRemoveLostUnconfTxs(self)) {
 			CBLogError("Could not remove old unconfirmed transactions.");
 			return false;
 		}
-		// Update block height
-		CBGetNetworkCommunicator(self)->blockHeight = blockHeight;
+		// If not not send in response to getblocks relay inv of this block to all peers, except the peer that gave us it.
+		CBPeer * peerFrom = vpeer;
+		if (!peerFrom->downloading) {
+			CBInventory * inv = CBNewInventory();
+			CBGetMessage(inv)->type = CB_MESSAGE_TYPE_INV;
+			CBByteArray * hash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
+			CBInventoryTakeInventoryItem(inv, CBNewInventoryItem(CB_INVENTORY_ITEM_BLOCK, hash));
+			CBReleaseObject(hash);
+			CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
+			CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers)
+				if (peer != peerFrom && peer->handshakeStatus | CB_HANDSHAKE_GOT_VERSION)
+					CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
+			CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
+			CBReleaseObject(inv);
+		}
+		// Remove this block from blockPeers and askedForBlocks
+		CBNodeFullFinishedWithBlock(self, block);
 	}else if (self->forkPoint == CB_NO_FORK)
 		// Set the fork point if not already
 		self->forkPoint = blockHeight;
-	// Remove this block from blockPeers and askedForBlocks
-	CBNodeFullFinishedWithBlock(self, block);
 	return true;
 }
 bool CBNodeFullAddBlockDirectly(CBNodeFull * self, CBBlock * block){
+	CBMutexLock(CBGetNode(self)->blockAndTxMutex);
 	self->addingDirect = true;
-	if (!CBValidatorAddBlockDirectly(CBGetNode(self)->validator, block, &(CBPeer){.nodeObj=self})){
+	if (!CBValidatorAddBlockDirectly(CBGetNode(self)->validator, block, &(CBPeer){.nodeObj=self, .downloading=false})){
 		CBLogError("Could not add a block directly to the validator.");
 		return false;
 	}
+	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 	self->addingDirect = false;
 	return true;
 }
-CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, CBUnconfTransaction utx, CBFoundTransaction ** fndTxPtr, uint64_t txInputValue){
+CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, CBUnconfTransaction utx, CBFoundTransaction * fndTx, uint64_t txInputValue){
 	char txStr[CB_TX_HASH_STR_SIZE];
 	CBTransactionHashToString(utx.tx, txStr);
 	// Create found transaction data
-	CBFoundTransaction * fndTx = malloc(sizeof(*fndTx));
-	if (fndTxPtr != NULL)
-		*fndTxPtr = fndTx;
 	fndTx->utx = utx;
 	fndTx->timeFound = CBGetMilliseconds();
 	fndTx->nextRelay = fndTx->timeFound + 1800000;
@@ -605,7 +659,9 @@ CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, 
 		CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(inv), NULL);
 	CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
 	CBReleaseObject(inv);
-	return true;
+	// Retain transaction
+	CBRetainObject(utx.tx);
+	return CB_TRUE;
 }
 void CBNodeFullAddToDependency(CBAssociativeArray * deps, uint8_t * hash, void * el, CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *)){
 	CBTransactionDependency * txDep;
@@ -624,10 +680,10 @@ void CBNodeFullAddToDependency(CBAssociativeArray * deps, uint8_t * hash, void *
 		// Not found, therefore add this as a dependant.
 		CBAssociativeArrayInsert(&txDep->dependants, el, res.position, NULL);
 }
-CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction utx, CBFoundTransaction ** fndTx, uint64_t txInputValue){
+CBErrBool CBNodeFullAddTransactionAsFound(CBNodeFull * self, CBUnconfTransaction utx, CBFoundTransaction * fndTx, uint64_t txInputValue){
 	// Everything is OK so check transaction through accounter
 	uint64_t timestamp = time(NULL);
-	CBErrBool ours = CBNodeFullFoundTransaction(self, utx.tx, timestamp, 0, CB_NO_BRANCH, true);
+	CBErrBool ours = CBNodeFullFoundTransaction(self, utx.tx, timestamp, 0, CB_NO_BRANCH, true, false);
 	if (ours == CB_ERROR){
 		CBLogError("Could not process an unconfirmed transaction with the accounter.");
 		return CB_ERROR;
@@ -640,7 +696,7 @@ uint64_t CBNodeFullAlreadyValidated(void * vpeer, CBTransaction * tx){
 }
 void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash){
 	// Make this block expected from this peer
-	memcpy(peer->expectedBlock, peer->reqBlocks[peer->reqBlockCursor].reqBlock, 20);
+	memcpy(peer->expectedBlock, hash, 20);
 	// Create getdata message
 	CBInventory * getData = CBNewInventory();
 	CBByteArray * hashObj = CBNewByteArrayWithDataCopy(hash, 32);
@@ -648,15 +704,11 @@ void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash){
 	CBReleaseObject(hashObj);
 	CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
 	// Send getdata
+	char blkStr[CB_BLOCK_HASH_STR_SIZE];
+	CBByteArrayToString(getData->itemFront->hash, 0, CB_BLOCK_HASH_STR_BYTES, blkStr);
+	CBLogVerbose("Asked for block %s from %s", blkStr, peer->peerStr);
 	CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
-}
-bool CBNodeFullBroadcastTransaction(CBNodeFull * self, CBTransaction * tx, uint32_t numUnconfDeps, uint64_t txInputValue){
-	// Add to accounter
-	if (CBNodeFullFoundTransaction(self, tx, time(NULL), 0, CB_NO_BRANCH, true) != CB_TRUE) {
-		CBLogError("Could not add a broadcast transaction to the accounter.");
-		return false;
-	}
-	return CBNodeFullAddOurOrOtherFoundTransaction(self, true, (CBUnconfTransaction){tx, CB_TX_OURS, numUnconfDeps}, NULL, txInputValue);
+	CBReleaseObject(getData);
 }
 void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 	CBMutexLock(self->pendingBlockDataMutex);
@@ -666,6 +718,7 @@ void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 	if (blockPeers->peers.root->numElements == 1 && blockPeers->peers.root->children[0] == NULL) {
 		// Only this peer has the block so delete the blockPeers and end.
 		CBAssociativeArrayDelete(&self->blockPeers, res.position, true);
+		CBMutexUnlock(self->pendingBlockDataMutex);
 		return;
 	}
 	// Remove this peer from the block's peers, if found
@@ -760,15 +813,16 @@ void CBNodeFullDeleteOrphanFromDependencies(CBNodeFull * self, CBOrphan * orphan
 		}
 	}
 }
-void CBNodeFullDownloadFromSomePeer(CBNodeFull * self){
+void CBNodeFullDownloadFromSomePeer(CBNodeFull * self, CBPeer * notPeer){
 	// Loop through peers to find one we can download from
 	CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
 	// ??? Order peers by block height
 	CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers){
-		if (!peer->downloading && !peer->upload && !peer->upToDate && peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS) {
+		if (!peer->downloading && !peer->upload && !peer->upToDate && peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS && peer != notPeer) {
 			// Ask this peer for blocks.
+			CBLogVerbose("Selected %s for block-chain download.", peer->peerStr);
 			// Send getblocks
-			if (!CBNodeFullSendGetBlocks(self, peer))
+			if (!CBNodeFullSendGetBlocks(self, peer, NULL, NULL))
 				CBLogError("Could not send getblocks for a new peer.");
 				// Ignore error.
 			else{
@@ -789,34 +843,37 @@ void CBNodeFullFinishedWithBlock(CBNodeFull * self, CBBlock * block){
 	CBAssociativeArrayDelete(&self->blockPeers, CBAssociativeArrayFind(&self->blockPeers, CBBlockGetHash(block)).position, true);
 	CBMutexUnlock(self->pendingBlockDataMutex);
 }
-CBErrBool CBNodeFullFoundTransaction(CBNodeFull * self, CBTransaction * tx, uint64_t time, uint32_t blockHeight, uint8_t branch, bool callNow){
+CBErrBool CBNodeFullFoundTransaction(CBNodeFull * self, CBTransaction * tx, uint64_t time, uint32_t blockHeight, uint8_t branch, bool callNow, bool processDependants){
 	// Add transaction
 	CBTransactionAccountDetailList * list;
 	CBErrBool ours = CBAccounterFoundTransaction(CBGetNode(self)->accounterStorage, tx, blockHeight, time, branch, &list);
 	if (ours == CB_ERROR) {
 		CBLogError("Could not process a transaction with the accounter.");
-		return false;
+		return CB_ERROR;
 	}
-	// If ours, we will need to call the callback...
-	if (ours == CB_TRUE) {
-		if (callNow){
-			// We can call the callback straightaway
-			CBGetNode(self)->callbacks.newTransaction(CBGetNode(self), tx, time, blockHeight, list);
+	// We will need to call CBNodeFullProcessNewTransaction to process the transaction, including its dependants.
+	if (callNow){
+		// We can call the callback straightaway
+		if (!CBNodeFullProcessNewTransaction(self, tx, time, blockHeight, list, processDependants, ours))
+			return CB_ERROR;
+		if (ours)
 			CBFreeTransactionAccountDetailList(list);
-		}else{
-			// Record in newTransactions.
-			CBNewTransactionDetails * details = malloc(sizeof(*details));
-			details->tx = tx;
-			details->time = time;
-			details->blockHeight = blockHeight;
-			details->accountDetailList = list;
-			if (self->newTransactions == NULL)
-				self->newTransactions = self->newTransactionsLast = details;
-			else
-				self->newTransactionsLast = self->newTransactionsLast->next = details;
-		}
+	}else{
+		// Record in newTransactions.
+		CBNewTransactionDetails * details = malloc(sizeof(*details));
+		details->tx = tx;
+		CBRetainObject(tx);
+		details->time = time;
+		details->blockHeight = blockHeight;
+		details->accountDetailList = list;
+		details->ours = ours;
+		details->next = NULL;
+		if (self->newTransactions == NULL)
+			self->newTransactions = self->newTransactionsLast = details;
+		else
+			self->newTransactionsLast = self->newTransactionsLast->next = details;
 	}
-	return true;
+	return ours;
 }
 CBUnconfTransaction * CBNodeFullGetAnyTransaction(CBNodeFull * self, uint8_t * hash){
 	CBUnconfTransaction * uTx = (CBUnconfTransaction *)CBNodeFullGetOurTransaction(self, hash);
@@ -878,11 +935,12 @@ CBErrBool CBNodeFullHasTransaction(CBNodeFull * self, uint8_t * hash){
 bool CBNodeFullInvalidBlock(void * vpeer, CBBlock * block){
 	CBPeer * peer = vpeer;
 	CBNodeFull * self = peer->nodeObj;
-	if (self->initialisedOurLostTxs) {
+	CBLogVerbose("Invlaid block.");
+	if (self->initialisedUnconfirmedTxs) {
 		// Delete our lost transactions and their dependencies.
-		CBFreeAssociativeArray(&self->ourLostTxDependencies);
-		CBFreeAssociativeArray(&self->ourLostTxs);
-		self->initialisedOurLostTxs = false;
+		CBFreeAssociativeArray(&self->unconfirmedTxDependencies);
+		CBFreeAssociativeArray(&self->unconfirmedTxs);
+		self->initialisedUnconfirmedTxs = false;
 	}
 	if (self->initialisedFoundUnconfTxsNew) {
 		// Delete the found unconfirmed transactions array for newly validated blocks.
@@ -898,6 +956,11 @@ bool CBNodeFullInvalidBlock(void * vpeer, CBBlock * block){
 		// Delete the lost unconfirmed transactions array
 		CBFreeAssociativeArray(&self->lostUnconfTxs);
 		self->initialisedLostUnconfTxs = false;
+	}
+	if (self->initialisedLostChainTxs) {
+		// Delete the lost chain transactions array
+		CBFreeAssociativeArray(&self->lostChainTxs);
+		self->initialisedLostChainTxs = false;
 	}
 	// Finished with the block chain
 	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
@@ -919,13 +982,21 @@ bool CBNodeFullInvalidBlock(void * vpeer, CBBlock * block){
 bool CBNodeFullIsOrphan(void * vpeer, CBBlock * block){
 	CBPeer * peer = vpeer;
 	CBNodeFull * node = peer->nodeObj;
-	if (peer->upToDate)
-		// Get previous block
-		CBNodeFullAskForBlock(node, peer, CBByteArrayGetData(block->prevBlockHash));
+	CBLogVerbose("Is orphan");
+	if (peer->upToDate){
+		// Get previous blocks
+		CBByteArray * stopAtHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
+		bool ret = CBNodeFullSendGetBlocks(node, peer, NULL, stopAtHash);
+		CBReleaseObject(stopAtHash);
+		peer->allowNewBranch = true;
+		peer->downloading = true;
+		peer->upToDate = false;
+		return ret;
+	}
 	return true;
 }
-void CBNodeFullLoseOurDependants(CBNodeFull * self, uint8_t * hash){
-	CBFindResult res = CBAssociativeArrayFind(&self->ourLostTxDependencies, hash);
+bool CBNodeFullLoseChainTxDependants(CBNodeFull * self, uint8_t * hash, bool now){
+	CBFindResult res = CBAssociativeArrayFind(&self->unconfirmedTxDependencies, hash);
 	if (res.found) {
 		CBFindResultProcessQueueItem * queue = &(CBFindResultProcessQueueItem){res, NULL};
 		CBFindResultProcessQueueItem * last = queue;
@@ -934,46 +1005,53 @@ void CBNodeFullLoseOurDependants(CBNodeFull * self, uint8_t * hash){
 			// This is a dependency, so we want to remove our lost txs.
 			// Loop through dependants
 			CBTransactionDependency * dep = CBFindResultToPointer(queue->res);
-			CBAssociativeArrayForEach(CBTransaction * dependant, &dep->dependants) {
+			CBAssociativeArrayForEach(CBTransactionOfType * dependant, &dep->dependants) {
 				// See if the dependant has been dealt with already
-				CBFindResult depRes = CBAssociativeArrayFind(&self->ourLostTxs, dependant);
+				CBFindResult depRes = CBAssociativeArrayFind(&self->unconfirmedTxs, dependant);
 				if (depRes.found) {
 					// Now add this lost transaction dependency information if it exists to the queue
-					res = CBAssociativeArrayFind(&self->ourLostTxDependencies, CBTransactionGetHash(dependant));
+					res = CBAssociativeArrayFind(&self->unconfirmedTxDependencies, CBTransactionGetHash(dependant->tx));
 					if (res.found) {
 						last->next = malloc(sizeof(*last->next));
 						last = last->next;
 						last->res = res;
 						last->next = NULL;
 					}
-					// Remove transaction from ourLostTxs
-					CBAssociativeArrayDelete(&self->ourLostTxs, depRes.position, true);
+					if (!CBNodeFullMakeLostChainTransaction(self, dependant, now))
+						return false;
 				}
 			}
-			// Remove dependency
-			CBAssociativeArrayDelete(&self->ourLostTxDependencies, queue->res.position, true);
 			// Move to next in queue
+			queue = queue->next;
+		}
+		// Go through queue again and this time remove the unconfirmed dependencies of the lost transactions. We have to do it afterwards as we store CBFindResults in the queue.
+		queue = first;
+		while (queue != NULL) {
+			// Remove dependency
+			CBAssociativeArrayDelete(&self->unconfirmedTxDependencies, queue->res.position, true);
+			// Move to next in queue and free data
 			CBFindResultProcessQueueItem * next = queue->next;
-			// Free this queue item unless first
 			if (queue != first)
 				free(queue);
 			queue = next;
 		}
 	}
+	return true;
 }
-void CBNodeFullLoseUnconfDependants(CBNodeFull * self, uint8_t * hash){
-	CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, hash);
-	if (res.found) {
-		// This transaction is indeed a dependency of at least one transaction we have as unconfirmed
-		// Loop through dependants
-		CBTransactionDependency * dep = CBFindResultToPointer(res);
-		CBAssociativeArrayForEach(CBTransaction * dependant, &dep->dependants) {
-			// Add transaction to lostUnconfTxs
-			if (! self->initialisedLostUnconfTxs)
-				CBInitAssociativeArray(&self->lostUnconfTxs, CBPtrCompare, NULL, NULL);
-			CBAssociativeArrayInsert(&self->lostUnconfTxs, dependant, CBAssociativeArrayFind(&self->lostUnconfTxs, dependant).position, NULL);
+bool CBNodeFullLostUnconfTransaction(CBNodeFull * self, CBUnconfTransaction * uTx, bool now){
+	if (now) {
+		// Remove now.
+		if (! CBNodeFullRemoveUnconfTx(self, uTx))
+			return false;
+	}else{
+		// Remove upon completion of reorg
+		if (! self->initialisedLostUnconfTxs){
+			self->initialisedLostUnconfTxs = true;
+			CBInitAssociativeArray(&self->lostUnconfTxs, CBTransactionPtrCompare, NULL, NULL);
 		}
+		CBAssociativeArrayInsert(&self->lostUnconfTxs, uTx, CBAssociativeArrayFind(&self->lostUnconfTxs, uTx).position, NULL);
 	}
+	return true;
 }
 bool CBNodeFullNewBranchCallback(void * vpeer, uint8_t branch, uint8_t parent, uint32_t blockHeight){
 	CBNode * node = CBGetPeer(vpeer)->nodeObj;
@@ -983,9 +1061,449 @@ bool CBNodeFullNewBranchCallback(void * vpeer, uint8_t branch, uint8_t parent, u
 	}
 	return true;
 }
-bool CBNodeFullNoNewBranches(void * vpeer, CBBlock * block){
+CBErrBool CBNodeNewUnconfirmedTransaction(CBNodeFull * self, CBPeer * peer, CBTransaction * tx){
+	CBNode * node = CBGetNode(self);
+	CBValidator * validator = node->validator;
+	char txStr[CB_TX_HASH_STR_SIZE];
+	CBTransactionHashToString(tx, txStr);
+	if (peer != NULL)
+		CBLogVerbose("%s gave us the transaction %s", peer->peerStr, txStr);
+	// Check the validity of the transaction
+	uint64_t outputValue;
+	if (!CBTransactionValidateBasic(tx, false, &outputValue))
+		return CB_FALSE;
+	// Check is standard
+	if (node->flags & CB_NODE_CHECK_STANDARD
+		&& !CBTransactionIsStandard(tx)){
+		// Ignore
+		CBLogVerbose("Transaction %s is non-standard.", txStr);
+		return CB_TRUE;
+	}
+	CBBlockBranch * mainBranch = &validator->branches[validator->mainBranch];
+	uint32_t lastHeight = mainBranch->startHeight + mainBranch->lastValidation;
+	// Check that the transaction is final, else ignore
+	if (! CBTransactionIsFinal(tx, CBNetworkAddressManagerGetNetworkTime(CBGetNetworkCommunicator(self)->addresses), lastHeight)){
+		CBLogVerbose("Transaction %s is not final.", txStr);
+		return CB_TRUE;
+	}
+	// Check sigops
+	uint32_t sigOps = CBTransactionGetSigOps(tx);
+	if (sigOps > CB_MAX_SIG_OPS){
+		CBMutexUnlock(node->blockAndTxMutex);
+		CBLogWarning("Transaction %s has an invalid sig-op count", txStr);
+		return CB_FALSE;
+	}
+	// Look for unspent outputs being spent
+	uint64_t inputValue = 0;
+	CBOrphan * orphan = NULL;
+	CBInventory * orphanGetData = NULL;
+	uint32_t missingInputs = 0;
+	CBUnconfTransaction utx = {tx,0};
+	// Data for holding type of dependency
+	struct{
+		enum{
+			CB_DEP_FOUND,
+			CB_DEP_UNFOUND,
+			CB_DEP_CHAIN
+		} type;
+		void * data;
+	}depData[tx->inputNum];
+	// Macros for freeing orphan data
+	#define CBFreeOrphanData \
+	if (orphanGetData) \
+		CBReleaseObject(orphanGetData); \
+	if (orphan) \
+		free(orphan);
+	#define CBTxReturnFalse CBFreeOrphanData return CB_FALSE;
+	#define CBTxReturnTrue CBFreeOrphanData return CB_TRUE;
+	#define CBTxReturnError CBFreeOrphanData return CB_ERROR;
+	for (uint32_t x = 0; x < tx->inputNum; x++) {
+		uint8_t * prevHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
+		// First look for unconfirmed unspent outputs
+		CBFoundTransaction * prevTx = CBNodeFullGetFoundTransaction(self, prevHash);
+		CBTransactionOutput * output = NULL;
+		if (prevTx != NULL) {
+			// Found transaction as unconfirmed, check for output
+			if (prevTx->utx.tx->outputNum < tx->inputs[x]->prevOut.index + 1){
+				// Not enough outputs
+				CBLogWarning("Transaction %s, input %u references an output that does not exist.", txStr, x);
+				CBTxReturnFalse
+			}
+			output = prevTx->utx.tx->outputs[tx->inputs[x]->prevOut.index];
+			CBRetainObject(output);
+			// Ensure not spent, else ignore.
+			if (output->spent){
+				CBLogVerbose("Transaction %s, input %u references an output that is spent. Ignoring.", txStr, x);
+				CBTxReturnTrue
+			}
+			// Increase the amount of unconfirmed dependencies this transaction has
+			utx.numUnconfDeps++;
+			// Dependency is found unconf
+			depData[x].type = CB_DEP_FOUND;
+			depData[x].data = prevTx;
+		}else{
+			// Else the dependency data is definitely the previous hash
+			depData[x].data = prevHash;
+			// Look in block-chain
+			CBErrBool exists = CBBlockChainStorageUnspentOutputExists(validator, prevHash, tx->inputs[x]->prevOut.index);
+			if (exists == CB_ERROR){
+				CBLogError("Could not determine if an unspent output exists.");
+				CBTxReturnError
+			}
+			if (exists == CB_FALSE){
+				// No unspent output.
+				if (peer == NULL) {
+					// Only allow complete transactions from self.
+					CBLogError("Transaction %s from self is incomplete", txStr);
+					CBTxReturnFalse
+				}
+				// Request the dependency in get data. This is an orphan transaction.
+				// UNLESS the transaction was there and the output index was bad. Check for the transaction
+				exists = CBBlockChainStorageTransactionExists(validator, prevHash);
+				if (exists == CB_ERROR){
+					CBLogError("Could not determine if a transaction exists.");
+					CBTxReturnError
+				}
+				if (exists == CB_TRUE){
+					// Output must be spent (as we only index unspent outputs), or it doesn't exist.
+					CBLogVerbose("Transaction %s, input %u references an output that is possibly spent on the chain. Ignoring.", txStr, x);
+					CBTxReturnTrue
+				}
+				missingInputs++;
+				if (orphanGetData == NULL || orphanGetData->itemNum < 50000) {
+					// Do not request transaction if we already expect it from this peer, or if it is an orphan
+					CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, prevHash);
+					if (!res.found && !CBNodeFullGetOrphanTransaction(self, prevHash)) {
+						char depTxStr[40];
+						CBByteArrayToString(tx->inputs[x]->prevOut.hash, 0, 20, depTxStr);
+						CBLogVerbose("Requiring dependency transaction %s from %s", depTxStr, peer->peerStr);
+						// Create getdata if not already
+						if (orphanGetData == NULL)
+							orphanGetData = CBNewInventory();
+						CBRetainObject(tx->inputs[x]->prevOut.hash);
+						CBInventoryTakeInventoryItem(orphanGetData, CBNewInventoryItem(CB_INVENTORY_ITEM_TX, tx->inputs[x]->prevOut.hash));
+						// Add to expected transactions from this peer.
+						uint8_t * insertHash = malloc(20);
+						memcpy(insertHash, prevHash, 20);
+						CBAssociativeArrayInsert(&peer->expectedTxs, insertHash, res.position, NULL);
+					}
+				}
+				// Dependency is unfound
+				depData[x].type = CB_DEP_UNFOUND;
+				continue;
+			}
+			// Load the unspent output
+			CBErrBool ok = CBValidatorLoadUnspentOutputAndCheckMaturity(validator, tx->inputs[x]->prevOut, lastHeight, &output);
+			if (ok == CB_ERROR){
+				CBLogError("There was an error getting an unspent output from storage.");
+				CBTxReturnError;
+			}
+			if (ok == CB_FALSE){
+				// Not mature so ignore
+				CBLogVerbose("Transaction %s is not mature.", txStr);
+				CBTxReturnTrue
+			}
+			// Dependency is on chain
+			depData[x].type = CB_DEP_CHAIN;
+		}
+		CBInputCheckResult inRes = CBValidatorVerifyScripts(validator, tx, x, output, &sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
+		if (inRes == CB_INPUT_BAD) {
+			CBReleaseObject(output);
+			CBLogWarning("Transaction %s, input %u is invalid.", txStr, x);
+			CBTxReturnFalse
+		}
+		if (inRes == CB_INPUT_NON_STD) {
+			CBReleaseObject(output);
+			CBLogVerbose("Transaction %s, input %u is non-standard. Ignoring transaction.", txStr, x);
+			CBTxReturnTrue
+		}
+		// Add to input value
+		inputValue += output->value;
+		CBReleaseObject(output);
+	}
+	CBUnconfTransaction * uTx; // Will be set for insertion to unconf, unfound and chain dependencies.
+	if (missingInputs != 0) {
+		// This transaction depends upon outputs that do not exist yet, add to orphans and send getdata for dependencies.
+		if (orphanGetData) {
+			CBGetMessage(orphanGetData)->type = CB_MESSAGE_TYPE_GETDATA;
+			CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(orphanGetData), NULL);
+			CBReleaseObject(orphanGetData);
+		}
+		bool room = true;
+		// 300000 equals 10 minutes times 500 bytes a transaction
+		bool canRemove = (CBGetMilliseconds() - self->deleteOrphanTime) > 300000 / self->otherTxsSizeLimit + 1;
+		while (self->otherTxsSize + CBGetMessage(tx)->bytes->length > self->otherTxsSizeLimit) {
+			if (!canRemove || !CBNodeFullRemoveOrphan(self)) {
+				room = false;
+				break;
+			}
+		}
+		if (room){
+			// Allocate memory for orphan data
+			orphan = malloc(sizeof(*orphan));
+			self->otherTxsSize += CBGetMessage(tx)->bytes->length;
+			// Finalise orphan data
+			orphan->inputValue = inputValue;
+			orphan->sigOps = sigOps;
+			orphan->utx = utx;
+			CBRetainObject(utx.tx);
+			// The number of missing inputs is equal to the dependencies we want
+			orphan->missingInputNum = missingInputs;
+			// Add orphan to array
+			CBAssociativeArrayInsert(&self->orphanTxs, orphan, CBAssociativeArrayFind(&self->orphanTxs, orphan).position, NULL);
+			uTx = (CBUnconfTransaction *)orphan;
+			CBLogVerbose("Added transaction %s as orphan", txStr);
+		}else{
+			CBReleaseObject(orphanGetData);
+			return CB_TRUE;
+		}
+	}else{
+		// Check that the input value is equal or more than the output value
+		if (inputValue < outputValue){
+			CBLogWarning("Transaction %s has an invalid output value.", txStr);
+			CBTxReturnFalse
+		}
+		// Add this transaction as found (complete)
+		CBFoundTransaction * fndTx = malloc(sizeof(*fndTx));
+		CBErrBool res = CBNodeFullAddTransactionAsFound(self, utx, fndTx, inputValue);
+		uTx = (CBUnconfTransaction *)fndTx;
+		if (res == CB_ERROR){
+			CBLogError("Could not add a transaction as found.");
+			CBTxReturnError
+		}
+		if (res == CB_TRUE) {
+			if (!CBNodeFullProcessNewTransactionProcessDependants(self, (CBNewTransactionType){false, {.uTx = fndTx}})) {
+				CBLogError("Unable to process the dependants of a newly found unconfirmed transaction.");
+				CBTxReturnError
+			}
+			// Stage the changes
+			if (!CBStorageDatabaseStage(node->database)){
+				CBLogError("Unable to stage changes of a new unconfirmed transaction to the database.");
+				CBTxReturnError
+			}
+		}else
+			// Could not add transaction
+			return CB_TRUE;
+	}
+	// Add as dependant
+	for (uint32_t x = 0; x < tx->inputNum; x++) {
+		if (depData[x].type == CB_DEP_CHAIN) {
+			// Add this transaction as a dependant of the previous chain transaction, if it is not been done so already
+			CBNodeFullAddToDependency(&self->chainDependencies, depData[x].data, uTx, CBTransactionPtrCompare);
+		}else if (depData[x].type == CB_DEP_FOUND){
+			// Add this transaction as a dependant of the previous found unconfirmed transaction, if it is not been done so already
+			CBFoundTransaction * prevTx = depData[x].data;
+			CBFindResult res = CBAssociativeArrayFind(&prevTx->dependants, uTx);
+			if (!res.found)
+				// Not found, therefore add this as a dependant.
+				CBAssociativeArrayInsert(&prevTx->dependants, uTx, res.position, NULL);
+		}else{
+			// Add this orphan to the dependencies of an unfound transaction.
+			// See if the dependency exists
+			CBFindResult res = CBAssociativeArrayFind(&self->unfoundDependencies, depData[x].data);
+			CBTransactionDependency * txDep;
+			if (!res.found) {
+				// Create the transaction dependency
+				txDep = malloc(sizeof(*txDep));
+				memcpy(txDep->hash, depData[x].data, 32);
+				CBInitAssociativeArray(&txDep->dependants, CBOrphanDependencyCompare, NULL, free);
+				// Insert transaction dependency
+				CBAssociativeArrayInsert(&self->unfoundDependencies, txDep, res.position, NULL);
+			}else
+				txDep = CBFindResultToPointer(res);
+			// Add orphan dependency
+			CBOrphanDependency * orphDep = malloc(sizeof(*orphDep));
+			orphDep->inputIndex = x;
+			orphDep->orphan = orphan;
+			// Insert orphan dependency
+			CBAssociativeArrayInsert(&txDep->dependants, orphDep, CBAssociativeArrayFind(&txDep->dependants, orphDep).position, NULL);
+		}
+	}
+	return CB_TRUE;
+}
+bool CBNodeFullProcessNewTransactionProcessDependants(CBNodeFull * self, CBNewTransactionType txType){
+	CBNewTransactionTypeProcessQueueItem * queue = &(CBNewTransactionTypeProcessQueueItem){txType, NULL}, * firstQueue = queue;
+	CBNewTransactionTypeProcessQueueItem * last = queue;
+	// Check to see if any orphans depend upon this transaction. When an orphan is found (complete) then we add the orphan to the queue of complete transactions whose dependants need to be processed. After processing the found transaction, then proceed to process the next transaction in the queue.
+	while (queue != NULL) {
+		// See if this transaction has orphan dependants.
+		CBNewTransactionType txType = queue->item;
+		CBTransaction * tx = txType.chain ? txType.txData.chainTx : txType.txData.uTx->utx.tx;
+		char txStr[CB_TX_HASH_STR_SIZE];
+		CBTransactionHashToString(tx, txStr);
+		CBLogVerbose("Processing dependants for transaction %s", txStr);
+		CBFindResult res = CBAssociativeArrayFind(&self->unfoundDependencies, CBTransactionGetHash(tx));
+		if (res.found) {
+			// Have dependants, loop through orphan dependants, process the inputs and check for newly completed transactions.
+			// Get orphan dependants
+			CBTransactionDependency * txDependency = CBFindResultToPointer(res);
+			CBAssociativeArray * orphanDependants = &txDependency->dependants;
+			// Remove this dependency from unfoundDependencies, but do not free yet
+			CBAssociativeArrayDelete(&self->unfoundDependencies, res.position, false);
+			CBOrphanDependency * delOrphanDep = NULL; // Set when orphan is removed so that we can ignore fututure dependencies
+			CBUnconfTransaction * lastOrphanUTx = NULL; // Used to detect change in orphan so that we can finally move the orphan to the foundDep array, and also for adding the correct dependant information when we have finished processing the particular dependencies for an orphan.
+			CBAssociativeArrayForEach(CBOrphanDependency * orphanDep, orphanDependants) {
+				if (delOrphanDep && delOrphanDep->orphan == orphanDep->orphan)
+					continue;
+				if (lastOrphanUTx && lastOrphanUTx->tx != orphanDep->orphan->utx.tx){
+					// The next orphan, so add the last one to the dependants
+					if (txType.chain)
+						CBNodeFullAddToDependency(&self->chainDependencies, CBTransactionGetHash(tx), lastOrphanUTx, CBTransactionPtrCompare);
+					else
+						CBAssociativeArrayInsert(&txType.txData.uTx->dependants, lastOrphanUTx, CBAssociativeArrayFind(&txType.txData.uTx->dependants, lastOrphanUTx).position, NULL);
+				}
+				// Check orphan input
+				CBTransactionOutput * output = tx->outputs[orphanDep->orphan->utx.tx->inputs[orphanDep->inputIndex]->prevOut.index];
+				CBInputCheckResult inRes = CBValidatorVerifyScripts(CBGetNode(self)->validator, orphanDep->orphan->utx.tx, orphanDep->inputIndex, output, &orphanDep->orphan->sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
+				bool rm = false;
+				if (inRes == CB_INPUT_OK) {
+					// Increase the input value
+					orphanDep->orphan->inputValue += output->value;
+					if (!txType.chain)
+						// Increase the number of unconfirmed dependencies.
+						orphanDep->orphan->utx.numUnconfDeps++;
+					// Reduce the number of missing inputs and if there are no missing inputs left do final processing on orphan
+					if (--orphanDep->orphan->missingInputNum == 0) {
+						rm = true; // No longer an orphan
+						// Calculate output value
+						uint64_t outputValue = 0;
+						for (uint32_t x = 0; x < orphanDep->orphan->utx.tx->outputNum; x++)
+							// Overflows have already been checked.
+							outputValue += orphanDep->orphan->utx.tx->outputs[x]->value;
+						// Ensure output value is eual to or less than input value
+						if (outputValue <= orphanDep->orphan->inputValue) {
+							// The orphan is OK, so add it to ours or other and the queue.
+							// Reallocate orphan data to found transaction data.
+							CBFoundTransaction * fndTx = malloc(sizeof(CBFoundTransaction));
+							CBErrBool res = CBNodeFullAddTransactionAsFound(self, orphanDep->orphan->utx, fndTx, orphanDep->orphan->inputValue);
+							if (res == CB_ERROR) {
+								// Free data
+								while (queue != NULL) {
+									CBNewTransactionTypeProcessQueueItem * next = queue->next;
+									if (queue != firstQueue)
+										// Only free if not first.
+										free(queue);
+									queue = next;
+								}
+								// Return with error
+								return false;
+							}
+							if (res == CB_TRUE) {
+								// Successfully added transaction as found, now add to queue
+								last->next = malloc(sizeof(*last->next));
+								last = last->next;
+								last->item = (CBNewTransactionType){false, {.uTx = fndTx}};
+								last->next = NULL;
+								// Set lastOrphanUTx
+								lastOrphanUTx = (CBUnconfTransaction *)fndTx;
+								// Retain transaction as we will delete the orphan.
+								CBRetainObject(fndTx->utx.tx);
+								// Now change all dependencies to point to found transaction and not orphan data which is to be deleted.
+								for (uint32_t x = 0; x < fndTx->utx.tx->inputNum; x++) {
+									if (x == orphanDep->inputIndex)
+										// We haven't added this one yet, obviously.
+										continue;
+									// Get prevout hash
+									uint8_t * hash = CBByteArrayGetData(fndTx->utx.tx->inputs[x]->prevOut.hash);
+									// Look for found transaction
+									CBFoundTransaction * fndTxDep = CBNodeFullGetFoundTransaction(self, hash);
+									if (fndTxDep != NULL){
+										CBAssociativeArrayDelete(&fndTxDep->dependants, CBAssociativeArrayFind(&fndTxDep->dependants, orphanDep->orphan).position, false);
+										CBAssociativeArrayInsert(&fndTxDep->dependants, fndTx, CBAssociativeArrayFind(&fndTxDep->dependants, fndTx).position, NULL);
+									}else{
+										// Must be a chain dependency
+										CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, hash);
+										CBTransactionDependency * dep = CBFindResultToPointer(res);
+										// Remove orphan data from chain dependants.
+										CBAssociativeArrayDelete(&dep->dependants, CBAssociativeArrayFind(&dep->dependants, orphanDep->orphan).position, false);
+										// Add found transaction data
+										CBAssociativeArrayInsert(&dep->dependants, fndTx, CBAssociativeArrayFind(&dep->dependants, fndTx).position, NULL);
+									}
+								}
+							}else{
+								// Not added so remove from dependencies.
+								CBNodeFullDeleteOrphanFromDependencies(self, orphanDep->orphan);
+								lastOrphanUTx = NULL; // Do not add to dependants.
+							}
+						}else{
+							// Else orphan is not OK. We will need to remove the orphan from dependencies.
+							CBNodeFullDeleteOrphanFromDependencies(self, orphanDep->orphan);
+							lastOrphanUTx = NULL; // Do not add to dependants.
+						}
+					}else
+						// Else still requiring inputs
+						// Set lastOrphanUTx
+						lastOrphanUTx = (CBUnconfTransaction *)orphanDep->orphan;
+				}else{
+					// We are to remove this orphan because of an invalid or non-standard input
+					rm = true;
+					// Since this orphan failed before satisfying all inputs, check for other input dependencies (of unprocessed inputs ie. for unfound transactions) and remove this orphan as a dependant. We have already removed this transaction's unforund dependencies from the array, so it will not interfere with that.
+					CBNodeFullDeleteOrphanFromDependencies(self, orphanDep->orphan);
+					lastOrphanUTx = NULL; // Do not add to dependants.
+				}
+				if (rm) {
+					// Remove orphan
+					CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, orphanDep->orphan).position, true);
+					// Ignore other dependencies for this orphan
+					delOrphanDep = orphanDep;
+					continue;
+				}
+			}
+			if (lastOrphanUTx){
+				// Add the last orphan to the dependants
+				if (txType.chain)
+					CBNodeFullAddToDependency(&self->chainDependencies, CBTransactionGetHash(tx), lastOrphanUTx, CBTransactionPtrCompare);
+				else
+					CBAssociativeArrayInsert(&txType.txData.uTx->dependants, lastOrphanUTx, CBAssociativeArrayFind(&txType.txData.uTx->dependants, lastOrphanUTx).position, NULL);
+			}
+			// Completed processing for this found transaction.
+			// Free the transaction dependency
+			CBFreeTransactionDependency(txDependency);
+		}
+		// Move to next in the queue
+		CBNewTransactionTypeProcessQueueItem * next = queue->next;
+		// Free this queue item unless first
+		if (queue != firstQueue)
+			free(queue);
+		queue = next;
+	}
+	return true;
+}
+bool CBNodeFullMakeLostChainTransaction(CBNodeFull * self, CBTransactionOfType * tx, bool now){
+	// Lose uconf dependants
+	uint8_t * hash = CBTransactionGetHash(tx->tx);
+	CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, hash);
+	if (res.found) {
+		// This transaction is indeed a dependency of at least one transaction we have as unconfirmed
+		// Loop through dependants
+		CBTransactionDependency * dep = CBFindResultToPointer(res);
+		CBAssociativeArrayForEach(CBUnconfTransaction * dependant, &dep->dependants)
+			// Lose the unconfirmed dependant
+			if (! CBNodeFullLostUnconfTransaction(self, dependant, now))
+				return false;
+	}
+	if (tx->ours) {
+		// Make this a lost chain transaction
+		if (now)
+			// Call doubleSpend
+			CBGetNode(self)->callbacks.doubleSpend(CBGetNode(self), hash);
+		else{
+			// Remove upon completion of reorg
+			if (! self->initialisedLostChainTxs) {
+				self->initialisedLostChainTxs = true;
+				CBInitAssociativeArray(&self->lostChainTxs, CBTransactionPtrCompare, NULL, CBFreeTransactionOfType);
+			}
+			CBAssociativeArrayInsert(&self->lostChainTxs, tx, CBAssociativeArrayFind(&self->lostChainTxs, tx).position, NULL);
+		}
+	}
+	// Remove transaction from unconfirmedTxs, and do not delete the CBTransactionOfType if we added it to the lostChainTxs
+	CBAssociativeArrayDelete(&self->unconfirmedTxs, CBAssociativeArrayFind(&self->unconfirmedTxs, tx).position, !tx->ours || now);
+	return true;
+}
+bool CBNodeFullNoNewBranches(void * vpeer, CBBlock * block) {
 	CBPeer * peer = vpeer;
 	CBNodeFull * self = peer->nodeObj;
+	CBLogVerbose("No new branches");
 	// Can't accept blocks from this peer at the moment
 	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 	CBNodeFullPeerDownloadEnd(self, peer);
@@ -1017,12 +1535,13 @@ bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, void * vpeer){
 	return true;
 }
 void CBNodeFullPeerDownloadEnd(CBNodeFull * self, CBPeer * peer){
+	CBLogVerbose("Ending download from %s", peer->peerStr);
 	CBMutexLock(self->numberPeersDownloadMutex);
 	self->numberPeersDownload--;
 	CBMutexUnlock(self->numberPeersDownloadMutex);
 	peer->expectBlock = false;
 	peer->downloading = false;
-	// Not working on any branches
+	// Now not working on any branches
 	if (peer->branchWorkingOn != CB_NO_BRANCH) {
 		CBMutexLock(self->workingMutex);
 		CBGetNode(self)->validator->branches[peer->branchWorkingOn].working--;
@@ -1031,7 +1550,7 @@ void CBNodeFullPeerDownloadEnd(CBNodeFull * self, CBPeer * peer){
 		peer->allowNewBranch = true;
 	}
 	// See if we can download from any other peers
-	CBNodeFullDownloadFromSomePeer(self);
+	CBNodeFullDownloadFromSomePeer(self, peer);
 }
 void CBNodeFullPeerFree(void * vpeer){
 	CBPeer * peer = vpeer;
@@ -1042,6 +1561,7 @@ void CBNodeFullPeerFree(void * vpeer){
 	CBMutexLock(peer->invResponseMutex);
 	CBMutexUnlock(peer->invResponseMutex);
 	CBFreeMutex(peer->invResponseMutex);
+	CBFreeMutex(peer->requestedDataMutex);
 	if (peer->downloading){
 		// If expected a block from the peer, we should ask another
 		if (peer->expectBlock)
@@ -1065,18 +1585,19 @@ void CBNodeFullPeerFree(void * vpeer){
 	CBFreeAssociativeArray(&peer->expectedTxs);
 	if (peer->requestedData != NULL) CBReleaseObject(peer->requestedData);
 	// See if we can download from any other peers
-	peer->downloading = true; // Ensure not this one.
-	CBNodeFullDownloadFromSomePeer(fullNode);
+	CBNodeFullDownloadFromSomePeer(fullNode, peer);
 }
 void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer){
 	CBInitAssociativeArray(&peer->expectedTxs, CBHashCompare, NULL, free);
 	peer->downloading = false;
+	peer->upload = false;
 	peer->expectBlock = false;
 	peer->requestedData = NULL;
 	peer->nodeObj = self;
 	peer->upToDate = false;
 	peer->invResponseTimerStarted = false;
 	CBNewMutex(&peer->invResponseMutex);
+	CBNewMutex(&peer->requestedDataMutex);
 }
 bool CBNodeFullPeerWorkingOnBranch(void * vpeer, uint8_t branch){
 	CBPeer * peer = vpeer;
@@ -1097,17 +1618,33 @@ bool CBNodeFullPeerWorkingOnBranch(void * vpeer, uint8_t branch){
 	peer->branchWorkingOn = branch;
 	return true;
 }
+bool CBNodeFullProcessNewTransaction(CBNodeFull * self, CBTransaction * tx, uint64_t time, uint32_t blockHeight, CBTransactionAccountDetailList * list, bool processDependants, bool ours){
+	// Call newTransaction if ours
+	if (ours)
+		CBGetNode(self)->callbacks.newTransaction(CBGetNode(self), tx, time, blockHeight, list);
+	// Check orphans for chain dependencies.
+	if (processDependants && !CBNodeFullProcessNewTransactionProcessDependants(self, (CBNewTransactionType){true, {.chainTx = tx}})) {
+		CBLogError("Failed to process the dependants of a new transaction found on the block chain.");
+		return false;
+	}
+	return true;
+}
 CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer, CBMessage * message){
 	CBNodeFull * self = CBGetNodeFull(node);
 	CBValidator * validator = node->validator;
+	char messageTypeStr[CB_MESSAGE_TYPE_STR_SIZE];
+	CBMessageTypeToString(message->type, messageTypeStr);
+	CBLogVerbose("Processing message from %s with the type %s.", peer->peerStr, messageTypeStr);
 	switch (message->type) {
 		case CB_MESSAGE_TYPE_VERSION:{
 			// Disconnect if the peer can't give us blocks but we don't have at least CB_MIN_DOWNLOAD peers we can download from.
 			CBMutexLock(self->numCanDownloadMutex);
 			if (CBGetVersion(message)->services | CB_SERVICE_FULL_BLOCKS) {
 				self->numCanDownload++;
-			}else if (self->numCanDownload < CB_MIN_DOWNLOAD)
+			}else if (self->numCanDownload < CB_MIN_DOWNLOAD){
+				CBMutexUnlock(self->numCanDownloadMutex);
 				return CB_MESSAGE_ACTION_DISCONNECT;
+			}
 			CBMutexUnlock(self->numCanDownloadMutex);
 			// Give our transactions
 			CBInventory * inv = NULL;
@@ -1157,12 +1694,14 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			// Ask for blocks, unless there is already CB_MAX_BLOCK_QUEUE peers giving us blocks or the peer advertises a block height equal or less than ours.
 			CBMutexLock(self->numberPeersDownloadMutex);
 			if (CBGetVersion(message)->blockHeight <= CBGetNetworkCommunicator(self)->blockHeight
-				|| self->numberPeersDownload == CB_MAX_BLOCK_QUEUE)
+				|| self->numberPeersDownload == CB_MAX_BLOCK_QUEUE){
+				CBMutexUnlock(self->numberPeersDownloadMutex);
 				break;
+			}
 			self->numberPeersDownload++;
 			CBMutexUnlock(self->numberPeersDownloadMutex);
 			// Send getblocks
-			if (!CBNodeFullSendGetBlocks(self, peer))
+			if (!CBNodeFullSendGetBlocks(self, peer, NULL, NULL))
 				return CBNodeReturnError(node, "Could not send getblocks for a new peer.");
 			// We don't know what branch the peer is going to give us yet
 			peer->branchWorkingOn = CB_NO_BRANCH;
@@ -1201,14 +1740,15 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 		case CB_MESSAGE_TYPE_GETDATA:{
 			// The peer is requesting data. It should only be requesting transactions or blocks that we own.
 			CBInventory * getData = CBGetInventory(message);
-			// Begin sending requested data, or add the requested data to the eisting requested data.
+			// Begin sending requested data, or add the requested data to the existing requested data.
+			char hashStr[41];
+			CBByteArrayToString(getData->itemFront->hash, 0, 20, hashStr);
+			CBMutexLock(peer->requestedDataMutex);
 			if (peer->requestedData == NULL) {
-				peer->sendDataIndex = 0;
 				peer->requestedData = getData;
 				CBRetainObject(peer->requestedData);
-				if (CBNodeFullSendRequestedData(self, peer))
-					// Return since the node was stoped.
-					return CB_MESSAGE_ACTION_RETURN;
+				CBLogVerbose("New getdata with first hash %s from %s", hashStr, peer->peerStr);
+				CBNodeFullSendRequestedData(self, peer);
 			}else{
 				// Add to existing requested data
 				uint16_t addNum = getData->itemNum;
@@ -1216,8 +1756,10 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					// Adjust to give no more than 50000
 					addNum = 50000 - peer->requestedData->itemNum;
 				for (uint16_t x = 0; x < addNum; x++)
-					CBInventoryAddInventoryItem(peer->requestedData, CBInventoryGetInventoryItem(getData, x));
+					CBInventoryTakeInventoryItem(peer->requestedData, CBInventoryPopInventoryItem(getData));
+				CBLogVerbose("Apended getdata with first hash %s from %s", hashStr, peer->peerStr);
 			}
+			CBMutexUnlock(peer->requestedDataMutex);
 			break;
 		}
 		case CB_MESSAGE_TYPE_INV:{
@@ -1226,8 +1768,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			// Get data request for objects we want.
 			CBInventory * getData = NULL;
 			uint16_t reqBlockNum = 0;
-			for (uint16_t x = 0; x < inv->itemNum; x++) {
-				CBInventoryItem * item = CBInventoryGetInventoryItem(inv, x);
+			for (CBInventoryItem * item; (item = CBInventoryPopInventoryItem(inv)) != NULL;) {
 				uint8_t * hash = CBByteArrayGetData(item->hash);
 				if (item->type == CB_INVENTORY_ITEM_BLOCK) {
 					if (reqBlockNum == 0 && peer->expectBlock){
@@ -1241,21 +1782,47 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					CBMutexUnlock(node->blockAndTxMutex);
 					if (exists == CB_ERROR)
 						return CBNodeReturnError(node, "Could not determine if we have a block in an inventory message.");
-					if (exists == CB_TRUE)
-						// Ignore this one.
+					char blockStr[40];
+					CBByteArrayToString(item->hash, 0, 20, blockStr);
+					if (exists == CB_TRUE){
+						// Ignore this block
+						// If the last block is not on the same branch as we are downloading from this peer, then resend getblocks for the other branch. This is needed in the case of very large reorgs.
+						if (item == inv->itemBack){
+							// Only allow for ignored blocks when working on another branch.
+							uint8_t branch;
+							uint32_t index;
+							if (CBBlockChainStorageGetBlockLocation(CBGetNode(self)->validator, hash, &branch, &index) != CB_TRUE)
+								return CBNodeReturnError(CBGetNode(self), "Couldn't get location of last block in an inventory to see if the peer has changed to another branch.");
+							if (peer->branchWorkingOn != branch) {
+								// Working on new branch
+								CBMutexLock(self->workingMutex);
+								if (peer->branchWorkingOn != CB_NO_BRANCH)
+									CBGetNode(self)->validator->branches[peer->branchWorkingOn].working--;
+								CBGetNode(self)->validator->branches[branch].working++;
+								CBMutexUnlock(self->workingMutex);
+								peer->branchWorkingOn = branch;
+								peer->allowNewBranch = true;
+								CBNodeFullSendGetBlocks(self, peer, NULL, NULL);
+								return CB_MESSAGE_ACTION_CONTINUE;
+							}
+							// All blocks ignored but not resending getblocks, so uptodate
+							CBNodeFullPeerDownloadEnd(self, peer);
+							peer->upToDate = true;
+						}
+						CBLogVerbose("Ignoring block %s from %s.", blockStr, peer->peerStr);
 						continue;
+					}
 					// Ensure we have not asked for this block yet.
 					CBMutexLock(self->pendingBlockDataMutex);
 					CBFindResult res = CBAssociativeArrayFind(&self->askedForBlocks, hash);
 					if (res.found){
+						CBLogVerbose("Already asked for the block %s from %s.", blockStr, peer->peerStr);
 						CBMutexUnlock(self->pendingBlockDataMutex);
 						continue;
 					}
-					char blockStr[40];
-					CBByteArrayToString(item->hash, 0, 20, blockStr);
-					CBLogVerbose("%s gave us hash of block %s", peer->peerStr, blockStr);
+					CBLogVerbose("%s gave us hash of block %s (%u)", peer->peerStr, blockStr, reqBlockNum);
 					// Add block to required blocks from peer
-					memcpy(peer->reqBlocks[reqBlockNum].reqBlock, hash, 20);
+					memcpy(peer->reqBlocks[reqBlockNum].reqBlock, hash, 32);
 					peer->reqBlocks[reqBlockNum].next = reqBlockNum + 1;
 					// Create or get block peers information
 					CBBlockPeers * blockPeers;
@@ -1312,12 +1879,14 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					uint8_t * insertHash = malloc(20);
 					memcpy(insertHash, hash, 20);
 					CBAssociativeArrayInsert(&peer->expectedTxs, insertHash, res.position, NULL);
-				}else continue;
+				}
 			}
 			if (reqBlockNum != 0) {
 				// Has blocks in inventory
-				CBEndTimer(peer->invResponseTimer);
-				peer->invResponseTimerStarted = false;
+				if (peer->invResponseTimerStarted) {
+					CBEndTimer(peer->invResponseTimer);
+					peer->invResponseTimerStarted = false;
+				}
 				// Add CB_END_REQ_BLOCKS to last required block
 				peer->reqBlocks[reqBlockNum-1].next = CB_END_REQ_BLOCKS;
 			}
@@ -1325,19 +1894,19 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			if (getData != NULL){
 				CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
 				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
+				CBReleaseObject(getData);
 			}
 			break;
 		}
 		case CB_MESSAGE_TYPE_TX:{
 			CBTransaction * tx = CBGetTransaction(message);
-			char txStr[CB_TX_HASH_STR_SIZE];
-			CBTransactionHashToString(tx, txStr);
-			CBLogVerbose("%s gave us the transaction %s", peer->peerStr, txStr);
 			// Ensure we expected this transaction
 			CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, CBTransactionGetHash(tx));
 			if (!res.found){
 				// Did not expect this transaction
-				CBLogWarning("%s gave us an unexpected transaction.", peer->peerStr);
+				char txStr[CB_TX_HASH_STR_SIZE];
+				CBTransactionHashToString(tx, txStr);
+				CBLogWarning("%s gave us an unexpected transaction %s.", peer->peerStr, txStr);
 				return CB_MESSAGE_ACTION_DISCONNECT;
 			}
 			CBMutexLock(node->blockAndTxMutex);
@@ -1351,331 +1920,13 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			}
 			// Remove from expected transactions
 			CBAssociativeArrayDelete(&peer->expectedTxs, res.position, true);
-			// Check the validity of the transaction
-			uint64_t outputValue;
-			if (!CBTransactionValidateBasic(tx, false, &outputValue))
+			CBErrBool result = CBNodeNewUnconfirmedTransaction(self, peer, tx);
+			CBMutexUnlock(node->blockAndTxMutex);
+			if (result == CB_ERROR)
+				return CBNodeReturnError(node, "Failed to process a new unconfirmed transaction.");
+			if (result == CB_FALSE)
 				return CB_MESSAGE_ACTION_DISCONNECT;
-			// Macro for breaking and freeing mutex
-			#define breakMutex CBMutexUnlock(node->blockAndTxMutex); break
-			// Check is standard
-			if (node->flags & CB_NODE_CHECK_STANDARD
-				&& !CBTransactionIsStandard(tx)){
-				// Ignore
-				CBLogVerbose("Transaction %s is non-standard.", txStr);
-				breakMutex;
-			}
-			CBBlockBranch * mainBranch = &validator->branches[validator->mainBranch];
-			uint32_t lastHeight = mainBranch->startHeight + mainBranch->lastValidation;
-			// Check that the transaction is final, else ignore
-			if (! CBTransactionIsFinal(tx, CBNetworkAddressManagerGetNetworkTime(CBGetNetworkCommunicator(self)->addresses), lastHeight)){
-				CBLogVerbose("Transaction %s is not final.", txStr);
-				breakMutex;
-			}
-			// Check sigops
-			uint32_t sigOps = CBTransactionGetSigOps(tx);
-			if (sigOps > CB_MAX_SIG_OPS){
-				CBMutexUnlock(node->blockAndTxMutex);
-				CBLogWarning("Transaction %s has an invalid sig-op count", txStr);
-				return CB_MESSAGE_ACTION_DISCONNECT;
-			}
-			// Look for unspent outputs being spent
-			uint64_t inputValue = 0;
-			CBOrphan * orphan = NULL;
-			CBInventory * orphanGetData = NULL;
-			bool wouldBeOrphan = false; // True whether or not orphan is actually stored.
-			CBUnconfTransaction utx = {tx,0};
-			// Data for holding type of dependency
-			struct{
-				enum{
-					CB_DEP_FOUND,
-					CB_DEP_UNFOUND,
-					CB_DEP_CHAIN
-				} type;
-				void * data;
-			}depData[tx->inputNum];
-			// Macros for freeing orphan data
-			#define CBFreeOrphanData \
-				if (orphanGetData) \
-					CBReleaseObject(orphanGetData); \
-				if (orphan) \
-					free(orphan); \
-				CBMutexUnlock(node->blockAndTxMutex);
-			#define CBTxReturnDisconnect CBFreeOrphanData return CB_MESSAGE_ACTION_DISCONNECT;
-			#define CBTxReturnContinue CBFreeOrphanData return CB_MESSAGE_ACTION_CONTINUE;
-			#define CBTxReturnError(x) CBFreeOrphanData return CBNodeReturnError(node, x);
-			for (uint32_t x = 0; x < tx->inputNum; x++) {
-				uint8_t * prevHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
-				// First look for unconfirmed unspent outputs
-				CBFoundTransaction * prevTx = CBNodeFullGetFoundTransaction(self, prevHash);
-				CBTransactionOutput * output;
-				if (prevTx != NULL) {
-					// Found transaction as unconfirmed, check for output
-					if (prevTx->utx.tx->outputNum < tx->inputs[x]->prevOut.index + 1){
-						// Not enough outputs
-						CBLogWarning("Transaction %s, input %u references an output that does not exist.", txStr, x);
-						CBTxReturnDisconnect
-					}
-					output = prevTx->utx.tx->outputs[tx->inputs[x]->prevOut.index];
-					// Ensure not spent, else ignore.
-					if (output->spent){
-						CBLogVerbose("Transaction %s, input %u references an output that is spent. Ignoring.", txStr, x);
-						CBTxReturnContinue
-					}
-					// Increase the amount of unconfirmed dependencies this transaction has
-					utx.numUnconfDeps++;
-					// Dependency is found unconf
-					depData[x].type = CB_DEP_FOUND;
-					depData[x].data = prevTx;
-				}else{
-					// Else the dependency data is definitely the previous hash
-					depData[x].data = prevHash;
-					// Look in block-chain
-					CBErrBool exists = CBBlockChainStorageUnspentOutputExists(validator, prevHash, tx->inputs[x]->prevOut.index);
-					if (exists == CB_ERROR)
-						CBTxReturnError("Could not determine if an unspent output exists.")
-					if (exists == CB_FALSE){
-						// No unspent output, request the dependency in get data. This is an orphan transaction.
-						// UNLESS the transaction was there and the output index was bad. Check for the transaction
-						exists = CBBlockChainStorageTransactionExists(validator, prevHash);
-						if (exists == CB_ERROR)
-							CBTxReturnError("Could not determine if a transaction exists.")
-						if (exists == CB_TRUE)
-							CBLogWarning("Transaction %s, input %u references an output that does not exist in the chain.", txStr, x);
-							CBTxReturnDisconnect
-						wouldBeOrphan = true;
-						if (orphanGetData == NULL || orphanGetData->itemNum < 50000) {
-							// Do not request transaction if we already expect it from this peer
-							CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, prevHash);
-							if (!res.found) {
-								char depTxStr[40];
-								CBByteArrayToString(tx->inputs[x]->prevOut.hash, 0, 20, depTxStr);
-								CBLogVerbose("Requiring dependency transaction %s from %s", depTxStr, peer->peerStr);
-								// Create getdata if not already
-								if (orphanGetData == NULL)
-									orphanGetData = CBNewInventory();
-								CBRetainObject(tx->inputs[x]->prevOut.hash);
-								CBInventoryTakeInventoryItem(orphanGetData, CBNewInventoryItem(CB_INVENTORY_ITEM_TX, tx->inputs[x]->prevOut.hash));
-								// Add to expected transactions from this peer.
-								uint8_t * insertHash = malloc(20);
-								memcpy(insertHash, prevHash, 20);
-								CBAssociativeArrayInsert(&peer->expectedTxs, insertHash, res.position, NULL);
-							}
-						}
-						// Dependency is unfound
-						depData[x].type = CB_DEP_UNFOUND;
-						continue;
-					}
-					// Load the unspent output
-					CBErrBool ok = CBValidatorLoadUnspentOutputAndCheckMaturity(validator, tx->inputs[x]->prevOut, lastHeight, &output);
-					if (ok == CB_ERROR)
-						CBTxReturnError("There was an error getting an unspent output from storage.")
-					if (ok == CB_FALSE){
-						// Not mature so ignore
-						CBLogVerbose("Transaction %s is not mature.", txStr);
-						CBTxReturnContinue
-					}
-					// Dependency is on chain
-					depData[x].type = CB_DEP_CHAIN;
-				}
-				CBInputCheckResult inRes = CBValidatorVerifyScripts(validator, tx, x, output, &sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
-				if (inRes == CB_INPUT_BAD) {
-					if (!res.found) CBReleaseObject(output);
-					CBLogWarning("Transaction %s, input %u is invalid.", txStr, x);
-					CBTxReturnDisconnect
-				}
-				if (inRes == CB_INPUT_NON_STD) {
-					if (!res.found) CBReleaseObject(output);
-					CBLogVerbose("Transaction %s, input %u is non-standard. Ignoring transaction.", txStr, x);
-					CBTxReturnContinue
-				}
-				// Add to input value
-				inputValue += output->value;
-				// If we looked in block chain release the output
-				if (!res.found) CBReleaseObject(output);
-			}
-			// Check that the input value is equal or more than the output value
-			if (inputValue < outputValue){
-				CBLogWarning("Transaction %s has an invalid output value.", txStr);
-				CBTxReturnDisconnect
-			}
-			CBUnconfTransaction * uTx; // Will be set for insertion to unconf, unfound and chain dependencies.
-			if (wouldBeOrphan) {
-				// This transaction depends upon outputs that do not exist yet, add to orphans and send getdata for dependencies.
-				if (orphanGetData) {
-					CBGetMessage(orphanGetData)->type = CB_MESSAGE_TYPE_GETDATA;
-					CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(orphanGetData), NULL);
-					CBReleaseObject(orphanGetData);
-				}
-				bool room = true;
-				// 300000 equals 10 minutes times 500 bytes a transaction
-				bool canRemove = (CBGetMilliseconds() - self->deleteOrphanTime) > 300000 / self->otherTxsSizeLimit + 1;
-				while (self->otherTxsSize + CBGetMessage(tx)->bytes->length > self->otherTxsSizeLimit) {
-					if (!canRemove || !CBNodeFullRemoveOrphan(self)) {
-						room = false;
-						break;
-					}
-				}
-				if (room){
-					// Allocate memory for orphan data
-					orphan = malloc(sizeof(*orphan));
-					self->otherTxsSize += CBGetMessage(tx)->bytes->length;
-					// Finalise orphan data
-					orphan->inputValue = inputValue;
-					orphan->sigOps = sigOps;
-					orphan->utx = utx;
-					// The number of missing inputs is equal to the dependencies we want with the getdata
-					orphan->missingInputNum = orphanGetData->itemNum;
-					// Add orphan to array
-					CBAssociativeArrayInsert(&self->orphanTxs, orphan, CBAssociativeArrayFind(&self->orphanTxs, orphan).position, NULL);
-					uTx = (CBUnconfTransaction *)orphan;
-					CBLogVerbose("Added transaction %s as orphan", txStr);
-				}else
-					break;
-			}else{
-				// Add this transaction as found (complete)
-				CBProcessQueueItem * queue = &(CBProcessQueueItem){
-					.next = NULL
-				};
-				CBErrBool res = CBNodeFullAddTransactionAsFound(self, utx, (CBFoundTransaction **)&queue->item, inputValue);
-				uTx = (CBUnconfTransaction *)queue->item;
-				if (res == CB_ERROR)
-					return CBNodeReturnError(node, "Could not add a transaction as found.");
-				if (res == CB_TRUE) {
-					CBProcessQueueItem * last = queue;
-					// Now check to see if any orphans depend upon this transaction. When an orphan is found (complete) then we add the orphan to the queue of complete transactions whose dependants need to be processed. After processing the found transaction, then proceed to process the next transaction in the queue.
-					while (queue != NULL) {
-						// See if this transaction has orphan dependants.
-						CBFoundTransaction * fndTx = queue->item;
-						CBFindResult res = CBAssociativeArrayFind(&self->unfoundDependencies, CBTransactionGetHash(fndTx->utx.tx));
-						if (res.found) {
-							// Have dependants, loop through orphan dependants, process the inputs and check for newly completed transactions.
-							// Get orphan dependants
-							CBAssociativeArray * orphanDependants = &((CBTransactionDependency *)CBFindResultToPointer(res))->dependants;
-							// Remove this dependency from unfoundDependencies, but do not free yet
-							CBAssociativeArrayDelete(&self->unfoundDependencies, res.position, false);
-							CBOrphanDependency * delOrphanDep = NULL; // Set when orphan is removed so that we can ignore fututure dependencies
-							CBOrphanDependency * lastOrphanDep = NULL; // Used to detect change in orphan so that we can finally move the orphan to the foundDep array.
-							CBAssociativeArrayForEach(CBOrphanDependency * orphanDep, orphanDependants) {
-								if (delOrphanDep && delOrphanDep->orphan == orphanDep->orphan)
-									continue;
-								if (lastOrphanDep && lastOrphanDep->orphan != orphanDep->orphan)
-									// The next orphan, so add the last one to the foundDep array
-									CBAssociativeArrayInsert(&fndTx->dependants, lastOrphanDep->orphan, CBAssociativeArrayFind(&fndTx->dependants, lastOrphanDep->orphan).position, NULL);
-								// Check orphan input
-								CBTransactionOutput * output = tx->outputs[orphanDep->orphan->utx.tx->inputs[orphanDep->inputIndex]->prevOut.index];
-								CBInputCheckResult inRes = CBValidatorVerifyScripts(validator, orphanDep->orphan->utx.tx, orphanDep->inputIndex, output, &orphanDep->orphan->sigOps, node->flags & CB_NODE_CHECK_STANDARD);
-								bool rm = false;
-								if (inRes == CB_INPUT_OK) {
-									// Increase the input value
-									orphanDep->orphan->inputValue += output->value;
-									// Increase the number of unconfirmed dependencies.
-									orphanDep->orphan->utx.numUnconfDeps++;
-									// Reduce the number of missing inputs and if there are no missing inputs left do final processing on orphan
-									if (--orphanDep->orphan->missingInputNum == 0) {
-										rm = true; // No longer an orphan
-										// Calculate output value
-										outputValue = 0;
-										for (uint32_t x = 0; x < orphanDep->orphan->utx.tx->outputNum; x++)
-											// Overflows have already been checked.
-											outputValue += orphanDep->orphan->utx.tx->outputs[x]->value;
-										// Ensure output value is eual to or less than input value
-										if (outputValue <= orphanDep->orphan->inputValue){
-											// The orphan is OK, so add it to ours or other and the queue.
-											CBFoundTransaction * fndTx;
-											CBErrBool res = CBNodeFullAddTransactionAsFound(self, orphanDep->orphan->utx, &fndTx, orphanDep->orphan->inputValue);
-											if (res == CB_ERROR) {
-												// Free data
-												while (queue != NULL) {
-													CBProcessQueueItem * next = queue->next;
-													if (fndTx->utx.tx != tx)
-														// Only free if not first.
-														free(queue);
-													queue = next;
-												}
-												// Return with error
-												return CBNodeReturnError(node, "There was an error adding a previously orphan transaction as found.");
-											}
-											if (res == CB_TRUE) {
-												// Successfully added transaction as found, now add to queue
-												last->next = malloc(sizeof(*last->next));
-												last = last->next;
-												last->item = fndTx;
-												last->next = NULL;
-											}
-										}else
-											// Else orphan is not OK. We will need to remove the orphan from dependencies.
-											CBNodeFullDeleteOrphanFromDependencies(self, orphanDep->orphan);
-									}
-								}else{
-									// We are to remove this orphan because of an invalid or non-standard input
-									rm = true;
-									// Since this orphan failed before satisfying all inputs, check for other input dependencies (of unprocessed inputs ie. for unfound transactions) and remove this orphan as a dependant. We have already removed this transaction's unforund dependencies from the array, so it will not interfere with that.
-									CBNodeFullDeleteOrphanFromDependencies(self, orphanDep->orphan);
-								}
-								if (rm) {
-									// Remove orphan
-									CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, orphanDep->orphan).position, true);
-									// Ignore other dependencies for this orphan
-									delOrphanDep = orphanDep;
-									continue;
-								}
-							}
-							if (lastOrphanDep)
-								// Add the last orphan to the dependants
-								CBAssociativeArrayInsert(&fndTx->dependants, lastOrphanDep->orphan->utx.tx, CBAssociativeArrayFind(&fndTx->dependants, lastOrphanDep->orphan).position, NULL);
-						}
-						// Completed processing for this found transaction.
-						// Free the transaction dependency
-						CBFreeTransactionDependency(CBFindResultToPointer(res));
-						// Move to next in the queue
-						CBProcessQueueItem * next = queue->next;
-						// Free this queue item unless first
-						if (fndTx->utx.tx != tx)
-							free(queue);
-						queue = next;
-					}
-					// Stage the changes
-					if (!CBStorageDatabaseStage(node->database))
-						return CBNodeReturnError(node, "Unable to stage changes of a new unconfirmed transaction to the database.");
-				}else
-					// Could not add transaction
-					breakMutex;
-			}
-			// Add as dependant
-			for (uint32_t x = 0; x < tx->inputNum; x++) {
-				if (depData[x].type == CB_DEP_CHAIN) {
-					// Add this transaction as a dependant of the previous chain transaction, if it is not been done so already
-					CBNodeFullAddToDependency(&self->chainDependencies, depData[x].data, uTx, CBTransactionPtrCompare);
-				}else if (depData[x].type == CB_DEP_FOUND){
-					// Add this transaction as a dependant of the previous found unconfirmed transaction, if it is not been done so already
-					CBFoundTransaction * prevTx = depData[x].data;
-					CBFindResult res = CBAssociativeArrayFind(&prevTx->dependants, uTx);
-					if (!res.found)
-						// Not found, therefore add this as a dependant.
-						CBAssociativeArrayInsert(&prevTx->dependants, uTx, res.position, NULL);
-				}else{
-					// Add this orphan to the dependencies of an unfound transaction.
-					// See if the dependency exists
-					CBFindResult res = CBAssociativeArrayFind(&self->unfoundDependencies, depData[x].data);
-					CBTransactionDependency * txDep;
-					if (!res.found) {
-						// Create the transaction dependency
-						txDep = malloc(sizeof(*txDep));
-						memcpy(txDep->hash, depData[x].data, 32);
-						CBInitAssociativeArray(&txDep->dependants, CBOrphanDependencyCompare, NULL, free);
-						// Insert transaction dependency
-						CBAssociativeArrayInsert(&self->unfoundDependencies, txDep, res.position, NULL);
-					}else
-						txDep = CBFindResultToPointer(res);
-					// Add orphan dependency
-					CBOrphanDependency * orphDep = malloc(sizeof(*orphDep));
-					orphDep->inputIndex = x;
-					orphDep->orphan = orphan;
-					// Insert orphan dependency
-					CBAssociativeArrayInsert(&txDep->dependants, orphDep, CBAssociativeArrayFind(&txDep->dependants, orphDep).position, NULL);
-				}
-			}
-			breakMutex;
+			break;
 		}
 		case CB_MESSAGE_TYPE_NOT_GIVEN_INV:
 			// Timer expired but not given block inventory
@@ -1692,35 +1943,44 @@ bool CBNodeFullRemoveBlock(void * vpeer, uint8_t branch, CBBlock * block){
 	// Loop through and process transactions
 	for (uint32_t x = 1; x < block->transactionNum; x++) {
 		CBTransaction * tx = block->transactions[x];
+		// Add transaction to unconfirmedTxs
+		if (! self->initialisedUnconfirmedTxs) {
+			// Initialise the lost transactions array
+			CBInitAssociativeArray(&self->unconfirmedTxs, CBTransactionPtrCompare, NULL, CBFreeTransactionOfType);
+			// Initialise the array for the dependencies of the lost transactions.
+			CBInitAssociativeArray(&self->unconfirmedTxDependencies, CBHashCompare, NULL, CBFreeTransactionDependency);
+			self->initialisedUnconfirmedTxs = true;
+		}
+		// Make transaction of type
+		CBTransactionOfType * txOfType = malloc(sizeof(*txOfType));
+		txOfType->tx = tx;
+		// Add this transaction to the lostTxs array
+		CBAssociativeArrayInsert(&self->unconfirmedTxs, txOfType, CBAssociativeArrayFind(&self->unconfirmedTxs, txOfType).position, NULL);
+		CBRetainObject(tx);
+		// Add dependencies
+		for (uint32_t y = 0; y < tx->inputNum; y++)
+			CBNodeFullAddToDependency(&self->unconfirmedTxDependencies, CBByteArrayGetData(tx->inputs[y]->prevOut.hash), txOfType, CBTransactionPtrCompare);
 		// See if this transaction is ours or not.
 		CBErrBool ours = CBAccounterIsOurs(CBGetNode(self)->accounterStorage, CBTransactionGetHash(tx));
 		if (ours == CB_ERROR) {
 			CBLogError("Could not determine if a transaction is ours.");
 			return false;
 		}
-		if (ours == CB_TRUE) {
-			if (! self->initialisedOurLostTxs) {
-				// Initialise the lost transactions array
-				CBInitAssociativeArray(&self->ourLostTxs, CBPtrCompare, NULL, CBReleaseObject);
-				// Initialise the array for the dependencies of the lost transactions.
-				CBInitAssociativeArray(&self->ourLostTxDependencies, CBHashCompare, NULL, CBFreeTransactionDependency);
-				self->initialisedOurLostTxs = true;
-			}
-			// Add this transaction to the lostTxs array
-			CBAssociativeArrayInsert(&self->ourLostTxs, tx, CBAssociativeArrayFind(&self->ourLostTxs, tx).position, NULL);
-			CBRetainObject(tx);
-			// Add dependencies
-			for (uint32_t y = 0; y < tx->inputNum; y++)
-				CBNodeFullAddToDependency(&self->ourLostTxDependencies, CBByteArrayGetData(tx->inputs[y]->prevOut.hash), tx, CBPtrCompare);
-		}else{
-			// If this transaction was a chain dependency of an unconfirmed transaction and was not our transaction then we should lose that transaction.
-			CBNodeFullLoseUnconfDependants(self, CBTransactionGetHash(tx));
-			// If this transaction is a dependency of one or more of our lost transactions, and it is not one of our transactions then we should remove our lost transactions depending on this and then any further dependencies of our transaction.
-			if (self->initialisedOurLostTxs)
-				CBNodeFullLoseOurDependants(self, CBTransactionGetHash(tx));
-		}
+		txOfType->ours = ours == CB_TX_OURS;
 	}
 	return true;
+}
+void CBNodeFullRemoveFoundTransactionFromDependencies(CBNodeFull * self, CBUnconfTransaction * uTx){
+	for (uint32_t x = 0; x < uTx->tx->inputNum; x++) {
+		uint8_t * prevHash = CBByteArrayGetData(uTx->tx->inputs[x]->prevOut.hash);
+		// See if the previous hash is of a found transaction
+		CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, prevHash);
+		if (fndTx)
+			CBAssociativeArrayDelete(&fndTx->dependants, CBAssociativeArrayFind(&fndTx->dependants, uTx).position, false);
+		else
+			// Remove from chain dependency if it exists in one.
+			CBNodeFullRemoveFromDependency(&self->chainDependencies, prevHash, uTx);
+	}
 }
 void CBNodeFullRemoveFromDependency(CBAssociativeArray * deps, uint8_t * hash, void * el){
 	CBFindResult res = CBAssociativeArrayFind(deps, hash);
@@ -1731,30 +1991,18 @@ void CBNodeFullRemoveFromDependency(CBAssociativeArray * deps, uint8_t * hash, v
 	if (!res2.found)
 		return;
 	// Remove element from dependants.
-	CBAssociativeArrayDelete(&dep->dependants, res2.position, true);
+	CBAssociativeArrayDelete(&dep->dependants, res2.position, false);
 	// See if the array is empty. If it is then we can remove this dependant
 	if (CBAssociativeArrayIsEmpty(&dep->dependants))
 		CBAssociativeArrayDelete(deps, res.position, true);
 }
 bool CBNodeFullRemoveLostUnconfTxs(CBNodeFull * self){
 	if (self->initialisedLostUnconfTxs) {
-		CBAssociativeArrayForEach(CBUnconfTransaction * tx, &self->lostUnconfTxs){
-			// If ours call doubleSpend and remove from storage
-			if (tx->type == CB_TX_OURS){
-				CBGetNode(self)->callbacks.doubleSpend(CBGetNode(self), CBTransactionGetHash(tx->tx));
-				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->nodeStorage, tx->tx)) {
-					CBLogError("Could not remove our lost transaction.");
-					return false;
-				}
-			}else if (tx->type == CB_TX_OTHER && !CBNodeStorageRemoveOtherTx(CBGetNode(self)->nodeStorage, tx->tx)) {
-				CBLogError("Could not remove other lost transaction.");
-				return false;
-			}
+		CBAssociativeArrayForEach(CBUnconfTransaction * tx, &self->lostUnconfTxs)
 			if (!CBNodeFullRemoveUnconfTx(self, tx)) {
 				CBLogError("Could not process an unconfirmed transaction being lost.");
 				return false;
 			}
-		}
 		// Free lostUnconfTxs
 		CBFreeAssociativeArray(&self->lostUnconfTxs);
 		self->initialisedLostUnconfTxs = false;
@@ -1780,9 +2028,11 @@ bool CBNodeFullRemoveUnconfTx(CBNodeFull * self, CBUnconfTransaction * txRm){
 	while (queue != NULL) {
 		CBUnconfTransaction * uTx = last->item;
 		CBRetainObject(uTx->tx);
-		if (uTx->type == CB_TX_ORPHAN)
-			CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, uTx->tx).position, true);
-		else{ // CB_TX_OURS or CB_TX_OTHER
+		if (uTx->type == CB_TX_ORPHAN){
+			CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, uTx->tx).position, false);
+			CBNodeFullDeleteOrphanFromDependencies(self, (CBOrphan *)uTx);
+			CBFreeOrphan(uTx);
+		}else{ // CB_TX_OURS or CB_TX_OTHER
 			CBFoundTransaction * fndTx = (CBFoundTransaction *)uTx;
 			// Add dependants to queue
 			CBAssociativeArrayForEach(CBUnconfTransaction * dependant, &fndTx->dependants) {
@@ -1791,29 +2041,36 @@ bool CBNodeFullRemoveUnconfTx(CBNodeFull * self, CBUnconfTransaction * txRm){
 				last->item = dependant;
 				last->next = NULL;
 			}
+			// Remove from storage
+			if (uTx->type == CB_TX_OURS) {
+				if (!CBNodeStorageRemoveOurTx(CBGetNode(self)->nodeStorage, uTx->tx)) {
+					CBLogError("Could not remove our lost transaction.");
+					return false;
+				}
+			}else if (uTx->type == CB_TX_OTHER && !CBNodeStorageRemoveOtherTx(CBGetNode(self)->nodeStorage, uTx->tx)) {
+				CBLogError("Could not remove other lost transaction.");
+				return false;
+			}
 			// Remove from ours or other array
 			CBAssociativeArray * arr = (uTx->type == CB_TX_OURS) ? &self->ourTxs : &self->otherTxs;
-			CBAssociativeArrayDelete(arr, CBAssociativeArrayFind(arr, fndTx).position, true);
+			CBAssociativeArrayDelete(arr, CBAssociativeArrayFind(arr, fndTx).position, false);
 			// Also delete from allChainFoundTxs if in there
 			CBFindResult res = CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx);
 			if (res.found)
-				CBAssociativeArrayDelete(&self->allChainFoundTxs, res.position, true);
-		}
-		// Remove from dependencies
-		for (uint32_t x = 0; x < uTx->tx->inputNum; x++){
-			uint8_t * prevHash = CBByteArrayGetData(uTx->tx->inputs[x]->prevOut.hash);
-			// See if the previous hash is of a found transaction
-			CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, prevHash);
-			if (fndTx)
-				CBAssociativeArrayDelete(&fndTx->dependants, CBAssociativeArrayFind(&fndTx->dependants, uTx).position, true);
-			else
-				// Remove from chain dependency if it exists in one.
-				CBNodeFullRemoveFromDependency(&self->chainDependencies, prevHash, uTx);
-		}
-		// Remove from accounter
-		if (uTx->type == CB_TX_OURS && ! CBAccounterLostBranchlessTransaction(CBGetNode(self)->accounterStorage, uTx->tx)) {
-			CBLogError("Could not lose unconfirmed transaction from the accounter.");
-			return false;
+				CBAssociativeArrayDelete(&self->allChainFoundTxs, res.position, false);
+			// Remove from dependencies
+			CBNodeFullRemoveFoundTransactionFromDependencies(self, uTx);
+			if (uTx->type == CB_TX_OURS){
+				// Remove from accounter
+				if (! CBAccounterLostUnconfirmedTransaction(CBGetNode(self)->accounterStorage, uTx->tx)) {
+					CBLogError("Could not lose unconfirmed transaction from the accounter.");
+					return false;
+				}
+				// Call callback
+				CBGetNode(self)->callbacks.doubleSpend(CBGetNode(self), CBTransactionGetHash(uTx->tx));
+			}
+			// Delete unconfirmed transaction
+			CBFreeFoundTransaction(uTx);
 		}
 		// Move to next in the queue
 		CBProcessQueueItem * next = queue->next;
@@ -1824,57 +2081,78 @@ bool CBNodeFullRemoveUnconfTx(CBNodeFull * self, CBUnconfTransaction * txRm){
 	}
 	return true;
 }
-bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer){
+bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer, uint8_t * extraBlock, CBByteArray * stopAtHash){
+	// a5923556af
 	// Lock for access to block chain.
 	CBMutexLock(CBGetNode(self)->blockAndTxMutex);
-	CBChainDescriptor * chainDesc = CBValidatorGetChainDescriptor(CBGetNode(self)->validator);
+	// We need to make sure we get the chain descriptor for the branch we are working on with the peer.
+	uint8_t branch = peer->branchWorkingOn == CB_NO_BRANCH ? CBGetNode(self) ->validator->mainBranch : peer->branchWorkingOn;
+	CBChainDescriptor * chainDesc = CBValidatorGetChainDescriptor(CBGetNode(self)->validator, branch, extraBlock);
 	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 	if (chainDesc == NULL){
 		CBLogError("There was an error when trying to retrieve the block-chain descriptor.");
 		return false;
 	}
-	char blockStr[41];
+	char blockStr[CB_BLOCK_HASH_STR_SIZE];
 	if (chainDesc->hashNum == 1)
 		strcpy(blockStr, "genesis");
 	else
-		CBByteArrayToString(chainDesc->hashes[0], 0, 20, blockStr);
+		CBByteArrayToString(chainDesc->hashes[0], 0, CB_BLOCK_HASH_STR_BYTES, blockStr);
 	CBLogVerbose("Sending getblocks to %s with block %s as the latest.", peer->peerStr, blockStr);
-	CBGetBlocks * getBlocks = CBNewGetBlocks(CB_MIN_PROTO_VERSION, chainDesc, NULL);
+	CBGetBlocks * getBlocks = CBNewGetBlocks(CB_MIN_PROTO_VERSION, chainDesc, stopAtHash);
 	CBReleaseObject(chainDesc);
 	CBGetMessage(getBlocks)->type = CB_MESSAGE_TYPE_GETBLOCKS;
 	CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getBlocks), NULL);
 	CBReleaseObject(getBlocks);
 	// Check in the future that the peer did send us an inv of blocks
-	CBStartTimer(CBGetNetworkCommunicator(self)->eventLoop, &peer->invResponseTimer, CBGetNetworkCommunicator(self)->responseTimeOut, CBNodeFullHasNotGivenBlockInv, peer);
-	peer->invResponseTimerStarted = true;
+	// If responseTimeout is 0 then wait indefinitely. 0 should only be set when debugging, as there should be timeouts.
+	if (CBGetNetworkCommunicator(self)->responseTimeOut != 0) {
+		CBStartTimer(CBGetNetworkCommunicator(self)->eventLoop, &peer->invResponseTimer, CBGetNetworkCommunicator(self)->responseTimeOut, CBNodeFullHasNotGivenBlockInv, peer);
+		peer->invResponseTimerStarted = true;
+	}
 	return true;
 }
-bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){
-	// See if the request has been satisfied
-	if (peer->sendDataIndex == peer->requestedData->itemNum) {
-		// We have sent everything
-		CBReleaseObject(peer->requestedData);
-		peer->requestedData = NULL;
-		return false;
-	}
-	// Get this item
-	CBInventoryItem * item = CBInventoryGetInventoryItem(peer->requestedData, peer->sendDataIndex);
-	// Lock for block or transaction access
-	CBMutexLock(CBGetNode(self)->blockAndTxMutex);
-	switch (item->type) {
-		case CB_INVENTORY_ITEM_TX:{
+void CBNodeFullSendRequestedData(void * vself, void * vpeer){
+	CBNodeFull * self = vself;
+	CBPeer * peer = vpeer;
+	CBMutexLock(peer->requestedDataMutex);
+	CBLogVerbose("Sending data to %s", peer->peerStr);
+	for (;;) {
+		if (peer->requestedData == NULL) {
+			// Done already
+			CBMutexUnlock(peer->requestedDataMutex);
+			return;
+		}
+		// Pop next item
+		CBInventoryItem * item = CBInventoryPopInventoryItem(peer->requestedData);
+		if (item == NULL) {
+			// We have sent everything
+			CBReleaseObject(peer->requestedData);
+			peer->requestedData = NULL;
+			CBMutexUnlock(peer->requestedDataMutex);
+			CBLogVerbose("Ended send data to %s", peer->peerStr);
+			return;
+		}
+		// Lock for block or transaction access
+		CBMutexLock(CBGetNode(self)->blockAndTxMutex);
+		if (item->type == CB_INVENTORY_ITEM_TX) {
 			// Look at all unconfirmed transactions
 			// Change the comparison function to accept a hash in place of a transaction object.
 			CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, CBByteArrayGetData(item->hash));
 			if (fndTx != NULL){
 				// The peer was requesting an unconfirmed transaction
 				CBGetMessage(fndTx->utx.tx)->type = CB_MESSAGE_TYPE_TX;
-				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(fndTx->utx.tx), CBNodeFullSendRequestedDataVoid);
+				char txStr[CB_TX_HASH_STR_SIZE];
+				CBTransactionHashToString(fndTx->utx.tx, txStr);
+				CBLogVerbose("Sending transaction %s to %s", txStr, peer->peerStr);
+				CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+				CBMutexUnlock(peer->requestedDataMutex);
+				CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(fndTx->utx.tx), CBNodeFullSendRequestedData);
+				return;
 			}
 			// Else the peer was requesting something we do not have as unconfirmed so ignore.
-			break;
-		}
-		case CB_INVENTORY_ITEM_BLOCK:{
+			// Loop around to next...
+		}else if (item->type == CB_INVENTORY_ITEM_BLOCK) {
 			// Look for the block to give
 			uint8_t branch;
 			uint32_t index;
@@ -1883,12 +2161,19 @@ bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){
 				CBLogError("Could not get the location for a block when a peer requested it of us.");
 				CBGetNode(self)->callbacks.onFatalNodeError(CBGetNode(self));
 				CBFreeNodeFull(self);
-				return true;
+				CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+				CBMutexUnlock(peer->requestedDataMutex);
+				return;
 			}
+			char blkStr[CB_BLOCK_HASH_STR_SIZE];
+			CBByteArrayToString(item->hash, 0, CB_BLOCK_HASH_STR_BYTES, blkStr);
 			if (exists == CB_FALSE) {
 				// The peer is requesting a block we do not have. Obviously we may have removed the block since, but this is unlikely
-				CBNetworkCommunicatorDisconnect(CBGetNetworkCommunicator(self), peer, CB_24_HOURS, false);
-				return true;
+				CBMutexUnlock(peer->requestedDataMutex);
+				CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+				CBLogWarning("Peer %s is requesting the block %s which we do not have.", peer->peerStr, blkStr);
+				CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectPeer, peer, false);
+				return;
 			}
 			// Load the block from storage
 			CBBlock * block = CBBlockChainStorageLoadBlock(CBGetNode(self)->validator, index, branch);
@@ -1896,82 +2181,84 @@ bool CBNodeFullSendRequestedData(CBNodeFull * self, CBPeer * peer){
 				CBLogError("Could not load a block from storage.");
 				CBGetNode(self)->callbacks.onFatalNodeError(CBGetNode(self));
 				CBFreeNodeFull(self);
-				return true;
+				CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+				CBMutexUnlock(peer->requestedDataMutex);
+				return;
 			}
+			CBLogVerbose("Sending block %s to %s", blkStr, peer->peerStr);
 			CBGetMessage(block)->type = CB_MESSAGE_TYPE_BLOCK;
-			CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(block), CBNodeFullSendRequestedDataVoid);
+			CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+			CBMutexUnlock(peer->requestedDataMutex);
+			CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(block), CBNodeFullSendRequestedData);
+			CBReleaseObject(block);
+			return;
 		}
-		case CB_INVENTORY_ITEM_ERROR:
-			return false;
+		CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+		// Unknown, loop around.
 	}
-	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
-	// If the item index is 249, then release the inventory items, move the rest down and then reduce the item number
-	if (peer->sendDataIndex == 249) {
-		for (uint16_t x = 0; x < 249; x++)
-			CBReleaseObject(peer->requestedData->items[0][x]);
-		memmove(peer->requestedData->items, peer->requestedData->items + sizeof(*peer->requestedData->items), (peer->requestedData->itemNum / 250) * sizeof(*peer->requestedData->items));
-		peer->requestedData->itemNum -= 250;
-	}
-	// Now move to the next piece of data
-	peer->sendDataIndex++;
-	return false;
-}
-void CBNodeFullSendRequestedDataVoid(void * self, void * peer){
-	CBNodeFullSendRequestedData(self, peer);
 }
 bool CBNodeFullStartValidation(void * vpeer){
+	CBLogVerbose("Started validation");
 	CBMutexLock(CBGetNode(CBGetPeer(vpeer)->nodeObj)->blockAndTxMutex);
 	CBGetNodeFull(CBGetPeer(vpeer)->nodeObj)->forkPoint = CB_NO_FORK;
 	return true;
 }
-bool CBNodeFullUnconfToChain(CBNodeFull * self, CBUnconfTransaction * uTx, uint32_t blockHeight, uint8_t branch, bool new){
+bool CBNodeFullUnconfToChain(CBNodeFull * self, CBUnconfTransaction * uTx, uint32_t blockHeight, uint32_t time, uint8_t branch, bool new){
 	// ??? Remove redundant code with CBNodeFullRemoveUnconfTx?
-	CBTransaction * tx;
-	tx = uTx->tx;
-	if (uTx->type == CB_TX_ORPHAN) {
-		CBOrphan * orphan = (CBOrphan *)uTx;
-		CBRetainObject(tx);
-		CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, orphan).position, true);
-	}else{ // CB_TX_OURS or CB_TX_OTHER
-		CBFoundTransaction * fndTx = (CBFoundTransaction *)uTx;
-		// Change to chain dependency
-		CBTransactionDependency * dep = malloc(sizeof(*dep));
-		memcpy(dep->hash, CBTransactionGetHash(tx), 32);
-		dep->dependants = fndTx->dependants;
-		CBAssociativeArrayInsert(&self->chainDependencies, dep, CBAssociativeArrayFind(&self->chainDependencies, dep).position, NULL);
-		// Remove from ours or other array
-		CBAssociativeArray * arr = (uTx->type == CB_TX_OURS) ? &self->ourTxs : &self->otherTxs;
-		CBAssociativeArrayDelete(arr, CBAssociativeArrayFind(arr, fndTx).position, false);
-		// Also delete from allChainFoundTxs if in there
-		CBFindResult res = CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx);
-		if (res.found)
-			CBAssociativeArrayDelete(&self->allChainFoundTxs, res.position, true);
-		// Free CBFoundTransaction data without freeing the dependants data
-		free(fndTx);
+	if (uTx->type == CB_TX_ORPHAN){
+		CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, uTx).position, false);
+		// Try adding transaction to accounter
+		CBTransactionAccountDetailList * list;
+		if (! CBAccounterFoundTransaction(CBGetNode(self)->accounterStorage, uTx->tx, blockHeight, time, branch, &list)) {
+			CBLogError("Could not process orphan to chain with the accounter.");
+			return false;
+		}
+		// Process dependants for this orphan
+		if (!CBNodeFullProcessNewTransactionProcessDependants(self, (CBNewTransactionType){true, {.chainTx = uTx->tx}})){
+			CBLogError("Could not process dependants for an orphan found on the block-chain");
+			return false;
+		}
+		// Remove from dependencies
+		CBNodeFullDeleteOrphanFromDependencies(self, (CBOrphan *) uTx);
+		// Call newTransaction
+		CBGetNode(self)->callbacks.newTransaction(CBGetNode(self), uTx->tx, time, blockHeight, list);
+		CBFreeOrphan(uTx);
+		return true;
 	}
+	// CB_TX_OURS or CB_TX_OTHER
+	CBFoundTransaction * fndTx = (CBFoundTransaction *)uTx;
+	// Change to chain dependency
+	CBTransactionDependency * dep = malloc(sizeof(*dep));
+	memcpy(dep->hash, CBTransactionGetHash(uTx->tx), 32);
+	dep->dependants = fndTx->dependants;
+	CBAssociativeArrayInsert(&self->chainDependencies, dep, CBAssociativeArrayFind(&self->chainDependencies, dep).position, NULL);
+	// Remove from ours or other array
+	CBAssociativeArray * arr = (uTx->type == CB_TX_OURS) ? &self->ourTxs : &self->otherTxs;
+	CBAssociativeArrayDelete(arr, CBAssociativeArrayFind(arr, fndTx).position, false);
+	// Also delete from allChainFoundTxs if in there
+	CBFindResult res = CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx);
+	if (res.found)
+		CBAssociativeArrayDelete(&self->allChainFoundTxs, res.position, false);
 	// Remove from dependencies
-	for (uint32_t x = 0; x < tx->inputNum; x++){
-		uint8_t * prevHash = CBByteArrayGetData(tx->inputs[x]->prevOut.hash);
-		// See if the previous hash is of a found transaction
-		CBFoundTransaction * fndTx = CBNodeFullGetFoundTransaction(self, prevHash);
-		if (fndTx)
-			CBAssociativeArrayDelete(&fndTx->dependants, CBAssociativeArrayFind(&fndTx->dependants, uTx).position, true);
-		else
-			// Remove from chain dependency if it exists in one.
-			CBNodeFullRemoveFromDependency(&self->chainDependencies, prevHash, uTx);
-	}
+	CBNodeFullRemoveFoundTransactionFromDependencies(self, uTx);
 	// Move to chain on accounter
-	if (uTx->type == CB_TX_OURS && new && ! CBAccounterBranchlessTransactionToBranch(CBGetNode(self)->accounterStorage, tx, blockHeight, branch)) {
-		CBLogError("Could not make unconf transaction a confirmed one on the accounter.");
-		return false;
+	if (uTx->type == CB_TX_OURS){
+		if (new && ! CBAccounterUnconfirmedTransactionToBranch(CBGetNode(self)->accounterStorage, uTx->tx, blockHeight, branch)) {
+			CBLogError("Could not make unconf transaction a confirmed one on the accounter.");
+			return false;
+		}
+		// Call transactionConfirmed if ours
+		CBGetNode(self)->callbacks.transactionConfirmed(CBGetNode(self), CBTransactionGetHash(uTx->tx), blockHeight);
 	}
-	// Call transactionConfirmed
-	CBGetNode(self)->callbacks.transactionConfirmed(CBGetNode(self), CBTransactionGetHash(tx), blockHeight);
+	// Now delete as unconfirmed, but keep dependants which the chain dependency now has.
+	CBReleaseObject(fndTx->utx.tx);
+	free(fndTx);
 	return true;
 }
 bool CBNodeFullValidatorFinish(void * vpeer, CBBlock * block){
 	CBPeer * peer = vpeer;
 	CBNodeFull * self = peer->nodeObj;
+	CBLogVerbose("Finish validating");
 	// Stage changes
 	if (!CBStorageDatabaseStage(CBGetNode(self)->database)) {
 		CBLogError("Could not stage changes to the block-chain and accounts.");
@@ -1982,14 +2269,16 @@ bool CBNodeFullValidatorFinish(void * vpeer, CBBlock * block){
 	// Return if adding direct
 	if (self->addingDirect)
 		return true;
-	// Get the next required block
-	CBMutexLock(self->pendingBlockDataMutex);
 	// Get the next block or ask for new blocks only if not up to date
 	if (peer->upToDate){
 		peer->expectBlock = false;
 		peer->downloading = false;
 		return true;
 	}
+	// Get the next required block
+	CBMutexLock(self->pendingBlockDataMutex);
+	// By default this is the last block and will be included in the chain descriptor.
+	uint8_t * lastBlock = NULL;
 	while ((peer->reqBlockCursor = peer->reqBlocks[peer->reqBlockCursor].next) != CB_END_REQ_BLOCKS) {
 		// We can get this next block if and only if it has not been asked for and the block peer information still exists, otherwise it is being got by another peer or it has been processed already.
 		uint8_t * hash = peer->reqBlocks[peer->reqBlockCursor].reqBlock;
@@ -2006,6 +2295,7 @@ bool CBNodeFullValidatorFinish(void * vpeer, CBBlock * block){
 				return true;
 			}
 		}
+		lastBlock = hash;
 	}
 	CBMutexUnlock(self->pendingBlockDataMutex);
 	// The node is allowed to give a new branch with a new inventory
@@ -2013,7 +2303,7 @@ bool CBNodeFullValidatorFinish(void * vpeer, CBBlock * block){
 	// No next required blocks for this node, now allowing for inv response.
 	peer->expectBlock = false;
 	// Ask for new block inventory.
-	if (!CBNodeFullSendGetBlocks(self, peer))
+	if (!CBNodeFullSendGetBlocks(self, peer, lastBlock, NULL))
 		return CBNodeReturnError(CBGetNode(self), "Could not send getblocks for getting the next blocks whilst downloading from a peer.");
 	return true;
 }

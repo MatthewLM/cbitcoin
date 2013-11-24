@@ -37,6 +37,7 @@ typedef struct{
  @returns The CBVarInt information
  */
 CBVarInt CBVarIntDecode(CBByteArray * bytes, uint32_t offset);
+CBVarInt CBVarIntDecodeData(uint8_t * bytes, uint32_t offset);
 /**
  @brief Encodes variable size integer into bytes.
  @param bytes The byte array to encode a variable size integer into.

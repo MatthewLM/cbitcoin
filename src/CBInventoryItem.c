@@ -36,11 +36,13 @@ CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data){
 void CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash){
 	self->type = type;
 	self->hash = hash;
+	self->next = NULL;
 	CBRetainObject(hash);
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data){
 	self->hash = NULL;
+	self->next = NULL;
 	CBInitMessageByData(CBGetMessage(self), data);
 }
 

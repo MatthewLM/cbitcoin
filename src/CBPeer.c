@@ -41,6 +41,7 @@ void CBInitPeer(CBPeer * self, CBNetworkAddress * addr, void (*onPeerDestroy)(vo
 	self->messageSent = 0;
 	self->time = 0;
 	self->connectionWorking = false;
+	self->connecting = false;
 	self->typesExpectedNum = 0;
 	self->downloadTime = 0;
 	self->downloadAmount = 0;

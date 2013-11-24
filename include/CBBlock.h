@@ -29,7 +29,8 @@
 // Constants and Macros
 
 #define CB_BLOCK_MAX_SIZE 1000000 // ~0.95 MB
-#define CB_BLOCK_HASH_STR_SIZE 41
+#define CB_BLOCK_HASH_STR_BYTES 32
+#define CB_BLOCK_HASH_STR_SIZE CB_BLOCK_HASH_STR_BYTES*2+1
 #define CBGetBlock(x) ((CBBlock *)x)
 
 /**

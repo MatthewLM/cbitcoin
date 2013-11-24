@@ -720,7 +720,6 @@ bool CBAddressStorageSaveAddress(CBDepObject self, void * address);
 
 // Cosntants
 
-#define CB_TX_UNCONFIRMED 0
 #define CB_NO_BRANCH 0xFF
 #define CB_NO_PARENT 0xFE
 
@@ -808,6 +807,7 @@ void CBFreeAccounterStorageTransactionCursor(CBDepObject self);
  @param self The accounter storage unspent output cursor object.
  */
 void CBFreeAccounterStorageUnspentOutputCursor(CBDepObject self);
+void CBFreeSpentOutputKeyPointer(void * key);
 /**
  @brief Adds a watched output hash to an account.
  @param self The accounter object. 
@@ -824,7 +824,7 @@ bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint
  @param branch The branch in which the transaction is found.
  @returns true on success and false on failure.
  */
-bool CBAccounterBranchlessTransactionToBranch(CBDepObject self, void * tx, uint32_t blockHeight, uint8_t branch);
+bool CBAccounterUnconfirmedTransactionToBranch(CBDepObject self, void * tx, uint32_t blockHeight, uint8_t branch);
 /**
  @brief Removes information for a branch.
  @param self The accounter object.
@@ -874,7 +874,7 @@ CBErrBool CBAccounterIsOurs(CBDepObject self, uint8_t * txHash);
  @param tx The transaction being lost.
  @returns true on success and false on failure.
  */
-bool CBAccounterLostBranchlessTransaction(CBDepObject self, void * tx);
+bool CBAccounterLostUnconfirmedTransaction(CBDepObject self, void * tx);
 /**
  @brief Merges a source account into destination account. The source account remains as it was before and the destination account gains all of the watched hashes, transactions and unspent outputs of the source account.
  @param self The accounter object.

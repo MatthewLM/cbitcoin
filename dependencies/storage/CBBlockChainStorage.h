@@ -50,9 +50,9 @@ typedef enum{
  */
 typedef enum{
 	CB_BLOCK_HASH = 0, /**< The hash is written before the block data */
-	CB_BLOCK_START = 20, /**< The start of the serialised block data */
-	CB_BLOCK_TIME = 88, 
-	CB_BLOCK_TARGET = 92, 
+	CB_BLOCK_START = 32, /**< The start of the serialised block data */
+	CB_BLOCK_TIME = 100,
+	CB_BLOCK_TARGET = 104,
 } CBBlockOffsets;
 
 /**

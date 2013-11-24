@@ -213,9 +213,9 @@ uint8_t * CBBlockGetHash(CBBlock * self){
 }
 void CBBlockHashToString(CBBlock * self, char output[CB_BLOCK_HASH_STR_SIZE]){
 	uint8_t * hash = CBBlockGetHash(self);
-	for (uint8_t x = 0; x < 20; x++)
+	for (uint8_t x = 0; x < CB_BLOCK_HASH_STR_BYTES; x++)
 		sprintf(output + x*2, "%02x", hash[x]);
-	output[40] = '\0';
+	output[CB_BLOCK_HASH_STR_SIZE-1] = '\0';
 }
 uint32_t CBBlockSerialise(CBBlock * self, bool transactions, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;

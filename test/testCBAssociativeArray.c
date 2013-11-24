@@ -42,6 +42,7 @@ int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %u\n", s);
 	srand(s);
+	s = 1384284162;
 	CBAssociativeArray array;
 	CBInitAssociativeArray(&array, CBKeyCompare, NULL, NULL);
 	uint8_t key[4];
@@ -648,6 +649,35 @@ int main(){
 			return 1;
 		}
 	}
+	end = false;
+	CBAssociativeArrayGetLast(&array, &it);
+	// Test reverse iteration
+	for (int x = size - 10; x >= 0; x -= 10) {
+		if (end) {
+			printf("ITERATOR BACKWARDS END FALSE FAIL\n");
+			return 1;
+		}
+		if (! CBAssociativeArrayFind(&array, it.node->elements[it.index]).found) {
+			printf("ITERATE BACKWARDS FIND FAIL %u\n", x);
+			return 1;
+		}
+		if (x == 0) {
+			if (! CBAssociativeArrayGetFirst(&array, &it2)){
+				printf("GET FIRST FAIL");
+				return 1;
+			}
+			if (it.node != it2.node || it.index != it2.index) {
+				printf("GET FIRST AND ITERATOR CONSISTENCY FAIL %u\n", x);
+				return 1;
+			}
+		}
+		lastKey = it.node->elements[it.index];
+		end = CBAssociativeArrayIterateBack(&array, &it);
+		if (! end && memcmp(it.node->elements[it.index], lastKey, 10) >= 0) {
+			printf("ITERATE BACKWARDS ORDER FAIL %u\n", x);
+			return 1;
+		}
+	}
 	// Test range interation
 	CBRangeIterator rit = {minKey, maxKey};
 	if (! CBAssociativeArrayRangeIteratorStart(&array, &rit)){
@@ -677,6 +707,36 @@ int main(){
 	}
 	if (! end) {
 		printf("ITERATOR END TRUE FAIL\n");
+		return 1;
+	}
+	// Test reverse iteration
+	if (! CBAssociativeArrayRangeIteratorLast(&array, &rit)){
+		printf("RANGER INTERATOR LAST FAIL\n");
+		return 1;
+	}
+	itKey = CBRangeIteratorGetPointer(&rit);
+	if (memcmp(maxKey, itKey, 10)) {
+		printf("RANGE ITERATOR LAST COMPARE FAIL\n");
+		return 1;
+	}
+	for (uint8_t x = 0;; x++) {
+		if (x == 9) {
+			uint8_t * itKey = CBRangeIteratorGetPointer(&rit);
+			if (memcmp(minKey, itKey, 10)) {
+				printf("RANGE ITERATOR PREV COMPARE FAIL\n");
+				return 1;
+			}
+		}
+		if (CBAssociativeArrayRangeIteratorPrev(&array, &rit)) {
+			if (x != 9) {
+				printf("RANGE ITERATOR PREV END NUM FAIL\n");
+				return 1;
+			}
+			break;
+		}
+	}
+	if (! end) {
+		printf("ITERATOR PREV END TRUE FAIL\n");
 		return 1;
 	}
 	// Try removing half of elements

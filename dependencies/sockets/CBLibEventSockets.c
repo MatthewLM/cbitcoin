@@ -296,6 +296,11 @@ void CBDoRun(evutil_socket_t socketID, short eventNum, void * arg){
 bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, bool block){
 	CBEventLoop * loop = loopID.ptr;
 	bool done = !block;
+	if (block && pthread_equal(((CBThread *)loop->loopThread.ptr)->thread, pthread_self()) != 0){
+		// We are in the event loop already and we are supposed to block.
+		callback(arg);
+		return true;
+	}
 	CBCallbackQueueItem * item = CBCallbackQueueAdd(&loop->queue, callback, arg, &done);
 	event_active(loop->userEvent, 0, 0);
 	if (block)

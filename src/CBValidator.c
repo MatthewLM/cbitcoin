@@ -149,6 +149,11 @@ CBCompare CBPtrCompare(CBAssociativeArray * foo, void * ptr1, void * ptr2){
 	return CB_COMPARE_EQUAL;
 }
 bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block, void * callbackObj){
+	// Start validation
+	if (!self->callbacks.start(callbackObj)){
+		CBLogError("start returned false when adding directly.");
+		return false;
+	}
 	self->branches[self->mainBranch].lastValidation = self->branches[self->mainBranch].numBlocks;
 	// Update unspent outputs
 	if (!CBValidatorAddBlockToMainChain(self, block, self->mainBranch, self->branches[self->mainBranch].numBlocks, CB_ADD_BLOCK_LAST, callbackObj)) {
@@ -174,6 +179,9 @@ bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block, void * cal
 		CBLogError("finish returned false when adding directly.");
 		return false;
 	}
+	char blkStr[CB_BLOCK_HASH_STR_SIZE];
+	CBBlockHashToString(block, blkStr);
+	CBLogVerbose("Added block %s directly.", blkStr);
 	return true;
 }
 bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * block, CBBigInt work){
@@ -203,6 +211,9 @@ bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * b
 	return true;
 }
 bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block){
+	char blockStr[CB_BLOCK_HASH_STR_SIZE];
+	CBBlockHashToString(block, blockStr);
+	CBLogVerbose("Added block %s to orphans.", blockStr);
 	CBMutexLock(self->orphanMutex);
 	// Save orphan.
 	uint8_t pos;
@@ -210,7 +221,10 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block){
 		// Release old orphan
 		CBReleaseObject(self->orphans[self->firstOrphan]);
 		pos = self->firstOrphan;
-		self->firstOrphan++;
+		if (self->firstOrphan == CB_MAX_ORPHAN_CACHE-1)
+			self->firstOrphan = 0;
+		else
+			self->firstOrphan++;
 	}else
 		// Adding an orphan.
 		pos = self->numOrphans++;
@@ -227,6 +241,11 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block){
 	if (! ((self->flags & CB_VALIDATOR_HEADERS_ONLY) ?
 			 CBBlockChainStorageSaveOrphanHeader : CBBlockChainStorageSaveOrphan)(self, block, pos)) {
 		CBLogError("Could not save an orphan.");
+		return false;
+	}
+	// Call isOrphan
+	if (!self->callbacks.isOrphan(self->callbackQueue[self->queueFront], block)) {
+		CBLogError("isOrphan returned false.");
 		return false;
 	}
 	return true;
@@ -291,10 +310,11 @@ void CBValidatorBlockProcessThread(void * validator){
 		}
 		// Get the block
 		CBBlock * block = self->blockQueue[self->queueFront];
-		char blockStr[41];
+		char blockStr[CB_BLOCK_HASH_STR_SIZE];
 		CBBlockHashToString(block, blockStr);
-		CBMutexUnlock(self->blockQueueMutex);
+		CBLogVerbose("Processing block %s", blockStr);
 		void * callbackObj = self->callbackQueue[self->queueFront];
+		CBMutexUnlock(self->blockQueueMutex);
 		switch (CBValidatorProcessBlock(self, block)) {
 			case CB_BLOCK_VALIDATION_BAD:
 				CBLogWarning("Block %s is bad.", blockStr);
@@ -314,7 +334,7 @@ void CBValidatorBlockProcessThread(void * validator){
 				}
 				break;
 			default:
-				CBLogWarning("Block %s finished processing.", blockStr);
+				CBLogVerbose("Block %s finished processing.", blockStr);
 				if (!self->callbacks.finish(callbackObj, block)) {
 					CBLogError("finish returned false");
 					self->callbacks.onValidatorError(callbackObj);
@@ -367,8 +387,8 @@ CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, u
 				return CB_BLOCK_VALIDATION_BAD;
 		}else
 			// Count the output value
-			for (uint32_t x = 0; x < block->transactions[x]->outputNum; x++)
-				outputValue += block->transactions[x]->outputs[x]->value;
+			for (uint32_t y = 0; y < block->transactions[x]->outputNum; y++)
+				outputValue += block->transactions[x]->outputs[y]->value;
 		if (! x)
 			// This is the coinbase, take the output as the coinbase output.
 			coinbaseOutputValue = outputValue;
@@ -414,11 +434,15 @@ CBChainPathPoint CBValidatorGetChainIntersection(CBChainPath * chain1, CBChainPa
 uint32_t CBValidatorGetBlockHeight(CBValidator * self){
 	return self->branches[self->mainBranch].startHeight + self->branches[self->mainBranch].numBlocks - 1;
 }
-CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self){
+CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self, uint8_t branch, uint8_t * extraBlock){
 	CBChainDescriptor * chainDesc = CBNewChainDescriptor();
-	uint32_t blockIndex = self->branches[self->mainBranch].numBlocks - 1;
-	uint8_t branch = self->mainBranch;
-	uint32_t step = 1, start = 0;
+	uint32_t blockIndex = self->branches[branch].numBlocks - 1;
+	uint32_t step = 1, start;
+	if (extraBlock != NULL) {
+		start = 1;
+		CBChainDescriptorTakeHash(chainDesc, CBNewByteArrayWithDataCopy(extraBlock, 32));
+	}else
+		start = 0;
 	for (;; start++) {
 		// Add the block hash
 		CBByteArray * hash = CBNewByteArrayOfSize(32);
@@ -478,16 +502,17 @@ CBChainPath CBValidatorGetMainChainPath(CBValidator * self){
 }
 uint32_t CBValidatorGetMedianTime(CBValidator * self, uint8_t branch, uint32_t prevIndex){
 	uint32_t height = self->branches[branch].startHeight + prevIndex;
-	height = (height > 12)? 12 : height;
-	uint8_t x = height/2; // Go back median amount
+	// Go back median amount
+	uint8_t x = (height > 12)? 12 : height;
+	x /= 2;
 	for (;;) {
 		if (prevIndex >= x) {
 			prevIndex -= x;
 			return CBBlockChainStorageGetBlockTime(self, branch, prevIndex);
 		}
 		x -= prevIndex + 1;
+		prevIndex = self->branches[branch].parentBlockIndex;
 		branch = self->branches[branch].parentBranch;
-		prevIndex = self->branches[branch].numBlocks - 1;
 	}
 }
 CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex, uint32_t inputIndex, uint64_t * value, uint32_t * sigOps){
@@ -1070,7 +1095,7 @@ bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, ui
 			free(txReadData);
 			return false;
 		}
-		// Loop thorugh inputs
+		// Loop through inputs
 		for (uint32_t y = block->transactions[x]->inputNum; y--;) {
 			if (x) {
 				// Only non-coinbase transactions contain prevOut references in inputs.
@@ -1086,31 +1111,19 @@ bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, ui
 				}
 				// Find the position of the output by looping through outputs
 				uint32_t txCursor = 0;
-				for (uint32_t z = block->transactions[x]->inputs[y]->prevOut.index; z--;) {
+				for (uint32_t z = outputIndex; z--;) {
 					// Add 8 for value
 					txCursor += 8;
 					// Add script value
-					if (txReadData[txCursor] < 253)
-						txCursor += 1 + txReadData[txCursor];
-					else if (txReadData[txCursor] == 253)
-						txCursor += 3 + CBArrayToInt16(txReadData, txCursor + 1);
-					else if (txReadData[txCursor] == 254)
-						txCursor += 5 + CBArrayToInt32(txReadData, txCursor + 1);
-					else if (txReadData[txCursor] == 255)
-						txCursor += 9 + CBArrayToInt64(txReadData, txCursor + 1);
+					CBVarInt vi = CBVarIntDecodeData(txReadData, txCursor);
+					txCursor += vi.size + vi.val;
 				}
 				// Add the posiion within the outputs to the start of the outputs.
 				outputsPos += txCursor;
 				// Get length
 				uint32_t outputLen = 8;
-				if (txReadData[txCursor] < 253)
-					outputLen += 1 + txReadData[txCursor];
-				else if (txReadData[txCursor] == 253)
-					outputLen += 3 + CBArrayToInt16(txReadData, txCursor + 1);
-				else if (txReadData[txCursor] == 254)
-					outputLen += 5 + CBArrayToInt32(txReadData, txCursor + 1);
-				else if (txReadData[txCursor] == 255)
-					outputLen += 9 + CBArrayToInt64(txReadData, txCursor + 1);
+				CBVarInt vi = CBVarIntDecodeData(txReadData, txCursor + 8);
+				outputLen += vi.size + vi.val;
 				// Save unspent output
 				if (! CBBlockChainStorageSaveUnspentOutput(self, prevTxHash, outputIndex, outputsPos, outputLen, true)) {
 					CBLogError("Could not save an unspent output reference when going backwards during re-organisation.");

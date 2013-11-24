@@ -348,6 +348,9 @@ bool CBTransactionIsStandard(CBTransaction * self) {
 	}
 	return true;
 }
+void CBTransactionMakeBytes(CBTransaction * self){
+	CBGetMessage(self)->bytes = CBNewByteArrayOfSize(CBTransactionCalculateLength(self));
+}
 uint32_t CBTransactionSerialise(CBTransaction * self, bool force){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {

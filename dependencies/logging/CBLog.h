@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
+#include <execinfo.h>
 
 typedef enum{
 	CB_LOG_ERROR = 'E',

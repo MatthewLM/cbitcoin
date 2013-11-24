@@ -27,7 +27,7 @@
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
 #include "CBCallbackQueue.h"
-#include <pthread.h> // POSIX threads
+#include "CBThreads.h"
 #include <ev.h> // libev events
 #include <sys/socket.h>
 #include <netdb.h>
