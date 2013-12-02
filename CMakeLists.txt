@@ -8,7 +8,7 @@ set(PROJECT_BUILD_DIR "${CMAKE_CURRENT_BUILD_DIR}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 
 set(DEBUG ON CACHE BOOL "Set debug.")
-set(STATIC_LIB OFF CACHE BOOL "Compile into static/shared libraries.")
+set(STATIC_LIB ON CACHE BOOL "Compile into static/shared libraries.")
 
 if (DEBUG)
     set(OFLAGS "-ggdb3")
