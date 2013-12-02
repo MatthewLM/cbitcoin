@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
-
 project(cbitcoin)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+
+# Paths
+set(PROJECT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(PROJECT_BUILD_DIR "${CMAKE_CURRENT_BUILD_DIR}")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 
 set(DEBUG ON CACHE BOOL "Set debug.")
 set(STATIC_LIB OFF CACHE BOOL "Compile into static/shared libraries.")
@@ -79,7 +83,7 @@ enable_testing()
 
 file(
     COPY
-        ${CMAKE_SOURCE_DIR}/test/scriptCases.txt
+        ${PROJECT_SOURCE_DIR}/test/scriptCases.txt
     DESTINATION
         ${CMAKE_BINARY_DIR}/test
 )
@@ -104,8 +108,8 @@ find_package(Doxygen)
 if (DOXYGEN_FOUND)
     add_custom_target(doc
         COMMAND
-            doxygen ${CMAKE_SOURCE_DIR}/Doxyfile
+            doxygen ${PROJECT_SOURCE_DIR}/Doxyfile
         WORKING_DIRECTORY
-            ${CMAKE_SOURCE_DIR}
+            ${PROJECT_SOURCE_DIR}
     )
 endif (DOXYGEN_FOUND)
