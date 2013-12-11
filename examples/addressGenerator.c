@@ -5,21 +5,12 @@
 //  Created by Matthew Mitchell on 06/06/2012.
 //  Copyright (c) 2012 Matthew Mitchell
 //  
-//  This file is part of cbitcoin.
-//
-//  cbitcoin is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  cbitcoin is distributed in the hope that it will be useful, 
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
-
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
 
 #include <stdio.h>
 #include <ctype.h>
@@ -84,12 +75,12 @@ int main(){
 	uint8_t * shaHash = malloc(32);
 	uint8_t * ripemdHash = malloc(20);
 	for (unsigned int x = 0; x < i;) {
-		if(NOT EC_KEY_generate_key(key)){
+		if(! EC_KEY_generate_key(key)){
 			printf("GENERATE KEY FAIL\n"); 
 			return 1;
 		}
 		int pubSizeNew = i2o_ECPublicKey(key, NULL);
-		if(NOT pubSizeNew){
+		if(! pubSizeNew){
 			printf("PUB KEY TO DATA ZERO\n"); 
 			return 1;
 		}
@@ -105,7 +96,7 @@ int main(){
 		SHA256(pubKey, pubSize, shaHash);
 		RIPEMD160(shaHash, 32, ripemdHash);
 		CBAddress * address = CBNewAddressFromRIPEMD160Hash(ripemdHash, CB_PRODUCTION_NETWORK_BYTE, false, err);
-		CBByteArray * string = CBVersionChecksumBytesGetString(CBGetVersionChecksumBytes(address));
+		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;
 		uint8_t offset = 1;
@@ -124,7 +115,7 @@ int main(){
 		if (match) {
 			// Get private key
 			const BIGNUM * privKeyNum = EC_KEY_get0_private_key(key);
-			if (NOT privKeyNum) {
+			if (! privKeyNum) {
 				printf("PRIV KEY TO BN FAIL\n");
 			}
 			int privSizeNew = BN_num_bytes(privKeyNum);

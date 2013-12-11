@@ -10,17 +10,21 @@ The features includes:
 * Functions for building and verifying Merkle trees.
 * Basic functions which can be used in various validation models (full nodes, pruning nodes, SPV nodes or whatever).
 * Asynchronous networking code which provides a simple interface to the bitcoin network for sending and receiving messages.
-* A network address manager
 * Automatic bitcoin handshakes.
 * Automatic peer discovery.
 * Automatic pings.
-* Base-58 bitcoin address encoding.
+* A network address manager.
+* Full block-chain validation.
+* Headers only validation.
+* Transaction accounting.
+* A fully validating node.
+* Base-58 encoding/decoding.
+* Bitcoin address/WIF functions.
+* Hierarchical Deterministic keys (BIP0032)
 * Simple reference counting memory management.
 * Doxygen documentation and well-documented source code.
 * Purely standard C99 with weakly linked function prototypes for cryptography, PRNG, file-IO and network dependencies.
 * Implementations of the dependencies using libevent, OpenSSL and POSIX.
-* Full block-chain validation (Incomplete)
-* Fully validating node (Planned)
 * SPV validation (Planned)
 * SPV node (Planned)
 
@@ -42,6 +46,7 @@ Installation
 
 To build, type into your terminal:
 
+    cd library
     ./configure
     make
 
@@ -60,6 +65,11 @@ And you can build debug versions of the test executables with:
 The library will be built into a ./bin directory; there is no install target yet.
 
 If you are able to get it to work for other systems then please submit the changes. If you think you have found a debug, then you may wish to submit an issue on the gitbub repository page (https://github.com/MatthewLM/cbitcoin/). Otherwise you may wish to try to fix the problem yourself, in which case please submit fixes. You should check to see that the issue is not being worked upon already.
+
+License
+-------
+
+cbitcoin is licensed under GPLv3, but contains exceptions for linking to OpenSSL and for distributing covered works without needed to distribute the corresponding source. Please read the LICENSE file.
 
 Making a Contribution
 ---------------------
@@ -120,6 +130,18 @@ cbitcoin should contain the following header for each file:
 	//
 	//  You should have received a copy of the GNU General Public License
 	//  along with cbitcoin.  If not, see <http://www.gnu.org/licenses/>.
+	//
+	//  Additional Permissions under GNU GPL version 3 section 7
+	//
+	//  Notwithstanding the terms of the license, when you distribute
+	//  a covered work in non-source form, you are not required to provide
+	//  source code corresponding to the covered work.
+	//
+	//  If you modify this Program, or any covered work, by linking or
+	//  combining it with OpenSSL (or a modified version of that library),
+	//  containing parts covered by the terms of the OpenSSL License, the
+	//  licensors of this Program grant you additional permission to convey
+	//  the resulting work.
 
 Header files should contain information for documentation. cbitcoin uses a Doxygen syntax (See http://www.stack.nl/~dimitri/doxygen/manual.html). Please document all files as well as structures and functions that are exposed by the library. Brief descriptions should be included. Details can be added at a later date, especially once code has been properly implemented. Files should be documented like this:
 
