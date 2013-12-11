@@ -10,17 +10,21 @@ The features includes:
 * Functions for building and verifying Merkle trees.
 * Basic functions which can be used in various validation models (full nodes, pruning nodes, SPV nodes or whatever).
 * Asynchronous networking code which provides a simple interface to the bitcoin network for sending and receiving messages.
-* A network address manager
 * Automatic bitcoin handshakes.
 * Automatic peer discovery.
 * Automatic pings.
-* Base-58 bitcoin address encoding.
+* A network address manager.
+* Full block-chain validation.
+* Headers only validation.
+* Transaction accounting.
+* A fully validating node.
+* Base-58 encoding/decoding.
+* Bitcoin address/WIF functions.
+* Hierarchical Deterministic keys (BIP0032)
 * Simple reference counting memory management.
 * Doxygen documentation and well-documented source code.
 * Purely standard C99 with weakly linked function prototypes for cryptography, PRNG, file-IO and network dependencies.
 * Implementations of the dependencies using libevent, OpenSSL and POSIX.
-* Full block-chain validation (Incomplete)
-* Fully validating node (Planned)
 * SPV validation (Planned)
 * SPV node (Planned)
 
@@ -42,6 +46,7 @@ Installation
 
 To build, type into your terminal:
 
+    cd library
     ./configure
     make
 
