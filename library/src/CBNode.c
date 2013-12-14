@@ -35,16 +35,17 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
 	self->callbacks = nodeCallbacks;
 	self->onMessageReceived = onMessageReceived;
 	// Initialise network communicator
+	CBNetworkCommunicator * comm = CBGetNetworkCommunicator(self);
 	commCallbacks.onMessageReceived = CBNodeOnMessageReceived;
-	CBInitNetworkCommunicator(CBGetNetworkCommunicator(self), commCallbacks);
+	CBInitNetworkCommunicator(comm, CB_SERVICE_FULL_BLOCKS, commCallbacks);
 	// Set network communicator fields.
-	CBGetNetworkCommunicator(self)->flags = CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY | CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING;
-	CBGetNetworkCommunicator(self)->version = CB_PONG_VERSION;
-	CBNetworkCommunicatorSetAlternativeMessages(CBGetNetworkCommunicator(self), NULL, NULL);
+	comm->flags = CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY | CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING;
+	comm->version = CB_PONG_VERSION;
+	CBNetworkCommunicatorSetAlternativeMessages(comm, NULL, NULL);
 	// Create address manager
-	CBGetNetworkCommunicator(self)->addresses = CBNewNetworkAddressManager(CBNodeOnValidatorError);
-	CBGetNetworkCommunicator(self)->addresses->maxAddressesInBucket = 1000;
-	CBGetNetworkCommunicator(self)->addresses->callbackHandler = self;
+	comm->addresses = CBNewNetworkAddressManager(CBNodeOnValidatorError);
+	comm->addresses->maxAddressesInBucket = 1000;
+	comm->addresses->callbackHandler = self;
 	// Initialise thread data
 	self->shutDownThread = false;
 	self->messageQueue = NULL;
@@ -55,10 +56,19 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
 	// Initialise the storage objects
 	if (CBNewBlockChainStorage(&self->blockChainStorage, database)) {
 		if (CBNewAccounterStorage(&self->accounterStorage, database)){
-			if (CBNewNodeStorage(&self->nodeStorage, database))
-				return true;
-			else
+			if (CBNewNodeStorage(&self->nodeStorage, database)){
+				// Setup address storage
+				if (CBNewAddressStorage(&comm->addrStorage, database)) {
+					if (CBAddressStorageLoadAddresses(comm->addrStorage, comm->addresses)){
+						comm->useAddrStorage = true;
+						return true;
+					}
+				}else
+					CBLogError("Could not create the address storage object for a node");
+				CBFreeNodeStorage(self->nodeStorage);
+			}else
 				CBLogError("Could not create the node storage object for a node");
+			CBFreeAccounterStorage(self->accounterStorage);
 		}else
 			CBLogError("Could not create the accounter storage object for a node");
 		CBFreeBlockChainStorage(self->blockChainStorage);

@@ -554,7 +554,7 @@ PACKAGE_STRING='cbitcoin 2.0 (pre-alpha)'
 PACKAGE_BUGREPORT='cbitcoin@thelibertyportal.com'
 PACKAGE_URL=''
 
-ac_unique_file="dependencies/crypto/CBOpenSSLCrypto.c"
+ac_unique_file="library/dependencies/crypto/CBOpenSSLCrypto.c"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -3434,7 +3434,6 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 CFLAGS="$save_cflags"
-
 
 # Add substitutions
 

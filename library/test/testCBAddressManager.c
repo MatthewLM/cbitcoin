@@ -40,11 +40,6 @@ void onBadTime(void * foo){
 	exit(EXIT_FAILURE);
 }
 
-void onPeerFree(void *);
-void onPeerFree(void * peer){
-	return;
-}
-
 uint32_t getLen(CBBTreeNode * self);
 uint32_t getLen(CBBTreeNode * self){
 	uint32_t len = self->numElements;
@@ -168,7 +163,7 @@ int main(){
 	}
 	CBPeer * peers[254];
 	for (uint8_t x = 0; x < 254; x++) {
-		peers[x] = CBNewPeer(addrs[x], onPeerFree);
+		peers[x] = CBNewPeer(addrs[x]);
 		CBNetworkAddressManagerAddPeer(addrMan, peers[x]);
 	}
 	if (addrMan->peersNum != 254) {

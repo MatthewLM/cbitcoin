@@ -38,7 +38,6 @@ bool CBInitNodeFull(CBNodeFull * self, CBDepObject database, CBNodeFlags flags, 
 	// Initialise the node
 	if (!CBInitNode(CBGetNode(self), database, flags, callbacks, (CBNetworkCommunicatorCallbacks){
 		CBNodeFullPeerSetup,
-		CBNodeFullPeerFree,
 		CBNodeFullOnTimeOut,
 		CBNodeFullAcceptType,
 		NULL,
@@ -1604,8 +1603,10 @@ void CBNodeFullPeerFree(void * vpeer){
 	if (peer->requestedData != NULL) CBReleaseObject(peer->requestedData);
 	// See if we can download from any other peers
 	CBNodeFullDownloadFromSomePeer(fullNode, peer);
+	CBFreePeer(peer);
 }
 void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer){
+	CBGetObject(peer)->free = CBNodeFullPeerFree;
 	CBInitAssociativeArray(&peer->expectedTxs, CBHashCompare, NULL, free);
 	peer->downloading = false;
 	peer->upload = false;

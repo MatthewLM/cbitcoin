@@ -35,6 +35,7 @@
  */
 typedef enum{
 	CB_TX_OUTPUT_TYPE_UNKNOWN, /**< The output is not recognised. */
+	CB_TX_OUTPUT_TYPE_PUBKEY, /**< <public key> OP_CHECKSIG */
 	CB_TX_OUTPUT_TYPE_KEYHASH, /**< OP_DUP OP_HASH160 <hash of public key (20 bytes)> OP_EQUALVERIFY OP_CHECKSIG */
 	CB_TX_OUTPUT_TYPE_P2SH, /**< OP_HASH160 <hash of script> OP_EQUAL */
 	CB_TX_OUTPUT_TYPE_MULTISIG, /**< <number of signatures required> <public keys> <number of public keys supplied> OP_CHECKMULTISIG */

@@ -3,7 +3,7 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 06/01/2013.
-//  Copyright (c) 2012 Matthew Mitchell
+//  Copyright (c) 2013 Matthew Mitchell
 //
 //  This file is part of cbitcoin. It is subject to the license terms
 //  in the LICENSE file found in the top-level directory of this

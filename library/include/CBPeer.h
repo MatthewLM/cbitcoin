@@ -65,7 +65,6 @@ typedef struct{
 typedef struct{
 	CBObjectMutex base;
 	CBNetworkAddress * addr; /**< The CBNetworkAddress of this peer */
-	void (*onPeerDestroy)(void *);
 	CBDepObject socketID; /**< Not used in the bitcoin protocol. This is used by cbitcoin to store a socket ID for a connection to a CBNetworkAddress. The socket here is not closed when the CBNetworkAddress is freed so needs to be closed elsewhere. */
 	CBMessage * receive; /**< Receiving message. NULL if not receiving. This message is exclusive to the peer. */
 	CBSendQueueItem sendQueue[CB_SEND_QUEUE_MAX_SIZE]; /**< Messages to send to this peer. NULL if not sending anything. */
@@ -122,13 +121,13 @@ typedef struct{
  @brief Creates a new CBPeer object.
  @returns A new CBPeer object.
  */
-CBPeer * CBNewPeer(CBNetworkAddress * addr, void (*onPeerDestroy)(void *));
+CBPeer * CBNewPeer(CBNetworkAddress * addr);
 
 /**
  @brief Initialises a CBPeer object
  @param self The CBPeer object to initialise
  */
-void CBInitPeer(CBPeer * self, CBNetworkAddress * addr, void (*onPeerDestroy)(void *));
+void CBInitPeer(CBPeer * self, CBNetworkAddress * addr);
 
 // Destructor
 

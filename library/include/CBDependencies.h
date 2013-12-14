@@ -148,9 +148,9 @@ bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections);
  @brief Accepts an incomming IPv4 connection on a bound socket. This should be non-blocking.
  @param socketID The socket id
  @param connectionSocketID A socket id for a new socket for the connection.
- @returns true if function was sucessful and false otherwise.
+ @returns A CBNetworkAddress of the connected connection.
  */
-bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID);
+void * CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID);
 #pragma weak CBSocketAccept
 /**
  @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.

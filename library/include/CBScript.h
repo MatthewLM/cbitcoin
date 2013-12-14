@@ -24,6 +24,7 @@
 
 #include "CBByteArray.h"
 #include "CBDependencies.h"
+#include "CBHDKeys.h"
 #include <stdbool.h>
 
 // Constants and Macros
@@ -216,7 +217,10 @@ CBScript * CBNewScriptOfSize(uint32_t size);
  @returns A new CBScript object or NULL on failure.
  */
 CBScript * CBNewScriptFromString(char * string);
-CBScript * CBNewScriptPubKeyHash(uint8_t * pubKeyHash);
+CBScript * CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n);
+CBScript * CBNewScriptP2SHOutput(CBScript * script);
+CBScript * CBNewScriptPubKeyHashOutput(uint8_t * pubKeyHash);
+CBScript * CBNewScriptPubKeyOutput(uint8_t * pubKey);
 /**
  @brief Creates a new CBScript using data.
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
@@ -240,7 +244,10 @@ CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size);
  @returns true on success, false on failure.
  */
 bool CBInitScriptFromString(CBScript * self, char * string);
-void CBInitScriptPubKeyHash(CBScript * self, uint8_t * pubKeyHash);
+void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, uint8_t n);
+void CBInitScriptP2SHOutput(CBScript * self, CBScript *  script);
+void CBInitScriptPubKeyHashOutput(CBScript * self, uint8_t * pubKeyHash);
+void CBInitScriptPubKeyOutput(CBScript * self, uint8_t * pubKey);
 
 /**
  @brief Release and free all of the objects stored by the CBScript object.
@@ -276,6 +283,7 @@ CBScriptStack CBNewEmptyScriptStack(void);
  @returns CB_SCRIPT_VALID is the program ended with true, CB_SCRIPT_INVALID on script failure or CB_SCRIPT_ERR if an error occured with the interpreter such as running of of memory.
  */
 CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, bool (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh);
+uint8_t CBScriptGetLengthOfPushOp(uint32_t dataLen);
 /**
  @brief Gets the amount being pushed from a script op at a given offset.
  @param self The script object.
@@ -308,6 +316,12 @@ bool CBScriptIsMultisig(CBScript * self);
  @retuns true if the script matches the P2SH template, false otherwise.
  */
 bool CBScriptIsP2SH(CBScript * self);
+/**
+ @brief Determines if a script object matches the public-key verification template.
+ @param self The CBScript object.
+ @retuns true if the script matches the public key template, false otherwise.
+ */
+bool CBScriptIsPubkey(CBScript * self);
 /**
  @brief Determines if a script has only push operations.
  @param self The CBScript object.
@@ -365,6 +379,7 @@ void CBScriptStackPushItem(CBScriptStack * stack, CBScriptStackItem item);
 void CBScriptStackRemoveItem(CBScriptStack * stack);
 uint32_t CBScriptStringMaxSize(CBScript * self);
 void CBScriptToString(CBScript * self, char * output);
+void CBScriptWritePushOp(CBScript * self, uint32_t offset, uint8_t * data, uint32_t dataLen);
 /**
  @brief Converts a int64_t to a CBScriptStackItem
  @param item Pass in a CBScriptStackItem for reallocating data.

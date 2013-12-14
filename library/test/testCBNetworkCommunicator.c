@@ -110,11 +110,11 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 				CBLogError("VERSION USER AGENT FAIL");
 				exit(EXIT_FAILURE);
 			}
-			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addSource->ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, CBGetVersion(theMessage)->addSource->ip->length)) {
+			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addSource->ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16)) {
 				CBLogError("VERSION SOURCE IP FAIL");
 				exit(EXIT_FAILURE);
 			}
-			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addRecv->ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, CBGetVersion(theMessage)->addRecv->ip->length)) {
+			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addRecv->ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16)) {
 				CBLogError("VERSION RECEIVE IP FAIL");
 				exit(EXIT_FAILURE);
 			}
@@ -244,13 +244,12 @@ int main(){
 	addrManListen->maxAddressesInBucket = 2;
 	CBNetworkCommunicatorCallbacks callbacks = {
 		onPeerWhatever,
-		onPeerFree,
 		onTimeOut,
 		acceptType,
 		onMessageReceived,
 		onNetworkError
 	};
-	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator(callbacks);
+	CBNetworkCommunicator * commListen = CBNewNetworkCommunicator(0, callbacks);
 	CBNetworkCommunicatorSetReachability(commListen, CB_IP_IP4 | CB_IP_LOCAL, true);
 	addrManListen->callbackHandler = commListen;
 	commListen->networkID = CB_PRODUCTION_NETWORK_BYTES;
@@ -268,7 +267,7 @@ int main(){
 	// Second listening CBNetworkCommunicator setup.
 	CBNetworkAddressManager * addrManListen2 = CBNewNetworkAddressManager(onBadTime);
 	addrManListen2->maxAddressesInBucket = 2;
-	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator(callbacks);
+	CBNetworkCommunicator * commListen2 = CBNewNetworkCommunicator(0, callbacks);
 	CBNetworkCommunicatorSetReachability(commListen2, CB_IP_IP4 | CB_IP_LOCAL, true);
 	addrManListen2->callbackHandler = commListen2;
 	commListen2->networkID = CB_PRODUCTION_NETWORK_BYTES;
@@ -289,7 +288,7 @@ int main(){
 	// We are going to connect to both listing CBNetworkCommunicators.
 	CBNetworkAddressManagerAddAddress(addrManConnect, addrListenB);
 	CBNetworkAddressManagerAddAddress(addrManConnect, addrListen2B);
-	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(callbacks);
+	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(0, callbacks);
 	CBNetworkCommunicatorSetReachability(commConnect, CB_IP_IP4 | CB_IP_LOCAL, true);
 	addrManConnect->callbackHandler = commConnect;
 	commConnect->networkID = CB_PRODUCTION_NETWORK_BYTES;

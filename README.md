@@ -46,7 +46,6 @@ Installation
 
 To build, type into your terminal:
 
-    cd library
     ./configure
     make
 

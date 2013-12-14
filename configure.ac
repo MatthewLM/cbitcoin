@@ -1,6 +1,6 @@
 AC_PREREQ([2.64])
 AC_INIT([cbitcoin], [2.0 (pre-alpha)], [cbitcoin@thelibertyportal.com])
-AC_CONFIG_SRCDIR([dependencies/crypto/CBOpenSSLCrypto.c])
+AC_CONFIG_SRCDIR([library/dependencies/crypto/CBOpenSSLCrypto.c])
 
 # Search for OpenSSL and LibEvent.
 AC_SEARCH_LIBS([SHA1], [crypto], [], [echo Default dependencies cannot be installed.])

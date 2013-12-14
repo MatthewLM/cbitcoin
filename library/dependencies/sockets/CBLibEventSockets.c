@@ -99,8 +99,23 @@ bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections){
 		return false;
 	return true;
 }
-bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
-	connectionSocketID->i = accept((evutil_socket_t)socketID.i, NULL, NULL);
+void * CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
+	struct sockaddr_storage addr_storage;
+	struct sockaddr * addr = (struct sockaddr *)&addr_storage;
+	socklen_t addrLen = sizeof(addr);
+	connectionSocketID->i = accept((evutil_socket_t)socketID.i, addr, &addrLen);
+	CBByteArray * ipBytes;
+	uint16_t port;
+	if (addr->sa_family == AF_INET) {
+		uint32_t ipInt = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
+		ipBytes = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0}, 16);
+		CBInt32ToArray(CBByteArrayGetData(ipBytes), 12, ipInt);
+		port = ((struct sockaddr_in *)addr)->sin_port;
+	}else{
+		ipBytes = CBNewByteArrayWithDataCopy(((struct sockaddr_in6 *)addr)->sin6_addr.s6_addr, 16);
+		port = ((struct sockaddr_in6 *)addr)->sin6_port;
+	}
+	CBNetworkAddress * addrObj = CBNewNetworkAddress(0, ipBytes, port, 0, false);
 	if (connectionSocketID->i == -1)
 		return false;
 	// Make socket non-blocking
@@ -110,7 +125,7 @@ bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
 		int i = 1;
 		setsockopt((evutil_socket_t)connectionSocketID->i, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
 	}
-	return true;
+	return addrObj;
 }
 bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator){
 	// Use threads

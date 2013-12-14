@@ -31,6 +31,7 @@
 
 #define CB_TX_MAX_SIZE 999915 // Block size minus the header
 #define CB_TX_MAX_STANDARD_VERSION 1
+#define CB_TX_MAX_STANDARD_SIZE 100000
 #define CB_TX_HASH_STR_SIZE 41
 #define CBGetTransaction(x) ((CBTransaction *)x)
 
@@ -97,6 +98,8 @@ void CBTransactionAddInput(CBTransaction * self, CBTransactionInput * input);
  @param input The CBTransactionOutput object.
  */
 void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output);
+void CBTransactionAddP2SHScript(CBTransaction * self, CBScript * p2shScript, uint32_t input);
+bool CBTransactionAddSignature(CBTransaction * self, CBScript * inScript, uint16_t offset, uint8_t sigSize, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
 /**
  @brief Calculates the hash for a transaction.
  @param self The CBTransaction object. This should be serialised.
@@ -148,7 +151,9 @@ void CBTransactionMakeBytes(CBTransaction * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionSerialise(CBTransaction * self, bool force);
-bool CBTransactionSignInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
+bool CBTransactionSignMultisigInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
+bool CBTransactionSignPubKeyHashInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
+bool CBTransactionSignPubKeyInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType);
 /**
  @brief Adds an CBTransactionInput to the CBTransaction without retaining it.
  @param self The CBTransaction object.

@@ -10,9 +10,10 @@
 
 # Flags
 
-INCDIR = $(CURDIR)/include
+INCDIR = $(CURDIR)/library/include
 BINDIR = $(CURDIR)/bin
-CFLAGS += -Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I$(INCDIR) -I/opt/local/ssl/include -I/opt/local/include -I$(CURDIR)/dependencies/threads -Werror 
+INCCLIENT = -I/$(CURDIR)/client-server/include
+CFLAGS += -Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I$(INCDIR) -I/opt/local/ssl/include -I/opt/local/include -I$(CURDIR)/library/dependencies/threads -Werror 
 LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
@@ -22,11 +23,13 @@ LIBRARY_VERSION = 2.0
 ifeq ($(OSTYPE), darwin)
 	LFLAGS += -flat_namespace -dynamiclib -undefined dynamic_lookup
 	LIBRARY_EXTENSION=.$(LIBRARY_VERSION).dylib
+	CFLAGS += -DCB_MACOSX
 else # Assuming Linux for now
 	LFLAGS += -shared
 	LIBRARY_EXTENSION=.$(LIBRARY_VERSION).so
 	ADDITIONAL_OPENSSL_FLAGS = -ldl -L/lib/x86_64-linux-gnu/
 	export LD_LIBRARY_PATH = $(BINDIR):/usr/local/lib
+	CFLAGS += -DCB_LINUX
 endif
 LIBCFLAGS = @LIB_COMPILE_CONFIG_FLAGS@
 
@@ -57,12 +60,12 @@ debug-test: test-build
 
 # Build all
 
-all-build: core crypto random threads logging network storage file-ec file-no-ec 
+all-build: core crypto random threads logging network storage file-ec file-no-ec client
 
 # Get files for the core library
 
-CORE_FILES = $(wildcard src/*.c)
-CORE_OBJS = $(patsubst src/%.c, build/%.o, $(CORE_FILES))
+CORE_FILES = $(wildcard library/src/*.c)
+CORE_OBJS = $(patsubst library/src/%.c, build/%.o, $(CORE_FILES))
 
 # Core library target linking
 
@@ -85,8 +88,8 @@ bin:
 
 # Core Compilation
 
-$(CORE_OBJS): build/%.o: src/%.c | build
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+$(CORE_OBJS): build/%.o: library/src/%.c | build
+	$(CC) -c $(CFLAGS) $< -o $@
 	$(CC) -I$(INCDIR) -MM $< > build/$*.d
 	@cp build/$*.d build/$*.P
 	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
@@ -95,7 +98,7 @@ $(CORE_OBJS): build/%.o: src/%.c | build
 
 # Dependencies require include/CBDependencies.h as a prerequisite
 
-build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o BLibEventSockets.o: include/CBDependencies.h
+build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o BLibEventSockets.o: library/include/CBDependencies.h
 
 # Crypto library target linking
 
@@ -104,7 +107,7 @@ crypto : build/CBOpenSSLCrypto.o | bin
 
 # Crypto library compile
 
-build/CBOpenSSLCrypto.o: dependencies/crypto/CBOpenSSLCrypto.c
+build/CBOpenSSLCrypto.o: library/dependencies/crypto/CBOpenSSLCrypto.c
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # Random library target linking
@@ -114,7 +117,7 @@ random : build/CBRand.o | bin
 
 # Random library compile
 
-build/CBRand.o: dependencies/random/CBRand.c
+build/CBRand.o: library/dependencies/random/CBRand.c
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # Network library target linking
@@ -124,10 +127,10 @@ network : build/CBLibEventSockets.o build/CBCallbackQueue.o | bin
 
 # Network library compile
 
-build/CBCallbackQueue.o: dependencies/sockets/CBCallbackQueue.c dependencies/sockets/CBCallbackQueue.h
+build/CBCallbackQueue.o: library/dependencies/sockets/CBCallbackQueue.c library/dependencies/sockets/CBCallbackQueue.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBLibEventSockets.o: dependencies/sockets/CBLibEventSockets.c dependencies/sockets/CBLibEventSockets.h
+build/CBLibEventSockets.o: library/dependencies/sockets/CBLibEventSockets.c library/dependencies/sockets/CBLibEventSockets.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 	
 # Threads library target linking
@@ -137,7 +140,7 @@ threads : build/CBThreads.o | bin
 
 # Threads library compile
 
-build/CBThreads.o: dependencies/threads/CBThreads.c dependencies/threads/CBThreads.h
+build/CBThreads.o: library/dependencies/threads/CBThreads.c library/dependencies/threads/CBThreads.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # Logging library target linking
@@ -147,7 +150,7 @@ logging : build/CBLog.o | bin
 
 # Logging library compile
 
-build/CBLog.o: dependencies/logging/CBLog.c dependencies/logging/CBLog.h 
+build/CBLog.o: library/dependencies/logging/CBLog.c library/dependencies/logging/CBLog.h 
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # File IO library target linking
@@ -160,19 +163,19 @@ file-no-ec : build/CBFileNoEC.o | bin
 
 # File IO library compile
 
-build/CBHamming72.o: dependencies/storage/CBHamming72.c dependencies/storage/CBHamming72.h
+build/CBHamming72.o: library/dependencies/storage/CBHamming72.c library/dependencies/storage/CBHamming72.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBFileEC.o: dependencies/storage/CBFileEC.c dependencies/storage/CBFileEC.h dependencies/storage/CBHamming72.h
+build/CBFileEC.o: library/dependencies/storage/CBFileEC.c library/dependencies/storage/CBFileEC.h library/dependencies/storage/CBHamming72.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBFileNoEC.o: dependencies/storage/CBFileNoEC.c dependencies/storage/CBFileNoEC.h
+build/CBFileNoEC.o: library/dependencies/storage/CBFileNoEC.c library/dependencies/storage/CBFileNoEC.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # Storage library files
 
-STORAGE_FILES = $(wildcard dependencies/storage/*.c)
-STORAGE_OBJS = $(patsubst dependencies/storage/%.c, build/%.o, $(STORAGE_FILES))
+STORAGE_FILES = $(wildcard library/dependencies/storage/*.c)
+STORAGE_OBJS = $(patsubst library/dependencies/storage/%.c, build/%.o, $(STORAGE_FILES))
 
 # Storage library target linking
 
@@ -181,19 +184,19 @@ storage : build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.
 
 # Storage library compile
 
-build/CBAccounterStorage.o: dependencies/storage/CBAccounterStorage.c dependencies/storage/CBAccounterStorage.h dependencies/storage/CBDatabase.h 
+build/CBAccounterStorage.o: library/dependencies/storage/CBAccounterStorage.c library/dependencies/storage/CBAccounterStorage.h library/dependencies/storage/CBDatabase.h 
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBAddressStorage.o: dependencies/storage/CBAddressStorage.c dependencies/storage/CBAddressStorage.h dependencies/storage/CBDatabase.h
+build/CBAddressStorage.o: library/dependencies/storage/CBAddressStorage.c library/dependencies/storage/CBAddressStorage.h library/dependencies/storage/CBDatabase.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBBlockChainStorage.o: dependencies/storage/CBBlockChainStorage.c dependencies/storage/CBBlockChainStorage.h dependencies/storage/CBDatabase.h
+build/CBBlockChainStorage.o: library/dependencies/storage/CBBlockChainStorage.c library/dependencies/storage/CBBlockChainStorage.h library/dependencies/storage/CBDatabase.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBNodeStorage.o: dependencies/storage/CBNodeStorage.c dependencies/storage/CBNodeStorage.h dependencies/storage/CBDatabase.h
+build/CBNodeStorage.o: library/dependencies/storage/CBNodeStorage.c library/dependencies/storage/CBNodeStorage.h library/dependencies/storage/CBDatabase.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
-build/CBDatabase.o: dependencies/storage/CBDatabase.c dependencies/storage/CBDatabase.h
+build/CBDatabase.o: library/dependencies/storage/CBDatabase.c library/dependencies/storage/CBDatabase.h
 	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
 
 # Clean
@@ -203,12 +206,12 @@ clean:
 
 # Tests
 
-TEST_FILES = $(wildcard test/*.c)
-TEST_BINARIES = $(patsubst test/%.c, bin/%, $(TEST_FILES))
-TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
+TEST_FILES = $(wildcard library/test/*.c)
+TEST_BINARIES = $(patsubst library/test/%.c, bin/%, $(TEST_FILES))
+TEST_OBJS = $(patsubst library/test/%.c, build/%.o, $(TEST_FILES))
 
 test-build : all-build $(TEST_BINARIES)
-	rm -f -r cbitcoin 0 1 2
+	rm -f -r cbitcoin 0 1 2 test.dat testDb
 
 # REMEMBER to add dependencies after the objects or libraries that depend on them.
 
@@ -216,6 +219,22 @@ $(TEST_BINARIES): bin/%: build/%.o
 	$(CC) $< -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o $@
 	$@
 
-$(TEST_OBJS): build/%.o: test/%.c
-	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ -I$(CURDIR)/dependencies/storage $< -o $@
+$(TEST_OBJS): build/%.o: library/test/%.c
+	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
+	
+# Client Server
+
+CLIENT_FILES = $(wildcard client-server/src/*.c)
+CLIENT_OBJS = $(patsubst client-server/src/%.c, build/%.o, $(CLIENT_FILES))
+
+$(CLIENT_OBJS): build/%.o: client-server/src/%.c | build
+	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $(INCCLIENT) $< -o $@
+	$(CC) -I$(INCDIR) $(INCCLIENT) -MM $< > build/$*.d
+	@cp build/$*.d build/$*.P
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+            -e '/^$$/ d' -e 's/$$/ :/' < build/$*.P >> build/$*.d;
+	@rm build/$*.P
+
+client : $(CLIENT_OBJS) | bin
+	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o bin/cbitcoin
 	

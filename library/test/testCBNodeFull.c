@@ -3,7 +3,7 @@
 //  cbitcoin
 //
 //  Created by Matthew Mitchell on 30/09/2013.
-//  Copyright (c) 2012 Matthew Mitchell
+//  Copyright (c) 2013 Matthew Mitchell
 //
 //  This file is part of cbitcoin. It is subject to the license terms
 //  in the LICENSE file found in the top-level directory of this
@@ -303,9 +303,9 @@ void maybeFinishLoseTest(void){
 		CBByteArray * prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(initialTxs[0]), 32);
 		CBTransactionTakeInput(falseTx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
 		CBReleaseObject(prev);
-		CBScript * script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys + 1));
+		CBScript * script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys + 1));
 		CBTransactionTakeOutput(falseTx, CBNewTransactionOutput(312500000, script));
-		CBTransactionSignInput(falseTx, keys + 1, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(falseTx, keys + 1, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(falseTx);
 		CBTransactionSerialise(falseTx, true);
 		CBTransaction * orphan = CBNewTransaction(20, 1);
@@ -318,8 +318,8 @@ void maybeFinishLoseTest(void){
 		CBReleaseObject(prev);
 		CBTransactionTakeOutput(orphan, CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
-		CBTransactionSignInput(orphan, keys, initialTxs[4]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionSignInput(orphan, keys + 1, falseTx->outputs[0]->scriptObject, 1, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(orphan, keys, initialTxs[4]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(orphan, keys + 1, falseTx->outputs[0]->scriptObject, 1, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(orphan);
 		CBTransactionSerialise(orphan, true);
 		// Get some peer for node 0
@@ -351,9 +351,9 @@ void maybeFinishLoseTest(void){
 		prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(initialTxs[3]), 32);
 		CBTransactionTakeInput(falseTx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 1));
 		CBReleaseObject(prev);
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 		CBTransactionTakeOutput(falseTx, CBNewTransactionOutput(312500000, script));
-		CBTransactionSignInput(falseTx, keys + 1, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(falseTx, keys + 1, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(falseTx);
 		CBTransactionSerialise(falseTx, true);
 		if (CBNodeFullNewUnconfirmedTransaction(nodes[0], peer, falseTx) != CB_TRUE){
@@ -369,9 +369,9 @@ void maybeFinishLoseTest(void){
 		prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(doubleSpends[2]), 32);
 		CBTransactionTakeInput(orphanSpendOtherBranch, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
 		CBReleaseObject(prev);
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 		CBTransactionTakeOutput(orphanSpendOtherBranch, CBNewTransactionOutput(312500000, script));
-		CBTransactionSignInput(orphanSpendOtherBranch, keys, doubleSpends[2]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(orphanSpendOtherBranch, keys, doubleSpends[2]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(orphanSpendOtherBranch);
 		CBTransactionSerialise(orphanSpendOtherBranch, true);
 		CBGetMessage(orphanSpendOtherBranch)->type = CB_MESSAGE_TYPE_TX;
@@ -586,10 +586,10 @@ void maybeFinishReorgTest(void){
 		CBByteArray * prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(initialTxs[1]), 32);
 		CBTransactionTakeInput(block->transactions[1], CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 2));
 		CBReleaseObject(prev);
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys + 1)); // This transaction differs by giving to node 1
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys + 1)); // This transaction differs by giving to node 1
 		CBTransactionTakeOutput(block->transactions[1], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
-		CBTransactionSignInput(block->transactions[1], keys + 2, initialTxs[1]->outputs[3]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(block->transactions[1], keys + 2, initialTxs[1]->outputs[3]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(block->transactions[1]);
 		CBTransactionSerialise(block->transactions[1], true);
 		chainDoubleSpend = block->transactions[1];
@@ -643,11 +643,6 @@ void maybeFinishReorgTest(void){
 		CBValidatorQueueBlock(CBGetNode(nodes[2])->validator, block2, dummyPeer);
 		CBReleaseObject(block2);
 	}
-}
-
-void dummyDestory(void * foo);
-void dummyDestory(void * foo){
-	
 }
 
 void finishReceiveInitialTest(void * foo);
@@ -745,9 +740,9 @@ void finishReceiveInitialTest(void * foo){
 	CBByteArray * prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(initialTxs[9]), 32);
 	CBTransactionTakeInput(falseTx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
 	CBReleaseObject(prev);
-	CBScript * script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+	CBScript * script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 	CBTransactionTakeOutput(falseTx, CBNewTransactionOutput(312500000, script));
-	CBTransactionSignInput(falseTx, keys, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+	CBTransactionSignPubKeyHashInput(falseTx, keys, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 	CBTransactionMakeBytes(falseTx);
 	CBTransactionSerialise(falseTx, true);
 	// Get some peer for node 0
@@ -802,10 +797,10 @@ void finishReceiveInitialTest(void * foo){
 	prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(initialTxs[1]), 32);
 	CBTransactionTakeInput(block->transactions[3], CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 2));
 	CBReleaseObject(prev);
-	script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+	script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 	CBTransactionTakeOutput(block->transactions[3], CBNewTransactionOutput(312500000, script));
 	CBReleaseObject(script);
-	CBTransactionSignInput(block->transactions[3], keys + 2, initialTxs[1]->outputs[3]->scriptObject, 0, CB_SIGHASH_ALL);
+	CBTransactionSignPubKeyHashInput(block->transactions[3], keys + 2, initialTxs[1]->outputs[3]->scriptObject, 0, CB_SIGHASH_ALL);
 	CBTransactionMakeBytes(block->transactions[3]);
 	CBTransactionSerialise(block->transactions[3], true);
 	doubleSpends[0] = block->transactions[3];
@@ -816,10 +811,10 @@ void finishReceiveInitialTest(void * foo){
 		prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(block->transactions[3 + x]), 32);
 		CBTransactionTakeInput(block->transactions[4 + x], CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
 		CBReleaseObject(prev);
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 		CBTransactionTakeOutput(block->transactions[4 + x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
-		CBTransactionSignInput(block->transactions[4 + x], keys, block->transactions[3 + x]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(block->transactions[4 + x], keys, block->transactions[3 + x]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(block->transactions[4 + x]);
 		CBTransactionSerialise(block->transactions[4 + x], true);
 		doubleSpends[1 + x] = block->transactions[4 + x];
@@ -867,10 +862,10 @@ void finishReceiveInitialTest(void * foo){
 	prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(initialTxs[3]), 32);
 	CBTransactionTakeInput(block2->transactions[3], CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 1));
 	CBReleaseObject(prev);
-	script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+	script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 	CBTransactionTakeOutput(block2->transactions[3], CBNewTransactionOutput(312500000, script));
 	CBReleaseObject(script);
-	CBTransactionSignInput(block2->transactions[3], keys + 1, initialTxs[3]->outputs[1]->scriptObject, 0, CB_SIGHASH_ALL);
+	CBTransactionSignPubKeyHashInput(block2->transactions[3], keys + 1, initialTxs[3]->outputs[1]->scriptObject, 0, CB_SIGHASH_ALL);
 	CBTransactionMakeBytes(block2->transactions[3]);
 	CBTransactionSerialise(block2->transactions[3], true);
 	doubleSpends[3] = block2->transactions[3];
@@ -881,10 +876,10 @@ void finishReceiveInitialTest(void * foo){
 		prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(block2->transactions[3 + x]), 32);
 		CBTransactionTakeInput(block2->transactions[4 + x], CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
 		CBReleaseObject(prev);
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys));
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 		CBTransactionTakeOutput(block2->transactions[4 + x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
-		CBTransactionSignInput(block2->transactions[4 + x], keys, block2->transactions[3 + x]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(block2->transactions[4 + x], keys, block2->transactions[3 + x]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(block2->transactions[4 + x]);
 		CBTransactionSerialise(block2->transactions[4 + x], true);
 		doubleSpends[4 + x] = block2->transactions[4 + x];
@@ -1377,8 +1372,7 @@ int main(){
 	// Make dummy peer for callback object
 	CBObject * dummyAddr = malloc(sizeof(*dummyAddr));
 	CBInitObject(dummyAddr, false);
-	dummyAddr->free = dummyDestory;
-	dummyPeer = CBNewPeer(CBGetNetworkAddress(dummyAddr), dummyDestory);
+	dummyPeer = CBNewPeer(CBGetNetworkAddress(dummyAddr));
 	dummyPeer->downloading = false;
 	dummyPeer->allowNewBranch = true;
 	dummyPeer->branchWorkingOn = CB_NO_BRANCH;
@@ -1513,7 +1507,7 @@ int main(){
 		CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0}, 1);
 		CBTransactionTakeInput(block->transactions[x], CBNewTransactionInput(script, CB_TX_INPUT_FINAL, firstCoinbase, x-1));
 		CBReleaseObject(script);
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys + x % 3));
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys + x % 3));
 		for (uint8_t y = 0; y < 4; y++)
 			CBTransactionTakeOutput(block->transactions[x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
@@ -1543,14 +1537,14 @@ int main(){
 			CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, (x-6)/2));
 			CBReleaseObject(prev);
 		}
-		script = CBNewScriptPubKeyHash(CBKeyPairGetHash(keys + x % 3));
+		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys + x % 3));
 		CBTransactionTakeOutput(tx, CBNewTransactionOutput(156250000 + (x >= 6)*156250000, script));
 		CBTransactionTakeOutput(tx, CBNewTransactionOutput(156250000, script));
 		CBReleaseObject(script);
 		// Sign transaction
-		CBTransactionSignInput(tx, keys + (x % 4 + 1) % 3, block->transactions[x % 4 + 1]->outputs[x/4]->scriptObject, 0, CB_SIGHASH_ALL);
+		CBTransactionSignPubKeyHashInput(tx, keys + (x % 4 + 1) % 3, block->transactions[x % 4 + 1]->outputs[x/4]->scriptObject, 0, CB_SIGHASH_ALL);
 		if (x >= 6)
-			CBTransactionSignInput(tx, keys + (x % 2)*2, deps[x % 2]->outputs[(x-6)/2]->scriptObject, 1, CB_SIGHASH_ALL);
+			CBTransactionSignPubKeyHashInput(tx, keys + (x % 2)*2, deps[x % 2]->outputs[(x-6)/2]->scriptObject, 1, CB_SIGHASH_ALL);
 		CBTransactionMakeBytes(tx);
 		CBTransactionSerialise(tx, true);
 		CBNodeFullNewUnconfirmedTransaction(nodes[0], NULL, tx);

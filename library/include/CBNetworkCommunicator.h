@@ -53,6 +53,8 @@ typedef enum{
 	CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE = 1, /**< Automatically share version and verack messages with new connections. */
 	CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY = 2, /**< Automatically discover peers and connect upto the maximum allowed connections using the supplied CBVersion. This involves the exchange of version messages and addresses. */
 	CB_NETWORK_COMMUNICATOR_AUTO_PING = 4, /**< Send ping messages every "heartBeat" automatically. If the protocol version in the CBVersion message is 60000 or over, cbitcoin will use the new ping/pong specification. @see PingPong.h */
+	CB_NETWORK_COMMUNICATOR_DETERMINE_IP4, /**< Determine IPv4 by looking for the receiving IPv4 in version messages. */
+	CB_NETWORK_COMMUNICATOR_DETERMINE_IP6, /**< Determine IPv6 by looking for the receiving IPv6 in version messages. */
 }CBNetworkCommunicatorFlags;
 
 /*
@@ -86,13 +88,13 @@ typedef struct{
 	CBNetworkAddress * ourAddress;
 	CBDepObject acceptEvent;
 	bool isListening;
+	bool isSet;
 } CBIPData;
 
 typedef struct CBNetworkCommunicator CBNetworkCommunicator;
 
 typedef struct{
 	void (*onPeerConnection)(CBNetworkCommunicator *, CBPeer *); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
-	void (*freePeer)(void *); /**< Callback for when a peer has been disconnected and needs to be freed with the peer as an argument. */
 	bool (*onTimeOut)(CBNetworkCommunicator *, void *); /**< Timeout event callback when an expected response timeouts. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The first argument is the CBNetworkCommunicator responsible for the timeout. The second argument is the peer with the timeout. Return true if the peer should be disconnected, else false. */
 	bool (*acceptingType)(CBNetworkCommunicator *, CBPeer *, CBMessageType); /**< Return true if the network communicator should accept the message type, else false. */
 	CBOnMessageReceivedAction (*onMessageReceived)(CBNetworkCommunicator *, CBPeer *, CBMessage *); /**< The callback for when a message has been received from a peer. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
@@ -130,11 +132,14 @@ struct CBNetworkCommunicator {
 	CBDepObject pingTimer; /**< Timer for ping event */
 	bool isPinging; /**< True when pings are being made. */
 	bool stoppedListening; /**< True if listening was stopped because there are too many connections */
-	uint64_t pendingIP; /**< A 64 bit integer to create placeholder IPs so that peers which have un-associated addresses are given something to make them unique until they get a real IP associated with them. */
 	CBIPType reachability; /**< Bitfield for reachable address types */
 	CBDepObject addrStorage; /**< The object for address storage. If not 0 and if the CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY flag is given, broadcast addresses will be recorded into the storage. */
 	bool useAddrStorage; /**< Set to true if using addrStorage */
 	CBDepObject peersMutex;
+	CBNetworkAddress * ip4s[3]; /** Store upto 3 IPv4 addresses that peers tell us are ours. */
+	uint32_t ip4Count[3]; /** The number of times each one has been suggested. */
+	CBNetworkAddress * ip6s[3]; /** Store upto 3 IPv6 addresses that peers tell us are ours. */
+	uint32_t ip6Count[3]; /** The number of times each one has been suggested. */
 	CBNetworkCommunicatorCallbacks callbacks;
 };
 
@@ -142,13 +147,13 @@ struct CBNetworkCommunicator {
  @brief Creates a new CBNetworkCommunicator object.
  @returns A new CBNetworkCommunicator object.
  */
-CBNetworkCommunicator * CBNewNetworkCommunicator(CBNetworkCommunicatorCallbacks callbacks);
+CBNetworkCommunicator * CBNewNetworkCommunicator(CBVersionServices services, CBNetworkCommunicatorCallbacks callbacks);
 
 /**
  @brief Initialises a CBNetworkCommunicator object
  @param self The CBNetworkCommunicator object to initialise
  */
-bool CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBNetworkCommunicatorCallbacks callbacks);
+bool CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBVersionServices services, CBNetworkCommunicatorCallbacks callbacks);
 
 /**
  @brief Release and free all of the objects stored by a CBNetworkCommunicator object.
@@ -183,6 +188,7 @@ bool CBNetworkCommunicatorCanConnect(CBNetworkCommunicator * self, CBNetworkAddr
  @returns CB_CONNECT_OK if successful. CB_CONNECT_NO_SUPPORT if the IP version is not supported. CB_CONNECT_BAD if the connection failed and the address will be penalised. CB_CONNECT_FAIL if the connection failed but the address will not be penalised.
  */
 CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPeer * peer);
+void CBNetworkCommunicatorDetermineIP(CBNetworkCommunicator * self, CBNetworkAddress * addr, bool ipv4);
 /**
  @brief Callback for the connection to a peer.
  @param vself The CBNetworkCommunicator object.
