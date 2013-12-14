@@ -1358,6 +1358,85 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(output);
-	// ??? Add stanadards tests
+	// Test CBTransactionSignPubKeyHashInput
+	CBKeyPair * keyPairs[2] = {CBNewKeyPair(true), CBNewKeyPair(true)};
+	CBKeyPairGenerate(keyPairs[0]);
+	CBKeyPairGenerate(keyPairs[1]);
+	tx = CBNewTransaction(0, 1);
+	CBByteArray * prev = CBNewByteArrayOfSize(32);
+	memset(CBByteArrayGetData(prev), 0, 32);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
+	script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keyPairs[0]));
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(666, script));
+	// Sign transaction
+	CBTransactionSignPubKeyHashInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
+	CBTransactionMakeBytes(tx);
+	CBTransactionSerialise(tx, true);
+	// Check execution of input script
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
+	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
+		printf("CBTransactionSignPubKeyHashInput FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(script);
+	// Test CBTransactionSignMultisigInput
+	tx = CBNewTransaction(0, 1);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
+	CBReleaseObject(prev);
+	script = CBNewScriptMultisigOutput((uint8_t *[2]){keyPairs[0]->pubkey.key, keyPairs[1]->pubkey.key}, 2, 2);
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(42, script));
+	// Sign transaction
+	CBTransactionSignMultisigInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
+	CBTransactionSignMultisigInput(tx, keyPairs[1], script, 0, CB_SIGHASH_ALL);
+	CBTransactionMakeBytes(tx);
+	CBTransactionSerialise(tx, true);
+	// Check execution of input script
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
+	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
+		printf("CBTransactionSignMultisigInput FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(script);
+	// Test CBTransactionSignPubkeyInput
+	tx = CBNewTransaction(0, 1);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
+	CBReleaseObject(prev);
+	script = CBNewScriptPubKeyOutput(keyPairs[0]->pubkey.key);
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(42, script));
+	// Sign transaction
+	CBTransactionSignPubKeyInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
+	CBTransactionMakeBytes(tx);
+	CBTransactionSerialise(tx, true);
+	// Check execution of input script
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
+	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
+		printf("CBTransactionSignPubkeyInput FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(script);
+	// Test P2SH signing and output
+	tx = CBNewTransaction(0, 1);
+	CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, 0));
+	CBReleaseObject(prev);
+	CBScript * p2shScript = CBNewScriptPubKeyOutput(keyPairs[0]->pubkey.key);
+	script = CBNewScriptP2SHOutput(p2shScript);
+	CBTransactionTakeOutput(tx, CBNewTransactionOutput(42, script));
+	// Sign transaction
+	CBTransactionSignPubKeyInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
+	CBTransactionAddP2SHScript(tx, p2shScript, 0);
+	CBTransactionMakeBytes(tx);
+	CBTransactionSerialise(tx, true);
+	// Check execution of input script
+	stack = CBNewEmptyScriptStack();
+	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
+	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
+		printf("CBTransactionSignPubkeyInput FAIL\n");
+		return 1;
+	}
+	CBReleaseObject(script);
+	// ??? Add standards tests
 	return 0;
 }

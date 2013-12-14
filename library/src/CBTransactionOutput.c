@@ -142,6 +142,8 @@ CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self){
 		return CB_TX_OUTPUT_TYPE_MULTISIG;
 	if (CBScriptIsP2SH(self->scriptObject))
 		return CB_TX_OUTPUT_TYPE_P2SH;
+	if (CBScriptIsPubkey(self->scriptObject))
+		return CB_TX_OUTPUT_TYPE_PUBKEY;
 	return CB_TX_OUTPUT_TYPE_UNKNOWN;
 }
 uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){

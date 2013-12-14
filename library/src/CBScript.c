@@ -32,10 +32,28 @@ CBScript * CBNewScriptFromString(char * string){
 	free(self);
 	return NULL;
 }
-CBScript * CBNewScriptPubKeyHash(uint8_t * pubKeyHash){
+CBScript * CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n){
 	CBScript * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
-	CBInitScriptPubKeyHash(self, pubKeyHash);
+	CBInitScriptMultisigOutput(self, pubKeys, m, n);
+	return self;
+}
+CBScript * CBNewScriptP2SHOutput(CBScript * script){
+	CBScript * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeByteArray;
+	CBInitScriptP2SHOutput(self, script);
+	return self;
+}
+CBScript * CBNewScriptPubKeyHashOutput(uint8_t * pubKeyHash){
+	CBScript * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeByteArray;
+	CBInitScriptPubKeyHashOutput(self, pubKeyHash);
+	return self;
+}
+CBScript * CBNewScriptPubKeyOutput(uint8_t * pubKey){
+	CBScript * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeByteArray;
+	CBInitScriptPubKeyOutput(self, pubKey);
 	return self;
 }
 CBScript * CBNewScriptWithData(uint8_t * data, uint32_t size){
@@ -527,7 +545,28 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 	return true;
 }
 
-void CBInitScriptPubKeyHash(CBScript * self, uint8_t * pubKeyHash){
+void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, uint8_t n){
+	CBInitByteArrayOfSize(self, 2 + n*(1 + CB_PUBKEY_SIZE));
+	CBByteArraySetByte(self, 0, CB_SCRIPT_OP_1 + m - 1);
+	uint16_t cursor = 1;
+	for (uint8_t x = 0; x < n; x++, cursor += CB_PUBKEY_SIZE + 1) {
+		CBByteArraySetByte(self, cursor, CB_PUBKEY_SIZE);
+		CBByteArraySetBytes(self, cursor + 1, pubKeys[x], CB_PUBKEY_SIZE);
+	}
+	CBByteArraySetByte(self, cursor, CB_SCRIPT_OP_1 + n - 1);
+}
+
+void CBInitScriptP2SHOutput(CBScript * self, CBScript * script){
+	uint8_t hash[32];
+	CBSha256(CBByteArrayGetData(script), script->length, hash);
+	CBInitByteArrayOfSize(self, 23);
+	CBByteArraySetByte(self, 0, CB_SCRIPT_OP_HASH160);
+	CBByteArraySetByte(self, 1, 20);
+	CBRipemd160(hash, 32, CBByteArrayGetData(self) + 2);
+	CBByteArraySetByte(self, 22, CB_SCRIPT_OP_EQUAL);
+}
+
+void CBInitScriptPubKeyHashOutput(CBScript * self, uint8_t * pubKeyHash){
 	CBInitByteArrayOfSize(self, 25);
 	CBByteArraySetByte(self, 0, CB_SCRIPT_OP_DUP);
 	CBByteArraySetByte(self, 1, CB_SCRIPT_OP_HASH160);
@@ -535,6 +574,13 @@ void CBInitScriptPubKeyHash(CBScript * self, uint8_t * pubKeyHash){
 	CBByteArraySetBytes(self, 3, pubKeyHash, 20);
 	CBByteArraySetByte(self, 23, CB_SCRIPT_OP_EQUALVERIFY);
 	CBByteArraySetByte(self, 24, CB_SCRIPT_OP_CHECKSIG);
+}
+
+void CBInitScriptPubKeyOutput(CBScript * self, uint8_t * pubKey){
+	CBInitByteArrayOfSize(self, CB_PUBKEY_SIZE + 2);
+	CBByteArraySetByte(self, 0, CB_PUBKEY_SIZE);
+	CBByteArraySetBytes(self, 1, pubKey, CB_PUBKEY_SIZE);
+	CBByteArraySetByte(self, CB_PUBKEY_SIZE + 1, CB_SCRIPT_OP_CHECKSIG);
 }
 
 void CBDestroyScript(void * self){
@@ -1262,6 +1308,15 @@ CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, bo
 		return CB_SCRIPT_TRUE;
 	}else return CB_SCRIPT_FALSE;
 }
+uint8_t CBScriptGetLengthOfPushOp(uint32_t dataLen){
+	if (dataLen < CB_SCRIPT_OP_PUSHDATA1)
+		return 1;
+	if (dataLen <= UINT8_MAX)
+		return 2;
+	if (dataLen <= UINT16_MAX)
+		return 3;
+	return 5;
+}
 uint32_t CBScriptGetPushAmount(CBScript * self, uint32_t * offset){
 	CBScriptOp op = CBByteArrayGetByte(self, *offset);
 	if (op == CB_SCRIPT_OP_0 || op > CB_SCRIPT_OP_PUSHDATA4)
@@ -1353,8 +1408,7 @@ bool CBScriptIsMultisig(CBScript * self){
 	if (sigNum == CB_NOT_A_NUMBER_OP || sigNum == 0)
 		return false;
 	uint8_t pubKeyNum = CBScriptOpGetNumber(CBByteArrayGetByte(self, self->length - 2));
-	if (pubKeyNum == CB_NOT_A_NUMBER_OP
-		|| pubKeyNum < sigNum)
+	if (pubKeyNum == CB_NOT_A_NUMBER_OP || pubKeyNum < sigNum)
 		return false;
 	// Check public keys
 	uint32_t cursor = 1;
@@ -1372,6 +1426,15 @@ bool CBScriptIsP2SH(CBScript * self){
 			&& CBByteArrayGetByte(self, 0) == CB_SCRIPT_OP_HASH160
 			&& CBByteArrayGetByte(self, 1) == 0x14
 			&& CBByteArrayGetByte(self, 22) == CB_SCRIPT_OP_EQUAL);
+}
+bool CBScriptIsPubkey(CBScript * self){
+	uint32_t cursor = 0;
+	uint32_t pushAmount = CBScriptGetPushAmount(self, &cursor);
+	if (pushAmount < 33 || pushAmount > 120)
+		return false;
+	if (CBByteArrayGetByte(self, cursor) != CB_SCRIPT_OP_CHECKSIG)
+		return false;
+	return true;
 }
 uint16_t CBScriptIsPushOnly(CBScript * self){
 	uint32_t x = 0;
@@ -1561,6 +1624,22 @@ void CBScriptToString(CBScript * self, char * output){
 		}
 	}
 	*output = '\0';
+}
+void CBScriptWritePushOp(CBScript * self, uint32_t offset, uint8_t * data, uint32_t dataLen){
+	uint8_t len = CBScriptGetLengthOfPushOp(dataLen);
+	if (len == 1)
+		CBByteArraySetByte(self, offset, dataLen);
+	else if (len == 2){
+		CBByteArraySetByte(self, offset, CB_SCRIPT_OP_PUSHDATA1);
+		CBByteArraySetByte(self, offset + 1, dataLen);
+	}else if (len == 3){
+		CBByteArraySetByte(self, offset, CB_SCRIPT_OP_PUSHDATA2);
+		CBByteArraySetInt16(self, offset + 1, dataLen);
+	}else{
+		CBByteArraySetByte(self, offset, CB_SCRIPT_OP_PUSHDATA4);
+		CBByteArraySetInt32(self, offset + 1, dataLen);
+	}
+	CBByteArraySetBytes(self, offset + len, data, dataLen);
 }
 CBScriptStackItem CBInt64ToScriptStackItem(CBScriptStackItem item, int64_t i){
 	if (i == 0) {

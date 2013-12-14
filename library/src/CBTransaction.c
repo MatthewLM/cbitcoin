@@ -85,6 +85,29 @@ void CBTransactionAddOutput(CBTransaction * self, CBTransactionOutput * output){
 	CBRetainObject(output);
 	CBTransactionTakeOutput(self, output);
 }
+void CBTransactionAddP2SHScript(CBTransaction * self, CBScript * p2shScript, uint32_t input){
+	uint16_t offset = self->inputs[input]->scriptObject->length;
+	CBScript * inScript = CBNewByteArrayOfSize(offset + p2shScript->length + CBScriptGetLengthOfPushOp(p2shScript->length));
+	CBByteArrayCopyByteArray(inScript, 0, self->inputs[input]->scriptObject);
+	CBReleaseObject(self->inputs[input]->scriptObject);
+	self->inputs[input]->scriptObject = inScript;
+	CBScriptWritePushOp(inScript, offset, CBByteArrayGetData(p2shScript), p2shScript->length);
+}
+bool CBTransactionAddSignature(CBTransaction * self, CBScript * inScript, uint16_t offset, uint8_t sigSize, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+	// Add push data size for signature
+	CBByteArraySetByte(inScript, offset, sigSize + 1); // Can do this, no more than 74 bytes
+	// Obtain the signature hash
+	uint8_t hash[32];
+	if (!CBTransactionGetInputHashForSignature(self, prevOutSubScript, input, signType, hash)){
+		CBLogError("Unable to obtain a hash for producing an input signature.");
+		return false;
+	}
+	// Now produce the signature.
+	CBKeySign(key->privkey, hash, CBByteArrayGetData(inScript) + offset + 1, sigSize);
+	// Add the sign type
+	CBByteArraySetByte(inScript, offset + sigSize + 1, signType);
+	return true;
+}
 void CBTransactionCalculateHash(CBTransaction * self, uint8_t * hash){
 	uint8_t * data = CBByteArrayGetData(CBGetMessage(self)->bytes);
 	uint8_t hash2[32];
@@ -307,6 +330,9 @@ bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutpu
 		}else if (CBScriptIsMultisig(p2sh)){
 			if (num - 1 != CBScriptOpGetNumber(CBByteArrayGetByte(p2sh, 0)))
 				return false;
+		}else if (CBScriptIsPubkey(p2sh)){
+			if (num != 2)
+				return false;
 		}else
 			return false;
 		return true;
@@ -316,6 +342,9 @@ bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutpu
 		return false;
 	if (type == CB_TX_OUTPUT_TYPE_KEYHASH) {
 		if (num != 2)
+			return false;
+	}else if (type == CB_TX_OUTPUT_TYPE_PUBKEY) {
+		if (num != 1)
 			return false;
 	}else if (num != CBScriptOpGetNumber(CBByteArrayGetByte(prevOut->scriptObject, 0)))
 		return false;
@@ -328,6 +357,8 @@ bool CBTransactionIsCoinBase(CBTransaction * self){
 }
 bool CBTransactionIsStandard(CBTransaction * self) {
 	if (self->version > CB_TX_MAX_STANDARD_VERSION)
+		return false;
+	if (CBTransactionCalculateLength(self) > CB_TX_MAX_STANDARD_SIZE)
 		return false;
 	for (uint32_t x = 0; x < self->inputNum; x++) {
 		if (self->inputs[x]->scriptObject->length > 500)
@@ -453,26 +484,48 @@ uint32_t CBTransactionSerialise(CBTransaction * self, bool force){
 	self->hashSet = false;
 	return cursor + 4;
 }
-bool CBTransactionSignInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+bool CBTransactionSignMultisigInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+	uint16_t sigSize = CBKeyGetSigSize(key->privkey);
+	CBScript * inScript;
+	uint16_t offset;
+	if (self->inputs[input]->scriptObject){
+		offset = self->inputs[input]->scriptObject->length;
+		inScript = CBNewByteArrayOfSize(offset + sigSize + 2);
+		CBByteArrayCopyByteArray(inScript, 0, self->inputs[input]->scriptObject);
+		CBReleaseObject(self->inputs[input]->scriptObject);
+		self->inputs[input]->scriptObject = inScript;
+	}else{
+		inScript = self->inputs[input]->scriptObject = CBNewScriptOfSize(sigSize + 3);
+		CBByteArraySetByte(inScript, 0, CB_SCRIPT_OP_0);
+		offset = 1;
+	}
+	return CBTransactionAddSignature(self, inScript, offset, sigSize, key, prevOutSubScript, input, signType);
+}
+bool CBTransactionSignPubKeyHashInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
 	// Get signature size
 	uint8_t sigSize = CBKeyGetSigSize(key->privkey);
 	// Initilialise script data
 	self->inputs[input]->scriptObject = CBNewScriptOfSize(CB_PUBKEY_SIZE + sigSize + 3);
-	// Add push data size for signature
-	CBByteArraySetByte(self->inputs[input]->scriptObject, 0, sigSize + 1); // Can do this, no more than 74 bytes
-	// Obtain the signature hash
-	uint8_t hash[32];
-	if (!CBTransactionGetInputHashForSignature(self, prevOutSubScript, input, signType, hash)){
-		CBLogError("Unable to obtain a hash for producing an input signature.");
+	// Add the signature.
+	if (!CBTransactionAddSignature(self, self->inputs[input]->scriptObject, 0, sigSize, key, prevOutSubScript, input, signType)){
+		CBLogError("Unable to add a signature ot a pubkey hash transaction input.");
 		return false;
 	}
-	// Now produce the signature.
-	CBKeySign(key->privkey, hash, CBByteArrayGetData(self->inputs[input]->scriptObject) + 1, sigSize);
-	// Add the sign type
-	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 1, signType);
 	// Add the public key
 	CBByteArraySetByte(self->inputs[input]->scriptObject, sigSize + 2, CB_PUBKEY_SIZE);
 	memcpy(CBByteArrayGetData(self->inputs[input]->scriptObject) + sigSize + 3, key->pubkey.key, CB_PUBKEY_SIZE);
+	return true;
+}
+bool CBTransactionSignPubKeyInput(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType){
+	// Get signature size
+	uint8_t sigSize = CBKeyGetSigSize(key->privkey);
+	// Initilialise script data
+	self->inputs[input]->scriptObject = CBNewScriptOfSize(sigSize + 2);
+	// Add the signature.
+	if (!CBTransactionAddSignature(self, self->inputs[input]->scriptObject, 0, sigSize, key, prevOutSubScript, input, signType)){
+		CBLogError("Unable to add a signature ot a pubkey hash transaction input.");
+		return false;
+	}
 	return true;
 }
 void CBTransactionTakeInput(CBTransaction * self, CBTransactionInput * input){
