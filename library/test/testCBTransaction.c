@@ -1372,7 +1372,7 @@ int main(){
 	CBTransactionSignPubKeyHashInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
 	CBTransactionMakeBytes(tx);
 	CBTransactionSerialise(tx, true);
-	// Check execution of input script
+	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
 	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
@@ -1391,7 +1391,7 @@ int main(){
 	CBTransactionSignMultisigInput(tx, keyPairs[1], script, 0, CB_SIGHASH_ALL);
 	CBTransactionMakeBytes(tx);
 	CBTransactionSerialise(tx, true);
-	// Check execution of input script
+	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
 	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
@@ -1409,7 +1409,7 @@ int main(){
 	CBTransactionSignPubKeyInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
 	CBTransactionMakeBytes(tx);
 	CBTransactionSerialise(tx, true);
-	// Check execution of input script
+	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
 	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
@@ -1429,7 +1429,7 @@ int main(){
 	CBTransactionAddP2SHScript(tx, p2shScript, 0);
 	CBTransactionMakeBytes(tx);
 	CBTransactionSerialise(tx, true);
-	// Check execution of input script
+	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
 	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
