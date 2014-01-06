@@ -53,15 +53,15 @@ void CBFreePingPong(void * self){
 
 //  Functions
 
-uint8_t CBPingPongDeserialise(CBPingPong * self){
+uint32_t CBPingPongDeserialise(CBPingPong * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBPingPong with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 8) {
 		CBLogError("Attempting to deserialise a CBPingPong with less than 8 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->ID = CBByteArrayReadInt64(bytes, 0);
 	return 8;

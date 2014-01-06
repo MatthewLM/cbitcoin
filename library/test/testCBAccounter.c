@@ -72,24 +72,20 @@ void checkUnspentOutputs(CBDepObject cursor, CBTestUOutDetails * outDetails, uin
 	CBFreeAccounterCursor(cursor);
 }
 
-void checkBalance(CBDepObject storage, bool unconf, uint64_t account, int64_t exp);
-void checkBalance(CBDepObject storage, bool unconf, uint64_t account, int64_t exp){
-	int64_t balance;
-	if (unconf) {
-		if (! CBAccounterGetAccountUnconfirmedBalance(storage, account, &balance)){
-			printf("GET UNCONF BALANCE FAIL\n");
-			exit(EXIT_FAILURE);
-		}
-	}else{
-		uint64_t cbalance;
-		if (! CBAccounterGetAccountBalance(storage, account, &cbalance)) {
-			printf("GET CONF BALANCE FAIL\n");
-			exit(EXIT_FAILURE);
-		}
-		balance = cbalance;
+void checkBalance(CBDepObject storage, uint64_t account, uint64_t exp, int64_t expUnconf);
+void checkBalance(CBDepObject storage, uint64_t account, uint64_t exp, int64_t expUnconf){
+	int64_t balanceUnconf;
+	uint64_t balance;
+	if (! CBAccounterGetAccountBalance(storage, account, &balance, &balanceUnconf)) {
+		printf("GET BALANCE FAIL\n");
+		exit(EXIT_FAILURE);
 	}
 	if (balance != exp) {
-		printf("BALANCE NUM FAIL %lli != %lli\n", balance, exp);
+		printf("BALANCE NUM FAIL %" PRIu64 " != %" PRIu64 "\n", balance, exp);
+		exit(EXIT_FAILURE);
+	}
+	if (balanceUnconf != expUnconf) {
+		printf("BALANCE UNCONF NUM FAIL %" PRIi64 " != %" PRIi64 "\n", balanceUnconf, expUnconf);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -185,11 +181,10 @@ int main(){
 	}
 	printf("CHECKING FOUND TX1\n");
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash1,CB_UNCONFIRMED,400,1000,CBTransactionGetHash(tx1)}
+		{hash1,CB_UNCONFIRMED,400,1000,CBTransactionGetHash(tx1),400,400}
 	}, 1);
 	// Check obtaining the balances
-	checkBalance(storage, true, account1, 400);
-	checkBalance(storage, false, account1, 400);
+	checkBalance(storage, account1, 400, 400);
 	// Check obtaining the unspent outputs
 	if (! CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, account1)) {
 		printf("CREATE UNSPENT OUTPUT CURSOR FAIL\n");
@@ -206,13 +201,12 @@ int main(){
 	}
 	printf("CHECKING TX1 MOVE TO CHAIN\n");
 	// Check balances
-	checkBalance(storage, true, account1, 0);
-	checkBalance(storage, false, account1, 400);
+	checkBalance(storage, account1, 400, 0);
 	// Check we can get transaction on the chain
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 1000);
 	printf("CHECKING TRANSACTIONS ON CHAIN\n");
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)}
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0}
 	}, 1);
 	// Check unspent output in chain
 	printf("CHECKING UNSPENT OUTPUTS ON CHAIN\n");
@@ -227,8 +221,7 @@ int main(){
 		printf("MOVE TX TO UNCONF FAIL\n");
 		return 1;
 	}
-	checkBalance(storage, true, account1, 400);
-	checkBalance(storage, false, account1, 400);
+	checkBalance(storage, account1, 400, 400);
 	// Move transaction back into chain
 	if (! CBAccounterTransactionChangeHeight(storage, tx1, CB_UNCONFIRMED, 1000)) {
 		printf("MOVE TX TO CHAIN FAIL\n");
@@ -289,8 +282,7 @@ int main(){
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
 	// Check balances
-	checkBalance(storage, true, account1, 50);
-	checkBalance(storage, false, account1, 450);
+	checkBalance(storage, account1, 450, 50);
 	printf("CHECKING OUTPUTS\n");
 	// Check unspent outputs for branch 0
 	CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, account1);
@@ -306,15 +298,13 @@ int main(){
 		return 1;
 	}
 	// Check balances
-	printf("CHECKING UNCONF BALANCE\n");
-	checkBalance(storage, true, account1, 0);
-	printf("CHECKING CHAIN BALANCE\n");
-	checkBalance(storage, false, account1, 400);
+	printf("CHECKING BALANCE\n");
+	checkBalance(storage, account1, 400, 0);
 	// Check we can't get transaction as unconfirmed
 	printf("CHECKING TRANSACTIONS\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 2000);
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)}
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0}
 	}, 1);
 	// Check unspent outputs in chain
 	printf("CHECKING OUTPUTS\n");
@@ -349,15 +339,13 @@ int main(){
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
 	// Check balances
-	printf("CHECKING UNCONF BALANCE\n");
-	checkBalance(storage, true, account1, 0);
-	printf("CHECKING CHAIN BALANCE\n");
-	checkBalance(storage, false, account1, 450);
+	printf("CHECKING BALANCE\n");
+	checkBalance(storage, account1, 450, 0);
 	// Check transactions
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 3000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash1,2000,50,3000,CBTransactionGetHash(tx2)}
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash1,2000,50,3000,CBTransactionGetHash(tx2),450,0}
 	}, 2);
 	// Check unspent outputs
 	CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, account1);
@@ -403,7 +391,7 @@ int main(){
 	CBFreeTransactionAccountDetailList(details);
 	printf("CHECK TX3 NEGATIVE BLANCE\n");
 	// Check negative balance
-	checkBalance(storage, true, account1, -200);
+	checkBalance(storage, account1, 250, -200);
 	// Add next transaction directly to branch
 	CBTransaction * tx4 = CBNewTransaction(0, 1);
 	CBByteArray * prevOutTx2 = CBNewScriptOfSize(32);
@@ -447,19 +435,17 @@ int main(){
 	}
 	printf("CHECK DIRECT TX4 AND MOVE TX3\n");
 	// Now check balances
-	printf("CHECK UNCONF BALANCE\n");
-	checkBalance(storage, true, account1, 0);
-	printf("CHECK CHAIN BALANCE\n");
-	checkBalance(storage, false, account1, 200);
+	printf("CHECK BALANCE\n");
+	checkBalance(storage, account1, 200, 0);
 	// Check transactions
 	printf("CHECKING TRANSACTIONS\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 4000);
 	checkTransactions(cursor, (CBTestTxDetails [4]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)}, // +400
-		{hash1,2000,50,3000,CBTransactionGetHash(tx2)}, // +50
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0}, // +400
+		{hash1,2000,50,3000,CBTransactionGetHash(tx2),450,0}, // +50
 		// This should be tx3 followed by tx4
-		{CBByteArrayGetData(prevOutHash),4000,-200,4000,CBTransactionGetHash(tx3)}, // -200
-		{CBByteArrayGetData(prevOutHash),4000,-50,4000,CBTransactionGetHash(tx4)}, // -50
+		{CBByteArrayGetData(prevOutHash),4000,-200,4000,CBTransactionGetHash(tx3),250,0}, // -200
+		{CBByteArrayGetData(prevOutHash),4000,-50,4000,CBTransactionGetHash(tx4),200,0}, // -50
 	}, 4);
 	// Check outputs
 	printf("CHECKING OUTPUS\n");
@@ -534,27 +520,27 @@ int main(){
 	}
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
-	// Check unconf balance for account 1
-	printf("CHECKING UNCONF BALANACE ACCOUNT 1\n");
-	checkBalance(storage, true, account1, -100);
-	// Check unconf balance for account 2
-	printf("CHECKING UNCONF BALANACE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 100);
+	// Check balance for account 1
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 100, -100);
+	// Check balance for account 2
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 100, 100);
 	// Check transactions for account 1
 	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 5000);
 	checkTransactions(cursor, (CBTestTxDetails [5]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash1,2000,50,3000,CBTransactionGetHash(tx2)},
-		{CBByteArrayGetData(prevOutHash),4000,-200,4000,CBTransactionGetHash(tx3)},
-		{CBByteArrayGetData(prevOutHash),4000,-50,4000,CBTransactionGetHash(tx4)},
-		{hash3,CB_UNCONFIRMED,-100,5000,CBTransactionGetHash(tx5)}
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash1,2000,50,3000,CBTransactionGetHash(tx2),450,0},
+		{CBByteArrayGetData(prevOutHash),4000,-200,4000,CBTransactionGetHash(tx3),250,0},
+		{CBByteArrayGetData(prevOutHash),4000,-50,4000,CBTransactionGetHash(tx4),200,0},
+		{hash3,CB_UNCONFIRMED,-100,5000,CBTransactionGetHash(tx5),100,-100}
 	}, 5);
 	// Check transaction for account 2
 	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 5000);
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash3,CB_UNCONFIRMED,100,5000,CBTransactionGetHash(tx5)}
+		{hash3,CB_UNCONFIRMED,100,5000,CBTransactionGetHash(tx5),100,100}
 	}, 1);
 	// Check unspent output for account 2
 	printf("CHECKING OUTPUTS ACCOUNT 2\n");
@@ -569,26 +555,22 @@ int main(){
 		return 1;
 	}
 	// Check balances for account 1
-	printf("CHECKING UNCONF BALANCE ACCOUNT 1\n");
-	checkBalance(storage, true, account1, 0);
-	printf("CHECKING CHAIN BALANCE ACCOUNT 1\n");
-	checkBalance(storage, false, account1, 100);
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 100, 0);
 	// Check balances for account 2
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 0);
-	printf("CHECKING CHAIN BALANCE ACCOUNT 2\n");
-	checkBalance(storage, false, account2, 100);
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 100, 0);
 	// Check getting only last transaction
 	printf("CHECKING LAST TRANSACTION ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 5000, 5000);
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash3,5000,-100,5000,CBTransactionGetHash(tx5)}
+		{hash3,5000,-100,5000,CBTransactionGetHash(tx5),100,0}
 	}, 1);
 	// Check getting tx for account 2
 	printf("CHECKING LAST TRANSACTION ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 5000, 5000);
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash3,5000,100,5000,CBTransactionGetHash(tx5)}
+		{hash3,5000,100,5000,CBTransactionGetHash(tx5),100,0}
 	}, 1);
 	// Check getting unspent output for account 1
 	printf("CHECKING OUTPUTS ACCOUNT 1\n");
@@ -620,13 +602,13 @@ int main(){
 		return EXIT_FAILURE;
 	}
 	// Test balance for account 1
-	printf("CHECKING CHAIN BALANCE ACCOUNT 1\n");
-	checkBalance(storage, false, account1, 400);
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 400, 0);
 	// Test account 1 transaction
 	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 5000);
 	checkTransactions(cursor, (CBTestTxDetails [1]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
 	}, 1);
 	// Test account 1 unspent outputs in new branch.
 	printf("CHECKING OUTPUTS ACCOUNT 1\n");
@@ -671,8 +653,8 @@ int main(){
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
 	// Check unconf balance for account 2
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 300);
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 300, 300);
 	// Second tx
 	CBTransaction * tx7 = CBNewTransaction(0, 1);
 	CBByteArray * prevOutTx6 = CBNewScriptOfSize(32);
@@ -725,25 +707,25 @@ int main(){
 	}
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
-	// Check unconf balance for account 1
-	printf("CHECKING UNCONF BALANCE ACCOUNT 1\n");
-	checkBalance(storage, true, account1, 100);
-	// Check unconf balance for account 2
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 0);
+	// Check balance for account 1
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 500, 100);
+	// Check balance for account 2
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 0, 0);
 	// Check getting transactions for account 1
 	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage,  account1, 1000, 7000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash1,CB_UNCONFIRMED,100,7000,CBTransactionGetHash(tx7)},
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400},
+		{hash1,CB_UNCONFIRMED,100,7000,CBTransactionGetHash(tx7),500,100},
 	}, 2);
 	// Check getting transaction for account 2
 	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 7000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash3,CB_UNCONFIRMED,300,6000,CBTransactionGetHash(tx6)},
-		{hash1,CB_UNCONFIRMED,-300,7000,CBTransactionGetHash(tx7)},
+		{hash3,CB_UNCONFIRMED,300,6000,CBTransactionGetHash(tx6),300,300},
+		{hash1,CB_UNCONFIRMED,-300,7000,CBTransactionGetHash(tx7),0,0},
 	}, 2);
 	// Check getting unspent output
 	printf("CHECKING OUTPUTS ACCOUNT 1\n");
@@ -762,30 +744,24 @@ int main(){
 		return 1;
 	}
 	// Check balances
-	printf("CHECKING UNCONF BALANCE ACCOUNT 1\n");
-	checkBalance(storage, true, account1, 0);
-	// Check unconf balance for account 2
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 0);
-	// Check chain balance for account 1
-	printf("CHECKING CHAIN BALANCE ACCOUNT 1\n");
-	checkBalance(storage, false, account1, 500);
-	// Check chain balance for account 2
-	printf("CHECKING CHAIN BALANCE ACCOUNT 2\n");
-	checkBalance(storage, false, account2, 0);
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 500, 0);
+	// Check balance for account 2
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 0, 0);
 	// Check getting transactions for account 1
 	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 7000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash1,7000,100,7000,CBTransactionGetHash(tx7)},
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash1,7000,100,7000,CBTransactionGetHash(tx7),500,0},
 	}, 2);
 	// Check getting transactions for account 2
 	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 7000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash3,6000,300,6000,CBTransactionGetHash(tx6)},
-		{hash1,7000,-300,7000,CBTransactionGetHash(tx7)},
+		{hash3,6000,300,6000,CBTransactionGetHash(tx6),300,0},
+		{hash1,7000,-300,7000,CBTransactionGetHash(tx7),0,0},
 	}, 2);
 	// Test getting unspent output
 	printf("CHECKING OUTPUTS ACCOUNT 1\n");
@@ -819,31 +795,25 @@ int main(){
 	// Free details
 	CBFreeTransactionAccountDetailList(details);
 	// Check balances
-	printf("CHECKING UNCONF BALANCE ACCOUNT 1\n");
-	checkBalance(storage, true, account1, 0);
-	// Check unconf balance for account 2
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 0);
-	// Check branch 1 balance for account 1
-	printf("CHECKING CHAIN BALANCE ACCOUNT 1\n");
-	checkBalance(storage, false, account1, 500);
-	// Check branch 1 balance for account 2
-	printf("CHECKING CHAIN BALANCE ACCOUNT 2\n");
-	checkBalance(storage, false, account2, 300);
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 500, 0);
+	// Check balance for account 2
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 300, 0);
 	// Check getting transactions for account 1
 	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 8000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash1,7000,100,7000,CBTransactionGetHash(tx7)},
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash1,7000,100,7000,CBTransactionGetHash(tx7),500,0},
 	}, 2);
 	// Check getting transactions for account 2
 	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 8000);
 	checkTransactions(cursor, (CBTestTxDetails [3]){
-		{hash3,6000,300,6000,CBTransactionGetHash(tx6)}, // +300
-		{hash3,8000,300,6000,CBTransactionGetHash(tx6)}, // +300
-		{hash1,7000,-300,7000,CBTransactionGetHash(tx7)}, // -300
+		{hash3,6000,300,6000,CBTransactionGetHash(tx6),300,0}, // +300
+		{hash3,8000,300,6000,CBTransactionGetHash(tx6),600,0}, // +300
+		{hash1,7000,-300,7000,CBTransactionGetHash(tx7),300,0}, // -300
 	}, 3);
 	// Test getting unspent outputs
 	printf("CHECKING OUTPUTS ACCOUNT 1\n");
@@ -863,23 +833,23 @@ int main(){
 		return 1;
 	}
 	// Check new balance
-	printf("CHECKING CHAIN BALANCE ACCOUNT 1\n");
-	checkBalance(storage, false, account1, 500);
-	printf("CHECKING CHAIN BALANCE ACCOUNT 2\n");
-	checkBalance(storage, false, account2, 0);
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 500, 0);
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 0, 0);
 	// Check transactions for account 1
 	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 8000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash1,7000,100,7000,CBTransactionGetHash(tx7)},
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash1,7000,100,7000,CBTransactionGetHash(tx7),500,0},
 	}, 2);
 	// Check transaction for account 2
 	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 8000);
 	checkTransactions(cursor, (CBTestTxDetails [2]){
-		{hash3,6000,300,6000,CBTransactionGetHash(tx6)},
-		{hash1,7000,-300,7000,CBTransactionGetHash(tx7)},
+		{hash3,6000,300,6000,CBTransactionGetHash(tx6),300,0},
+		{hash1,7000,-300,7000,CBTransactionGetHash(tx7),0,0},
 	}, 2);
 	// Check unspent output for account 1
 	printf("CHECKING OUTPUTS ACCOUNT 1\n");
@@ -891,12 +861,12 @@ int main(){
 	printf("CHECKING OUTPUTS ACCOUNT 2\n");
 	CBNewAccounterStorageUnspentOutputCursor(&cursor, storage, account2);
 	checkUnspentOutputs(cursor, NULL, 0);
-	// Check unconf balances
-	printf("CHECKING UNCONF BALANCE ACCOUNT 1\n");
-	checkBalance(storage, true, account1, 0);
-	// Check unconf balance for account 2
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, 0);
+	// Check balances
+	printf("CHECKING BALANCE ACCOUNT 1\n");
+	checkBalance(storage, account1, 500, 0);
+	// Check balance for account 2
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 0, 0);
 	// Test CBAccounterIsOurs
 	if (CBAccounterIsOurs(storage, CBTransactionGetHash(tx1)) != CB_TRUE) {
 		printf("IS OURS TX1 FAIL\n");
@@ -937,29 +907,42 @@ int main(){
 		return 1;
 	}
 	// Find tx as unconf
+	printf("CHECKING TX8");
 	if (! CBAccounterFoundTransaction(storage, tx8, CB_UNCONFIRMED, 8000, NULL)) {
 		printf("FOUND TX8 FAIL\n");
 		return 1;
 	}
+	printf("CHECKING TRANSACTIONS ACCOUNT 1\n");
+	CBNewAccounterStorageTransactionCursor(&cursor, storage, account1, 1000, 8000);
+	checkTransactions(cursor, (CBTestTxDetails [3]){
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash1,7000,100,7000,CBTransactionGetHash(tx7),500,0},
+		{hash3,CB_UNCONFIRMED,-500,8000,CBTransactionGetHash(tx8),0,-500},
+	}, 3);
+	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
+	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 8000);
+	checkTransactions(cursor, (CBTestTxDetails [3]){
+		{hash3,6000,300,6000,CBTransactionGetHash(tx6),300,0},
+		{hash1,7000,-300,7000,CBTransactionGetHash(tx7),0,0},
+		{hash3,CB_UNCONFIRMED,400,8000,CBTransactionGetHash(tx8),400,400},
+	}, 3);
 	printf("CHECKING MERGE\n");
 	// Test merging account 1 into account 2
 	if (!CBAccounterMergeAccountIntoAccount(storage, account2, account1)) {
 		printf("MERGE FAIL\n");
 		return 1;
 	}
-	// Check unconfirmed balance
-	printf("CHECKING UNCONF BALANCE ACCOUNT 2\n");
-	checkBalance(storage, true, account2, -100);
-	printf("CHECKING CHAIN BALANCE ACCOUNT 2\n");
-	checkBalance(storage, false, account2, 400);
+	// Check balance
+	printf("CHECKING BALANCE ACCOUNT 2\n");
+	checkBalance(storage, account2, 400, -100);
 	// Check getting transactions for account 2
 	printf("CHECKING TRANSACTIONS ACCOUNT 2\n");
 	CBNewAccounterStorageTransactionCursor(&cursor, storage, account2, 1000, 8000);
 	checkTransactions(cursor, (CBTestTxDetails [4]){
-		{hash1,1000,400,1000,CBTransactionGetHash(tx1)},
-		{hash3,6000,300,6000,CBTransactionGetHash(tx6)},
-		{hash1,7000,-200,7000,CBTransactionGetHash(tx7)},
-		{hash3,CB_UNCONFIRMED,-100,8000,CBTransactionGetHash(tx8)},
+		{hash1,1000,400,1000,CBTransactionGetHash(tx1),400,0},
+		{hash3,6000,300,6000,CBTransactionGetHash(tx6),700,0},
+		{hash1,7000,-200,7000,CBTransactionGetHash(tx7),500,0},
+		{hash3,CB_UNCONFIRMED,-100,8000,CBTransactionGetHash(tx8),400,-100},
 	}, 4);
 	// Check getting outputs for account 2
 	printf("CHECKING OUTPUTS ACCOUNT 2\n");
@@ -986,8 +969,7 @@ int main(){
 	}
 	// Verify account 2 had change in balance
 	printf("CHECKING ACCOUNT 2 GOT WATCHED HASH FROM ACCOUNT 1\n");
-	checkBalance(storage, true, account2, -450);
-	checkBalance(storage, false, account2, 50);
+	checkBalance(storage, account2, 50, -450);
 	// Add another transaction as unconfirmed spending tx9, then remove it. Does the tx9 outputs then exist as unspent?
 	CBTransaction * tx10 = CBNewTransaction(0, 1);
 	CBByteArray * prevOutTx9 = CBNewScriptOfSize(32);

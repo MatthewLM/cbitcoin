@@ -80,7 +80,7 @@ void CBFreePingPong(void * self);
  @param self The CBPingPong object
  @returns Length read if successful, zero otherwise.
 */
-uint8_t CBPingPongDeserialise(CBPingPong * self);
+uint32_t CBPingPongDeserialise(CBPingPong * self);
 /**
  @brief Serialises a CBPingPong to the byte data.
  @param self The CBPingPong object

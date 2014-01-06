@@ -680,7 +680,7 @@ void CBNodeFullAskForBlock(CBNodeFull * self, CBPeer * peer, uint8_t * hash){
 	CBGetMessage(getData)->type = CB_MESSAGE_TYPE_GETDATA;
 	// Send getdata
 	char blkStr[CB_BLOCK_HASH_STR_SIZE];
-	CBByteArrayToString(getData->itemFront->hash, 0, CB_BLOCK_HASH_STR_BYTES, blkStr);
+	CBByteArrayToString(getData->itemFront->hash, 0, CB_BLOCK_HASH_STR_BYTES, blkStr, true);
 	CBLogVerbose("Asked for block %s from %s", blkStr, peer->peerStr);
 	CBNodeSendMessageOnNetworkThread(CBGetNetworkCommunicator(self), peer, CBGetMessage(getData), NULL);
 	CBReleaseObject(getData);
@@ -697,12 +697,18 @@ void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 		return;
 	}
 	// Remove this peer from the block's peers, if found
-	res = CBAssociativeArrayFind(&blockPeers->peers, peer);
-	if (res.found)
-		CBAssociativeArrayDelete(&blockPeers->peers, res.position, true);
+	CBFindResult blockPeersRes = CBAssociativeArrayFind(&blockPeers->peers, peer);
+	if (blockPeersRes.found)
+		CBAssociativeArrayDelete(&blockPeers->peers, blockPeersRes.position, true);
 	// Now get the first peer we can get this block from.
 	CBPosition it;
-	CBAssociativeArrayGetFirst(&blockPeers->peers, &it);
+	if (!CBAssociativeArrayGetFirst(&blockPeers->peers, &it)){
+		// No peers to download from!
+		CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, peer->expectedBlock).position, false);
+		CBAssociativeArrayDelete(&self->blockPeers, res.position, true);
+		CBMutexUnlock(self->pendingBlockDataMutex);
+		return;
+	}
 	CBPeer * next = it.node->elements[it.index];
 	// Now add this block to be got next.
 	if (next->downloading) {
@@ -896,8 +902,11 @@ CBFoundTransaction * CBNodeFullGetOurTransaction(CBNodeFull * self, uint8_t * ha
 	return (res.found) ? CBFindResultToPointer(res) : NULL;
 }
 void CBNodeFullHasNotGivenBlockInv(void * vpeer){
-	// Give a NOT_GIVEN_INV message to process queue
 	CBPeer * peer = vpeer;
+	// Stop timer
+	CBEndTimer(peer->invResponseTimer);
+	peer->invResponseTimerStarted = false;
+	// Give a NOT_GIVEN_INV message to process queue
 	CBMutexLock(peer->invResponseMutex);
 	CBMessage * message = CBNewMessageByObject();
 	message->type = CB_MESSAGE_TYPE_NOT_GIVEN_INV;
@@ -1155,11 +1164,10 @@ CBErrBool CBNodeFullNewUnconfirmedTransaction(CBNodeFull * self, CBPeer * peer, 
 				if (orphanGetData == NULL || orphanGetData->itemNum < 50000) {
 					// Do not request transaction if we already expect it from this peer, or if it is an orphan
 					CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, prevHash);
-					assert(res.position.node == peer->expectedTxs.root);
 					if (!res.found && !CBNodeFullGetOrphanTransaction(self, prevHash)) {
 						assert(res.position.node == peer->expectedTxs.root);
 						char depTxStr[41];
-						CBByteArrayToString(tx->inputs[x]->prevOut.hash, 0, 20, depTxStr);
+						CBByteArrayToString(tx->inputs[x]->prevOut.hash, 0, 20, depTxStr, true);
 						assert(res.position.node == peer->expectedTxs.root);
 						CBLogVerbose("Requiring dependency transaction %s from %s", depTxStr, peer->peerStr);
 						// Create getdata if not already
@@ -1205,16 +1213,22 @@ CBErrBool CBNodeFullNewUnconfirmedTransaction(CBNodeFull * self, CBPeer * peer, 
 			// Dependency is on chain
 			depData[x].type = CB_DEP_CHAIN;
 		}
-		CBInputCheckResult inRes = CBValidatorVerifyScripts(validator, tx, x, output, &sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
+		CBInputCheckResult inRes = CBValidatorVerifyP2SHAndStandard(output->scriptObject, tx->inputs[x]->scriptObject, &sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
 		if (inRes == CB_INPUT_BAD) {
 			CBReleaseObject(output);
-			CBLogWarning("Transaction %s, input %u is invalid.", txStr, x);
+			CBLogWarning("Transaction %s, input %u failed P2SH validation.", txStr, x);
 			CBTxReturnFalse
 		}
 		if (inRes == CB_INPUT_NON_STD) {
 			CBReleaseObject(output);
 			CBLogVerbose("Transaction %s, input %u is non-standard. Ignoring transaction.", txStr, x);
 			CBTxReturnTrue
+		}
+		// Verify scripts
+		if (! CBValidatorVerifyScripts(tx, x, output->scriptObject)) {
+			CBReleaseObject(output);
+			CBLogWarning("Transaction %s, input %u failed script validation.", txStr, x);
+			CBTxReturnFalse
 		}
 		// Add to input value
 		inputValue += output->value;
@@ -1352,7 +1366,10 @@ bool CBNodeFullProcessNewTransactionProcessDependants(CBNodeFull * self, CBNewTr
 				}
 				// Check orphan input
 				CBTransactionOutput * output = tx->outputs[orphanDep->orphan->utx.tx->inputs[orphanDep->inputIndex]->prevOut.index];
-				CBInputCheckResult inRes = CBValidatorVerifyScripts(CBGetNode(self)->validator, orphanDep->orphan->utx.tx, orphanDep->inputIndex, output, &orphanDep->orphan->sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
+				CBInputCheckResult inRes = CBValidatorVerifyP2SHAndStandard(output->scriptObject, orphanDep->orphan->utx.tx->inputs[orphanDep->inputIndex]->scriptObject, &orphanDep->orphan->sigOps, CBGetNode(self)->flags & CB_NODE_CHECK_STANDARD);
+				if (inRes == CB_INPUT_OK)
+					if (!CBValidatorVerifyScripts(orphanDep->orphan->utx.tx, orphanDep->inputIndex, output->scriptObject))
+						inRes = CB_INPUT_BAD;
 				bool rm = false;
 				if (inRes == CB_INPUT_OK) {
 					// Increase the input value
@@ -1528,9 +1545,9 @@ bool CBNodeFullNoNewBranches(void * vpeer, CBBlock * block) {
 	CBNodeFullFinishedWithBlock(self, block);
 	return true;
 }
-void CBNodeFullOnNetworkError(CBNetworkCommunicator * comm){
+void CBNodeFullOnNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason){
 	CBNode * node = CBGetNode(comm);
-	node->callbacks.onFatalNodeError(node);
+	node->callbacks.onFatalNodeError(node, reason);
 }
 bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, void * vpeer){
 	// An expected response timed out.
@@ -1592,6 +1609,28 @@ void CBNodeFullPeerFree(void * vpeer){
 			CBGetNode(peer->nodeObj)->validator->branches[peer->branchWorkingOn].working--;
 			CBMutexUnlock(fullNode->workingMutex);
 		}
+		// Remove peer from blockPeers.
+		CBMutexLock(fullNode->pendingBlockDataMutex);
+		for (; peer->reqBlockCursor != CB_END_REQ_BLOCKS; peer->reqBlockCursor = peer->reqBlocks[peer->reqBlockCursor].next) {
+			uint8_t * blockHash = peer->reqBlocks[peer->reqBlockCursor].reqBlock;
+			CBFindResult res = CBAssociativeArrayFind(&fullNode->blockPeers, blockHash);
+			if (!res.found)
+				// Must have been deleted from blockPeers in CBNodeFullCancelBlock
+				continue;
+			CBBlockPeers * blockPeers = CBFindResultToPointer(res);
+			if (blockPeers->peers.root->numElements == 1 && !blockPeers->peers.root->children[0])
+				// Only have one more element, so delete block from blockPeers.
+				CBAssociativeArrayDelete(&fullNode->blockPeers, res.position, true);
+			else{
+				// Else only delete peer from blockPeers
+				res = CBAssociativeArrayFind(&fullNode->blockPeers, peer);
+				if (!res.found)
+					// Must have been deleted from blockPeers in CBNodeFullCancelBlock
+					continue;
+				CBAssociativeArrayDelete(&blockPeers->peers, res.position, false);
+			}
+		}
+		CBMutexUnlock(fullNode->pendingBlockDataMutex);
 	}
 	// If can download from this peer, decrement numCanDownload
 	if (peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS) {
@@ -1615,6 +1654,7 @@ void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer){
 	peer->nodeObj = self;
 	peer->upToDate = false;
 	peer->invResponseTimerStarted = false;
+	peer->reqBlockCursor = CB_END_REQ_BLOCKS;
 	CBNewMutex(&peer->invResponseMutex);
 	CBNewMutex(&peer->requestedDataMutex);
 }
@@ -1651,9 +1691,6 @@ bool CBNodeFullProcessNewTransaction(CBNodeFull * self, CBTransaction * tx, uint
 CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer, CBMessage * message){
 	CBNodeFull * self = CBGetNodeFull(node);
 	CBValidator * validator = node->validator;
-	char messageTypeStr[CB_MESSAGE_TYPE_STR_SIZE];
-	CBMessageTypeToString(message->type, messageTypeStr);
-	CBLogVerbose("Processing message from %s with the type %s.", peer->peerStr, messageTypeStr);
 	switch (message->type) {
 		case CB_MESSAGE_TYPE_VERSION:{
 			// Disconnect if the peer can't give us blocks but we don't have at least CB_MIN_DOWNLOAD peers we can download from.
@@ -1761,7 +1798,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			CBInventory * getData = CBGetInventory(message);
 			// Begin sending requested data, or add the requested data to the existing requested data.
 			char hashStr[41];
-			CBByteArrayToString(getData->itemFront->hash, 0, 20, hashStr);
+			CBByteArrayToString(getData->itemFront->hash, 0, 20, hashStr, true);
 			CBMutexLock(peer->requestedDataMutex);
 			if (peer->requestedData == NULL) {
 				peer->requestedData = getData;
@@ -1801,9 +1838,9 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					CBMutexUnlock(node->blockAndTxMutex);
 					if (exists == CB_ERROR)
 						return CBNodeReturnError(node, "Could not determine if we have a block in an inventory message.");
-					char blockStr[41];
-					CBByteArrayToString(item->hash, 0, 20, blockStr);
-					if (exists == CB_TRUE){
+					char blockStr[CB_BLOCK_HASH_STR_SIZE];
+					CBByteArrayToString(item->hash, 0, CB_BLOCK_HASH_STR_BYTES, blockStr, true);
+					if (exists == CB_TRUE) {
 						// Ignore this block
 						// If the last block is not on the same branch as we are downloading from this peer, then resend getblocks for the other branch. This is needed in the case of very large reorgs.
 						if (item == inv->itemBack){
@@ -1834,7 +1871,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					CBMutexLock(self->pendingBlockDataMutex);
 					CBFindResult res = CBAssociativeArrayFind(&self->askedForBlocks, hash);
 					if (res.found){
-						CBLogVerbose("Already asked for the block %s from %s.", blockStr, peer->peerStr);
+						CBLogVerbose("Already asked for the block %s from the inv from %s.", blockStr, peer->peerStr);
 						CBMutexUnlock(self->pendingBlockDataMutex);
 						continue;
 					}
@@ -1851,6 +1888,13 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 						memcpy(blockPeers->hash, hash, 20);
 						CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
 						CBAssociativeArrayInsert(&self->blockPeers, blockPeers, res.position, NULL);
+					}
+					// Ensure the peer has not given us this block yet
+					CBFindResult blockPeersRes = CBAssociativeArrayFind(&blockPeers->peers, peer);
+					if (blockPeersRes.found) {
+						CBLogVerbose("Already got the block %s from %s.", blockStr, peer->peerStr);
+						CBMutexUnlock(self->pendingBlockDataMutex);
+						continue;
 					}
 					if (reqBlockNum++ == 0) {
 						// Ask for first block
@@ -1870,7 +1914,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 						CBGetMessage(getData)->expectResponse = CB_MESSAGE_TYPE_BLOCK;
 					}else
 						// Record that this peer has this block
-						CBAssociativeArrayInsert(&blockPeers->peers, peer, CBAssociativeArrayFind(&blockPeers->peers, peer).position, NULL);
+						CBAssociativeArrayInsert(&blockPeers->peers, peer, blockPeersRes.position, NULL);
 					CBMutexUnlock(self->pendingBlockDataMutex);
 				}else if (item->type == CB_INVENTORY_ITEM_TX){
 					// Check if we have the transaction already
@@ -1886,7 +1930,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 					if (res.found)
 						continue;
 					char txStr[41];
-					CBByteArrayToString(item->hash, 0, 20, txStr);
+					CBByteArrayToString(item->hash, 0, 20, txStr, true);
 					CBLogVerbose("%s gave us hash of transaction %s", peer->peerStr, txStr);
 					// We do not have the transaction, so add it to getdata
 					if (getData == NULL)
@@ -1984,7 +2028,7 @@ bool CBNodeFullRemoveBlock(void * vpeer, uint8_t branch, uint32_t blockHeight, C
 			CBLogError("Could not determine if a transaction is ours.");
 			return false;
 		}
-		chainTx->ours = ours == CB_TX_OURS;
+		chainTx->ours = ours == CB_TRUE;
 	}
 	return true;
 }
@@ -2115,7 +2159,7 @@ bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer, uint8_t * extraBl
 	if (chainDesc->hashNum == 1)
 		strcpy(blockStr, "genesis");
 	else
-		CBByteArrayToString(chainDesc->hashes[0], 0, CB_BLOCK_HASH_STR_BYTES, blockStr);
+		CBByteArrayToString(chainDesc->hashes[0], 0, CB_BLOCK_HASH_STR_BYTES, blockStr, true);
 	CBLogVerbose("Sending getblocks to %s with block %s as the latest.", peer->peerStr, blockStr);
 	CBGetBlocks * getBlocks = CBNewGetBlocks(CB_MIN_PROTO_VERSION, chainDesc, stopAtHash);
 	CBReleaseObject(chainDesc);
@@ -2178,7 +2222,7 @@ void CBNodeFullSendRequestedData(void * vself, void * vpeer){
 			CBErrBool exists = CBBlockChainStorageGetBlockLocation(CBGetNode(self)->validator, CBByteArrayGetData(item->hash), &branch, &index);
 			if (exists == CB_ERROR) {
 				CBLogError("Could not get the location for a block when a peer requested it of us.");
-				CBGetNode(self)->callbacks.onFatalNodeError(CBGetNode(self));
+				CBGetNode(self)->callbacks.onFatalNodeError(CBGetNode(self), CB_ERROR_GENERAL);
 				CBFreeNodeFull(self);
 				CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 				CBMutexUnlock(peer->requestedDataMutex);
@@ -2186,7 +2230,7 @@ void CBNodeFullSendRequestedData(void * vself, void * vpeer){
 				return;
 			}
 			char blkStr[CB_BLOCK_HASH_STR_SIZE];
-			CBByteArrayToString(item->hash, 0, CB_BLOCK_HASH_STR_BYTES, blkStr);
+			CBByteArrayToString(item->hash, 0, CB_BLOCK_HASH_STR_BYTES, blkStr, true);
 			if (exists == CB_FALSE) {
 				// The peer is requesting a block we do not have. Obviously we may have removed the block since, but this is unlikely
 				CBMutexUnlock(peer->requestedDataMutex);
@@ -2200,7 +2244,7 @@ void CBNodeFullSendRequestedData(void * vself, void * vpeer){
 			CBBlock * block = CBBlockChainStorageLoadBlock(CBGetNode(self)->validator, index, branch);
 			if (block == NULL) {
 				CBLogError("Could not load a block from storage.");
-				CBGetNode(self)->callbacks.onFatalNodeError(CBGetNode(self));
+				CBGetNode(self)->callbacks.onFatalNodeError(CBGetNode(self), CB_ERROR_GENERAL);
 				CBFreeNodeFull(self);
 				CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 				CBMutexUnlock(peer->requestedDataMutex);

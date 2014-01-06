@@ -44,14 +44,18 @@ CBDatabase * CBNewDatabase(char * dataDir, char * folder, uint32_t extraDataSize
 	return self;
 }
 bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t extraDataSize, uint32_t commitGap, uint32_t cacheLimit){
-	self->dataDir = dataDir;
-	self->folder = folder;
+	self->dataDir = malloc(strlen(dataDir) + 1);
+	strcpy(self->dataDir, dataDir);
+	self->folder = malloc(strlen(folder) + 1);
+	strcpy(self->folder, folder);
 	self->lastUsedFileID = CB_DATABASE_NO_LAST_FILE;
 	self->commitGap = commitGap;
 	self->cacheLimit = cacheLimit;
 	self->stagedSize = 0;
 	self->lastCommit = CBGetMilliseconds();
 	self->hasStaged = false;
+	self->commitFail = false;
+	self->numIndexes = 0;
 	char filename[strlen(self->dataDir) + strlen(self->folder) + 12];
 	// Create folder if it doesn't exist
 	sprintf(filename, "%s/%s/", self->dataDir, self->folder);
@@ -166,8 +170,16 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t e
 	}
 	// Initialise array for the index information
 	CBInitAssociativeArray(&self->valueWritingIndexes, CBIndexPtrCompare, NULL, NULL);
-	// Create the mutex
-	CBNewMutex(&self->databaseMutex);
+	// Create the mutexs
+	CBNewMutex(&self->diskMutex);
+	CBNewMutex(&self->currentMutex);
+	CBNewMutex(&self->stagedMutex);
+	CBNewMutex(&self->commitMutex);
+	// Start commit thread.
+	self->shutDownThread = false;
+	self->doCommit = false;
+	CBNewCondition(&self->commitCond);
+	CBNewThread(&self->commitThread, CBDatabaseCommitThread, self);
 	return true;
 }
 void CBInitDatabaseTransactionChanges(CBDatabaseTransactionChanges * self, CBDatabase * database){
@@ -363,7 +375,7 @@ bool CBDatabaseLoadIndexNode(CBDatabaseIndex * index, CBIndexNode * node, uint16
 		// Give non-chached information to begin with.
 		node->children[x].cached = false;
 		if (! CBFileRead(file, data, 6)) {
-			for (uint8_t y = 0; y <= node->numElements; y++)
+			for (uint8_t y = 0; y < node->numElements; y++)
 				CBReleaseObject(node->elements[y]);
 			CBLogError("Could not read the location of an index child.");
 			return false;
@@ -440,15 +452,30 @@ CBDatabase * CBGetDatabase(void * self){
 }
 
 bool CBFreeDatabase(CBDatabase * self){
+	// Wait for the last commit to complete
+	CBMutexLock(self->commitMutex);
+	CBMutexUnlock(self->commitMutex);
 	// Commit staged changes if we didn't last time
 	if (self->hasStaged
 		&& ! CBDatabaseCommit(self)){
 		CBLogError("Failed to commit when freeing a database transaction.");
 		return false;
 	}
+	// End commit thread
+	CBMutexLock(self->commitMutex);
+	self->shutDownThread = true;
+	if (!self->doCommit)
+		// The thread is waiting to commit so wake it.
+		CBConditionSignal(self->commitCond);
+	CBMutexUnlock(self->commitMutex);
+	CBThreadJoin(self->commitThread);
+	CBFreeThread(self->commitThread);
+	CBFreeMutex(self->commitMutex);
+	CBFreeMutex(self->diskMutex);
+	CBFreeMutex(self->currentMutex);
+	CBFreeMutex(self->stagedMutex);
 	CBFreeAssociativeArray(&self->deletionIndex);
 	CBFreeAssociativeArray(&self->valueWritingIndexes);
-	CBFreeMutex(self->databaseMutex);
 	// Close files
 	CBFileClose(self->deletionIndexFile);
 	if (self->lastUsedFileID != CB_DATABASE_NO_LAST_FILE)
@@ -457,6 +484,8 @@ bool CBFreeDatabase(CBDatabase * self){
 	CBFreeDatabaseTransactionChanges(&self->staged);
 	CBFreeDatabaseTransactionChanges(&self->current);
 	free(self->extraDataOnDisk);
+	free(self->dataDir);
+	free(self->folder);
 	free(self);
 	return true;
 }
@@ -478,10 +507,13 @@ void CBFreeIndex(CBDatabaseIndex * index){
 	free(index);
 }
 void CBFreeIndexElementPos(CBIndexElementPos pos){
+	// If this node is not cached then we can remove it, as it was only needed temporarily.
 	if (! pos.nodeLoc.cached)
 		CBFreeIndexNode(pos.nodeLoc.cachedNode);
 	for (uint8_t x = 0; x < pos.parentStack.num; x++)
-		if (! pos.parentStack.nodes[x].cached)
+		if (! pos.parentStack.nodes[x].cached
+			// We may have moved to a parent and thus the nodeLoc is at a parent that we do not want to free twice.
+			&& pos.parentStack.nodes[x].cachedNode != pos.nodeLoc.cachedNode)
 			CBFreeIndexNode(pos.parentStack.nodes[x].cachedNode);
 }
 void CBFreeIndexTxData(void * vindexTxData){
@@ -553,15 +585,15 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 	uint32_t dataTempLen = dataLen + 12;
 	uint8_t * dataTemp = malloc(dataTempLen);
 	// Write file type
-	dataTemp[0] = fileType;
+	dataTemp[CB_OVERWRITE_LOG_FILE_TYPE] = fileType;
 	// Write index ID
-	dataTemp[1] = (index == NULL) ? 0 : index->ID;
+	dataTemp[CB_OVERWRITE_LOG_INDEX_ID] = (index == NULL) ? 0 : index->ID;
 	// Write file ID
-	CBInt16ToArray(dataTemp, 2, fileID);
+	CBInt16ToArray(dataTemp, CB_OVERWRITE_LOG_FILE_ID, fileID);
 	// Write offset
-	CBInt32ToArray(dataTemp, 4, offset);
+	CBInt32ToArray(dataTemp, CB_OVERWRITE_LOG_OFFSET, offset);
 	// Write data size
-	CBInt32ToArray(dataTemp, 8, dataLen);
+	CBInt32ToArray(dataTemp, CB_OVERWRITE_LOG_LENGTH, dataLen);
 	// Write old data ??? Change to have old data as input to function
 	if (! CBFileSeek(file, offset)){
 		CBLogError("Could not seek to the read position for previous data in a file to be overwritten.");
@@ -585,7 +617,7 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 		return false;
 	}
 	if (! CBFileOverwrite(file, data, dataLen)) {
-		CBLogError("Could not overwrite file %u at position %u with length %u", fileID, offset, dataLen);
+		CBLogError("Could not overwrite file %" PRIu16 " at position %" PRIu32 " with length %" PRIu32, fileID, offset, dataLen);
 		return false;
 	}
 	return true;
@@ -647,12 +679,9 @@ bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CB
 	return true;
 }
 void CBDatabaseAddWriteValue(uint8_t * writeValue, CBDatabaseIndex * index, uint8_t * key, uint32_t dataLen, uint8_t * dataPtr, uint32_t offset, bool stage) {
-	CBMutexLock(index->database->databaseMutex);
-	CBDatabaseAddWriteValueNoMutex(writeValue, index, key, dataLen, dataPtr, offset, stage);
-	CBMutexUnlock(index->database->databaseMutex);
-}
-void CBDatabaseAddWriteValueNoMutex(uint8_t * writeValue, CBDatabaseIndex * index, uint8_t * key, uint32_t dataLen, uint8_t * dataPtr, uint32_t offset, bool stage) {
 	CBDatabase * self = index->database;
+	if (!stage)
+		CBMutexLock(index->database->currentMutex);
 	CBDatabaseTransactionChanges * changes = stage ? &self->staged : &self->current;
 	// Get the index tx data
 	CBIndexTxData * indexTxData = CBDatabaseGetIndexTxData(changes, index, true);
@@ -723,16 +752,18 @@ void CBDatabaseAddWriteValueNoMutex(uint8_t * writeValue, CBDatabaseIndex * inde
 			}
 		}
 	}
+	if (!stage)
+		CBMutexUnlock(index->database->currentMutex);
 }
 bool CBDatabaseAppend(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint8_t * data, uint32_t dataLen) {
 	// Execute the append operation
 	CBDepObject file;
 	if (! CBDatabaseGetFile(self, &file, fileType, index, fileID)) {
-		CBLogError("Could not get file %u for appending.", fileID);
+		CBLogError("Could not get file %" PRIu16 " for appending.", fileID);
 		return false;
 	}
 	if (! CBFileAppend(file, data, dataLen)) {
-		CBLogError("Failed to append data to file %u.", fileID);
+		CBLogError("Failed to append data to file %" PRIu16 ".", fileID);
 		return false;
 	}
 	return true;
@@ -741,23 +772,21 @@ bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, CBDat
 	// Execute the append operation
 	CBDepObject file;
 	if (! CBDatabaseGetFile(self, &file, fileType, index, fileID)) {
-		CBLogError("Could not get file %u for appending.", fileID);
+		CBLogError("Could not get file %" PRIu16 " for appending.", fileID);
 		return false;
 	}
 	if (! CBFileAppendZeros(file, amount)) {
-		CBLogError("Failed to append data to file %u.", fileID);
+		CBLogError("Failed to append data to file %" PRIu16 ".", fileID);
 		return false;
 	}
 	return true;
 }
 bool CBDatabaseChangeKey(CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey, bool stage) {
-	CBMutexLock(index->database->databaseMutex);
-	bool ret = CBDatabaseChangeKeyNoMutex(index, previousKey, newKey, stage);
-	CBMutexUnlock(index->database->databaseMutex);
-	return ret;
-}
-bool CBDatabaseChangeKeyNoMutex(CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey, bool stage) {
 	CBDatabase * self = index->database;
+	if (self->commitFail)
+		return false;
+	if (!stage)
+		CBMutexLock(index->database->currentMutex);
 	CBDatabaseTransactionChanges * changes = stage ? &self->staged : &self->current;
 	// Get the index tx data
 	CBIndexTxData * indexTxData = CBDatabaseGetIndexTxData(changes, index, true);
@@ -772,21 +801,31 @@ bool CBDatabaseChangeKeyNoMutex(CBDatabaseIndex * index, uint8_t * previousKey, 
 		// Insert new entry if the old key exists in the index or staged
 		bool foundPrev = false;
 		if (! stage) {
+			// Reading from staged so we need to use the staged mutex
+			CBMutexLock(self->stagedMutex);
 			// Look for the old key being staged
 			CBIndexTxData * stagedIndexTxData = CBDatabaseGetIndexTxData(&self->staged, index, false);
 			if (stagedIndexTxData){
 				stagedIndexTxData->valueWrites.compareFunc = CBTransactionKeysCompare;
+				stagedIndexTxData->changeKeysNew.compareFunc = CBNewKeyWithSingleKeyCompare;
 				if (CBAssociativeArrayFind(&stagedIndexTxData->valueWrites, previousKey).found
 					|| CBAssociativeArrayFind(&stagedIndexTxData->changeKeysNew, previousKey).found)
 					foundPrev = true;
 				stagedIndexTxData->valueWrites.compareFunc = CBTransactionKeysAndOffsetCompare;
+				stagedIndexTxData->changeKeysNew.compareFunc = CBNewKeyCompare;
 			}
+			CBMutexUnlock(self->stagedMutex);
 		}
 		if (! foundPrev) {
+			// Reading from disk so use disk mutex
+			CBMutexLock(self->diskMutex);
 			CBIndexFindWithParentsResult fres = CBDatabaseIndexFindWithParents(index, previousKey);
 			CBFreeIndexElementPos(fres.el);
+			CBMutexUnlock(self->diskMutex);
 			if (fres.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error whilst trying to find a previous key in the index to see if a change key entry should be made.");
+				if (!stage)
+					CBMutexUnlock(index->database->currentMutex);
 				return false;
 			}
 			foundPrev = fres.status == CB_DATABASE_INDEX_FOUND;
@@ -831,24 +870,35 @@ bool CBDatabaseChangeKeyNoMutex(CBDatabaseIndex * index, uint8_t * previousKey, 
 		if (stage)
 			self->stagedSize -= index->keySize;
 	}
+	if (!stage)
+		CBMutexUnlock(index->database->currentMutex);
 	return true;
 }
 void CBDatabaseClearCurrent(CBDatabase * self) {
-	CBMutexLock(self->databaseMutex);
+	CBMutexLock(self->currentMutex);
 	// Free index tx data
 	CBFreeAssociativeArray(&self->current.indexes);
 	CBInitAssociativeArray(&self->current.indexes, CBIndexCompare, NULL, CBFreeIndexTxData);
 	// Change extra data to match staged.
 	memcpy(self->current.extraData, self->staged.extraData, self->extraDataSize);
-	CBMutexUnlock(self->databaseMutex);
+	CBMutexUnlock(self->currentMutex);
 }
 bool CBDatabaseCommit(CBDatabase * self){
-	CBMutexLock(self->databaseMutex);
-	bool res = CBDatabaseCommitNoMutex(self);
-	CBMutexUnlock(self->databaseMutex);
-	return res;
+	CBMutexLock(self->commitMutex);
+	if (self->commitFail){
+		CBMutexUnlock(self->commitMutex);
+		return false;
+	}
+	if (!self->doCommit) {
+		self->doCommit = true;
+		CBConditionSignal(self->commitCond); 
+	}
+	CBMutexUnlock(self->commitMutex);
+	return true;
 }
-bool CBDatabaseCommitNoMutex(CBDatabase * self){
+bool CBDatabaseCommitProcess(CBDatabase * self){
+	self->hasStaged = false;
+	// ??? Commit each index concurrently?
 	char filename[strlen(self->dataDir) + strlen(self->folder) + 10];
 	sprintf(filename, "%s/%s/log.dat", self->dataDir, self->folder);
 	// Open the log file
@@ -913,6 +963,7 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 				CBFileClose(self->logFile);
 				CBFreeIndexElementPos(res.el);
 				CBReleaseObject(newIndexValue);
+				CBMutexUnlock(self->diskMutex);
 				return false;
 			}
 			// Add new key to index
@@ -1108,7 +1159,7 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 		}
 		// Sync index
 		if (! CBFileSync(indexTxData->index->indexFile)) {
-			CBLogError("Failed to synchronise index file for index with ID %u", indexTxData->index->ID);
+			CBLogError("Failed to synchronise index file for index with ID %" PRIu8, indexTxData->index->ID);
 			CBFileClose(self->logFile);
 			return false;
 		}
@@ -1180,8 +1231,10 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 	}
 	CBFileClose(self->logFile);
 	// Free index tx data
+	CBMutexLock(self->stagedMutex);
 	CBFreeAssociativeArray(&self->staged.indexes);
 	CBInitAssociativeArray(&self->staged.indexes, CBIndexCompare, NULL, CBFreeIndexTxData);
+	CBMutexUnlock(self->stagedMutex);
 	// Reset valueWritingIndexes
 	CBFreeAssociativeArray(&self->valueWritingIndexes);
 	CBInitAssociativeArray(&self->valueWritingIndexes, CBIndexPtrCompare, NULL, NULL);
@@ -1193,7 +1246,25 @@ bool CBDatabaseCommitNoMutex(CBDatabase * self){
 	self->hasStaged = false;
 	return true;
 }
-bool CBDatabaseEnsureConsistent(CBDatabase * self){
+void CBDatabaseCommitThread(void * vdatabase){
+	CBDatabase * self = vdatabase;
+	CBMutexLock(self->commitMutex);
+	for (;;) {
+		if (!self->doCommit && !self->shutDownThread)
+			// Wait for data to commit to disk
+			CBConditionWait(self->commitCond, self->commitMutex);
+		// Check to see if the thread should terminate
+		if (self->shutDownThread){
+			CBMutexUnlock(self->commitMutex);
+			return;
+		}
+		// Commence commit
+		if ((self->commitFail = !CBDatabaseCommitProcess(self)))
+			return;
+		self->doCommit = false;
+	}
+}
+bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 	char filename[strlen(self->dataDir) + strlen(self->folder) + 12];
 	sprintf(filename, "%s/%s/log.dat", self->dataDir, self->folder);
 	// Determine if the logfile has been created or not
@@ -1207,7 +1278,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 		return false;
 	}
 	// Check if the logfile is active or not.
-	uint8_t data[12];
+	uint8_t data[12]; // Data needs to be 12 for reading from file.
 	if (! CBFileRead(logFile, data, 1)) {
 		CBLogError("Failed reading the logfile.");
 		CBFileClose(logFile);
@@ -1233,7 +1304,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 		return false;
 	}
 	uint16_t lastFile = CBArrayToInt16(data, 4);
-	sprintf(filenameEnd, "val_%u.dat", lastFile);
+	sprintf(filenameEnd, "val_%" PRIu16 ".dat", lastFile);
 	if (! CBFileTruncate(filename, CBArrayToInt32(data, 6))) {
 		CBLogError("Failed to truncate the last data file down to the previous size.");
 		CBFileClose(logFile);
@@ -1251,13 +1322,13 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 			return false;
 		}
 		lastFile = CBArrayToInt16(data, 1);
-		sprintf(filenameEnd, "idx_%u_%u.dat", data[0], lastFile);
+		sprintf(filenameEnd, "idx_%" PRIu8 "_%" PRIu16 ".dat", data[0], lastFile);
 		if (! CBFileTruncate(filename, CBArrayToInt32(data, 3))) {
 			CBLogError("Failed to truncate the last file down to the previous size for an index.");
 			CBFileClose(logFile);
 			return false;
 		}
-		sprintf(filenameEnd, "idx_%u_%u.dat", data[0], lastFile + 1);
+		sprintf(filenameEnd, "idx_%" PRIu8 "_%u.dat", data[0], lastFile + 1);
 		if (! access(filename, F_OK))
 			remove(filename);
 	}
@@ -1270,14 +1341,14 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 	}
 	uint8_t * prevData = NULL;
 	uint32_t prevDataSize = 0;
-	for (uint32_t c = 14 + 7 * data[10]; c < logFileLen;) {
+	for (uint32_t c = 12 + 7 * data[10]; c < logFileLen;) {
 		// Read file type, index ID and file ID, offset and size
 		if (! CBFileRead(logFile, data, 12)) {
 			CBLogError("Could not read from the log file.");
 			CBFileClose(logFile);
 			return false;
 		}
-		uint32_t dataLen = CBArrayToInt32(data, 8);
+		uint32_t dataLen = CBArrayToInt32(data, CB_OVERWRITE_LOG_LENGTH);
 		// Read previous data
 		if (prevDataSize < dataLen) {
 			prevData = realloc(prevData, dataLen);
@@ -1286,18 +1357,19 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 		if (! CBFileRead(logFile, prevData, dataLen)) {
 			CBLogError("Could not read previous data from the log file.");
 			CBFileClose(logFile);
+			free(prevData);
 			return false;
 		}
 		// Write the data to the file
-		switch (data[0]) {
+		switch (data[CB_OVERWRITE_LOG_FILE_TYPE]) {
 			case CB_DATABASE_FILE_TYPE_DATA:
-				sprintf(filenameEnd, "val_%u.dat", CBArrayToInt16(data, 2));
+				sprintf(filenameEnd, "val_%u.dat", CBArrayToInt16(data, CB_OVERWRITE_LOG_FILE_ID));
 				break;
 			case CB_DATABASE_FILE_TYPE_DELETION_INDEX:
 				strcpy(filenameEnd, "del.dat");
 				break;
 			case CB_DATABASE_FILE_TYPE_INDEX:
-				sprintf(filenameEnd, "idx_%u_%u.dat", data[1], CBArrayToInt16(data, 2));
+				sprintf(filenameEnd, "idx_%u_%u.dat", data[CB_OVERWRITE_LOG_INDEX_ID], CBArrayToInt16(data, CB_OVERWRITE_LOG_FILE_ID));
 				break;
 			default:
 				break;
@@ -1306,24 +1378,28 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 		if (! CBFileOpen(&file, filename, false)) {
 			CBLogError("Could not open the file for writting the previous data.");
 			CBFileClose(logFile);
+			free(prevData);
 			return false;
 		}
-		if (! CBFileSeek(file, CBArrayToInt32(data, 4))){
+		if (! CBFileSeek(file, CBArrayToInt32(data, CB_OVERWRITE_LOG_OFFSET))){
 			CBLogError("Could not seek the file for writting the previous data.");
 			CBFileClose(logFile);
 			CBFileClose(file);
+			free(prevData);
 			return false;
 		}
 		if (! CBFileOverwrite(file, prevData, dataLen)) {
 			CBLogError("Could not write previous data back into the file.");
 			CBFileClose(logFile);
 			CBFileClose(file);
+			free(prevData);
 			return false;
 		}
 		if (! CBFileSync(file)) {
 			CBLogError("Could not synchronise a file during recovery..");
 			CBFileClose(logFile);
 			CBFileClose(file);
+			free(prevData);
 			return false;
 		}
 		CBFileClose(file);
@@ -1338,7 +1414,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self){
 	}
 	// Now we are done, make the logfile inactive
 	data[0] = 0;
-	if (CBFileOverwrite(logFile, data, 1))
+	if (CBFileSeek(logFile, 0) && CBFileOverwrite(logFile, data, 1))
 		CBFileSync(logFile);
 	CBFileClose(logFile);
 	return true;
@@ -1354,7 +1430,6 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length){
 	return res;
 }
 bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType type, CBDatabaseIndex * index, uint16_t fileID){
-	assert(fileID == 0);
 	if (type == CB_DATABASE_FILE_TYPE_DATA){
 		if (fileID == self->lastUsedFileID){
 			*file = self->fileObjectCache;
@@ -1407,22 +1482,19 @@ bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType
 	return true;
 }
 bool CBDatabaseGetLength(CBDatabaseIndex * index, uint8_t * key, uint32_t * length) {
-	CBMutexLock(index->database->databaseMutex);
-	bool ret = CBDatabaseGetLengthNoMutex(index, key, length);
-	CBMutexUnlock(index->database->databaseMutex);
-	return ret;
-}
-bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t * length) {
 	uint8_t * diskKey = key;
 	CBDatabase * self = index->database;
 	// Get the index tx data
 	for (CBDatabaseTransactionChanges * c = &self->current;; c = &self->staged) {
+		CBDepObject mu = c == &self->current ? self->currentMutex : self->stagedMutex;
+		CBMutexLock(mu);
 		CBIndexTxData * indexTxData = CBDatabaseGetIndexTxData(c, index, false);
 		if (indexTxData) {
 			// Check for a deletion value
 			CBFindResult res = CBAssociativeArrayFind(&indexTxData->deleteKeys, diskKey);
 			if (res.found){
 				*length = CB_DOESNT_EXIST;
+				CBMutexUnlock(mu);
 				return true;
 			}
 			// First check for CB_OVERWRITE_DATA value write entry as it replaces the length on disk.
@@ -1432,6 +1504,7 @@ bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t
 			res = CBAssociativeArrayFind(&indexTxData->valueWrites, compareData);
 			if (res.found){
 				*length = CBArrayToInt32(((uint8_t *)CBFindResultToPointer(res)), index->keySize + 4);
+				CBMutexUnlock(mu);
 				return true;
 			}
 			// Get the key as it should exist in the staged changes or in the disk
@@ -1441,10 +1514,12 @@ bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t
 				diskKey = CBFindResultToPointer(ckres);
 			indexTxData->changeKeysNew.compareFunc = CBNewKeyCompare;
 		}
+		CBMutexUnlock(mu);
 		if (c == &self->staged)
 			break;
 	}
 	// Look in index for value
+	CBMutexLock(self->diskMutex);
 	CBIndexFindWithParentsResult indexRes = CBDatabaseIndexFindWithParents(index, diskKey);
 	if (indexRes.status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error when attempting to find a key in an index to get the data length.");
@@ -1457,6 +1532,7 @@ bool CBDatabaseGetLengthNoMutex(CBDatabaseIndex * index, uint8_t * key, uint32_t
 	}
 	*length = indexRes.el.nodeLoc.cachedNode->elements[indexRes.el.index]->length;
 	CBFreeIndexElementPos(indexRes.el);
+	CBMutexUnlock(self->diskMutex);
 	return true;
 }
 CBIndexTxData * CBDatabaseGetIndexTxData(CBDatabaseTransactionChanges * tx, CBDatabaseIndex * index, bool create){
@@ -1484,7 +1560,6 @@ bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindWithParentsResult
 	CBIndexValue * indexValue = res->el.nodeLoc.cachedNode->elements[res->el.index];
 	if (! CBDatabaseAddDeletionEntry(index->database, indexValue->fileID, indexValue->pos, indexValue->length)) {
 		CBLogError("Failed to create a deletion entry for a key-value.");
-		CBMutexUnlock(index->database->databaseMutex);
 		return false;
 	}
 	// Make the length CB_DELETED_VALUE, signifying deletion of the data
@@ -1493,7 +1568,6 @@ bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindWithParentsResult
 	CBInt32ToArray(data, 0, CB_DELETED_VALUE);
 	if (! CBDatabaseAddOverwrite(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, res->el.nodeLoc.diskNodeLoc.indexFile, data, res->el.nodeLoc.diskNodeLoc.offset + 3 + (index->keySize + 10)*res->el.index, 4)) {
 		CBLogError("Failed to overwrite the index entry's length with CB_DELETED_VALUE to signify deletion.");
-		CBMutexUnlock(index->database->databaseMutex);
 		return false;
 	}
 	return true;
@@ -1570,6 +1644,9 @@ CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * in
 	}
 }
 bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBIndexElementPos * pos, CBIndexNodeLocation * right){
+	// Lock the disk mutex as the index will not be consistent during this time
+	CBMutexLock(index->database->diskMutex);
+	#define CBDatabaseIndexInsertReturn(ret) CBMutexUnlock(index->database->diskMutex); return ret;
 	bool bottom = pos->nodeLoc.cachedNode->children[0].diskNodeLoc.indexFile == 0 && pos->nodeLoc.cachedNode->children[0].diskNodeLoc.offset == 0;
 	// See if we can insert data in this node
 	if (pos->nodeLoc.cachedNode->numElements < CB_DATABASE_BTREE_ELEMENTS) {
@@ -1578,22 +1655,22 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 			if (! CBDatabaseIndexMoveElements(index, &pos->nodeLoc, &pos->nodeLoc, pos->index, pos->index + 1, pos->nodeLoc.cachedNode->numElements - pos->index, false)
 				|| (! bottom && ! CBDatabaseIndexMoveChildren(index, &pos->nodeLoc, &pos->nodeLoc, pos->index + 1, pos->index + 2, pos->nodeLoc.cachedNode->numElements - pos->index, false))) {
 				CBLogError("Could not move elements and children up one in a node for inserting a new element.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 		}
 		// Insert element and right child
 		if (! CBDatabaseIndexSetElement(index, &pos->nodeLoc, indexVal, pos->index, false)
 			|| (right && ! CBDatabaseIndexSetChild(index, &pos->nodeLoc, right, pos->index + 1, false))){
 			CBLogError("Could not set an element and child for adding to an unfull index node.");
-			return false;
+			CBDatabaseIndexInsertReturn(false);
 		}
 		// Increase number of elements
 		if (! CBDatabaseIndexSetNumElements(index, &pos->nodeLoc, pos->nodeLoc.cachedNode->numElements + 1, false)){
 			CBLogError("Could not increment the number of elements for an index node when inserting a node.");
-			return false;
+			CBDatabaseIndexInsertReturn(false);
 		}
 		// The element has been added, we can stop here.
-		return true;
+		CBDatabaseIndexInsertReturn(true);
 	}else{
 		// We need to split this node into two. Create cached node if we can.
 		CBIndexNodeLocation new;
@@ -1612,7 +1689,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 		if (! CBDatabaseIndexSetNumElements(index, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS, false)
 			|| ! CBDatabaseIndexSetNumElements(index, &new, CB_DATABASE_BTREE_HALF_ELEMENTS, true)) {
 			CBLogError("Could not set two split nodes ot have the number of elements equal to half the order.");
-			return false;
+			CBDatabaseIndexInsertReturn(false);
 		}
 		CBIndexValue * middleEl;
 		// Check where to insert new element
@@ -1628,7 +1705,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 				// Set remainder of elements as blank
 				|| ! CBDatabaseAppendZeros(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, new.diskNodeLoc.indexFile, CB_DATABASE_BTREE_HALF_ELEMENTS * (index->keySize + 10))) {
 				CBLogError("Could not move elements including the new element into the new node");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			if (! bottom
 				&& (! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, 0, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS, true)
@@ -1637,7 +1714,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 					// Set the remaining children
 					|| ! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, pos->index + 1, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS + 1, CB_DATABASE_BTREE_ELEMENTS - pos->index, true))){
 					CBLogError("Could not insert children into new node.");
-					return false;
+					CBDatabaseIndexInsertReturn(false);
 				}
 			// Set middle element
 			middleEl = pos->nodeLoc.cachedNode->elements[CB_DATABASE_BTREE_HALF_ELEMENTS];
@@ -1649,7 +1726,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 				// Set remaining elements as blank
 				|| ! CBDatabaseAppendZeros(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, new.diskNodeLoc.indexFile, CB_DATABASE_BTREE_HALF_ELEMENTS * (index->keySize + 10))){
 				CBLogError("Could not move elements into the new node, with the new element being the middle element.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			if (! bottom
 				&& (// Set right child
@@ -1657,7 +1734,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 					// Copy children
 					|| ! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, 1, CB_DATABASE_BTREE_HALF_ELEMENTS, true))) {
 					CBLogError("Could not move children into the new node, with the new element being the middle element.");
-					return false;
+					CBDatabaseIndexInsertReturn(false);
 				}
 			// Middle value is inserted value
 			middleEl = indexVal;
@@ -1674,7 +1751,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 				// Move new element into old node
 				|| ! CBDatabaseIndexSetElement(index, &pos->nodeLoc, indexVal, pos->index, false)) {
 				CBLogError("Could not insert the new element into the old node and move elements to the new node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			if (! bottom
 				&& (// Move children in old node to make room for the right child
@@ -1684,19 +1761,19 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 					// Copy children into new node
 					|| ! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS, 0, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, true))) {
 					CBLogError("Could not insert the children to the new node when the new element is in the first node.");
-					return false;
+					CBDatabaseIndexInsertReturn(false);
 				}
 		}
 		if (bottom){
 			// If in bottom make all children blank.
 			if (! CBDatabaseIndexSetBlankChildren(index, &new, 0, CB_DATABASE_BTREE_ELEMENTS + 1)) {
 				CBLogError("Could not insert blank children into the new bottom node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// Else set only the last CB_DATABASE_BTREE_HALF_ELEMENTS as blank
 		}else if (! CBDatabaseIndexSetBlankChildren(index, &new, CB_DATABASE_BTREE_HALF_ELEMENTS, CB_DATABASE_BTREE_HALF_ELEMENTS)){
 			CBLogError("Could not insert blank children into the new not bottom node.");
-			return false;
+			CBDatabaseIndexInsertReturn(false);
 		}
 		// If the root was split, create a new root
 		if (pos->nodeLoc.cachedNode == index->indexCache.cachedNode) {
@@ -1708,33 +1785,33 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 			// Write number of elements which is one
 			if (! CBDatabaseIndexSetNumElements(index, &index->indexCache, 1, true)) {
 				CBLogError("Could not write the number of elements to a new root node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// Write the middle element
 			if (! CBDatabaseIndexSetElement(index, &index->indexCache, middleEl, 0, true)) {
 				CBLogError("Could not set the middle element to a new root node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// Write blank elements
 			uint16_t elementsSize = (10+index->keySize)*(CB_DATABASE_BTREE_ELEMENTS-1);
 			if (! CBDatabaseAppendZeros(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, index->newLastFile, elementsSize)) {
 				CBLogError("Could not write the blank elements for a new root node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// Write left child
 			if (! CBDatabaseIndexSetChild(index, &index->indexCache, &pos->nodeLoc, 0, true)) {
 				CBLogError("Could not write the left child (old root) for a new root node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// Write right child
 			if (! CBDatabaseIndexSetChild(index, &index->indexCache, &new, 1, true)) {
 				CBLogError("Could not write the right child (new node) for a new root node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// Write blank children
 			if (! CBDatabaseIndexSetBlankChildren(index, &index->indexCache, 2, CB_DATABASE_BTREE_ELEMENTS-1)) {
 				CBLogError("Could not write the blank children for a new root node.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			uint8_t data[6];
 			// Overwrite root information in index
@@ -1742,10 +1819,10 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 			CBInt32ToArray(data, 2, index->indexCache.diskNodeLoc.offset);
 			if (! CBDatabaseAddOverwrite(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, 0, data, 6, 6)) {
 				CBLogError("Could not add an overwrite operation for the root node information in the index on disk.");
-				return false;
+				CBDatabaseIndexInsertReturn(false);
 			}
 			// All done
-			return true;
+			CBDatabaseIndexInsertReturn(true);
 		}
 		// Get the new pos for inserting the middle value and right node
 		if (pos->parentStack.cursor)
@@ -1976,7 +2053,6 @@ void CBDatabaseIndexSetNewNodePosition(CBDatabaseIndex * index, CBIndexNodeLocat
 	}
 }
 bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation * node, uint8_t numElements, bool append){
-	assert(numElements <= CB_DATABASE_BTREE_ELEMENTS);
 	if (node->cached)
 		node->cachedNode->numElements = numElements;
 	if (append) {
@@ -1991,12 +2067,11 @@ bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation 
 	return true;
 }
 CBIndexFindStatus CBDatabaseRangeIteratorFirst(CBDatabaseRangeIterator * it){
-	CBMutexLock(it->index->database->databaseMutex);
-	CBIndexFindStatus ret = CBDatabaseRangeIteratorFirstNoMutex(it);
-	CBMutexUnlock(it->index->database->databaseMutex);
-	return ret;
-}
-CBIndexFindStatus CBDatabaseRangeIteratorFirstNoMutex(CBDatabaseRangeIterator * it){
+	// Ensure commit ended ??? Could also add seperate mutexes per index to allow for more concurrency. Could also allow commiting and iteration at the same time by notifying the iterator that an array or disk iterator has been invalidated.
+	CBMutexLock(it->index->database->commitMutex);
+	CBMutexUnlock(it->index->database->commitMutex);
+	if (it->index->database->commitFail)
+		return false;
 	// Set the minimum and maximum elements for the iterators.
 	it->currentIt.minElement = it->minElement;
 	it->currentIt.maxElement = it->maxElement;
@@ -2086,7 +2161,7 @@ bool CBDatabaseRangeIteratorGetKey(CBDatabaseRangeIterator * it, uint8_t * key){
 		case CB_KEY_DISK:
 			memcpy(key, it->indexPos.nodeLoc.cachedNode->elements[it->indexPos.index]->key, it->index->keySize);
 			return true;
-		case CB_KEY_NONE:
+		default:
 			return false;
 	}
 }
@@ -2149,12 +2224,10 @@ bool CBDatabaseRangeIteratorKeyIfLesser(uint8_t ** lowestKey, CBRangeIterator * 
 	return false;
 }
 CBIndexFindStatus CBDatabaseRangeIteratorLast(CBDatabaseRangeIterator * it){
-	CBMutexLock(it->index->database->databaseMutex);
-	CBIndexFindStatus ret = CBDatabaseRangeIteratorLastNoMutex(it);
-	CBMutexUnlock(it->index->database->databaseMutex);
-	return ret;
-}
-CBIndexFindStatus CBDatabaseRangeIteratorLastNoMutex(CBDatabaseRangeIterator * it){
+	CBMutexLock(it->index->database->commitMutex);
+	CBMutexUnlock(it->index->database->commitMutex);
+	if (it->index->database->commitFail)
+		return false;
 	// Go to the end of the txKeys
 	it->currentIt.minElement = it->minElement;
 	it->currentIt.maxElement = it->maxElement;
@@ -2250,7 +2323,6 @@ CBIndexFindStatus CBDatabaseRangeIteratorLastNoMutex(CBDatabaseRangeIterator * i
 }
 CBIndexFindStatus CBDatabaseRangeIteratorNext(CBDatabaseRangeIterator * it){
 	// Get the key and then iterate all keys which are equal to it
-	CBMutexLock(it->index->database->databaseMutex);
 	uint8_t key[it->index->keySize];
 	CBDatabaseRangeIteratorGetKey(it, key);
 	CBIndexTxData * currentIndexTxData = CBDatabaseGetIndexTxData(&it->index->database->current, it->index, false);
@@ -2272,13 +2344,10 @@ CBIndexFindStatus CBDatabaseRangeIteratorNext(CBDatabaseRangeIterator * it){
 	// Iterate if invalid staged keys
 	CBDatabaseRangeIteratorIterateStagedIfInvalid(it, currentIndexTxData, stagedIndexTxData, true);
 	if (it->gotIndEl && memcmp(key, it->indexPos.nodeLoc.cachedNode->elements[it->indexPos.index]->key, it->index->keySize) == 0) {
-		if (CBDatabaseRangeIteratorIterateIndex(it, true) == CB_DATABASE_INDEX_ERROR) {
-			CBMutexUnlock(it->index->database->databaseMutex);
+		if (CBDatabaseRangeIteratorIterateIndex(it, true) == CB_DATABASE_INDEX_ERROR)
 			return CB_DATABASE_INDEX_ERROR;
-		}
 	}
 	bool got = it->gotCurrentEl || it->gotCurrentChangedEl || it->gotStagedEl || it->gotStagedChangedEl || it->gotIndEl;
-	CBMutexUnlock(it->index->database->databaseMutex);
 	return got ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND;
 }
 CBIndexFindStatus CBDatabaseRangeIteratorIterateIndex(CBDatabaseRangeIterator * it, bool forwards){
@@ -2398,12 +2467,8 @@ bool CBDatabaseRangeIteratorRead(CBDatabaseRangeIterator * it, uint8_t * data, u
 	return CBDatabaseReadValue(it->index, key, data, dataLen, offset, false) == CB_DATABASE_INDEX_FOUND;
 }
 CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, bool staged){
-	CBMutexLock(index->database->databaseMutex);
-	CBIndexFindStatus ret = CBDatabaseReadValueNoMutex(index, key, data, dataSize, offset, staged);
-	CBMutexUnlock(index->database->databaseMutex);
-	return ret;
-}
-CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, bool staged){
+	if (index->database->commitFail)
+		return false;
 	uint32_t highestWritten = dataSize;
 	bool readyForNext = false;
 	CBIndexValue * idxVal;
@@ -2411,16 +2476,27 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 	CBIndexTxData * indexTxData;
 	uint8_t * nextKey;
 	// Get the index tx data
+	if (staged)
+		CBMutexLock(index->database->stagedMutex);
 	indexTxData = CBDatabaseGetIndexTxData(staged ? &index->database->staged : &index->database->current, index, false);
 	if (indexTxData) {
 		// If there is a delete entry, it cannot be found.
-		if (CBAssociativeArrayFind(&indexTxData->deleteKeys, key).found)
+		if (CBAssociativeArrayFind(&indexTxData->deleteKeys, key).found){
+			if (staged)
+				CBMutexUnlock(index->database->stagedMutex);
 			return CB_DATABASE_INDEX_NOT_FOUND;
+		}
 		// Look to see if this key is being changed to by searching changeKeysNew so that we use the old key for staged or disk.
 		indexTxData->changeKeysNew.compareFunc = CBNewKeyWithSingleKeyCompare;
 		CBFindResult ckres = CBAssociativeArrayFind(&indexTxData->changeKeysNew, key);
 		nextKey = ckres.found ? CBFindResultToPointer(ckres) : key;
 		indexTxData->changeKeysNew.compareFunc = CBNewKeyCompare;
+		// If there is a change key entry with this being the old key, without there being an entry with this as the new key, it cannot be found.
+		if (!ckres.found && CBAssociativeArrayFind(&indexTxData->changeKeysOld, key).found) {
+			if (staged)
+				CBMutexUnlock(index->database->stagedMutex);
+			return CB_DATABASE_INDEX_NOT_FOUND;
+		}
 		// Loop through write entrys
 		uint8_t compareDataMin[index->keySize + 4];
 		uint8_t compareDataMax[index->keySize + 4];
@@ -2437,6 +2513,8 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 			if (valOffset == CB_OVERWRITE_DATA) {
 				// Take data from this
 				memcpy(data, writeValue + offset, dataSize);
+				if (staged)
+					CBMutexUnlock(index->database->stagedMutex);
 				return CB_DATABASE_INDEX_FOUND;
 			}
 			// Read from this subsection write if possible
@@ -2462,15 +2540,20 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 					if (! readyForNext) {
 						if (staged) {
 							// Now look for disk index value
+							CBMutexLock(index->database->diskMutex);
 							CBIndexFindResult res = CBDatabaseIndexFind(index, nextKey);
 							if (res.status == CB_DATABASE_INDEX_ERROR) {
 								CBLogError("Could not find an index value for reading.");
+								CBMutexUnlock(index->database->diskMutex);
+								CBMutexUnlock(index->database->stagedMutex);
 								return CB_DATABASE_INDEX_ERROR;
 							}
 							idxVal = res.data.el;
 							if (! CBDatabaseGetFile(index->database, &file, CB_DATABASE_FILE_TYPE_DATA, 0, idxVal->fileID)) {
 								CBLogError("Could not open file for reading part of a value.");
 								CBReleaseObject(idxVal);
+								CBMutexUnlock(index->database->diskMutex);
+								CBMutexUnlock(index->database->stagedMutex);
 								return CB_DATABASE_INDEX_ERROR;
 							}
 						}
@@ -2482,14 +2565,20 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 					if (staged) {
 						if (! CBFileSeek(file, idxVal->pos + readOffset)){
 							CBLogError("Could not read seek file for reading part of a value.");
+							CBMutexUnlock(index->database->diskMutex);
+							CBMutexUnlock(index->database->stagedMutex);
 							return CB_DATABASE_INDEX_ERROR;
 						}
 						if (! CBFileRead(file, data + dataOffset, readLen)) {
 							CBLogError("Could not read from file for value.");
+							CBMutexUnlock(index->database->diskMutex);
+							CBMutexUnlock(index->database->stagedMutex);
 							return CB_DATABASE_INDEX_ERROR;
 						}
-					}else if (CBDatabaseReadValueNoMutex(index, nextKey, data + dataOffset, readLen, readOffset, true) != CB_DATABASE_INDEX_FOUND){
+					}else if (CBDatabaseReadValue(index, nextKey, data + dataOffset, readLen, readOffset, true) != CB_DATABASE_INDEX_FOUND){
 						CBLogError("Could not read from staged changes for reading part of a value.");
+						CBMutexUnlock(index->database->diskMutex);
+						CBMutexUnlock(index->database->stagedMutex);
 						return CB_DATABASE_INDEX_ERROR;
 					}
 				}
@@ -2503,51 +2592,59 @@ CBIndexFindStatus CBDatabaseReadValueNoMutex(CBDatabaseIndex * index, uint8_t * 
 			return CB_DATABASE_INDEX_FOUND;
 	}else
 		nextKey = key;
+	if (staged)
+		CBMutexUnlock(index->database->stagedMutex);
 	// Read in the rest of the data
 	if (! readyForNext) {
 		if (staged) {
+			CBMutexLock(index->database->diskMutex);
 			CBIndexFindResult res = CBDatabaseIndexFind(index, nextKey);
 			if (res.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("Could not find an index value for reading.");
+				CBMutexUnlock(index->database->diskMutex);
 				return CB_DATABASE_INDEX_ERROR;
 			}
-			if (res.status != CB_DATABASE_INDEX_FOUND)
+			if (res.status != CB_DATABASE_INDEX_FOUND){
+				CBMutexUnlock(index->database->diskMutex);
 				return res.status;
+			}
 			idxVal = res.data.el;
 			// If deleted not found
 			if (idxVal->length == CB_DELETED_VALUE){
 				CBReleaseObject(idxVal);
+				CBMutexUnlock(index->database->diskMutex);
 				return CB_DATABASE_INDEX_NOT_FOUND;
 			}
 			if (! CBDatabaseGetFile(index->database, &file, CB_DATABASE_FILE_TYPE_DATA, 0, idxVal->fileID)) {
 				CBLogError("Could not open file for reading part of a value.");
 				CBReleaseObject(idxVal);
+				CBMutexUnlock(index->database->diskMutex);
 				return CB_DATABASE_INDEX_ERROR;
 			}
 		}
 	}
-	if (staged) {
-		if (! CBFileSeek(file, idxVal->pos + offset)) {
-			CBLogError("Could not read seek file for reading part of a value.");
-			return CB_DATABASE_INDEX_ERROR;
-		}
-		if (! CBFileRead(file, data, highestWritten)) {
-			CBLogError("Could not read from file for value.");
-			return CB_DATABASE_INDEX_ERROR;
-		}
-		CBReleaseObject(idxVal);
-	}else
-		return CBDatabaseReadValueNoMutex(index, nextKey, data, highestWritten, offset, true);
+	if (!staged)
+		return CBDatabaseReadValue(index, nextKey, data, highestWritten, offset, true);
+	if (! CBFileSeek(file, idxVal->pos + offset)) {
+		CBLogError("Could not read seek file for reading part of a value.");
+		CBMutexUnlock(index->database->diskMutex);
+		return CB_DATABASE_INDEX_ERROR;
+	}
+	if (! CBFileRead(file, data, highestWritten)) {
+		CBLogError("Could not read from file for value.");
+		CBMutexUnlock(index->database->diskMutex);
+		return CB_DATABASE_INDEX_ERROR;
+	}
+	CBReleaseObject(idxVal);
+	CBMutexUnlock(index->database->diskMutex);
 	return CB_DATABASE_INDEX_FOUND;
 }
 bool CBDatabaseRemoveValue(CBDatabaseIndex * index, uint8_t * key, bool stage) {
-	CBMutexLock(index->database->databaseMutex);
-	bool ret = CBDatabaseRemoveValueNoMutex(index, key, stage);
-	CBMutexUnlock(index->database->databaseMutex);
-	return ret;
-}
-bool CBDatabaseRemoveValueNoMutex(CBDatabaseIndex * index, uint8_t * key, bool stage) {
+	if (index->database->commitFail)
+		return false;
 	// Get the index tx data
+	if (stage)
+		CBMutexLock(index->database->stagedMutex);
 	CBIndexTxData * indexTxData = CBDatabaseGetIndexTxData(stage ? &index->database->staged : &index->database->current, index, true);
 	// Remove all instances of the key in the values writes array
 	indexTxData->valueWrites.compareFunc = CBTransactionKeysCompare;
@@ -2572,6 +2669,7 @@ bool CBDatabaseRemoveValueNoMutex(CBDatabaseIndex * index, uint8_t * key, bool s
 		bool foundKey = false;
 		if (! stage) {
 			// Look for the old key being staged
+			CBMutexLock(index->database->stagedMutex);
 			CBIndexTxData * stagedIndexTxData = CBDatabaseGetIndexTxData(&index->database->staged, index, false);
 			if (stagedIndexTxData){
 				stagedIndexTxData->valueWrites.compareFunc = CBTransactionKeysCompare;
@@ -2580,16 +2678,20 @@ bool CBDatabaseRemoveValueNoMutex(CBDatabaseIndex * index, uint8_t * key, bool s
 					foundKey = true;
 				stagedIndexTxData->valueWrites.compareFunc = CBTransactionKeysAndOffsetCompare;
 			}
+			CBMutexUnlock(index->database->stagedMutex);
 		}
 		if (! foundKey) {
+			CBMutexLock(index->database->diskMutex);
 			CBIndexFindWithParentsResult fres = CBDatabaseIndexFindWithParents(index, key);
 			CBFreeIndexElementPos(fres.el);
 			if (fres.status == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("There was an error whilst trying to find a previous key in the index to see if a change key entry should be made.");
+				CBMutexUnlock(index->database->diskMutex);
 				return false;
 			}
 			if (fres.status != CB_DATABASE_INDEX_FOUND)
 				return true;
+			CBMutexUnlock(index->database->diskMutex);
 		}
 	}
 	// See if key exists to be deleted already
@@ -2611,20 +2713,22 @@ bool CBDatabaseRemoveValueNoMutex(CBDatabaseIndex * index, uint8_t * key, bool s
 		if (stage)
 			index->database->stagedSize -= index->keySize*2;
 	}
+	if (stage)
+		CBMutexUnlock(index->database->stagedMutex);
 	return true;
 }
 bool CBDatabaseStage(CBDatabase * self){
-	CBMutexLock(self->databaseMutex);
-	bool ret = CBDatabaseStageNoMutex(self);
-	CBMutexUnlock(self->databaseMutex);
-	return ret;
-}
-bool CBDatabaseStageNoMutex(CBDatabase * self){
+	// Wait for commit to complete
+	CBMutexLock(self->commitMutex);
+	CBMutexUnlock(self->commitMutex);
+	if (self->commitFail)
+		return false;
+	CBMutexLock(self->stagedMutex);
 	// Go through all indicies
 	CBAssociativeArrayForEach(CBIndexTxData * indexTxData, &self->current.indexes){
 		// Change keys
 		CBAssociativeArrayForEach(uint8_t * changeKey, &indexTxData->changeKeysOld)
-			if (! CBDatabaseChangeKeyNoMutex(indexTxData->index, changeKey, changeKey + indexTxData->index->keySize, true)) {
+			if (! CBDatabaseChangeKey(indexTxData->index, changeKey, changeKey + indexTxData->index->keySize, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
 				return false;
 			}
@@ -2633,17 +2737,18 @@ bool CBDatabaseStageNoMutex(CBDatabase * self){
 			uint32_t * offsetPtr = (uint32_t *)(valueWrite + indexTxData->index->keySize);
 			uint32_t * sizePtr = offsetPtr + 1;
 			uint8_t * dataPtr = (uint8_t *)(sizePtr + 1);
-			CBDatabaseAddWriteValueNoMutex(valueWrite, indexTxData->index, valueWrite, *sizePtr, dataPtr, *offsetPtr, true);
+			CBDatabaseAddWriteValue(valueWrite, indexTxData->index, valueWrite, *sizePtr, dataPtr, *offsetPtr, true);
 		}
 		// Remove the value writes array onFree function because we have used the data for the staging
 		indexTxData->valueWrites.onFree = NULL;
 		// Deletions
 		CBAssociativeArrayForEach(uint8_t * deleteKey, &indexTxData->deleteKeys)
-			if (! CBDatabaseRemoveValueNoMutex(indexTxData->index, deleteKey, true)) {
+			if (! CBDatabaseRemoveValue(indexTxData->index, deleteKey, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
 				return false;
 			}
 	}
+	CBMutexUnlock(self->stagedMutex);
 	// Free index tx data
 	CBFreeAssociativeArray(&self->current.indexes);
 	CBInitAssociativeArray(&self->current.indexes, CBIndexCompare, NULL, CBFreeIndexTxData);
@@ -2653,7 +2758,7 @@ bool CBDatabaseStageNoMutex(CBDatabase * self){
 	uint64_t now = CBGetMilliseconds();
 	if (self->stagedSize > self->cacheLimit
 		|| self->lastCommit + self->commitGap < now) {
-		if (! CBDatabaseCommitNoMutex(self)) {
+		if (! CBDatabaseCommit(self)) {
 			CBLogError("There was a problem commiting to disk.");
 			return false;
 		}
@@ -2662,6 +2767,9 @@ bool CBDatabaseStageNoMutex(CBDatabase * self){
 	return true;
 }
 void CBDatabaseWriteConcatenatedValue(CBDatabaseIndex * index, uint8_t * key, uint8_t numDataParts, uint8_t ** data, uint32_t * dataSize){
+	if (index->database->commitFail)
+		// Last commit has failed. Silently fail. Other function calls will report the error.
+		return;
 	// Create element
 	uint32_t size = 0;
 	for (uint8_t x = 0; x < numDataParts; x++)
@@ -2678,10 +2786,14 @@ void CBDatabaseWriteConcatenatedValue(CBDatabaseIndex * index, uint8_t * key, ui
 	CBDatabaseAddWriteValue(valueWrite, index, key, size, dataPtr, CB_OVERWRITE_DATA, false);
 }
 void CBDatabaseWriteValue(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size){
+	if (index->database->commitFail)
+		return;
 	// Write element by overwriting previous data
 	CBDatabaseWriteValueSubSection(index, key, data, size, CB_OVERWRITE_DATA);
 }
 void CBDatabaseWriteValueSubSection(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size, uint32_t offset){
+	if (index->database->commitFail)
+		return;
 	// Create element
 	uint8_t * valueWrite = malloc(index->keySize + 8 + size);
 	uint32_t * intPtr = (uint32_t *)(valueWrite + index->keySize + 4);

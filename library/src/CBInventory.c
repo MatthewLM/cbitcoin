@@ -55,7 +55,7 @@ void CBDestroyInventory(void * vself){
 	}
 	CBDestroyMessage(self);
 }
-void CBFreeInventory(void * self){
+void CBFreeInventory(void * self) {
 	CBDestroyInventory(self);
 	free(self);
 }
@@ -72,16 +72,16 @@ uint32_t CBInventoryDeserialise(CBInventory * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBInventory with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 37) {
 		CBLogError("Attempting to deserialise a CBInventory with less bytes than required for one item.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt itemNum = CBVarIntDecode(bytes, 0);
 	if (itemNum.val > 50000) {
 		CBLogError("Attempting to deserialise a CBInventory with a var int over 50000.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->itemNum = 0;
 	self->itemFront = NULL;
@@ -92,11 +92,11 @@ uint32_t CBInventoryDeserialise(CBInventory * self){
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		CBInventoryItem * item = CBNewInventoryItemFromData(data);
 		// Deserialise
-		uint8_t len = CBInventoryItemDeserialise(item);
-		if (!len){
+		uint32_t len = CBInventoryItemDeserialise(item);
+		if (len == CB_DESERIALISE_ERROR){
 			CBLogError("CBInventory cannot be deserialised because of an error with the CBInventoryItem number %u.", x);
 			CBReleaseObject(data);
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// Take item
 		CBInventoryTakeInventoryItem(self, item);

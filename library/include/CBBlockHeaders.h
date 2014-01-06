@@ -26,7 +26,6 @@
 
 // Cosntants
 
-#define CB_BLOCK_HEADERS_MAX_SIZE 178009
 #define CBGetBlockHeaders(x) ((CBBlockHeaders *)x)
 
 /**

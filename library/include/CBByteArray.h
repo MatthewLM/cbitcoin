@@ -85,6 +85,7 @@ CBByteArray * CBNewByteArrayWithData(uint8_t * data, uint32_t size);
  @returns The new CBByteArray object.
  */
 CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data, uint32_t size);
+CBByteArray * CBNewByteArrayFromHex(char * hex);
 
 /**
  @brief Initialises a CBByteArray object from a C string. The termination character is not included in the new CBByteArray.
@@ -121,6 +122,7 @@ void CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size);
  @param size Size in bytes for the new array.
  */
 void CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t size);
+void CBInitByteArrayFromHex(CBByteArray * self, char * hex);
 
 /**
  @brief Releases and frees all fo the objects stored by the CBByteArray object.
@@ -295,6 +297,7 @@ CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t l
  @returns The new CBByteArray.
  */
 CBByteArray * CBByteArraySubReference(CBByteArray * self, uint32_t offset, uint32_t length);
-void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output);
+void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output, bool backwards);
+bool CBStrHexToBytes(char * hex, uint8_t * output);
 
 #endif

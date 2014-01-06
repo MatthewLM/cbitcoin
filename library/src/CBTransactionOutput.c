@@ -79,11 +79,11 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBTransactionOutput with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 9) {
 		CBLogError("Attempting to deserialise a CBTransactionOutput with less than 9 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	uint8_t x = CBByteArrayGetByte(bytes, 8); // Check length for decoding CBVarInt
 	if (x < 253)
@@ -96,17 +96,17 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self){
 		x = 17;
 	if (bytes->length < x) {
 		CBLogError("Attempting to deserialise a CBTransactionOutput with less than %i bytes required.", x);
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt scriptLen = CBVarIntDecode(bytes, 8); // Can now decode.
 	if (scriptLen.val > 10000) {
 		CBLogError("Attempting to deserialise a CBTransactionInput with too big a script.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	uint32_t reqLen = (uint32_t)(8 + scriptLen.size + scriptLen.val);
 	if (bytes->length < reqLen) {
 		CBLogError("Attempting to deserialise a CBTransactionOutput with less bytes than needed according to the length for the script. %i < %i", bytes->length, reqLen);
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->value = CBByteArrayReadInt64(bytes, 0);
@@ -135,16 +135,8 @@ bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash){
 	}
 	return false;
 }
-CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self){
-	if (CBScriptIsKeyHash(self->scriptObject))
-		return CB_TX_OUTPUT_TYPE_KEYHASH;
-	if (CBScriptIsMultisig(self->scriptObject))
-		return CB_TX_OUTPUT_TYPE_MULTISIG;
-	if (CBScriptIsP2SH(self->scriptObject))
-		return CB_TX_OUTPUT_TYPE_P2SH;
-	if (CBScriptIsPubkey(self->scriptObject))
-		return CB_TX_OUTPUT_TYPE_PUBKEY;
-	return CB_TX_OUTPUT_TYPE_UNKNOWN;
+CBScriptOutputType CBTransactionOutputGetType(CBTransactionOutput * self){
+	return CBScriptOutputGetType(self->scriptObject);
 }
 uint32_t CBTransactionOutputSerialise(CBTransactionOutput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;

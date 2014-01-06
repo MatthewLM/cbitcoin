@@ -74,11 +74,11 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBVersion with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 46) {
 		CBLogError("Attempting to deserialise a CBVersion with less than 46 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	self->services = (CBVersionServices) CBByteArrayReadInt64(bytes, 4);
@@ -87,10 +87,10 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 	CBByteArray * data = CBByteArraySubReference(bytes, 20, bytes->length-20);
 	self->addRecv = CBNewNetworkAddressFromData(data, false);
 	uint32_t len = CBNetworkAddressDeserialise(self->addRecv, false); // No time from version message.
-	if (! len){
+	if (len == CB_DESERIALISE_ERROR){
 		CBLogError("CBVersion cannot be deserialised because of an error with the receiving address.");
 		CBReleaseObject(data);
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	// Readjust CBByteArray length for recieving address
 	data->length = len;
@@ -98,16 +98,16 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 	if (self->version >= 106) { // ??? Very old. No need for backwards compatibility? Might as well.
 		if (bytes->length < 85) {
 			CBLogError("Attempting to deserialise a CBVersion with less than 85 bytes required.");
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// Source address deserialisation
 		data = CBByteArraySubReference(bytes, 46, bytes->length-46);
 		self->addSource = CBNewNetworkAddressFromData(data, false);
 		uint32_t len = CBNetworkAddressDeserialise(self->addSource, false); // No time from version message.
-		if (! len){
+		if (len == CB_DESERIALISE_ERROR){
 			CBLogError("CBVersion cannot be deserialised because of an error with the source address.");
 			CBReleaseObject(data);
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// Readjust CBByteArray length for source address
 		data->length = len;
@@ -116,16 +116,16 @@ uint32_t CBVersionDeserialise(CBVersion * self){
 		uint8_t x = CBByteArrayGetByte(bytes, 80); // Check length for decoding CBVarInt
 		if (x > 253){
 			CBLogError("Attempting to deserialise a CBVersion with a var string that is too big.");
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		CBVarInt varInt = CBVarIntDecode(bytes, 80);
 		if (bytes->length < 84 + varInt.size + varInt.val) {
 			CBLogError("Attempting to deserialise a CBVersion without enough space to cover the userAgent and block height.");
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		if (varInt.val > 400) { // cbitcoin accepts userAgents upto 400 bytes
 			CBLogError("Attempting to deserialise a CBVersion with a userAgent over 400 bytes.");
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		self->userAgent = CBNewByteArraySubReference(bytes, 80 + varInt.size, (uint32_t)varInt.val);
 		self->blockHeight = CBByteArrayReadInt32(bytes, 80 + varInt.size + (uint32_t)varInt.val);

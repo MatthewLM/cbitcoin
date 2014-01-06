@@ -126,18 +126,18 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBTransaction with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 10) {
 		CBLogError("Attempting to deserialise a CBTransaction with less than 10 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	CBVarInt inputOutputLen = CBVarIntDecode(bytes, 4);
 	if (! inputOutputLen.val
 		|| inputOutputLen.val * 41 > bytes->length - 10) {
 		CBLogError("Attempting to deserialise a CBTransaction with a bad var int for the number of inputs.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	uint32_t cursor = 4 + inputOutputLen.size;
 	self->inputNum = (uint32_t)inputOutputLen.val;
@@ -146,10 +146,10 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		CBTransactionInput * input = CBNewTransactionInputFromData(data);
 		uint32_t len = CBTransactionInputDeserialise(input);
-		if (! len){
+		if (len == CB_DESERIALISE_ERROR){
 			CBLogError("CBTransaction cannot be deserialised because of an error with the input number %u.", x);
 			CBReleaseObject(data);
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// The input was deserialised correctly. Now adjust the length and add it to the transaction.
 		data->length = len;
@@ -159,13 +159,13 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 	}
 	if (bytes->length < cursor + 5) { // Needs at least 5 more for the output CBVarInt and the lockTime
 		CBLogError("Attempting to deserialise a CBTransaction with not enough bytes for the outputs and lockTime.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	inputOutputLen = CBVarIntDecode(bytes, cursor);
 	if (inputOutputLen.val == 0
 		|| inputOutputLen.val * 9 > bytes->length - 10) {
 		CBLogError("Attempting to deserialise a CBTransaction with a bad var int for the number of outputs.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	cursor += inputOutputLen.size; // Move past output CBVarInt
 	self->outputNum = (uint32_t)inputOutputLen.val;
@@ -174,10 +174,10 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		CBTransactionOutput * output = CBNewTransactionOutputFromData(data);
 		uint32_t len = CBTransactionOutputDeserialise(output);
-		if (! len){
+		if (len == CB_DESERIALISE_ERROR){
 			CBLogError("CBTransaction cannot be deserialised because of an error with the output number %u.", x);
 			CBReleaseObject(data);
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// The output was deserialised correctly. Now adjust the length and add it to the transaction.
 		data->length = len;
@@ -187,7 +187,7 @@ uint32_t CBTransactionDeserialise(CBTransaction * self){
 	}
 	if (bytes->length < cursor + 4) { // Ensure 4 bytes are available for lockTime
 		CBLogError("Attempting to deserialise a CBTransaction with not enough bytes for the lockTime.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->lockTime = CBByteArrayReadInt32(bytes, cursor);
 	return cursor + 4;
@@ -320,9 +320,9 @@ void CBTransactionHashToString(CBTransaction * self, char output[CB_TX_HASH_STR_
 		sprintf(output + x*2, "%02x", hash[x]);
 	output[40] = '\0';
 }
-bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutput * prevOut, CBScript * p2sh){
+bool CBTransactionInputIsStandard(CBScript * inputScript, CBScript * outputScript, CBScript * p2sh){
 	// Get the number of stack items
-	uint16_t num = CBScriptIsPushOnly(input->scriptObject);
+	uint16_t num = CBScriptIsPushOnly(inputScript);
 	if (p2sh) {
 		if (CBScriptIsKeyHash(p2sh)) {
 			if (num != 3)
@@ -337,7 +337,7 @@ bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutpu
 			return false;
 		return true;
 	}
-	CBTransactionOutputType type = CBTransactionOutputGetType(prevOut);
+	CBScriptOutputType type = CBScriptOutputGetType(outputScript);
 	if (type == CB_TX_OUTPUT_TYPE_UNKNOWN)
 		return false;
 	if (type == CB_TX_OUTPUT_TYPE_KEYHASH) {
@@ -346,7 +346,7 @@ bool CBTransactionInputIsStandard(CBTransactionInput * input, CBTransactionOutpu
 	}else if (type == CB_TX_OUTPUT_TYPE_PUBKEY) {
 		if (num != 1)
 			return false;
-	}else if (num != CBScriptOpGetNumber(CBByteArrayGetByte(prevOut->scriptObject, 0)))
+	}else if (num != CBScriptOpGetNumber(CBByteArrayGetByte(outputScript, 0)))
 		return false;
 	return true;
 }
@@ -367,7 +367,7 @@ bool CBTransactionIsStandard(CBTransaction * self) {
 			return false;
 	}
 	for (uint32_t x = 0; x < self->outputNum; x++) {
-		CBTransactionOutputType type = CBTransactionOutputGetType(self->outputs[x]);
+		CBScriptOutputType type = CBTransactionOutputGetType(self->outputs[x]);
 		if (type == CB_TX_OUTPUT_TYPE_UNKNOWN)
 			return false;
 		if (type == CB_TX_OUTPUT_TYPE_MULTISIG) {

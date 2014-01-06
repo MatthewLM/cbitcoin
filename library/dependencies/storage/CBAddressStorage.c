@@ -35,8 +35,8 @@ bool CBAddressStorageDeleteAddress(CBDepObject uself, void * address){
 	CBAddressStorage * self = uself.ptr;
 	CBNetworkAddress * addrObj = address;
 	uint8_t key[18];
-	memcpy(key, CBByteArrayGetData(addrObj->ip), 16);
-	CBInt16ToArray(key, 16, addrObj->port);
+	memcpy(key, CBByteArrayGetData(addrObj->sockAddr.ip), 16);
+	CBInt16ToArray(key, 16, addrObj->sockAddr.port);
 	// Remove address
 	if (! CBDatabaseRemoveValue(self->addrs, key, false)) {
 		CBLogError("Could not remove an address from storage.");
@@ -74,8 +74,7 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 		// Create network address object and add to the address manager.
 		CBByteArray * ip = CBNewByteArrayWithDataCopy(key, 16);
 		CBNetworkAddress * addr = CBNewNetworkAddress(CBArrayToInt64(data, 0),
-													  ip,
-													  CBArrayToInt16(key, 16),
+													  (CBSocketAddress){ip,CBArrayToInt16(key, 16)},
 													  (CBVersionServices) CBArrayToInt64(data, 8),
 													  true);
 		addr->penalty = CBArrayToInt32(data, 16);
@@ -94,8 +93,8 @@ bool CBAddressStorageSaveAddress(CBDepObject uself, void * address){
 	CBNetworkAddress * addrObj = address;
 	uint8_t key[18], data[20];
 	// Create key
-	memcpy(key, CBByteArrayGetData(addrObj->ip), 16);
-	CBInt16ToArray(key, 16, addrObj->port);
+	memcpy(key, CBByteArrayGetData(addrObj->sockAddr.ip), 16);
+	CBInt16ToArray(key, 16, addrObj->sockAddr.port);
 	// Create data
 	CBInt64ToArray(data, 0, addrObj->lastSeen);
 	CBInt64ToArray(data, 8, (uint64_t) addrObj->services);

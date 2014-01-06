@@ -13,8 +13,8 @@
 INCDIR = $(CURDIR)/library/include
 BINDIR = $(CURDIR)/bin
 INCCLIENT = -I/$(CURDIR)/client-server/include
-CFLAGS += -Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I$(INCDIR) -I/opt/local/ssl/include -I/opt/local/include -I$(CURDIR)/library/dependencies/threads -Werror 
 LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
+CFLAGS += -I$(INCDIR) -I$(CURDIR)/library/dependencies/threads @CONFIGFLAGS@
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
   #export OSTYPE
@@ -31,7 +31,6 @@ else # Assuming Linux for now
 	export LD_LIBRARY_PATH = $(BINDIR):/usr/local/lib
 	CFLAGS += -DCB_LINUX
 endif
-LIBCFLAGS = @LIB_COMPILE_CONFIG_FLAGS@
 
 # Directory names
 
@@ -108,7 +107,7 @@ crypto : build/CBOpenSSLCrypto.o | bin
 # Crypto library compile
 
 build/CBOpenSSLCrypto.o: library/dependencies/crypto/CBOpenSSLCrypto.c
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # Random library target linking
 
@@ -118,7 +117,7 @@ random : build/CBRand.o | bin
 # Random library compile
 
 build/CBRand.o: library/dependencies/random/CBRand.c
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # Network library target linking
 
@@ -128,10 +127,10 @@ network : build/CBLibEventSockets.o build/CBCallbackQueue.o | bin
 # Network library compile
 
 build/CBCallbackQueue.o: library/dependencies/sockets/CBCallbackQueue.c library/dependencies/sockets/CBCallbackQueue.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBLibEventSockets.o: library/dependencies/sockets/CBLibEventSockets.c library/dependencies/sockets/CBLibEventSockets.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 	
 # Threads library target linking
 
@@ -141,7 +140,7 @@ threads : build/CBThreads.o | bin
 # Threads library compile
 
 build/CBThreads.o: library/dependencies/threads/CBThreads.c library/dependencies/threads/CBThreads.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # Logging library target linking
 
@@ -151,7 +150,7 @@ logging : build/CBLog.o | bin
 # Logging library compile
 
 build/CBLog.o: library/dependencies/logging/CBLog.c library/dependencies/logging/CBLog.h 
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # File IO library target linking
 
@@ -164,13 +163,13 @@ file-no-ec : build/CBFileNoEC.o | bin
 # File IO library compile
 
 build/CBHamming72.o: library/dependencies/storage/CBHamming72.c library/dependencies/storage/CBHamming72.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBFileEC.o: library/dependencies/storage/CBFileEC.c library/dependencies/storage/CBFileEC.h library/dependencies/storage/CBHamming72.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBFileNoEC.o: library/dependencies/storage/CBFileNoEC.c library/dependencies/storage/CBFileNoEC.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # Storage library files
 
@@ -185,19 +184,19 @@ storage : build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.
 # Storage library compile
 
 build/CBAccounterStorage.o: library/dependencies/storage/CBAccounterStorage.c library/dependencies/storage/CBAccounterStorage.h library/dependencies/storage/CBDatabase.h 
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBAddressStorage.o: library/dependencies/storage/CBAddressStorage.c library/dependencies/storage/CBAddressStorage.h library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBBlockChainStorage.o: library/dependencies/storage/CBBlockChainStorage.c library/dependencies/storage/CBBlockChainStorage.h library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBNodeStorage.o: library/dependencies/storage/CBNodeStorage.c library/dependencies/storage/CBNodeStorage.h library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 build/CBDatabase.o: library/dependencies/storage/CBDatabase.c library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # Clean
 
@@ -228,7 +227,7 @@ CLIENT_FILES = $(wildcard client-server/src/*.c)
 CLIENT_OBJS = $(patsubst client-server/src/%.c, build/%.o, $(CLIENT_FILES))
 
 $(CLIENT_OBJS): build/%.o: client-server/src/%.c | build
-	$(CC) -c $(CFLAGS) $(LIBCFLAGS) $(INCCLIENT) $< -o $@
+	$(CC) -c $(CFLAGS) $(INCCLIENT) $< -o $@
 	$(CC) -I$(INCDIR) $(INCCLIENT) -MM $< > build/$*.d
 	@cp build/$*.d build/$*.P
 	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
@@ -236,5 +235,5 @@ $(CLIENT_OBJS): build/%.o: client-server/src/%.c | build
 	@rm build/$*.P
 
 client : $(CLIENT_OBJS) | bin
-	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o bin/cbitcoin
+	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-@NOEC@ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o bin/cbitcoin
 	

@@ -194,7 +194,7 @@ uint64_t CBNetworkAddressManagerGetGroup(CBNetworkAddressManager * self, CBNetwo
 			start = 2;
 			break;
 		case CB_IP_TEREDO:
-			return CB_IP_IP4 | ((CBByteArrayGetByte(addr->ip, 12) ^ 0xFF) << 8) | ((CBByteArrayGetByte(addr->ip, 13) ^ 0xFF) << 16);
+			return CB_IP_IP4 | ((CBByteArrayGetByte(addr->sockAddr.ip, 12) ^ 0xFF) << 8) | ((CBByteArrayGetByte(addr->sockAddr.ip, 13) ^ 0xFF) << 16);
 		case CB_IP_HENET:
 			group = CB_IP_IP6;
 			bits = 36;
@@ -214,9 +214,9 @@ uint64_t CBNetworkAddressManagerGetGroup(CBNetworkAddressManager * self, CBNetwo
 	}
 	uint8_t x = 8;
 	for (; bits >= 8; bits -= 8, x += 8, start++)
-		group |= CBByteArrayGetByte(addr->ip, start) << x;
+		group |= CBByteArrayGetByte(addr->sockAddr.ip, start) << x;
 	if (bits > 0)
-		group |= (CBByteArrayGetByte(addr->ip, start) | ((1 << bits) - 1)) << x;
+		group |= (CBByteArrayGetByte(addr->sockAddr.ip, start) | ((1 << bits) - 1)) << x;
 	return group;
 }
 CBPeer * CBNetworkAddressManagerGetPeer(CBNetworkAddressManager * self, uint32_t x){
@@ -309,8 +309,10 @@ void CBNetworkAddressManagerTakeAddress(CBNetworkAddressManager * self, CBNetwor
 	// Find the bucket for this address and insert it into the object
 	CBNetworkAddressManagerSetBucketIndex(self, addr);
 	// Add address to array
-	CBPosition pos = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr).position;
-	CBAssociativeArrayInsert(&self->addresses[addr->bucket], addr, pos, NULL);
+	CBFindResult res = CBAssociativeArrayFind(&self->addresses[addr->bucket], addr);
+	if (res.found)
+		return;
+	CBAssociativeArrayInsert(&self->addresses[addr->bucket], addr, res.position, NULL);
 	// Add address to array sorted by the score
 	CBAssociativeArrayInsert(&self->addressScores[addr->bucket], addr, CBAssociativeArrayFind(&self->addressScores[addr->bucket], addr).position, NULL);
 	// Increase the number of addresses.
@@ -342,6 +344,8 @@ CBCompare CBPeerIPPortCompare(CBAssociativeArray * array, void * peer1, void * p
 	return CBNetworkAddressIPPortCompare(array, ((CBPeer *)peer1)->addr, ((CBPeer *)peer2)->addr);
 }
 CBCompare CBPeerCompareWithAddr(CBAssociativeArray * array, void * addr, void * peer){
+	assert(addr != NULL);
+	assert(((CBPeer *)peer)->addr != NULL);
 	return CBNetworkAddressIPPortCompare(array, addr, ((CBPeer *)peer)->addr);
 }
 CBCompare CBNetworkAddressCompare(CBAssociativeArray * array, void * address1, void * address2){
@@ -358,11 +362,11 @@ CBCompare CBNetworkAddressCompare(CBAssociativeArray * array, void * address1, v
 CBCompare CBNetworkAddressIPPortCompare(CBAssociativeArray * array, void * address1, void * address2){
 	CBNetworkAddress * addrObj1 = address1;
 	CBNetworkAddress * addrObj2 = address2;
-	CBCompare res = CBByteArrayCompare(addrObj1->ip, addrObj2->ip);
+	CBCompare res = CBByteArrayCompare(addrObj1->sockAddr.ip, addrObj2->sockAddr.ip);
 	if (res == CB_COMPARE_EQUAL) {
-		if (addrObj1->port > addrObj2->port)
+		if (addrObj1->sockAddr.port > addrObj2->sockAddr.port)
 			return CB_COMPARE_MORE_THAN;
-		if (addrObj1->port < addrObj2->port)
+		if (addrObj1->sockAddr.port < addrObj2->sockAddr.port)
 			return CB_COMPARE_LESS_THAN;
 	}
 	return res;

@@ -62,32 +62,32 @@ void CBFreeGetBlocks(void * self){
 
 //  Functions
 
-uint16_t CBGetBlocksDeserialise(CBGetBlocks * self){
+uint32_t CBGetBlocksDeserialise(CBGetBlocks * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBGetBlocks with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 37) { // 4 version bytes, 1 for varint, 32 stop at hash bytes
 		CBLogError("Attempting to deserialise a CBGetBlocks with less bytes than required for one hash.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->version = CBByteArrayReadInt32(bytes, 0);
 	// Deserialise the CBChainDescriptor
 	CBByteArray * data = CBByteArraySubReference(bytes, 4, bytes->length-4);
 	self->chainDescriptor = CBNewChainDescriptorFromData(data);
-	uint16_t len = CBChainDescriptorDeserialise(self->chainDescriptor);
-	if (! len){
+	uint32_t len = CBChainDescriptorDeserialise(self->chainDescriptor);
+	if (len == CB_DESERIALISE_ERROR){
 		CBLogError("CBGetBlocks cannot be deserialised because of an error with the CBChainDescriptor.");
 		CBReleaseObject(data);
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	data->length = len; // Re-adjust length for the chain descriptor object's reference.
 	CBReleaseObject(data); // Release this reference.
 	// Deserialise stopAtHash
 	if (bytes->length < len + 36) { // The chain descriptor length plus the version and stopAtHash bytes.
 		CBLogError("Attempting to deserialise a CBGetBlocks with less bytes than required for the stopAtHash.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	// Determine if stop at hash is null
 	self->stopAtHash = CBNewByteArraySubReference(bytes, len + 4, 32);

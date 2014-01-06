@@ -26,7 +26,6 @@ bool CBNewAccounterStorage(CBDepObject * storage, CBDepObject database) {
 		uint32_t cacheLimit;
 	} indexes[14] = {
 		// ??? Decide on cache limits
-		{&self->accountUnconfBalance, 8, 10000},
 		{&self->accountTxDetails, 16, 10000},
 		{&self->accountUnspentOutputs, 16, 10000},
 		{&self->accountTimeTx, 32, 10000},
@@ -40,12 +39,12 @@ bool CBNewAccounterStorage(CBDepObject * storage, CBDepObject database) {
 		{&self->watchedHashes, 28, 10000},
 		{&self->accountWatchedHashes, 28, 10000},
 	};
-	for (uint8_t x = 0; x < 13; x++) {
+	for (uint8_t x = 0; x < 12; x++) {
 		*indexes[x].index = CBLoadIndex(self->database, indexID + x, indexes[x].keySize, indexes[x].cacheLimit);
 		if (indexes[x].index == NULL) {
 			for (uint8_t y = 0; y < x; y++)
 				CBFreeIndex(*indexes[y].index);
-			CBLogError("There was an error loading the accounter index %u", x);
+			CBLogError("There was an error loading the accounter index %" PRIu8, x);
 			return false;
 		}
 	}
@@ -82,7 +81,6 @@ bool CBNewAccounterStorageUnspentOutputCursor(CBDepObject * ucursor, CBDepObject
 }
 void CBFreeAccounterStorage(CBDepObject self){
 	CBAccounterStorage * storage = self.ptr;
-	CBFreeIndex(storage->accountUnconfBalance);
 	CBFreeIndex(storage->accountTxDetails);
 	CBFreeIndex(storage->orderNumTxDetails);
 	CBFreeIndex(storage->outputAccounts);
@@ -112,7 +110,7 @@ bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint
 	CBDatabaseWriteValue(storage->accountWatchedHashes, watchedHashKey, NULL, 0);
 	return true;
 }
-bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint64_t accountID, int64_t adjustment, uint64_t * last){
+bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint64_t accountID, int64_t adjustment, int64_t unconfAdjustment, uint64_t * last, int64_t * unconfLast){
 	uint8_t accountTimeTxMin[32];
 	uint8_t accountTimeTxMax[32];
 	CBInt64ToArray(accountTimeTxMin, CB_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
@@ -122,7 +120,7 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 	memset(accountTimeTxMin + CB_ACCOUNT_TIME_TX_TX_ID, 0, 8);
 	memset(accountTimeTxMax + CB_ACCOUNT_TIME_TX_TX_ID, 0xFF, 8);
 	CBDatabaseRangeIterator it = {accountTimeTxMin, accountTimeTxMax, storage->accountTimeTx};
-	if (adjustment != 0) {
+	if (adjustment != 0 || unconfAdjustment != 0) {
 		CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was a problem finding the first branch section account time tx details.");
@@ -130,20 +128,26 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 		}
 		if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
 			// Get the data
-			uint8_t data[8];
-			if (!CBDatabaseRangeIteratorRead(&it, data, 8, 0)) {
+			uint8_t data[16];
+			if (!CBDatabaseRangeIteratorRead(&it, data, 16, 0)) {
 				CBLogError("Could not read the cumulative balance for adjustment");
 				return false;
 			}
-			// Adjust balance
-			uint64_t adjustedBal = CBArrayToInt64(data, 0) + adjustment;
-			CBInt64ToArray(data, 0, adjustedBal);
+			// Adjust balances
+			uint64_t adjustedBal = CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_BALANCE) + adjustment;
+			CBInt64ToArray(data, CB_ACCOUNT_TIME_TX_BALANCE, adjustedBal);
 			if (last)
 				*last = adjustedBal;
-			// Write adjusted balance
+			int64_t unconfAdjustedBal;
+			CBAccounterUInt64ToInt64(CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE), &unconfAdjustedBal);
+			unconfAdjustedBal += unconfAdjustment;
+			CBInt64ToArray(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE, CBAccounterInt64ToUInt64(unconfAdjustedBal));
+			if (unconfLast)
+				*unconfLast = unconfAdjustedBal;
+			// Write adjusted balances
 			uint8_t key[33];
 			CBDatabaseRangeIteratorGetKey(&it, key);
-			CBDatabaseWriteValue(storage->accountTimeTx, key, data, 8);
+			CBDatabaseWriteValue(storage->accountTimeTx, key, data, 16);
 			// Go to next if possible.
 			CBIndexFindStatus status = CBDatabaseRangeIteratorNext(&it);
 			if (status == CB_DATABASE_INDEX_ERROR) {
@@ -155,38 +159,26 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 				break;
 		}
 	}else{
-		// Adjustment is zero so do not adjust but get the last balance as it is
+		// Adjustment is zero so do not adjust but get the last balances as they are
 		CBIndexFindStatus status = CBDatabaseRangeIteratorLast(&it);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was a problem finding the first branch section account time tx details.");
 			return false;
 		}
 		if (status == CB_DATABASE_INDEX_FOUND){
-			uint8_t data[8];
-			if (!CBDatabaseRangeIteratorRead(&it, data, 8, 0)) {
+			uint8_t data[16];
+			if (!CBDatabaseRangeIteratorRead(&it, data, 16, 0)) {
 				CBLogError("Could not read the cumulative balance for adjustment");
 				return false;
 			}
-			// Adjust balance
 			if (last)
-				*last = CBArrayToInt64(data, 0);
+				*last = CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_BALANCE);
+			if (unconfLast)
+				*unconfLast = CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE);
 		}
 		// Else do not change last
 	}
 	CBFreeDatabaseRangeIterator(&it);
-	return true;
-}
-bool CBAccounterAdjustUnconfBalance(CBAccounterStorage * self, uint64_t accountID, uint64_t value){
-	int64_t balance;
-	if (! CBAccounterGetAccountUnconfirmedBalance((CBDepObject){.ptr=self}, accountID, &balance)) {
-		CBLogError("Could not get the previous balance for unconfirmed transactions for adjustment.");
-		return false;
-	}
-	balance += value;
-	uint8_t accountUnconfBalanceKey[8], data[8];
-	CBInt64ToArray(accountUnconfBalanceKey, 0, accountID);
-	CBInt64ToArray(data, 0, labs(balance) | ((balance > 0) ? 0x8000000000000000 : 0));
-	CBDatabaseWriteValue(self->accountUnconfBalance, accountUnconfBalanceKey, data, 8);
 	return true;
 }
 bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t oldHeight, uint32_t newHeight){
@@ -242,10 +234,29 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
-			// Adjust the unconf balance
-			if (! CBAccounterAdjustUnconfBalance(storage, accountID, oldHeight == CB_UNCONFIRMED ? -value : value)) {
-				CBLogError("Could not adjust the balance of unconfirmed transactions for an account when removing one that enters a branch.");
-				CBFreeDatabaseRangeIterator(&it);
+			// Get the timestamp and orderNum
+			uint8_t timestampAndOrderNum[16];
+			if (CBDatabaseReadValue(storage->txDetails, key + CB_TX_ACCOUNTS_TX_ID, timestampAndOrderNum, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
+				CBLogError("Could not read a transaction's timestamp when changing the height");
+				return false;
+			}
+			// Get the last order number of the transaction
+			uint8_t orderNumTxDetailsMin[16], orderNumTxDetailsMax[16];
+			memcpy(orderNumTxDetailsMin + CB_ORDER_NUM_TX_DETAILS_TX_ID, key + CB_TX_ACCOUNTS_TX_ID, 8);
+			memcpy(orderNumTxDetailsMax + CB_ORDER_NUM_TX_DETAILS_TX_ID, key + CB_TX_ACCOUNTS_TX_ID, 8);
+			memset(orderNumTxDetailsMin + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 0, 8);
+			memset(orderNumTxDetailsMax + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 0xFF, 8);
+			CBDatabaseRangeIterator it2 = {orderNumTxDetailsMin, orderNumTxDetailsMax, storage->orderNumTxDetails};
+			if (CBDatabaseRangeIteratorLast(&it2) != CB_DATABASE_INDEX_FOUND){
+				CBLogError("Could not get the last order number for a transaction.");
+				return false;
+			}
+			// Get the key and thus the order number
+			CBDatabaseRangeIteratorGetKey(&it2, orderNumTxDetailsMax);
+			memcpy(timestampAndOrderNum + 8, orderNumTxDetailsMax + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 8);
+			// Adjust the unconf balances.
+			if (!CBAccounterAdjustBalances(storage, timestampAndOrderNum, (uint8_t [16]){0xFF}, accountID, 0, oldHeight == CB_UNCONFIRMED ? -value : value, NULL, NULL)) {
+				CBLogError("Unable to adjust unconfirmed cumulative balances.");
 				return false;
 			}
 			// Iterate if possible
@@ -615,36 +626,32 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 				// Finished adding data for the account.
 				curDetails = &(*curDetails)->next;
 			}
-			// Write the balance
-			if (blockHeight == CB_UNCONFIRMED) {
-				// Adust unconf balance
-				if (! CBAccounterAdjustUnconfBalance(storage, info->accountID, valueInt)) {
-					CBLogError("Could not adjust the balance of unconfirmed transactions for an account when a new transaction has been found.");
-					CBFoundTransactionReturnError
-				}
-			}
-			// Else write the cumulative balance for the transaction and get the next order number
+			// Else write the cumulative balances for the transaction and get the next order number
 			uint64_t balance;
+			int64_t unconfBalance;
 			// Get balance upto this transaction
-			if (! CBAccounterGetLastAccountBalance(storage, info->accountID, time, &balance)) {
+			if (! CBAccounterGetLastAccountBalance(storage, info->accountID, time, &balance, &unconfBalance)) {
 				CBLogError("Could not read the cumulative balance for a transaction.");
 				CBFoundTransactionReturnError
 			}
 			// Set the order num into the key array for the branch account time transaction entry.
 			memcpy(keyArr + CB_ACCOUNT_TIME_TX_ORDERNUM, nextOrderNumData, 8);
-			// Set balance into data array
+			// Set balances into data array
 			balance += valueInt;
-			CBInt64ToArray(data, 0, balance);
+			if (blockHeight == CB_UNCONFIRMED)
+				unconfBalance += valueInt;
+			CBInt64ToArray(data, CB_ACCOUNT_TIME_TX_BALANCE, balance);
+			CBInt64ToArray(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE, CBAccounterInt64ToUInt64(unconfBalance));
 			// Create the branch account time transaction entry.
 			CBInt64ToArray(keyArr, CB_ACCOUNT_TIME_TX_ACCOUNT_ID, info->accountID);
 			CBInt64ToArrayBigEndian(keyArr, CB_ACCOUNT_TIME_TX_TIMESTAMP, time);
 			CBInt64ToArray(keyArr, CB_ACCOUNT_TIME_TX_TX_ID, txID);
-			CBDatabaseWriteValue(storage->accountTimeTx, keyArr, data, 8);
+			CBDatabaseWriteValue(storage->accountTimeTx, keyArr, data, 16);
 			// Adjust the balances of any future transactions already stored
 			CBInt64ToArrayBigEndian(keyArr, CB_ACCOUNT_TIME_TX_ORDERNUM, CBArrayToInt64BigEndian(keyArr, CB_ACCOUNT_TIME_TX_ORDERNUM) + 1);
 			uint8_t high[16];
 			memset(high, 0xFF, 16);
-			if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, high, info->accountID, valueInt, NULL)) {
+			if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, high, info->accountID, valueInt, (blockHeight == CB_UNCONFIRMED)*valueInt, NULL, NULL)) {
 				CBLogError("Could not adjust the balances of transactions after one inserted.");
 				return false;
 			}
@@ -660,26 +667,8 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 	CBFreeAssociativeArray(&txInfo);
 	return CB_TRUE;
 }
-bool CBAccounterGetAccountBalance(CBDepObject self, uint64_t accountID, uint64_t * balance){
-	return CBAccounterGetLastAccountBalance(self.ptr, accountID, UINT64_MAX, balance);
-}
-bool CBAccounterGetAccountUnconfirmedBalance(CBDepObject self, uint64_t accountID, int64_t * balance){
-	CBAccounterStorage * storage = self.ptr;
-	uint8_t key[8], data[8];
-	CBInt64ToArray(key, 0, accountID);
-	CBIndexFindStatus res = CBDatabaseReadValue(storage->accountUnconfBalance, key, data, 8, 0, false);
-	if (res == CB_DATABASE_INDEX_ERROR) {
-		CBLogError("There was an error trying to get the balance of unconfirmed transactions.");
-		return false;
-	}
-	if (res == CB_DATABASE_INDEX_FOUND) {
-		uint64_t txBalanceRaw = CBArrayToInt64(data, 0);
-		*balance = txBalanceRaw & 0x7FFFFFFFFFFFFFFF;
-		if (! (txBalanceRaw & 0x8000000000000000))
-			*balance = -*balance;
-	}else
-		*balance = 0;
-	return true;
+bool CBAccounterGetAccountBalance(CBDepObject self, uint64_t accountID, uint64_t * balance, int64_t * unconfBalance){
+	return CBAccounterGetLastAccountBalance(self.ptr, accountID, UINT64_MAX, balance, unconfBalance);
 }
 CBErrBool CBAccounterGetNextTransaction(CBDepObject cursoru, CBTransactionDetails * details){
 	CBAccounterStorageTxCursor * txCursor = cursoru.ptr;
@@ -699,10 +688,16 @@ CBErrBool CBAccounterGetNextTransaction(CBDepObject cursoru, CBTransactionDetail
 	if (res != CB_DATABASE_INDEX_FOUND)
 		return CB_FALSE;
 	// Get the key
-	uint8_t key[33];
+	uint8_t key[33], keyArr[17], data[16];
 	CBDatabaseRangeIteratorGetKey(&cursor->it, key);
+	// Read the cumulative balance
+	if (! CBDatabaseRangeIteratorRead(&cursor->it, data, 16, 0)) {
+		CBLogError("Could not read the cumulative balance of an account's transaction.");
+		return CB_ERROR;
+	}
+	details->cumBalance = CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_BALANCE);
+	CBAccounterUInt64ToInt64(CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE), &details->cumUnconfBalance);
 	// Get the transaction hash
-	uint8_t keyArr[17], data[8];
 	memcpy(keyArr, key + CB_ACCOUNT_TIME_TX_TX_ID, 8);
 	if (CBDatabaseReadValue(cursor->storage->txDetails, keyArr, details->txHash, 32, CB_TX_DETAILS_HASH, false) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Could not read a transaction's hash.");
@@ -768,29 +763,32 @@ CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursoru, CBUnspentOutputDe
 		return CB_TRUE;
 	}
 }
-bool CBAccounterGetLastAccountBalance(CBAccounterStorage * storage, uint64_t accountID, uint64_t maxTime, uint64_t * balance){
+bool CBAccounterGetLastAccountBalance(CBAccounterStorage * storage, uint64_t accountID, uint64_t maxTime, uint64_t * balance, int64_t * unconfBalance){
 	uint8_t accountTimeTxMin[32];
 	uint8_t accountTimeTxMax[32];
 	CBInt64ToArray(accountTimeTxMin, CB_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
 	CBInt64ToArray(accountTimeTxMax, CB_ACCOUNT_TIME_TX_ACCOUNT_ID, accountID);
 	memset(accountTimeTxMin + CB_ACCOUNT_TIME_TX_TIMESTAMP, 0, 24);
 	CBInt64ToArrayBigEndian(accountTimeTxMax, CB_ACCOUNT_TIME_TX_TIMESTAMP, maxTime);
+	memset(accountTimeTxMax + CB_ACCOUNT_TIME_TX_ORDERNUM, 0xFF, 16);
 	CBDatabaseRangeIterator lastTxIt = {accountTimeTxMin, accountTimeTxMax, storage->accountTimeTx};
 	CBIndexFindStatus res = CBDatabaseRangeIteratorLast(&lastTxIt);
 	if (res == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not get the last transaction in a branch section to get the last balance for calculating a new balance.");
 		return false;
 	}
-	if (res == CB_DATABASE_INDEX_FOUND){
-		uint8_t data[8];
-		if (! CBDatabaseRangeIteratorRead(&lastTxIt, data, 8, 0)) {
+	if (res == CB_DATABASE_INDEX_FOUND) {
+		uint8_t data[16];
+		if (! CBDatabaseRangeIteratorRead(&lastTxIt, data, 16, 0)) {
 			CBLogError("Could not read the transaction cumulative balance for an account.");
 			return false;
 		}
-		*balance = CBArrayToInt64(data, 0);
+		*balance = CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_BALANCE);
+		CBAccounterUInt64ToInt64(CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE), unconfBalance);
 	}else{
 		CBFreeDatabaseRangeIterator(&lastTxIt);
 		*balance = 0;
+		*unconfBalance = 0;
 	}
 	return true;
 }
@@ -967,14 +965,6 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
-		if (height == CB_UNCONFIRMED) {
-			// Also adjust unconfirmed balance.
-			if (! CBAccounterAdjustUnconfBalance(storage, accountID, -value)) {
-				CBLogError("Could not adjust an account balance for branchless transactions when one is being removed.");
-				CBFreeDatabaseRangeIterator(&it);
-				return false;
-			}
-		}
 		// Remove the branch account time transaction entry
 		memcpy(keyArr + CB_ACCOUNT_TIME_TX_ACCOUNT_ID, key + CB_TX_ACCOUNTS_ACCOUNT_ID, 8);
 		memcpy(keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, timestampData, 8);
@@ -988,7 +978,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 		// Can now adjust other time transaction entry balances...
 		uint8_t high[16];
 		memset(high, 0xFF, 16);
-		if (! CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, high, accountID, -value, NULL)){
+		if (! CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, high, accountID, -value, (height == CB_UNCONFIRMED)*(-value), NULL, NULL)){
 			CBLogError("Could not adjust balances for transactions past a deleted one.");
 			CBFreeDatabaseRangeIterator(&it);
 			return false;
@@ -1135,16 +1125,6 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 }
 bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, uint64_t accountSrc){
 	CBAccounterStorage * storage = self.ptr;
-	// Add unconfirmed balance from dest to src
-	int64_t balance;
-	if (!CBAccounterGetAccountUnconfirmedBalance(self, accountSrc, &balance)) {
-		CBLogError("Unable to get the balance of the source account when merging.");
-		return false;
-	}
-	if (!CBAccounterAdjustUnconfBalance(storage, accountDest, balance)){
-		CBLogError("Unable to adjust the balance of the destination account when merging.");
-		return false;
-	}
 	// Loop through watched hashes of source account
 	uint8_t accountWatchedHashesMin[28];
 	uint8_t accountWatchedHashesMax[28];
@@ -1259,8 +1239,9 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	}
 	CBFreeDatabaseRangeIterator(&it);
 	// 1. loop through branchSectionAccountTimeTx 2. loop through account outputs
-	int64_t addedBalance = 0;
-	uint64_t last;
+	int64_t addedBalance = 0, addedUnconfBalance = 0;
+	uint64_t last = 0;
+	int64_t lastUnconf = 0;
 	// branchSectionAccountTimeTx
 	uint8_t accountTimeTxMin[32];
 	uint8_t accountTimeTxMax[32];
@@ -1278,17 +1259,25 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	memset(keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, 0, 16);
 	if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
 		// Get the key
-		uint8_t key[32];
+		uint8_t key[32], data[16];
 		CBDatabaseRangeIteratorGetKey(&it, key);
 		// Adjust balances for everything between last and this key if addedBalance is not 0
-		if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_ACCOUNT_TIME_TX_TIMESTAMP, accountDest, addedBalance, &last)) {
+		if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_ACCOUNT_TIME_TX_TIMESTAMP, accountDest, addedBalance, addedUnconfBalance, &last, &lastUnconf)) {
 			CBLogError("Could not adjust the cumulative balanaces.");
 			return false;
 		}
+		// See if the transaction is unconfirmed. If it is then adjust the unconfirmed added balance and last balance.
+		uint8_t orderNumTxDetailsKey[16];
+		memcpy(orderNumTxDetailsKey + CB_ORDER_NUM_TX_DETAILS_TX_ID, key + CB_ACCOUNT_TIME_TX_TX_ID, 8);
+		memcpy(orderNumTxDetailsKey + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, key + CB_ACCOUNT_TIME_TX_ORDERNUM, 8);
+		if (CBDatabaseReadValue(storage->orderNumTxDetails, orderNumTxDetailsKey, data, 4, CB_ORDER_NUM_TX_DETAILS_HEIGHT, false) != CB_DATABASE_INDEX_FOUND) {
+			CBLogError("Couldn't read the height of a transaction for the source account.");
+			return false;
+		}
+		bool unconfirmed = CBArrayToInt32BigEndian(data, 0) == CB_UNCONFIRMED;
 		// Adjust addedBalance by the value of the source account transaction details.
 		memcpy(keyArr2 + CB_ACCOUNT_TX_DETAILS_TX_ID, key + CB_ACCOUNT_TIME_TX_TX_ID, 8);
 		CBInt64ToArray(keyArr2, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountSrc);
-		uint8_t data[8];
 		if (CBDatabaseReadValue(storage->accountTxDetails, keyArr2, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Couldn't read the value of a transaction for the source account.");
 			return false;
@@ -1297,13 +1286,18 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		CBAccounterUInt64ToInt64(CBArrayToInt64(data, 0), &value);
 		addedBalance += value;
 		last += value;
-		CBInt64ToArray(data, 0, last);
+		if (unconfirmed) {
+			addedUnconfBalance += value;
+			lastUnconf += value;
+		}
+		CBInt64ToArray(data, CB_ACCOUNT_TIME_TX_BALANCE, last);
+		CBInt64ToArray(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE, CBAccounterInt64ToUInt64(lastUnconf));
 		// Copy everything from the key except the account ID
 		memcpy(keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_ACCOUNT_TIME_TX_TIMESTAMP, 24);
 		// Set the destination account ID
 		CBInt64ToArray(keyArr, CB_ACCOUNT_TIME_TX_ACCOUNT_ID, accountDest);
 		// Write data for destination account
-		CBDatabaseWriteValue(storage->accountTimeTx, keyArr, data, 8);
+		CBDatabaseWriteValue(storage->accountTimeTx, keyArr, data, 16);
 		// Increase key by one since we do not want to adjust the value added. Do this with the ordernum
 		CBInt64ToArrayBigEndian(keyArr, CB_ACCOUNT_TIME_TX_ORDERNUM, CBArrayToInt64BigEndian(keyArr, CB_ACCOUNT_TIME_TX_ORDERNUM) + 1);
 		// Go to next first if possible. Make mininum same as key plus one
@@ -1321,7 +1315,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	// Adjust remaining balances.
 	uint8_t max[16];
 	memset(max, 0xFF, 16);
-	if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, max, accountDest, addedBalance, &last)) {
+	if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, max, accountDest, addedBalance, addedUnconfBalance, NULL, NULL)) {
 		CBLogError("Could not adjust the remaining cumulative balanaces.");
 		return false;
 	}

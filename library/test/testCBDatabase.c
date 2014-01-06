@@ -43,7 +43,7 @@ int main(){
 		printf("NEW STORAGE FAIL\n");
 		return 1;
 	}
-	if (memcmp(storage->dataDir, ".", 3)) {
+	if (strcmp(storage->dataDir, ".")) {
 		printf("OBJECT DATA DIR FAIL\n");
 		return 1;
 	}
@@ -109,6 +109,8 @@ int main(){
 	CBFileClose(file);
 	// Test opening of initial files
 	storage = (CBDatabase *)CBNewDatabase(".", "testDb", 10, 10000000, 10000000);
+	// Wait a second for the commit thread
+	sleep(1);
 	if (storage->lastFile != 0) {
 		printf("STORAGE NUM FILES FAIL\n");
 		return 1;
@@ -140,7 +142,7 @@ int main(){
 		printf("READ ALL VALUE STAGED FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Now check over commited data
 	memset(readStr, 0, 15);
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
@@ -251,7 +253,7 @@ int main(){
 		printf("READ REPLACED VALUE STAGED FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	memset(readStr, 0, 15);
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Replacement!!!", 15)) {
@@ -360,7 +362,7 @@ int main(){
 	// Remove first value
 	CBDatabaseRemoveValue(index, key, false);
 	CBDatabaseStage(storage);
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Check data
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 12, 0, false);
 	if (memcmp(readStr, "Another one", 12)) {
@@ -442,7 +444,7 @@ int main(){
 	// Increase size of second key-value to 15 to replace deleted section
 	CBDatabaseWriteValue(index, key2, (uint8_t *)"Annoying code.", 15);
 	CBDatabaseStage(storage);
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Look at data
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Annoying code.", 15)) {
@@ -567,6 +569,13 @@ int main(){
 		printf("RECOVERY INIT DATABASE FAIL\n");
 		return 1;
 	}
+	// Check double CBDatabaseEnsureConsistent, to ensure that the CBDatabaseEnsureConsistent gives us a good logfile.
+	CBFreeDatabase(storage);
+	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
+	if (! storage) {
+		printf("RECOVERY INIT 2 DATABASE FAIL\n");
+		return 1;
+	}
 	index = CBLoadIndex(storage, 0, 10, nodeSize*2);
 	// Verify recovery.
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
@@ -646,7 +655,7 @@ int main(){
 	// Add value with smaller length than deleted section
 	CBDatabaseWriteValue(index, key, (uint8_t *)"Maniac", 7);
 	CBDatabaseStage(storage);
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Look at data
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 7, 0, false);
 	if (memcmp(readStr, "Maniac", 7)) {
@@ -761,7 +770,7 @@ int main(){
 		printf("CHANGE KEY VALUE STAGED FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Check data in disk
 	memset(readStr, 0, 7);
 	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
@@ -905,7 +914,7 @@ int main(){
 		printf("OVERWRITE WITH SMALLER VALUE STAGED FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Check data in disk
 	memset(readStr, 0, 4);
 	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 4, 0, false);
@@ -1024,7 +1033,7 @@ int main(){
 		printf("CHANGE KEY TO EXISTING KEY VALUE STAGED FAIL\n");
 		return 1;
 	}
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	// Check data in disk
 	memset(readStr, 0, 15);
 	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false);
@@ -1228,7 +1237,18 @@ int main(){
 		return 1;
 	}
 	CBDatabaseStage(storage);
+	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
+	if (memcmp(readStr, "reforthmefifthdue", 18)) {
+		printf("SUBSECTIONS TO STAGED NO OVERWRITE READ FAIL\n");
+		return 1;
+	}
+	CBDatabaseGetLength(index, key, &len);
+	if (len != 18){
+		printf("SUBSECTIONS TO STAGED NO OVERWRITE READ LEN FAIL\n");
+		return 1;
+	}
 	CBDatabaseCommit(storage);
+	memset(readStr, 0, 18);
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 18, 0, false);
 	if (memcmp(readStr, "reforthmefifthdue", 18)) {
 		printf("SUBSECTIONS TO DISK NO OVERWRITE READ FAIL\n");
@@ -1311,10 +1331,18 @@ int main(){
 	CBDatabaseWriteValue(index, key4, (uint8_t *)"Change the key", 15);
 	CBDatabaseChangeKey(index, key4, key3, false);
 	CBDatabaseChangeKey(index, key3, key, false);
+	if (CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
+		printf("READ FROM OLD KEY IN CURRENT BEFORE FIRST STAGE FAIL\n");
+		return 1;
+	}
 	CBDatabaseStage(storage);
 	CBDatabaseChangeKey(index, key, key3, false);
 	CBDatabaseChangeKey(index, key3, key2, false);
 	CBDatabaseWriteValue(index, key3, (uint8_t *)"a value", 8);
+	if (CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
+		printf("READ FROM OLD KEY IN CURRENT FAIL\n");
+		return 1;
+	}
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
 	if (strcmp(readStr, "Change the key")) {
 		printf("READ FROM NEW KEY IN CURRENT DATA FAIL\n");
@@ -1335,7 +1363,6 @@ int main(){
 	}
 	// Test staged with change key
 	CBDatabaseStage(storage);
-	CBDatabaseCommit(storage);
 	if (CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false) != CB_DATABASE_INDEX_NOT_FOUND) {
 		printf("READ FROM OLD KEY IN STAGED FAIL\n");
 		return 1;

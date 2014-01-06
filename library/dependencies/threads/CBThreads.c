@@ -92,3 +92,6 @@ void CBConditionWait(CBDepObject cond, CBDepObject mutex){
 void CBConditionSignal(CBDepObject cond){
 	assert(pthread_cond_signal(cond.ptr) == 0);
 }
+uint8_t CBGetNumberOfCores(void){
+	return sysconf(_SC_NPROCESSORS_ONLN);
+}

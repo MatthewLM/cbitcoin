@@ -62,7 +62,7 @@ int main(){
 	// Test adding addresses
 	for (uint8_t x = 0; x < 255; x++) {
 		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x/2}, 16);
-		CBNetworkAddress * addr = CBNewNetworkAddress(1358856884 + rand() % 15, ip, 45562 + (rand() % 5) + 6 * (x % 2), CB_SERVICE_FULL_BLOCKS, true);
+		CBNetworkAddress * addr = CBNewNetworkAddress(1358856884 + rand() % 15, (CBSocketAddress){ip, 45562 + (rand() % 5) + 6 * (x % 2)}, CB_SERVICE_FULL_BLOCKS, true);
 		addr->penalty = rand() % 20;
 		CBNetworkAddressManagerTakeAddress(addrMan, addr);
 		CBReleaseObject(ip);
@@ -92,13 +92,13 @@ int main(){
 					memset(lastIP, 0, 16);
 					lastPort = 0;
 				}else{
-					int res = memcmp(CBByteArrayGetData(addr->ip), lastIP, 16);
+					int res = memcmp(CBByteArrayGetData(addr->sockAddr.ip), lastIP, 16);
 					if (res < 0) {
 						printf("ADDR IP ORDER FAIL");
 						return 1;
 					}else if (res > 0){
 						lastPort = 0;
-					}else if (addr->port <= lastPort){
+					}else if (addr->sockAddr.port <= lastPort){
 						printf("ADDR PORT ORDER/DUPLICATE FAIL");
 						return 1;
 					}
@@ -242,7 +242,7 @@ int main(){
 	// Add 10 addresses to storage
 	for (uint8_t x = 0; x < 10; x++) {
 		CBByteArray * ip = CBNewByteArrayWithDataCopy((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,x}, 16);
-		addrs[x] = CBNewNetworkAddress(x, ip, x, x % 2, true);
+		addrs[x] = CBNewNetworkAddress(x, (CBSocketAddress){ip, x}, x % 2, true);
 		addrs[x]->penalty = x;
 		CBReleaseObject(ip);
 		if (! CBAddressStorageSaveAddress(storage, addrs[x])){
@@ -291,7 +291,7 @@ int main(){
 			printf("STORAGE LOAD LAST SEEN FAIL\n");
 			return 1;
 		}
-		if (addrs[x]->port != val) {
+		if (addrs[x]->sockAddr.port != val) {
 			printf("STORAGE LOAD PORT FAIL\n");
 			return 1;
 		}
@@ -303,7 +303,7 @@ int main(){
 			printf("STORAGE LOAD SERVICES FAIL\n");
 			return 1;
 		}
-		if (memcmp((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,val}, CBByteArrayGetData(addrs[x]->ip), 16)) {
+		if (memcmp((uint8_t []){0x20,0x01,0x0D,0xB8,0x85,0xA3,0x00,0x42,0x10,0x00,0x8A,0x2E,0x03,0x70,0x73,val}, CBByteArrayGetData(addrs[x]->sockAddr.ip), 16)) {
 			printf("STORAGE LOAD IP FAIL\n");
 			return 1;
 		}

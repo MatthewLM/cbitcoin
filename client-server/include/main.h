@@ -24,8 +24,8 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <pwd.h>
-#include <uuid/uuid.h>
 #include "CBNodeFull.h"
+#include "CBRPCServer.h"
 
 // Macros
 
@@ -36,28 +36,31 @@
 #endif
 
 #define CB_CLIENT_USER_AGENT CB_USER_AGENT_SEGMENT "client-server"
-#define CB_SEED_DOMAINS (char *[]){"seed.bitcoin.sipa.be", "dnsseed.bluematt.me", "dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}
-#define CB_SEED_DOMAIN_NUM 4
 #define CBInvalidArg(str) {printf("Invalid argument. " str ": %s %s\n", argv[x], argv[x+1]); return EXIT_FAILURE;}
 
 // Structures
 
-typedef struct CBNetworkAddressLinkedList CBNetworkAddressLinkedList;
+typedef struct CBNetworkAddressLinkedListNode CBNetworkAddressLinkedListNode;
 
-struct CBNetworkAddressLinkedList{
+struct CBNetworkAddressLinkedListNode{
 	CBNetworkAddress * addr;
-	CBNetworkAddressLinkedList * next;
+	CBNetworkAddressLinkedListNode * next;
 };
+
+typedef struct{
+	CBNetworkAddressLinkedListNode * start;
+	CBNetworkAddressLinkedListNode * last;
+} CBNetworkAddressLinkedList;
 
 // Functions
 
-bool CBCheckNumber(uint32_t num, size_t lineNum);
+bool CBAddNetworkAddress(CBNetworkAddressLinkedList * nodes, char * ip, bool isPublic);
+bool CBCheckNumber(uint32_t num);
 void CBOnDoubleSpend(CBNode * node, uint8_t * txHash);
 void CBOnNewBlock(CBNode * node, CBBlock * block, uint32_t forkPoint);
 void CBOnNewTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details);
-void CBOnFatalNodeError(CBNode * node);
+void CBOnFatalNodeError(CBNode * node, CBErrorReason reason);
 void CBOnTransactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight);
 void CBOnTransactionUnconfirmed(CBNode * node, uint8_t * txHash);
-
-CBNetworkAddress * CBReadNetworkAddress(char * ip, size_t lineNum, bool isPublic);
+CBNetworkAddress * CBReadNetworkAddress(char * ip, bool isPublic);
 void CBStartNode(void * comm);

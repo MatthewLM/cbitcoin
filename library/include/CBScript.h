@@ -49,6 +49,17 @@ typedef enum{
 	CB_SCRIPT_INVALID, /**< Script does not validate */
 } CBScriptExecuteReturn;
 
+/**
+ @brief The types of output recognised by cbitcoin.
+ */
+typedef enum{
+	CB_TX_OUTPUT_TYPE_UNKNOWN, /**< The output is not recognised. */
+	CB_TX_OUTPUT_TYPE_PUBKEY, /**< <public key> OP_CHECKSIG */
+	CB_TX_OUTPUT_TYPE_KEYHASH, /**< OP_DUP OP_HASH160 <hash of public key (20 bytes)> OP_EQUALVERIFY OP_CHECKSIG */
+	CB_TX_OUTPUT_TYPE_P2SH, /**< OP_HASH160 <hash of script> OP_EQUAL */
+	CB_TX_OUTPUT_TYPE_MULTISIG, /**< <number of signatures required> <public keys> <number of public keys supplied> OP_CHECKMULTISIG */
+} CBScriptOutputType;
+
 typedef enum{
 	CB_SCRIPT_OP_0 = 0x00,
     CB_SCRIPT_OP_FALSE = CB_SCRIPT_OP_0,
@@ -334,6 +345,7 @@ uint16_t CBScriptIsPushOnly(CBScript * self);
  @retuns The number or CB_NOT_A_NUMBER_OP.
  */
 uint8_t CBScriptOpGetNumber(CBScriptOp op);
+CBScriptOutputType CBScriptOutputGetType(CBScript * self);
 /**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.

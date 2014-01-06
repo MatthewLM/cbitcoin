@@ -64,11 +64,11 @@ uint32_t CBInventoryItemDeserialise(CBInventoryItem * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBInventoryItem with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 36) {
 		CBLogError("Attempting to deserialise a CBInventoryItem with less than 36 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->type = CBByteArrayReadInt32(bytes, 0);
 	self->hash = CBByteArraySubReference(bytes, 4, 32);

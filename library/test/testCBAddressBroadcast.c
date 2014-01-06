@@ -61,9 +61,9 @@ int main(){
 		printf("DESERIALISATION FIRST SERVICES FAIL\n");
 		return 1;
 	}
-	if (memcmp(CBByteArrayGetData(add->addresses[0]->ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16)) {
+	if (memcmp(CBByteArrayGetData(add->addresses[0]->sockAddr.ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16)) {
 		printf("DESERIALISATION FIRST IP FAIL\n0x");
-		uint8_t * d = CBByteArrayGetData(add->addresses[0]->ip);
+		uint8_t * d = CBByteArrayGetData(add->addresses[0]->sockAddr.ip);
 		for (int x = 0; x < 16; x++) {
 			printf("%.2X", d[x]);
 		}
@@ -74,7 +74,7 @@ int main(){
 		}
 		return 1;
 	}
-	if (add->addresses[0]->port != 8333) {
+	if (add->addresses[0]->sockAddr.port != 8333) {
 		printf("DESERIALISATION FIRST PORT FAIL\n");
 		return 1;
 	}
@@ -86,9 +86,9 @@ int main(){
 		printf("DESERIALISATION SECOND SERVICES FAIL\n");
 		return 1;
 	}
-	if (memcmp(CBByteArrayGetData(add->addresses[1]->ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16)) {
+	if (memcmp(CBByteArrayGetData(add->addresses[1]->sockAddr.ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16)) {
 		printf("DESERIALISATION SECOND IP FAIL\n0x");
-		uint8_t * d = CBByteArrayGetData(add->addresses[1]->ip);
+		uint8_t * d = CBByteArrayGetData(add->addresses[1]->sockAddr.ip);
 		for (int x = 0; x < 16; x++) {
 			printf("%.2X", d[x]);
 		}
@@ -99,16 +99,16 @@ int main(){
 		}
 		return 1;
 	}
-	if (add->addresses[1]->port != 24366) {
+	if (add->addresses[1]->sockAddr.port != 24366) {
 		printf("DESERIALISATION SECOND PORT FAIL\n");
 		return 1;
 	}
 	// Test serialisation with timestamps
 	memset(CBByteArrayGetData(bytes), 0, 61);
-	CBReleaseObject(add->addresses[0]->ip);
-	add->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
-	CBReleaseObject(add->addresses[1]->ip);
-	add->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
+	CBReleaseObject(add->addresses[0]->sockAddr.ip);
+	add->addresses[0]->sockAddr.ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
+	CBReleaseObject(add->addresses[1]->sockAddr.ip);
+	add->addresses[1]->sockAddr.ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
 	if (CBNetworkAddressListSerialise(add, true) != 61){
 		printf("SERIALISATION LEN FAIL\n");
 		return 1;
@@ -151,9 +151,9 @@ int main(){
 		printf("DESERIALISATION NO TIME FIRST SERVICES FAIL\n");
 		return 1;
 	}
-	if (memcmp(CBByteArrayGetData(add->addresses[0]->ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16)) {
+	if (memcmp(CBByteArrayGetData(add->addresses[0]->sockAddr.ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16)) {
 		printf("DESERIALISATION NO TIME FIRST IP FAIL\n0x");
-		uint8_t * d = CBByteArrayGetData(add->addresses[0]->ip);
+		uint8_t * d = CBByteArrayGetData(add->addresses[0]->sockAddr.ip);
 		for (int x = 0; x < 16; x++) {
 			printf("%.2X", d[x]);
 		}
@@ -164,7 +164,7 @@ int main(){
 		}
 		return 1;
 	}
-	if (add->addresses[0]->port != 8333) {
+	if (add->addresses[0]->sockAddr.port != 8333) {
 		printf("DESERIALISATION NO TIME FIRST PORT FAIL\n");
 		return 1;
 	}
@@ -172,9 +172,9 @@ int main(){
 		printf("DESERIALISATION NO TIME SECOND SERVICES FAIL\n");
 		return 1;
 	}
-	if (memcmp(CBByteArrayGetData(add->addresses[1]->ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16)) {
+	if (memcmp(CBByteArrayGetData(add->addresses[1]->sockAddr.ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16)) {
 		printf("DESERIALISATION NO TIME SECOND IP FAIL\n0x");
-		uint8_t * d = CBByteArrayGetData(add->addresses[1]->ip);
+		uint8_t * d = CBByteArrayGetData(add->addresses[1]->sockAddr.ip);
 		for (int x = 0; x < 16; x++) {
 			printf("%.2X", d[x]);
 		}
@@ -185,16 +185,16 @@ int main(){
 		}
 		return 1;
 	}
-	if (add->addresses[1]->port != 24366) {
+	if (add->addresses[1]->sockAddr.port != 24366) {
 		printf("DESERIALISATION NO TIME SECOND PORT FAIL\n");
 		return 1;
 	}
 	// Test serialisation without timestamps
 	memset(CBByteArrayGetData(bytes), 0, 53);
-	CBReleaseObject(add->addresses[0]->ip);
-	add->addresses[0]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
-	CBReleaseObject(add->addresses[1]->ip);
-	add->addresses[1]->ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
+	CBReleaseObject(add->addresses[0]->sockAddr.ip);
+	add->addresses[0]->sockAddr.ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
+	CBReleaseObject(add->addresses[1]->sockAddr.ip);
+	add->addresses[1]->sockAddr.ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x24, 0x60, 0xA2, 0x08}, 16);
 	if(CBNetworkAddressListSerialise(add, true) != 53){
 		printf("SERIALISATION NO TIME LEN FAIL\n");
 		return 1;

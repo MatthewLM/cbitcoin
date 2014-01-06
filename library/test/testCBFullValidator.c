@@ -1460,5 +1460,6 @@ int main(){
 	CBRetainObject(validator);
 	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
+	// ??? Add test for loading orphans. Does it deserialise?
 	return 0;
 }

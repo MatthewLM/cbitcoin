@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 #include "CBConstants.h"
 
 // Use weak linking so these functions can be implemented outside of the library.
@@ -148,9 +149,10 @@ bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections);
  @brief Accepts an incomming IPv4 connection on a bound socket. This should be non-blocking.
  @param socketID The socket id
  @param connectionSocketID A socket id for a new socket for the connection.
- @returns A CBNetworkAddress of the connected connection.
+ @param sockAddr The CBSocketAddress of the connection.
+ @returns true on success and false on failure.
  */
-void * CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID);
+bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID, void * sockAddr);
 #pragma weak CBSocketAccept
 /**
  @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
@@ -162,6 +164,8 @@ void * CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID);
  */
 bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator);
 #pragma weak CBNewEventLoop
+bool CBNetworkCommunicatorLoadDNS(void * comm, char * domain);
+#pragma weak CBNetworkCommunicatorLoadDNS
 /**
  @brief Runs a callback on the event loop.
  @param loopID The loop ID
@@ -260,7 +264,7 @@ int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len);
  @param callback The callback function.
  @param arg The callback argument.
  */
-bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint16_t time, void (*callback)(void *), void * arg);
+bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint32_t time, void (*callback)(void *), void * arg);
 #pragma weak CBStartTimer
 /**
  @brief Ends a timer.
@@ -721,6 +725,8 @@ typedef struct{
 	uint8_t txHash[32];
 	uint64_t timestamp;
 	uint32_t height;
+	uint64_t cumBalance;
+	int64_t cumUnconfBalance;
 } CBTransactionDetails;
 
 typedef struct CBTransactionAccountDetailList CBTransactionAccountDetailList;
@@ -823,18 +829,8 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t bloc
  @param balance The balance to set.
  @returns true on success, false on failure.
  */
-bool CBAccounterGetAccountBalance(CBDepObject self, uint64_t accountID, uint64_t * balance);
+bool CBAccounterGetAccountBalance(CBDepObject self, uint64_t accountID, uint64_t * balance, int64_t * unconfBalance);
 #pragma weak CBAccounterGetAccountBalance
-/**
- @brief Gets the unconfirmed balance for an account.
- @param self The accounter object.
- @param branch The branch ID.
- @param accountID The account ID.
- @param balance The balance to set.
- @returns true on success, false on failure.
- */
-bool CBAccounterGetAccountUnconfirmedBalance(CBDepObject self, uint64_t accountID, int64_t * balance);
-#pragma weak CBAccounterGetAccountUnconfirmedBalance
 /**
  @brief Gets the next transaction by a cursor.
  @param cursor The cursor object.
@@ -925,6 +921,8 @@ void CBConditionWait(CBDepObject cond, CBDepObject mutex);
 #pragma weak CBConditionWait
 void CBConditionSignal(CBDepObject cond);
 #pragma weak CBConditionSignal
+uint8_t CBGetNumberOfCores(void);
+#pragma weak CBGetNumberOfCores
 
 // LOGGING DEPENDENCIES
 

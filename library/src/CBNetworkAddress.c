@@ -18,10 +18,10 @@
 
 //  Constructor
 
-CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic){
+CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBSocketAddress addr, CBVersionServices services, bool isPublic){
 	CBNetworkAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeNetworkAddress;
-	CBInitNetworkAddress(self, lastSeen, ip, port, services, isPublic);
+	CBInitNetworkAddress(self, lastSeen, addr, services, isPublic);
 	return self;
 }
 CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic){
@@ -33,27 +33,26 @@ CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic
 
 //  Initialiser
 
-void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic){
+void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBSocketAddress addr, CBVersionServices services, bool isPublic){
 	self->lastSeen = lastSeen;
 	self->penalty = 0;
-	self->ip = ip;
+	self->sockAddr = addr;
 	self->isPublic = isPublic;
-	if (! ip) {
-		ip = CBNewByteArrayOfSize(16);
-		memset(CBByteArrayGetData(ip), 0, 16);
+	if (! self->sockAddr.ip) {
+		self->sockAddr.ip = CBNewByteArrayOfSize(16);
+		memset(CBByteArrayGetData(self->sockAddr.ip), 0, 16);
 		self->type = CB_IP_INVALID;
 	}else{
 		// Determine IP type
-		self->type = CBGetIPType(CBByteArrayGetData(ip));
-		CBRetainObject(ip);
+		self->type = CBGetIPType(CBByteArrayGetData(self->sockAddr.ip));
+		CBRetainObject(self->sockAddr.ip);
 	}
-	self->port = port;
 	self->services = services;
 	self->bucketSet = false;
 	CBInitMessageByObject(CBGetMessage(self));
 }
 void CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, bool isPublic){
-	self->ip = NULL;
+	self->sockAddr.ip = NULL;
 	self->bucketSet = false;
 	CBInitMessageByData(CBGetMessage(self), data);
 }
@@ -62,7 +61,7 @@ void CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, b
 
 void CBDestroyNetworkAddress(void * vself){
 	CBNetworkAddress * self = vself;
-	if (self->ip) CBReleaseObject(self->ip);
+	if (self->sockAddr.ip) CBReleaseObject(self->sockAddr.ip);
 	CBDestroyMessage(self);
 }
 void CBFreeNetworkAddress(void * self){
@@ -72,15 +71,15 @@ void CBFreeNetworkAddress(void * self){
 
 //  Functions
 
-uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp){
+uint32_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBNetworkAddress with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 26 + timestamp * 4) {
 		CBLogError("Attempting to deserialise a CBNetworkAddress with less bytes than required.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	uint8_t start;
 	uint64_t twoHoursAgo = time(NULL) - 3600;
@@ -95,17 +94,17 @@ uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp){
 		start = 0;
 	}
 	self->services = (CBVersionServices) CBByteArrayReadInt64(bytes, start);
-	self->ip = CBNewByteArraySubReference(bytes, start + 8, 16);
+	self->sockAddr.ip = CBNewByteArraySubReference(bytes, start + 8, 16);
 	// Determine IP type
-	self->type = CBGetIPType(CBByteArrayGetData(self->ip));
-	self->port = CBByteArrayReadPort(bytes, start + 24);
+	self->type = CBGetIPType(CBByteArrayGetData(self->sockAddr.ip));
+	self->sockAddr.port = CBByteArrayReadPort(bytes, start + 24);
 	return start + 26;
 }
 bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr){
-	return (self->ip
-			&& addr->ip
-			&& CBByteArrayCompare(self->ip, addr->ip) == CB_COMPARE_EQUAL
-			&& self->port == addr->port);
+	return (self->sockAddr.ip
+			&& addr->sockAddr.ip
+			&& CBByteArrayCompare(self->sockAddr.ip, addr->sockAddr.ip) == CB_COMPARE_EQUAL
+			&& self->sockAddr.port == addr->sockAddr.port);
 }
 uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
@@ -124,10 +123,10 @@ uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp){
 	}else cursor = 0;
 	CBByteArraySetInt64(bytes, cursor, self->services);
 	cursor += 8;
-	CBByteArrayCopyByteArray(bytes, cursor, self->ip);
-	CBByteArrayChangeReference(self->ip, bytes, cursor);
+	CBByteArrayCopyByteArray(bytes, cursor, self->sockAddr.ip);
+	CBByteArrayChangeReference(self->sockAddr.ip, bytes, cursor);
 	cursor += 16;
-	CBByteArraySetPort(bytes, cursor, self->port);
+	CBByteArraySetPort(bytes, cursor, self->sockAddr.port);
 	bytes->length = cursor + 2;
 	CBGetMessage(self)->serialised = true;
 	return cursor + 2;
@@ -135,18 +134,18 @@ uint8_t CBNetworkAddressSerialise(CBNetworkAddress * self, bool timestamp){
 char * CBNetworkAddressToString(CBNetworkAddress * self, char output[48]){
 	if (self->type & CB_IP_IP4) {
 		sprintf(output, "[::ffff:%u.%u.%u.%u]:%u",
-				CBByteArrayGetByte(self->ip, 12),
-				CBByteArrayGetByte(self->ip, 13),
-				CBByteArrayGetByte(self->ip, 14),
-				CBByteArrayGetByte(self->ip, 15),
-				self->port);
+				CBByteArrayGetByte(self->sockAddr.ip, 12),
+				CBByteArrayGetByte(self->sockAddr.ip, 13),
+				CBByteArrayGetByte(self->sockAddr.ip, 14),
+				CBByteArrayGetByte(self->sockAddr.ip, 15),
+				self->sockAddr.port);
 		return strchr(output, '\0');
 	}
 	*(output++) = '[';
 	uint8_t numColons = 0;
 	for (uint8_t x = 0; x < 16; x += 2) {
 		// Also can be used for any reading of big endian 16 bit integers
-		uint16_t num = CBByteArrayReadPort(self->ip, x);
+		uint16_t num = CBByteArrayReadPort(self->sockAddr.ip, x);
 		if (num == 0) {
 			// Skip
 			if (numColons < 2) {
@@ -167,6 +166,6 @@ char * CBNetworkAddressToString(CBNetworkAddress * self, char output[48]){
 	}
 	// Add port number
 	*output = ']';
-	sprintf(output + 1, ":%u", self->port);
+	sprintf(output + 1, ":%u", self->sockAddr.port);
 	return strchr(output, '\0');
 }

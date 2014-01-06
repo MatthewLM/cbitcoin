@@ -30,6 +30,7 @@
 // Constants and Macros
 
 #define CB_MESSAGE_TYPE_STR_SIZE 11
+#define CB_DESERIALISE_ERROR UINT32_MAX
 #define CBGetMessage(x) ((CBMessage *)x)
 
 /*

@@ -77,9 +77,9 @@ uint64_t CBGetMilliseconds(void){
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
-void onFatalNodeError(CBNode * node);
-void onFatalNodeError(CBNode * node){
-	CBLogError("ON FATAL NODE ERROR\n");
+void onFatalNodeError(CBNode * node, CBErrorReason reason);
+void onFatalNodeError(CBNode * node, CBErrorReason reason){
+	CBLogError("ON FATAL NODE ERROR %u\n", reason);
 	exit(EXIT_FAILURE);
 }
 
@@ -156,29 +156,25 @@ void maybeFinishOrphanTest(void * foo){
 		for (uint8_t x = 0; x < 5; x++)
 			CBAccounterGetTransactionTime(CBGetNode(nodes[0])->accounterStorage, CBTransactionGetHash(initialTxs[(int []){4,6,7,10,12}[x]]), times + x);
 		checkTransactions(cursor, (CBTestTxDetails [13]){
-			/* 0 */ {CBKeyPairGetHash(keys), 1003, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2])},
-			/* 1 */ {CBKeyPairGetHash(keys), 1001, 312500000, 1231471166, CBTransactionGetHash(doubleSpends[0])},
-			/* 2 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[1])},
-			/* 3 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[2])},
-			/* 4 */ {CBKeyPairGetHash(keys), 1002, 312500000, 1231471167, CBTransactionGetHash(doubleSpends[3])},
-			/* 5 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[4])},
-			/* 6 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[5])},
-			/* 7 */ {zeroHash, 1004, 0, 1231471169, CBTransactionGetHash(orphanSpendOtherBranch)},
+			/* 0 */ {CBKeyPairGetHash(keys), 1003, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2]),1250000000,0},
+			/* 1 */ {CBKeyPairGetHash(keys), 1001, 312500000, 1231471166, CBTransactionGetHash(doubleSpends[0]),1562500000,0},
+			/* 2 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[1]),1562500000,0},
+			/* 3 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[2]),1562500000,0},
+			/* 4 */ {CBKeyPairGetHash(keys), 1002, 312500000, 1231471167, CBTransactionGetHash(doubleSpends[3]),1875000000,0},
+			/* 5 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[4]),1875000000,0},
+			/* 6 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[5]),1875000000,0},
+			/* 7 */ {zeroHash, 1004, 0, 1231471169, CBTransactionGetHash(orphanSpendOtherBranch),1875000000,0},
 			// Timestamps should be after the fixed timestamps.
-			/* 8 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4])},
-			/* 9 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6])},
-			/* 10 */ {CBKeyPairGetHash(keys), 1002, 312500000, times[2], CBTransactionGetHash(initialTxs[7])},
-			/* 11 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10])},
-			/* 12 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12])},
+			/* 8 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4]),2187500000,312500000},
+			/* 9 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6]),1875000000,0},
+			/* 10 */ {CBKeyPairGetHash(keys), 1002, 312500000, times[2], CBTransactionGetHash(initialTxs[7]),2187500000,0},
+			/* 11 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10]),2187500000,0},
+			/* 12 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12]),2031250000,-156250000},
 		}, 13);
 		int64_t ubalance;
 		uint64_t cbalance;
-		if (! CBAccounterGetAccountUnconfirmedBalance(CBGetNode(nodes[0])->accounterStorage, 1, &ubalance)){
+		if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance, &ubalance)){
 			printf("GET UNCONF BALANCE FAIL\n");
-			exit(EXIT_FAILURE);
-		}
-		if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance)) {
-			printf("GET CONF BALANCE FAIL\n");
 			exit(EXIT_FAILURE);
 		}
 		if (ubalance != -156250000) {
@@ -263,24 +259,20 @@ void maybeFinishLoseTest(void){
 		for (uint8_t x = 0; x < 5; x++)
 			CBAccounterGetTransactionTime(CBGetNode(nodes[0])->accounterStorage, CBTransactionGetHash(initialTxs[(int []){4,6,7,10,12}[x]]), times + x);
 		checkTransactions(cursor, (CBTestTxDetails [9]){
-			/* 0 */ {CBKeyPairGetHash(keys), 1001, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2])},
-			/* 1 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, 1231471167, CBTransactionGetHash(doubleSpends[3])},
-			/* 2 */ {zeroHash, CB_UNCONFIRMED, 0, 1231471167, CBTransactionGetHash(doubleSpends[4])},
-			/* 3 */ {zeroHash, CB_UNCONFIRMED, 0, 1231471167, CBTransactionGetHash(doubleSpends[5])},
-			/* 4 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4])},
-			/* 5 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6])},
-			/* 6 */ {CBKeyPairGetHash(keys), 1003, 312500000, times[2], CBTransactionGetHash(initialTxs[7])},
-			/* 7 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10])},
-			/* 8 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12])},
+			/* 0 */ {CBKeyPairGetHash(keys), 1001, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2]),1250000000,0},
+			/* 1 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, 1231471167, CBTransactionGetHash(doubleSpends[3]),1562500000,312500000},
+			/* 2 */ {zeroHash, CB_UNCONFIRMED, 0, 1231471167, CBTransactionGetHash(doubleSpends[4]),1562500000,312500000},
+			/* 3 */ {zeroHash, CB_UNCONFIRMED, 0, 1231471167, CBTransactionGetHash(doubleSpends[5]),1562500000,312500000},
+			/* 4 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4]),1875000000,625000000},
+			/* 5 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6]),1562500000,312500000},
+			/* 6 */ {CBKeyPairGetHash(keys), 1003, 312500000, times[2], CBTransactionGetHash(initialTxs[7]),1875000000,312500000},
+			/* 7 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10]),1875000000,312500000},
+			/* 8 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12]),1718750000,156250000},
 		}, 9);
 		int64_t ubalance;
 		uint64_t cbalance;
-		if (! CBAccounterGetAccountUnconfirmedBalance(CBGetNode(nodes[0])->accounterStorage, 1, &ubalance)){
+		if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance, &ubalance)){
 			printf("LOSE CHAIN AND RELAY GET UNCONF BALANCE FAIL\n");
-			exit(EXIT_FAILURE);
-		}
-		if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance)) {
-			printf("LOSE CHAIN AND RELAY GET CONF BALANCE FAIL\n");
 			exit(EXIT_FAILURE);
 		}
 		if (ubalance != 156250000) {
@@ -512,27 +504,23 @@ void maybeFinishReorgTest(void){
 		for (uint8_t x = 0; x < 5; x++)
 			CBAccounterGetTransactionTime(CBGetNode(nodes[0])->accounterStorage, CBTransactionGetHash(initialTxs[(int []){4,6,7,10,12}[x]]), times + x);
 		checkTransactions(cursor, (CBTestTxDetails [12]){
-			/* 0 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2])},
-			/* 1 */ {CBKeyPairGetHash(keys), 1001, 312500000, 1231471166, CBTransactionGetHash(doubleSpends[0])},
-			/* 2 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[1])},
-			/* 3 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[2])},
-			/* 4 */ {CBKeyPairGetHash(keys), 1002, 312500000, 1231471167, CBTransactionGetHash(doubleSpends[3])},
-			/* 5 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[4])},
-			/* 6 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[5])},
+			/* 0 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2]),1250000000,1250000000},
+			/* 1 */ {CBKeyPairGetHash(keys), 1001, 312500000, 1231471166, CBTransactionGetHash(doubleSpends[0]),1562500000,1250000000},
+			/* 2 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[1]),1562500000,1250000000},
+			/* 3 */ {zeroHash, 1001, 0, 1231471166, CBTransactionGetHash(doubleSpends[2]),1562500000,1250000000},
+			/* 4 */ {CBKeyPairGetHash(keys), 1002, 312500000, 1231471167, CBTransactionGetHash(doubleSpends[3]),1875000000,1250000000},
+			/* 5 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[4]),1875000000,1250000000},
+			/* 6 */ {zeroHash, 1002, 0, 1231471167, CBTransactionGetHash(doubleSpends[5]),1875000000,1250000000},
 			// Timestamps should be after the fixed timestamps.
-			/* 7 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4])},
-			/* 8 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6])},
-			/* 9 */ {CBKeyPairGetHash(keys), 1002, 312500000, times[2], CBTransactionGetHash(initialTxs[7])},
-			/* 10 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10])},
-			/* 11 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12])},
+			/* 7 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4]),2187500000,1562500000},
+			/* 8 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6]),1875000000,1250000000},
+			/* 9 */ {CBKeyPairGetHash(keys), 1002, 312500000, times[2], CBTransactionGetHash(initialTxs[7]),2187500000,1250000000},
+			/* 10 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10]),2187500000,1250000000},
+			/* 11 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12]),2031250000,1093750000},
 		}, 12);
 		int64_t ubalance;
 		uint64_t cbalance;
-		if (! CBAccounterGetAccountUnconfirmedBalance(CBGetNode(nodes[0])->accounterStorage, 1, &ubalance)){
-			printf("CHAIN REORGANISATION GET UNCONF BALANCE FAIL\n");
-			exit(EXIT_FAILURE);
-		}
-		if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance)) {
+		if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance, &ubalance)) {
 			printf("CHAIN REORGANISATION GET CONF BALANCE FAIL\n");
 			exit(EXIT_FAILURE);
 		}
@@ -707,22 +695,18 @@ void finishReceiveInitialTest(void * foo){
 	for (uint8_t x = 0; x < 6; x++)
 		CBAccounterGetTransactionTime(CBGetNode(nodes[0])->accounterStorage, CBTransactionGetHash(initialTxs[(int []){4,6,7,10,12,13}[x]]), times + x);
 	checkTransactions(cursor, (CBTestTxDetails [7]){
-		/* 0 */ {CBKeyPairGetHash(keys), 1001, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2])},
-		/* 1 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4])},
-		/* 2 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6])},
-		/* 3 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[2], CBTransactionGetHash(initialTxs[7])},
-		/* 4 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10])},
-		/* 5 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12])},
-		/* 6 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 468750000, times[5], CBTransactionGetHash(initialTxs[13])},
+		/* 0 */ {CBKeyPairGetHash(keys), 1001, 1250000000, 1231471165, CBTransactionGetHash(initialTxs[2]), 1250000000,0},
+		/* 1 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[0], CBTransactionGetHash(initialTxs[4]), 1562500000,312500000},
+		/* 2 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -312500000, times[1], CBTransactionGetHash(initialTxs[6]), 1250000000,0},
+		/* 3 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 312500000, times[2], CBTransactionGetHash(initialTxs[7]), 1562500000,312500000},
+		/* 4 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 0, times[3], CBTransactionGetHash(initialTxs[10]), 1562500000,312500000},
+		/* 5 */ {CBKeyPairGetHash(keys + 2), CB_UNCONFIRMED, -156250000, times[4], CBTransactionGetHash(initialTxs[12]), 1406250000, 156250000},
+		/* 6 */ {CBKeyPairGetHash(keys), CB_UNCONFIRMED, 468750000, times[5], CBTransactionGetHash(initialTxs[13]),1875000000,625000000},
 	}, 7);
 	int64_t ubalance;
 	uint64_t cbalance;
-	if (! CBAccounterGetAccountUnconfirmedBalance(CBGetNode(nodes[0])->accounterStorage, 1, &ubalance)){
+	if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance, &ubalance)){
 		printf("INITIAL GET UNCONF BALANCE FAIL\n");
-		exit(EXIT_FAILURE);
-	}
-	if (! CBAccounterGetAccountBalance(CBGetNode(nodes[0])->accounterStorage, 1, &cbalance)) {
-		printf("INITIAL GET CONF BALANCE FAIL\n");
 		exit(EXIT_FAILURE);
 	}
 	if (ubalance != 625000000) {
@@ -1358,7 +1342,7 @@ void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
 
 void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
 void CBNetworkCommunicatorTryConnectionsVoid(void * comm){
-	CBNetworkCommunicatorTryConnections(comm);
+	CBNetworkCommunicatorTryConnections(comm, false);
 }
 
 void CBNetworkCommunicatorStartListeningVoid(void * comm);
@@ -1407,11 +1391,10 @@ int main(){
 		CBNewStorageDatabase(&databases[x], directory, 10000000, 10000000);
 		nodes[x] = CBNewNodeFull(databases[x], CB_NODE_CHECK_STANDARD, 100000, callbacks);
 		CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
-		CBNetworkAddress * addr = CBNewNetworkAddress(0, loopBack, 45562 + x, 0, false);
+		CBNetworkAddress * addr = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45562 + x}, 0, false);
 		CBReleaseObject(loopBack);
 		CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
 		CBNetworkCommunicator * comm = CBGetNetworkCommunicator(nodes[x]);
-		comm->networkID = CB_PRODUCTION_NETWORK_BYTES;
 		comm->maxConnections = 3;
 		comm->maxIncommingConnections = 3;
 		comm->recvTimeOut = 0;
@@ -1428,8 +1411,8 @@ int main(){
 	}
 	// Give node 0 the addresses for node 1 and 2
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
-	CBNetworkAddress * addr = CBNewNetworkAddress(0, loopBack, 45563, 0, true);
-	CBNetworkAddress * addr2 = CBNewNetworkAddress(0, loopBack, 45564, 0, true);
+	CBNetworkAddress * addr = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45563}, 0, true);
+	CBNetworkAddress * addr2 = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45564}, 0, true);
 	CBReleaseObject(loopBack);
 	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr);
 	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr2);

@@ -32,7 +32,8 @@
 #define CB_NO_BRANCH 0xFF
 
 typedef enum{
-	CB_NODE_CHECK_STANDARD,
+	CB_NODE_CHECK_STANDARD = 1,
+	CB_NODE_BOOTSTRAP = 2
 } CBNodeFlags;
 
 typedef struct{
@@ -45,7 +46,7 @@ typedef struct{
 typedef struct CBNode CBNode;
 
 typedef struct{
-	void (*onFatalNodeError)(CBNode *);
+	void (*onFatalNodeError)(CBNode *, CBErrorReason reason);
 	void (*newBlock)(CBNode *, CBBlock * block, uint32_t forkPoint);
 	void (*newTransaction)(CBNode *, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details);
 	void (*transactionConfirmed)(CBNode *, uint8_t * txHash, uint32_t blockHeight);
@@ -114,6 +115,7 @@ void CBFreeNode(void * self);
 // Functions
 
 void CBNodeDisconnectPeer(void * vpeer);
+void CBNodeOnBadTime(void * self);
 CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * message);
 void CBNodeOnValidatorError(void *);
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert);

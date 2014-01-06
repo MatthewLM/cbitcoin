@@ -70,7 +70,15 @@ typedef enum{
  */
 typedef enum{
 	CB_ORDER_NUM_TX_DETAILS_HEIGHT = 0,
-} CBBranchTxDetailsDataOffsets;
+} CBTxDetailsDataOffsets;
+
+/**
+ @brief The data offsets for accountTimeTx
+ */
+typedef enum{
+	CB_ACCOUNT_TIME_TX_BALANCE = 0,
+	CB_ACCOUNT_TIME_TX_UNCONF_BALANCE = 8,
+} CBAccountTimeTxDataOffsets;
 
 /**
  @brief The key offsets for outputHashAndIndexToID
@@ -144,7 +152,7 @@ typedef enum{
 	CB_ACCOUNT_TIME_TX_TIMESTAMP = 8,
 	CB_ACCOUNT_TIME_TX_ORDERNUM = 16, /**< This is important. 8 bytes for allowing ordering of transactions with the same timestamp by the order they were found. */
 	CB_ACCOUNT_TIME_TX_TX_ID = 24,
-} CBBranchAccountTimeTxKeyOffsets;
+} CBAccountTimeTxKeyOffsets;
 
 // Structures
 
@@ -166,7 +174,6 @@ typedef struct{
 	uint64_t nextTxID;
 	uint64_t nextOutputRefID;
 	CBDatabaseIndex * txDetails;
-	CBDatabaseIndex * accountUnconfBalance; /**< Contains the total of all the values of unconfirmed transactions. */
 	CBDatabaseIndex * outputDetails; /**< Contains the value, txHash, index and hash identifier of outputs. */
 	CBDatabaseIndex * accountTxDetails; /**< Contains the value of the transction for the account and the in/out address. */
 	CBDatabaseIndex * accountTimeTx; /**< Entries for the transactions in each accounts ordered by time and 32bit integer that insures transactions with the same time get ordered by the order found. Contains details for on-chain transactions with the balance upto that transaction. Used to fetch balances for accounts and making reorgs easier. */
@@ -200,15 +207,7 @@ typedef struct{
 
 // Functions
 
-bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint64_t accountID, int64_t adjustment, uint64_t * last);
-/**
- @brief Adjusts the balance for an account of th unconfirmed transactions.
- @param self The accounter storage object.
- @param accountID The ID of the account.
- @param value The amount to adjust the balance by.
- @returns true on success, false on failure.
- */
-bool CBAccounterAdjustUnconfBalance(CBAccounterStorage * self, uint64_t accountID, uint64_t value);
+bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint64_t accountID, int64_t adjustment, int64_t unconfAdjustment, uint64_t * last, int64_t * unconfLast);
 /**
  @brief Changes the spent status of an output reference on a branch to spent
  @param self The accounter storage object.
@@ -225,7 +224,7 @@ bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, 
  @param balance Will be set to the balance
  @returns true on success, false on failure.
  */
-bool CBAccounterGetLastAccountBalance(CBAccounterStorage * self, uint64_t accountID, uint64_t maxTime, uint64_t * balance);
+bool CBAccounterGetLastAccountBalance(CBAccounterStorage * self, uint64_t accountID, uint64_t maxTime, uint64_t * balance, int64_t * unconfBalance);
 /**
  @brief Gets the value of a transction for an account.
  @param self The accounter storage object.

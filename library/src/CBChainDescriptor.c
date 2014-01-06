@@ -65,24 +65,24 @@ void CBChainDescriptorAddHash(CBChainDescriptor * self, CBByteArray * hash){
 	CBRetainObject(hash);
 	CBChainDescriptorTakeHash(self, hash);
 }
-uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
+uint32_t CBChainDescriptorDeserialise(CBChainDescriptor * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBChainDescriptor with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 1) {
 		CBLogError("Attempting to deserialise a CBChainDescriptor with no bytes");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt hashNum = CBVarIntDecode(bytes, 0);
 	if (hashNum.val > 500) {
 		CBLogError("Attempting to deserialise a CBChainDescriptor with a var int over 500.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < hashNum.size + hashNum.val * 32) {
 		CBLogError("Attempting to deserialise a CBChainDescriptor with less bytes than required for the hashes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	// Deserialise each hash
 	self->hashes = malloc(sizeof(*self->hashes) * (size_t)hashNum.val);

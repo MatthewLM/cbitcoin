@@ -17,7 +17,7 @@
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
 #include "CBThreads.h"
-#include "stdarg.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>

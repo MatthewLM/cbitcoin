@@ -118,24 +118,24 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBAlert with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 47) {
 		CBLogError("Attempting to deserialise a CBAlert with less than 47 bytes minimally required.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt payloadLen = CBVarIntDecode(bytes, 0);
 	if (bytes->length < payloadLen.size + payloadLen.val + 1) { // Plus one byte for signature var int. After this check the payload size is used to check the payload contents.
 		CBLogError("Attempting to deserialise a CBAlert with less bytes than required for payload.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (payloadLen.val > 2000) { // Prevent too much memory being used.
 		CBLogError("Attempting to deserialise a CBAlert with a payload var int larger than 2000 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (payloadLen.val < 45) {
 		CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than 45.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	uint16_t cursor = payloadLen.size;
 	self->version = CBByteArrayReadInt32(bytes, cursor);
@@ -152,7 +152,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	CBVarInt setCancelLen = CBVarIntDecode(bytes, cursor);
 	if (payloadLen.val < 44 + setCancelLen.size + setCancelLen.val * 4) {
 		CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->setCancelNum = setCancelLen.val;
 	cursor += setCancelLen.size;
@@ -171,7 +171,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 	CBVarInt userAgentsLen = CBVarIntDecode(bytes, cursor);
 	if (payloadLen.val < 7 + cursor + userAgentsLen.size + userAgentsLen.val - payloadLen.size) { // 7 for priority and 3 strings
 		CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set assuming empty strings.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	self->userAgentNum = userAgentsLen.val;
 	cursor += userAgentsLen.size;
@@ -182,8 +182,8 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 			CBVarInt userAgentLen = CBVarIntDecode(bytes, cursor); // No need to check space as there is enough data afterwards for safety.
 			cursor += userAgentLen.size;
 			if (payloadLen.val < 7 + cursor + userAgentLen.val + self->userAgentNum - x - payloadLen.size) { // 7 for priority and 3 strings. The current user agent size and the rest as if empty strings.
-				CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set up to user agent %u.", x);
-				return 0;
+				CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the cancel set and the user agent set up to user agent %" PRIu16 ".", x);
+				return CB_DESERIALISE_ERROR;
 			}
 			// Enough space so set user agent
 			if (userAgentLen.val)
@@ -279,7 +279,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 					// Did not pass third string. Release second.
 					if (self->displayedComment) CBReleaseObject(self->displayedComment);
 				}else{
-					CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string. %u < %u", payloadLen.val, cursor + displayedCommentLen.val + 1);
+					CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string. %" PRIu64 " < %" PRIu64, payloadLen.val, cursor + displayedCommentLen.val + 1);
 				}
 			}else{
 				CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the displayed string var int.");
@@ -293,7 +293,7 @@ uint32_t CBAlertDeserialise(CBAlert * self){
 		CBLogError("Attempting to deserialise a CBAlert with a payload var int smaller than required to cover the hidden string var int.");
 	}
 	// Error
-	return 0;
+	return CB_DESERIALISE_ERROR;
 }
 CBByteArray * CBAlertGetPayload(CBAlert * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;

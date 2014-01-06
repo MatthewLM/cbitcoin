@@ -84,21 +84,21 @@ uint32_t CBTransactionInputDeserialise(CBTransactionInput * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBTransactionInput with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 41) {
 		CBLogError("Attempting to deserialise a CBTransactionInput with less than 41 bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt scriptLen = CBVarIntDecode(bytes, 36);
 	if (scriptLen.val > 10000) {
 		CBLogError("Attempting to deserialise a CBTransactionInput with too big a script.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	uint32_t reqLen = (uint32_t)(40 + scriptLen.size + scriptLen.val);
 	if (bytes->length < reqLen) {
 		CBLogError("Attempting to deserialise a CBTransactionInput with less bytes than needed according to the length for the script. %i < %i", bytes->length, reqLen);
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	// Deserialise by subreferencing byte arrays and reading integers.
 	self->prevOut.hash = CBByteArraySubReference(bytes, 0, 32);

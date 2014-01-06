@@ -40,10 +40,13 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
 	CBInitNetworkCommunicator(comm, CB_SERVICE_FULL_BLOCKS, commCallbacks);
 	// Set network communicator fields.
 	comm->flags = CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY | CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING;
+	if (flags & CB_NODE_BOOTSTRAP)
+		comm->flags |= CB_NETWORK_COMMUNICATOR_BOOTSTRAP;
 	comm->version = CB_PONG_VERSION;
+	comm->networkID = CB_PRODUCTION_NETWORK_BYTES; // ??? Add testnet support
 	CBNetworkCommunicatorSetAlternativeMessages(comm, NULL, NULL);
 	// Create address manager
-	comm->addresses = CBNewNetworkAddressManager(CBNodeOnValidatorError);
+	comm->addresses = CBNewNetworkAddressManager(CBNodeOnBadTime);
 	comm->addresses->maxAddressesInBucket = 1000;
 	comm->addresses->callbackHandler = self;
 	// Initialise thread data
@@ -74,7 +77,7 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
 		CBFreeBlockChainStorage(self->blockChainStorage);
 	}else
 		CBLogError("Could not create the block storage object for a node");
-	CBFreeNetworkCommunicator(self);
+	CBDestroyNetworkCommunicator(self);
 	return false;
 }
 
@@ -111,6 +114,13 @@ void CBNodeDisconnectPeer(void * vpeer){
 	CBNetworkCommunicator * comm = peer->nodeObj;
 	CBNetworkCommunicatorDisconnect(comm, peer, CB_24_HOURS, false);
 }
+void CBNodeOnBadTime(void * vself){
+	CBNode * self = vself;
+	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
+	CBLogError("The system time is potentially incorrect. It does not match with the network time.");
+	self->callbacks.onFatalNodeError(self, CB_ERROR_BAD_TIME);
+	CBReleaseObject(self);
+}
 CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * message){
 	CBNode * self = CBGetNode(comm);
 	// Add message to queue
@@ -139,7 +149,7 @@ void CBNodeOnValidatorError(void * vpeer){
 	CBNode * self = CBGetPeer(vpeer)->nodeObj;
 	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 	CBLogError("There was a validation error.");
-	self->callbacks.onFatalNodeError(self);
+	self->callbacks.onFatalNodeError(self, CB_ERROR_VALIDATION);
 	CBReleaseObject(self);
 }
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert){
@@ -176,15 +186,16 @@ void CBNodeProcessMessages(void * node){
 		CBMutexLock(self->messageProcessMutex);
 		// Remove this from queue
 		CBReleaseObject(toProcess->message);
+		CBReleaseObject(toProcess->peer);
 		self->messageQueue = toProcess->next;
 		free(toProcess);
 	}
 }
 CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err){
 	CBLogError(err);
-	self->callbacks.onFatalNodeError(self);
+	self->callbacks.onFatalNodeError(self, CB_ERROR_GENERAL);
 	CBReleaseObject(self);
-	return CB_MESSAGE_ACTION_RETURN;
+	return CB_MESSAGE_ACTION_CONTINUE;
 }
 CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, CBGetBlocks * getBlocks, bool full){
 	CBChainDescriptor * chainDesc = getBlocks->chainDescriptor;
@@ -274,7 +285,7 @@ CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * p
 		if (full) {
 			CBByteArray * hashObj = CBNewByteArrayWithDataCopy(hash, 32);
 			char blkStr[CB_BLOCK_HASH_STR_SIZE];
-			CBByteArrayToString(hashObj, 0, CB_BLOCK_HASH_STR_BYTES, blkStr);
+			CBByteArrayToString(hashObj, 0, CB_BLOCK_HASH_STR_BYTES, blkStr, true);
 			CBInventoryTakeInventoryItem(CBGetInventory(message), CBNewInventoryItem(CB_INVENTORY_ITEM_BLOCK, hashObj));
 			CBReleaseObject(hashObj);
 		}else

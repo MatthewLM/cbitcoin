@@ -26,7 +26,6 @@
 
 // Constants and Macros
 
-#define CB_NETWORK_ADDRESS_LIST_MAX_SIZE 1000
 #define CBGetNetworkAddressList(x) ((CBNetworkAddressList *)x)
 
 /**
@@ -35,7 +34,7 @@
 typedef struct{
 	CBMessage base; /**< CBMessage base structure */
 	bool timeStamps; /**< If true, timestamps are included with the CBNetworkAddresses */
-	uint8_t addrNum; /**< Number of addresses. Maximum is 30. */
+	uint32_t addrNum; /**< Number of addresses. Maximum is 30. */
 	CBNetworkAddress ** addresses; /**< List of CBNetworkAddresses shared so that peers can find new peers. */
 } CBNetworkAddressList;
 

@@ -48,6 +48,12 @@ CBByteArray * CBNewByteArrayWithDataCopy(uint8_t * data, uint32_t size){
 	CBInitByteArrayWithDataCopy(self, data, size);
 	return self;
 }
+CBByteArray * CBNewByteArrayFromHex(char * hex){
+	CBByteArray * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeByteArray;
+	CBInitByteArrayFromHex(self, hex);
+	return self;
+}
 
 //  Initialisers
 
@@ -95,6 +101,10 @@ void CBInitByteArrayWithDataCopy(CBByteArray * self, uint8_t * data, uint32_t si
 	self->sharedData->references = 1;
 	self->length = size;
 	self->offset = 0;
+}
+void CBInitByteArrayFromHex(CBByteArray * self, char * hex){
+	CBInitByteArrayOfSize(self, (uint32_t)strlen(hex)/2);
+	CBStrHexToBytes(hex, CBByteArrayGetData(self));
 }
 
 //  Destructor
@@ -215,9 +225,32 @@ CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t l
 CBByteArray * CBByteArraySubReference(CBByteArray * self, uint32_t offset, uint32_t length){
 	return CBNewByteArraySubReference(self, offset, length);
 }
-void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output){
+void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output, bool backwards){
 	for (uint32_t x = offset; x < offset + length; x++) {
-		sprintf(output, "%02x", CBByteArrayGetByte(self, x));
+		sprintf(output, "%02x", CBByteArrayGetByte(self, offset + (backwards ? length - x - 1 : x)));
 		output += 2;
+	}
+}
+bool CBStrHexToBytes(char * hex, uint8_t * output){
+	char interpret[3];
+	char * cursor = hex;
+	for (uint32_t pos = 0;;cursor += 2, pos++) {
+		for (uint8_t x = 0; x < 2; x++) {
+			interpret[x] = cursor[x];
+			if ((interpret[x] < '0' || interpret[x] > '9')
+				&& (interpret[x] < 'a' || interpret[x] > 'f')
+				&& (interpret[x] < 'A' || interpret[x] > 'F')) {
+				if (x == 1)
+					return false;
+				if (interpret[0] == ' '
+				    || interpret[0] == '\n'
+					|| interpret[0] == '\0') {
+					return true;
+				}else
+					return false;
+			}
+		}
+		interpret[2] = '\0';
+		output[pos] = strtoul(interpret, NULL, 16);
 	}
 }

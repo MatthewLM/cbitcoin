@@ -237,7 +237,7 @@ bool CBNodeFullNewBranchCallback(void *, uint8_t branch, uint8_t parent, uint32_
 CBErrBool CBNodeFullNewUnconfirmedTransaction(CBNodeFull * self, CBPeer * peer, CBTransaction * tx);
 bool CBNodeFullMakeLostChainTransaction(CBNodeFull * self, CBChainTransaction * tx, bool now);
 bool CBNodeFullNoNewBranches(void *, CBBlock * block);
-void CBNodeFullOnNetworkError(CBNetworkCommunicator * comm);
+void CBNodeFullOnNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason);
 bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, void * peer);
 void CBNodeFullPeerDownloadEnd(CBNodeFull * self, CBPeer * peer);
 /**

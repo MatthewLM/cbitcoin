@@ -26,8 +26,6 @@
 
 // Constants and Macros
 
-#define CB_GET_BLOCKS_MAX_SIZE 16045
-#define CB_GET_HEADERS_MAX_SIZE 64045
 #define CBGetGetBlocks(x) ((CBGetBlocks *)x)
 
 /**
@@ -90,7 +88,7 @@ uint32_t CBGetBlocksCalculateLength(CBGetBlocks * self);
  @param self The CBGetBlocks object
  @returns The length read on success, 0 on failure.
 */
-uint16_t CBGetBlocksDeserialise(CBGetBlocks * self);
+uint32_t CBGetBlocksDeserialise(CBGetBlocks * self);
 /**
  @brief Serialises a CBGetBlocks to the byte data.
  @param self The CBGetBlocks object

@@ -37,6 +37,11 @@ typedef enum{
 	CB_SERVICE_FULL_BLOCKS = 1, /**< Service for full blocks. Node maintains the entire blockchain. */
 }CBVersionServices;
 
+typedef struct{
+	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. IPv4 addresses should use the IPv4 mapped IPv6 addresses. */
+	uint16_t port; /**< Port number */
+} CBSocketAddress;
+
 /**
  @brief Structure for CBNetworkAddress objects. @see CBNetworkAddress.h
 */
@@ -45,10 +50,9 @@ typedef struct{
 	uint64_t lastSeen; /**< The timestamp the address was last seen */
 	uint32_t penalty; /**< Addresses are selected partially by their time last seen, but the time last seen is adjusted with a penalty for bad behaviour. This is taken awat from the time last seen. */
 	CBVersionServices services; /**< Services bit field */
-	CBByteArray * ip; /**< IP address. Should be 16 bytes for the IPv6 compatible format. IPv4 addresses should use the IPv4 mapped IPv6 addresses. */
+	CBSocketAddress sockAddr;
 	CBIPType type; /**< The type of the IP */
-	uint16_t port; /**< Port number */
-	int32_t version; /**< Protocol version of peer. Set to CB_NODE_VERSION_!_SET before it is set once a CBVersion message is received. */
+	//int32_t version; /**< Protocol version of peer. */
 	bool isPublic; /**< If true the address is public and should be relayed. If true, upon a lost or failed connection, return to addresses list. If false the address is private and should be forgotten when connections are closed and never relayed. Addresses are made public when we receive them in an address broadcast. */
 	uint8_t bucket; /**< The bucket number for this address. */
 	bool bucketSet; /**< True if the bucket has been previously set */
@@ -63,7 +67,7 @@ typedef struct{
  @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns A new CBNetworkAddress object.
  */
-CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic);
+CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBSocketAddress addr, CBVersionServices services, bool isPublic);
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
  @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
@@ -81,7 +85,7 @@ CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic
  @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
  @returns true on success, false on failure.
  */
-void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBByteArray * ip, uint16_t port, CBVersionServices services, bool isPublic);
+void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBSocketAddress addr, CBVersionServices services, bool isPublic);
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
@@ -109,7 +113,7 @@ void CBFreeNetworkAddress(void * self);
  @param timestamp If true a timestamp is expected, else it is not. If a timestamp is not expected then "lastSeen" will be set to two hours ago.
  @returns The length read on success, 0 on failure.
  */
-uint8_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp);
+uint32_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp);
 /**
  @brief Compares two network addresses
  @param self The CBNetworkAddress object

@@ -87,7 +87,7 @@ void CBChainDescriptorAddHash(CBChainDescriptor * self, CBByteArray * hash);
  @param self The CBChainDescriptor object
  @returns The length read on success, 0 on failure.
 */
-uint16_t CBChainDescriptorDeserialise(CBChainDescriptor * self);
+uint32_t CBChainDescriptorDeserialise(CBChainDescriptor * self);
 /**
  @brief Serialises a CBChainDescriptor to the byte data.
  @param self The CBChainDescriptor object

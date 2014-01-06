@@ -99,25 +99,23 @@ bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections){
 		return false;
 	return true;
 }
-void * CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
+bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID, void * vsockAddr){
 	struct sockaddr_storage addr_storage;
+	CBSocketAddress * sockAddr = vsockAddr;
 	struct sockaddr * addr = (struct sockaddr *)&addr_storage;
 	socklen_t addrLen = sizeof(addr);
 	connectionSocketID->i = accept((evutil_socket_t)socketID.i, addr, &addrLen);
-	CBByteArray * ipBytes;
-	uint16_t port;
-	if (addr->sa_family == AF_INET) {
-		uint32_t ipInt = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		ipBytes = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0}, 16);
-		CBInt32ToArray(CBByteArrayGetData(ipBytes), 12, ipInt);
-		port = ((struct sockaddr_in *)addr)->sin_port;
-	}else{
-		ipBytes = CBNewByteArrayWithDataCopy(((struct sockaddr_in6 *)addr)->sin6_addr.s6_addr, 16);
-		port = ((struct sockaddr_in6 *)addr)->sin6_port;
-	}
-	CBNetworkAddress * addrObj = CBNewNetworkAddress(0, ipBytes, port, 0, false);
 	if (connectionSocketID->i == -1)
 		return false;
+	if (addr->sa_family == AF_INET) {
+		uint32_t ipInt = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
+		sockAddr->ip = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0}, 16);
+		CBInt32ToArray(CBByteArrayGetData(sockAddr->ip), 12, ipInt);
+		sockAddr->port = ((struct sockaddr_in *)addr)->sin_port;
+	}else{
+		sockAddr->ip = CBNewByteArrayWithDataCopy(((struct sockaddr_in6 *)addr)->sin6_addr.s6_addr, 16);
+		sockAddr->port = ((struct sockaddr_in6 *)addr)->sin6_port;
+	}
 	// Make socket non-blocking
 	evutil_make_socket_nonblocking((evutil_socket_t)connectionSocketID->i);
 	// Stop SIGPIPE
@@ -125,7 +123,7 @@ void * CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID){
 		int i = 1;
 		setsockopt((evutil_socket_t)connectionSocketID->i, SOL_SOCKET, SO_NOSIGPIPE, &i, sizeof(i));
 	}
-	return addrObj;
+	return true;
 }
 bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator){
 	// Use threads
@@ -145,6 +143,26 @@ bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidT
 	// Create thread
 	CBNewThread(&loop->loopThread, CBStartEventLoop, loop);
 	loopID->ptr = loop;
+	return true;
+}
+bool CBNetworkCommunicatorLoadDNS(void * vcomm, char * domain){
+	CBNetworkCommunicator * comm = vcomm;
+	struct addrinfo * addrs;
+	if (getaddrinfo(domain, NULL, NULL, &addrs))
+		return false;
+	for (;addrs; addrs = addrs->ai_next) {
+		CBByteArray * ipBytes;
+		if (addrs->ai_family == AF_INET) {
+			uint32_t ipInt = ((struct sockaddr_in *)addrs->ai_addr)->sin_addr.s_addr;
+			ipBytes = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0}, 16);
+			CBInt32ToArray(CBByteArrayGetData(ipBytes), 12, ipInt);
+		}else
+			ipBytes = CBNewByteArrayWithDataCopy(((struct sockaddr_in6 *)addrs->ai_addr)->sin6_addr.s6_addr, 16);
+		CBNetworkAddress * addr = CBNewNetworkAddress(0, (CBSocketAddress){ipBytes, 8333}, CB_SERVICE_FULL_BLOCKS, false);
+		CBReleaseObject(ipBytes);
+		CBNetworkAddressManagerAddAddress(comm->addresses, addr);
+		CBReleaseObject(addr);
+	}
 	return true;
 }
 void CBStartEventLoop(void * vloop){
@@ -194,7 +212,7 @@ void CBDidConnect(evutil_socket_t socketID, short eventNum, void * arg){
 		getsockopt(socketID, SOL_SOCKET, SO_ERROR, &optval, &optlen);
 		if (optval){
 			// Act as timeout
-			CBLogError("Connection error: %s", strerror(optval));
+			CBLogWarning("Connection error: %s", strerror(optval));
 			event->loop->onTimeOut(event->loop->communicator, event->peer, CB_TIMEOUT_CONNECT_ERROR);
 		}else
 			// Connection successful
@@ -280,7 +298,7 @@ int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len){
 		return 0; // False event. Wait again. No bytes read.
 	return CB_SOCKET_FAILURE; // Failure
 }
-bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint16_t time, void (*callback)(void *), void * arg){
+bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint32_t time, void (*callback)(void *), void * arg){
 	CBTimer * theTimer = malloc(sizeof(*theTimer));
 	theTimer->callback = callback;
 	theTimer->arg = arg;

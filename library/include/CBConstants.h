@@ -19,6 +19,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+struct CBForEachData{
+	unsigned pos: 31;
+	unsigned enterNested: 1;
+};
+
 //  Macros
 
 #define CB_LIBRARY_VERSION 5 // Goes up in increments
@@ -30,6 +35,7 @@
 #define CB_24_HOURS 86400
 #define CB_SCAN_START ((CB_NETWORK_TIME_ALLOWED_TIME_DRIFT + CB_BLOCK_ALLOWED_TIME_DRIFT)*2)
 #define CB_NO_SCAN 0xFFFFFFFFFFFFFFFF
+#define CB_MAX_MESSAGE_SIZE 0x02000000
 #define CBInt16ToArray(arr, offset, i) (arr)[offset] = (uint8_t)(i); \
 									 (arr)[offset + 1] = (uint8_t)((i) >> 8);
 #define CBInt32ToArray(arr, offset, i) CBInt16ToArray(arr, offset, i) \
@@ -69,6 +75,10 @@
 											  | (uint64_t)(arr)[offset + 1] << 48 \
 											  | (uint64_t)(arr)[offset + 2] << 40 \
 											  | (uint64_t)(arr)[offset + 3] << 32)
+#define CBForEach(el, arr) \
+	for (struct CBForEachData s = {0, true}; s.enterNested && sizeof(arr) && sizeof(arr[0])*(s.pos+1) <= sizeof(arr) ; s.enterNested = !s.enterNested, s.pos++) \
+		for (el = arr[s.pos];s.enterNested;s.enterNested = !s.enterNested)
+
 //  Enums
 
 typedef enum{
@@ -98,5 +108,13 @@ typedef enum{
 	CB_PREFIX_PRODUCTION_PRIVATE_KEY = 128,
 	CB_PREFIX_TEST_PRIVATE_KEY = 239
 } CBBase58Prefix;
+
+typedef enum{
+	CB_ERROR_UNREACHABLE,
+	CB_ERROR_NO_PEERS,
+	CB_ERROR_BAD_TIME,
+	CB_ERROR_VALIDATION,
+	CB_ERROR_GENERAL,
+} CBErrorReason;
 
 #endif

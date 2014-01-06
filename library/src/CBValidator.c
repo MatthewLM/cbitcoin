@@ -23,8 +23,6 @@ CBValidator * CBNewValidator(CBDepObject storage, CBValidatorFlags flags, CBVali
 	CBGetObject(self)->free = CBFreeValidator;
 	if (CBInitValidator(self, storage, flags, callbacks))
 		return self;
-	// If initialisation failed, free the data that exists.
-	CBFreeValidator(self);
 	return NULL;
 }
 
@@ -55,12 +53,15 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 		}
 		// Loop through the branches
 		for (uint8_t x = 0; x < self->numBranches; x++) {
-			if (! CBBlockChainStorageLoadBranch(self, x)) {
+			if (! CBBlockChainStorageLoadBranch(self, x)
+				|| !CBBlockChainStorageLoadBranchWork(self, x)) {
 				CBLogError("Could not load branch %u.", x);
-				return false;
-			}
-			if (! CBBlockChainStorageLoadBranchWork(self, x)) {
-				CBLogError("Could not load work for branch %u.", x);
+				// Release orphans
+				for (uint8_t y = 0; y < self->numOrphans; y++)
+					CBReleaseObject(self->orphans[x]);
+				// Free branch work
+				for (uint8_t y = 0; y < x; y++)
+					free(self->branches[x].work.data);
 				return false;
 			}
 		}
@@ -69,6 +70,7 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 		CBBlock * genesis = (flags & CB_VALIDATOR_HEADERS_ONLY) ? CBNewBlockGenesisHeader() : CBNewBlockGenesis();
 		if (! CBBlockChainStorageSaveBlock(self, genesis, 0, 0)) {
 			CBLogError("Could not save genesis block.");
+			CBReleaseObject(genesis);
 			return false;
 		}
 		CBReleaseObject(genesis);
@@ -87,6 +89,7 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 		self->branches[0].startHeight = 0;
 		self->branches[0].numBlocks = 1;
 		self->branches[0].lastValidation = 0;
+		self->branches[0].parentBlockIndex = 0; // Not needed but keep valgrind happy.
 		// Write branch information
 		if (! CBBlockChainStorageSaveBranch(self, 0)) {
 			CBLogError("Could not save the initial branch information.");
@@ -108,6 +111,8 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 	CBNewMutex(&self->orphanMutex);
 	CBNewCondition(&self->blockProcessWaitCond);
 	CBNewThread(&self->blockProcessThread, CBValidatorBlockProcessThread, self);
+	// Start the thread pool for script processing
+	CBInitThreadPoolQueue(&self->scriptProcessing.threadPool, CBGetNumberOfCores(), CBValidatorProcessScripts, CBDestroyScriptProcessItem);
 	return true;
 }
 
@@ -131,13 +136,20 @@ void CBDestroyValidator(void * vself){
 	// Release orphans
 	for (uint8_t x = 0; x < self->numOrphans; x++)
 		CBReleaseObject(self->orphans[x]);
-		// Release branches
-		for (uint8_t x = 0; x < self->numBranches; x++)
-			free(self->branches[x].work.data);
+	// Release branches
+	for (uint8_t x = 0; x < self->numBranches; x++)
+		free(self->branches[x].work.data);
+	CBDestroyThreadPoolQueue(&self->scriptProcessing.threadPool);
 }
 void CBFreeValidator(void * self){
 	CBDestroyValidator(self);
 	free(self);
+}
+
+void CBDestroyScriptProcessItem(void * vscriptItem){
+	CBScriptProcessItem * scriptItem = vscriptItem;
+	CBReleaseObject(scriptItem->outScript);
+	CBReleaseObject(scriptItem->tx);
 }
 
 //  Functions
@@ -352,6 +364,8 @@ void CBValidatorBlockProcessThread(void * validator){
 	}
 }
 CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t height){
+	// No script failures
+	self->scriptProcessing.scriptFailure = false;
 	// Check that the first transaction is a coinbase transaction.
 	if (! CBTransactionIsCoinBase(block->transactions[0]))
 		return CB_BLOCK_VALIDATION_BAD;
@@ -411,6 +425,10 @@ CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, u
 			blockReward += inputValue - outputValue;
 		}
 	}
+	// Wait for script processing to end, and then check result
+	CBThreadPoolQueueWaitUntilFinished(&self->scriptProcessing.threadPool);
+	if (self->scriptProcessing.scriptFailure)
+		return CB_BLOCK_VALIDATION_BAD;
 	// Verify coinbase output for reward
 	if (coinbaseOutputValue > blockReward)
 		return CB_BLOCK_VALIDATION_BAD;
@@ -563,10 +581,23 @@ CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t b
 			return CB_BLOCK_VALIDATION_BAD;
 	}
 	// We have sucessfully received an output for this input. Verify the input script for the output script.
-	if (CBValidatorVerifyScripts(self, block->transactions[transactionIndex], inputIndex, prevOut, sigOps, false) == CB_INPUT_BAD) {
+	CBScript * inScript = block->transactions[transactionIndex]->inputs[inputIndex]->scriptObject;
+	// First verify if P2SH
+	if (CBValidatorVerifyP2SHAndStandard(prevOut->scriptObject, inScript, sigOps, false) == CB_INPUT_BAD) {
 		CBReleaseObject(prevOut);
 		return CB_BLOCK_VALIDATION_BAD;
 	}
+	// Check to see if any scripts have failed.
+	if (self->scriptProcessing.scriptFailure)
+		return CB_BLOCK_VALIDATION_BAD;
+	// Queue the scripts to be verified
+	CBScriptProcessItem * item = malloc(sizeof(*item));
+	item->inputIndex = inputIndex;
+	item->outScript = prevOut->scriptObject;
+	item->tx = block->transactions[transactionIndex];
+	CBRetainObject(item->outScript);
+	CBRetainObject(item->tx);
+	CBThreadPoolQueueAdd(&self->scriptProcessing.threadPool, &item->item);
 	// Increment the value with the input value then be done with the output
 	*value += prevOut->value;
 	CBReleaseObject(prevOut);
@@ -1049,6 +1080,14 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 	}
 	return CB_BLOCK_VALIDATION_OK;
 }
+void CBValidatorProcessScripts(CBThreadPoolQueue * threadPoolQueue, void * vScriptItem){
+	CBScriptProcessItem * scriptItem = vScriptItem;
+	if (!CBValidatorVerifyScripts(scriptItem->tx, scriptItem->inputIndex, scriptItem->outScript)) {
+		// Clear queues and signify that validation failed.
+		((CBScriptProcessing *)threadPoolQueue)->scriptFailure = true;
+		CBThreadPoolQueueClear(threadPoolQueue);
+	}
+}
 bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackObj){
 	// Schedule the block for complete processing.
 	CBRetainObject(block);
@@ -1232,42 +1271,44 @@ bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blo
 	CBReleaseObject(block);
 	return res;
 }
-bool CBValidatorVerifyScripts(CBValidator * self, CBTransaction * tx, uint32_t inputIndex, CBTransactionOutput * output, uint32_t * sigOps, bool checkStandard){
+CBInputCheckResult CBValidatorVerifyP2SHAndStandard(CBScript * outputScript, CBScript * inputScript, uint32_t * sigOps, bool checkStandard){
 	CBScript * p2sh = NULL;
-	// Vrify scripts, check input for standard and count p2sh sigops.
+	// Verify P2SH inputs.
+	if (CBScriptIsP2SH(outputScript)){
+		// For P2SH inputs, there must be no script operations except for push operations, and there should be at least one push operation.
+		if (CBScriptIsPushOnly(inputScript) == 0)
+			return CB_INPUT_BAD;
+		// Since the output is a P2SH we include the serialised script in the signature operations
+		// Run input script to get P2SH script. Could be optimised to get P2SH directly but not very important as there are only push operations.
+		CBScriptStack stack = CBNewEmptyScriptStack();
+		if (CBScriptExecute(inputScript, &stack, NULL, NULL, 0, false) == CB_SCRIPT_INVALID)
+			return CB_INPUT_BAD;
+		p2sh = CBNewScriptWithDataCopy(stack.elements[stack.length - 1].data, stack.elements[stack.length - 1].length);
+		CBFreeScriptStack(stack);
+		*sigOps += CBScriptGetSigOpCount(p2sh, true);
+		if (*sigOps > CB_MAX_SIG_OPS)
+			return CB_INPUT_BAD;
+	}
+	// Check for standard input
+	if (checkStandard && !CBTransactionInputIsStandard(inputScript, outputScript, p2sh))
+		return CB_INPUT_NON_STD;
+	if (p2sh)
+		CBReleaseObject(p2sh);
+	return CB_INPUT_OK;
+}
+bool CBValidatorVerifyScripts(CBTransaction * tx, uint32_t inputIndex, CBScript * outScript){
+	// Verify scripts, check input for standard and count p2sh sigops.
 	CBScriptStack stack = CBNewEmptyScriptStack();
 	// Execute the input script.
 	CBScriptExecuteReturn scriptRes = CBScriptExecute(tx->inputs[inputIndex]->scriptObject, &stack, CBTransactionGetInputHashForSignature, tx, inputIndex, false);
 	// Check is script is invalid, but for input scripts, do not care if false.
 	if (scriptRes == CB_SCRIPT_INVALID) {
 		CBFreeScriptStack(stack);
-		return CB_INPUT_BAD;
+		return false;
 	}
-	// Verify P2SH inputs.
-	if (CBScriptIsP2SH(output->scriptObject)){
-		// For P2SH inputs, there must be no script operations except for push operations, and there should be at least one push operation.
-		if (CBScriptIsPushOnly(tx->inputs[inputIndex]->scriptObject) == 0){
-			CBFreeScriptStack(stack);
-			return CB_INPUT_BAD;
-		}
-		// Since the output is a P2SH we include the serialised script in the signature operations
-		p2sh = CBNewScriptWithDataCopy(stack.elements[stack.length - 1].data, stack.elements[stack.length - 1].length);
-		*sigOps += CBScriptGetSigOpCount(p2sh, true);
-		if (*sigOps > CB_MAX_SIG_OPS){
-			CBFreeScriptStack(stack);
-			return CB_INPUT_BAD;
-		}
-	}
-	// Check for standard input
-	if (checkStandard && CBTransactionInputIsStandard(tx->inputs[inputIndex], output, p2sh)) {
-		CBFreeScriptStack(stack);
-		return CB_INPUT_NON_STD;
-	}
-	if (p2sh)
-		CBReleaseObject(p2sh);
 	// Execute the output script.
-	scriptRes = CBScriptExecute(output->scriptObject, &stack, CBTransactionGetInputHashForSignature, tx, inputIndex, true);
+	scriptRes = CBScriptExecute(outScript, &stack, CBTransactionGetInputHashForSignature, tx, inputIndex, true);
 	// Finished with the stack.
 	CBFreeScriptStack(stack);
-	return (scriptRes == CB_SCRIPT_TRUE) ? CB_INPUT_OK : CB_INPUT_BAD;
+	return scriptRes == CB_SCRIPT_TRUE;
 }

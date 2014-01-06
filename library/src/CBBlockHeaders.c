@@ -69,16 +69,16 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBBlockHeaders with no bytes.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 82) {
 		CBLogError("Attempting to deserialise a CBBlockHeaders with less bytes than required for one header.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt headerNum = CBVarIntDecode(bytes, 0);
 	if (headerNum.val > 2000) {
 		CBLogError("Attempting to deserialise a CBBlockHeaders with a var int over 2000.");
-		return 0;
+		return CB_DESERIALISE_ERROR;
 	}
 	// Deserialise each header
 	self->headerNum = headerNum.val;
@@ -88,11 +88,11 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self){
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 		self->blockHeaders[x] = CBNewBlockFromData(data);
 		// Deserialise
-		uint8_t len = CBBlockDeserialise(self->blockHeaders[x], false); // false for no transactions. Only the header.
-		if (! len){
-			CBLogError("CBBlockHeaders cannot be deserialised because of an error with the CBBlock number %u.", x);
+		uint32_t len = CBBlockDeserialise(self->blockHeaders[x], false); // false for no transactions. Only the header.
+		if (len == CB_DESERIALISE_ERROR){
+			CBLogError("CBBlockHeaders cannot be deserialised because of an error with the CBBlock number %" PRIu16 ".", x);
 			CBReleaseObject(data);
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// Adjust length
 		data->length = len;
@@ -125,11 +125,11 @@ uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force){
 				CBReleaseObject(CBGetMessage(self->blockHeaders[x])->bytes);
 			CBGetMessage(self->blockHeaders[x])->bytes = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
 			if (! CBGetMessage(self->blockHeaders[x])->bytes) {
-				CBLogError("Cannot create a new CBByteArray sub reference in CBBlockHeadersSerialise for the header number %u", x);
+				CBLogError("Cannot create a new CBByteArray sub reference in CBBlockHeadersSerialise for the header number %" PRIu16, x);
 				return 0;
 			}
 			if (! CBBlockSerialise(self->blockHeaders[x], false, force)) { // false for no transactions.
-				CBLogError("CBBlockHeaders cannot be serialised because of an error with the CBBlock number %u.", x);
+				CBLogError("CBBlockHeaders cannot be serialised because of an error with the CBBlock number %" PRIu16 ".", x);
 				// Release CBByteArray objects to avoid problems overwritting pointer without release, if serialisation is tried again.
 				for (uint8_t y = 0; y < x + 1; y++)
 					CBReleaseObject(CBGetMessage(self->blockHeaders[y])->bytes);

@@ -439,8 +439,6 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 				space = false;
 				line = false;
 				if (cursor[1] == 'x') {
-					// Is hex, interpret hex digits.
-					char interpret[3];
 					char * spaceFind = strchr(cursor, ' ');
 					char * lineFind = strchr(cursor, '\n');
 					uint32_t diff;
@@ -466,19 +464,19 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 					uint32_t num = diff/2;
 					// Create push operations. The number of bytes to push is represented in little endian.
 					if (num < 76) {
-						uint8_t * temp = realloc(data, dataLast + 1);
+						uint8_t * temp = realloc(data, dataLast + 1 + num);
 						data = temp;
 						data[dataLast] = num;
 						dataLast++;
-					}else if (num < 256){
-						uint8_t * temp = realloc(data, dataLast + 2);
+					}else if (num < 256) {
+						uint8_t * temp = realloc(data, dataLast + 2 + num);
 						data = temp;
 						data[dataLast] = CB_SCRIPT_OP_PUSHDATA1;
 						dataLast++;
 						data[dataLast] = num;
 						dataLast++;
-					}else if (num < 65536){
-						uint8_t * temp = realloc(data, dataLast + 3);
+					}else if (num < 65536) {
+						uint8_t * temp = realloc(data, dataLast + 3 + num);
 						data = temp;
 						data[dataLast] = CB_SCRIPT_OP_PUSHDATA2;
 						dataLast++;
@@ -487,7 +485,7 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 						data[dataLast] = num >> 8;
 						dataLast++;
 					}else{
-						uint8_t * temp = realloc(data, dataLast + 5);
+						uint8_t * temp = realloc(data, dataLast + 5 + num);
 						data = temp;
 						data[dataLast] = CB_SCRIPT_OP_PUSHDATA4;
 						dataLast++;
@@ -500,36 +498,10 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 						data[dataLast] = num >> 24;
 						dataLast++;
 					}
-					while (true) {
-						cursor += 2;
-						interpret[0] = cursor[0];
-						if ((interpret[0] >= '0' && interpret[0] <= '9') 
-							|| (interpret[0] >= 'a' && interpret[0] <= 'f') 
-							|| (interpret[0] >= 'A' && interpret[0] <= 'F')) {
-							interpret[1] = cursor[1];
-							interpret[2] = '\0';
-							if ((interpret[1] >= '0' && interpret[1] <= '9') 
-								|| (interpret[1] >= 'a' && interpret[1] <= 'f') 
-								|| (interpret[1] >= 'A' && interpret[1] <= 'F')) {
-								// Both
-								uint8_t * temp = realloc(data, dataLast + 1);
-								data = temp;
-								data[dataLast] = strtoul(interpret, NULL, 16);
-								dataLast++;
-							}else{
-								free(data);
-								return false; // In pairs
-							}
-						}else if(interpret[0] == ' '
-								 || interpret[0] == '\n'
-								 || interpret[0] == '\0'){
-							// End
-							break;
-						}else{
-							free(data);
-							return false; // Needs to be space, line or end.
-						}
-					}
+					cursor += 2;
+					CBStrHexToBytes(cursor, data + dataLast);
+					dataLast += num;
+					cursor += diff;
 					break;
 				}else{
 					free(data);
@@ -1477,6 +1449,17 @@ uint8_t CBScriptOpGetNumber(CBScriptOp op){
 	if (op <= CB_SCRIPT_OP_16 && op >= CB_SCRIPT_OP_1)
 		return op - CB_SCRIPT_OP_1 + 1;
 	return CB_NOT_A_NUMBER_OP;
+}
+CBScriptOutputType CBScriptOutputGetType(CBScript * self){
+	if (CBScriptIsKeyHash(self))
+		return CB_TX_OUTPUT_TYPE_KEYHASH;
+	if (CBScriptIsMultisig(self))
+		return CB_TX_OUTPUT_TYPE_MULTISIG;
+	if (CBScriptIsP2SH(self))
+		return CB_TX_OUTPUT_TYPE_P2SH;
+	if (CBScriptIsPubkey(self))
+		return CB_TX_OUTPUT_TYPE_PUBKEY;
+	return CB_TX_OUTPUT_TYPE_UNKNOWN;
 }
 void CBSubScriptRemoveSignature(uint8_t * subScript, uint32_t * subScriptLen, CBScriptStackItem signature){
 	if (signature.data == NULL) return; // Signature zero

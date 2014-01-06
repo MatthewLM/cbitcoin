@@ -110,11 +110,11 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 				CBLogError("VERSION USER AGENT FAIL");
 				exit(EXIT_FAILURE);
 			}
-			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addSource->ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16)) {
+			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addSource->sockAddr.ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16)) {
 				CBLogError("VERSION SOURCE IP FAIL");
 				exit(EXIT_FAILURE);
 			}
-			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addRecv->ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16)) {
+			if (memcmp(CBByteArrayGetData(CBGetVersion(theMessage)->addRecv->sockAddr.ip), (uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0}, 16)) {
 				CBLogError("VERSION RECEIVE IP FAIL");
 				exit(EXIT_FAILURE);
 			}
@@ -192,8 +192,8 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 	pthread_mutex_unlock(&tester.testingMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
-void onNetworkError(CBNetworkCommunicator * comm);
-void onNetworkError(CBNetworkCommunicator * comm){
+void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason);
+void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason){
 	CBLogError("DID LOSE LAST NODE");
 	exit(EXIT_FAILURE);
 }
@@ -214,7 +214,7 @@ void onPeerFree(void * peer){
 
 void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
 void CBNetworkCommunicatorTryConnectionsVoid(void * comm){
-	CBNetworkCommunicatorTryConnections(comm);
+	CBNetworkCommunicatorTryConnections(comm, false);
 }
 
 void CBNetworkCommunicatorStartListeningVoid(void * comm);
@@ -229,11 +229,11 @@ int main(){
 	// Create three CBNetworkCommunicators and connect over the loopback address. Two will listen, one will connect. Test auto handshake, auto ping and auto discovery.
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
 	CBByteArray * loopBack2 = CBByteArrayCopy(loopBack); // Do not use in more than one thread.
-	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, loopBack, 45562, 0, false);
-	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, loopBack2, 45562, 0, true); // Use in connector thread.
-	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, loopBack, 45563, 0, false);
-	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, loopBack2, 45563, 0, true); // Use in connector thread.
-	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, loopBack, 45564, 0, false); // Different port over loopback to seperate the CBNetworkCommunicators.
+	CBNetworkAddress * addrListen = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45562}, 0, false);
+	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, (CBSocketAddress){loopBack2, 45562}, 0, true); // Use in connector thread.
+	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45563}, 0, false);
+	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, (CBSocketAddress){loopBack2, 45563}, 0, true); // Use in connector thread.
+	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45564}, 0, false); // Different port over loopback to seperate the CBNetworkCommunicators.
 	CBReleaseObject(loopBack);
 	CBReleaseObject(loopBack2);
 	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);

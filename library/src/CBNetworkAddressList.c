@@ -50,7 +50,7 @@ void CBInitNetworkAddressListFromData(CBNetworkAddressList * self, bool timeStam
 
 void CBDestroyNetworkAddressList(void * vself){
 	CBNetworkAddressList * self = vself;
-	for (uint8_t x = 0; x < self->addrNum; x++)
+	for (uint32_t x = 0; x < self->addrNum; x++)
 		CBReleaseObject(self->addresses[x]);
 	if (self->addresses) free(self->addresses);
 	CBDestroyMessage(vself);
@@ -69,45 +69,34 @@ void CBNetworkAddressListAddNetworkAddress(CBNetworkAddressList * self, CBNetwor
 uint32_t CBNetworkAddressListDeserialise(CBNetworkAddressList * self){
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
-		CBLogError("Attempting to deserialise a CBNetworkAddress with no bytes.");
-		return 0;
+		CBLogError("Attempting to deserialise a CBNetworkAddressList with no bytes.");
+		return CB_DESERIALISE_ERROR;
 	}
 	if (bytes->length < 26 + self->timeStamps * 4) {
-		CBLogError("Attempting to deserialise a CBNetworkAddress without enough bytes to cover one address.");
-		return 0;
+		CBLogError("Attempting to deserialise a CBNetworkAddressList without enough bytes to cover one address.");
+		return CB_DESERIALISE_ERROR;
 	}
 	CBVarInt num = CBVarIntDecode(bytes, 0);
-	if (num.val > 30) {
-		CBLogError("Attempting to deserialise a CBNetworkAddress with a var int over 30.");
-		return 0;
+	if (num.val > 1000) {
+		CBLogError("Attempting to deserialise a CBNetworkAddressList with a var int over 1000.");
+		return CB_DESERIALISE_ERROR;
 	}
 	self->addresses = malloc(sizeof(*self->addresses) * (size_t)num.val);
-	self->addrNum = num.val;
+	self->addrNum = (uint32_t)num.val;
 	uint16_t cursor = num.size;
-	for (uint8_t x = 0; x < num.val; x++) {
+	for (uint32_t x = 0; x < num.val; x++) {
 		// Make new CBNetworkAddress from the rest of the data.
-		uint8_t len;
+		uint32_t len;
 		CBByteArray * data = CBByteArraySubReference(bytes, cursor, bytes->length-cursor);
-		if (data) {
-			// Create a new network address object. It is public since it is in an address broadcast.
-			self->addresses[x] = CBNewNetworkAddressFromData(data, true);
-			if (self->addresses[x]){
-				// Deserialise
-				len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);
-				if (! len)
-					CBLogError("CBNetworkAddress cannot be deserialised because of an error with the CBNetworkAddress number %u.", x);
-			}else{
-				len = 0;
-				CBLogError("Could not create CBNetworkAddress in CBNetworkAddressDeserialise for network address %u.", x);
-			}
-		}else{
-			len = 0;
-			CBLogError("Could not create CBByteArray in CBNetworkAddressDeserialise for network address %u.", x);
-		}
-		if (! len) {
+		// Create a new network address object. It is public since it is in an address broadcast.
+		self->addresses[x] = CBNewNetworkAddressFromData(data, true);
+		// Deserialise
+		len = CBNetworkAddressDeserialise(self->addresses[x], self->timeStamps);
+		if (len == CB_DESERIALISE_ERROR){
+			CBLogError("CBNetworkAddressList cannot be deserialised because of an error with the CBNetworkAddress number %u.", x);
 			// Release bytes
 			CBReleaseObject(data);
-			return 0;
+			return CB_DESERIALISE_ERROR;
 		}
 		// Adjust length
 		data->length = len;

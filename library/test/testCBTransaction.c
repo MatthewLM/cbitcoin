@@ -1433,7 +1433,7 @@ int main(){
 	stack = CBNewEmptyScriptStack();
 	CBScriptExecute(tx->inputs[0]->scriptObject, &stack, NULL, NULL, 0, false);
 	if (CBScriptExecute(script, &stack, CBTransactionGetInputHashForSignature, tx, 0, false) != CB_SCRIPT_TRUE) {
-		printf("CBTransactionSignPubkeyInput FAIL\n");
+		printf("CBTransactionSignPubkeyInput P2SH FAIL\n");
 		return 1;
 	}
 	CBReleaseObject(script);

@@ -26,7 +26,6 @@
 
 // Constants and Macros
 
-#define CB_ALERT_MAX_SIZE 2100 // Max size for payload is 2000. Extra 100 for signature though the signature will likely be less.
 #define CBGetAlert(x) ((CBAlert *)x)
 
 /**

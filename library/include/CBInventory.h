@@ -26,8 +26,6 @@
 
 // Constants and Macros
 
-#define CB_GET_DATA_MAX_SIZE 50000
-#define CB_INVENTORY_BROADCAST_MAX_SIZE 50000
 #define CBGetInventory(x) ((CBInventory *)x)
 
 /**

@@ -53,9 +53,6 @@ bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 	return true;
 }
 bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
-	if (ftell(file.ptr) <= 26088 && ftell(file.ptr) > 26088-dataLen) {
-		printf("HERE");
-	}
 	return fwrite(data, 1, dataLen, file.ptr) == dataLen;
 }
 bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){

@@ -31,17 +31,6 @@
 #define CBGetTransactionOutput(x) ((CBTransactionOutput *)x)
 
 /**
- @brief The types of output recognised by cbitcoin. IP transaction types are not recognised by cbitcoin because they are insecure and pointless.
- */
-typedef enum{
-	CB_TX_OUTPUT_TYPE_UNKNOWN, /**< The output is not recognised. */
-	CB_TX_OUTPUT_TYPE_PUBKEY, /**< <public key> OP_CHECKSIG */
-	CB_TX_OUTPUT_TYPE_KEYHASH, /**< OP_DUP OP_HASH160 <hash of public key (20 bytes)> OP_EQUALVERIFY OP_CHECKSIG */
-	CB_TX_OUTPUT_TYPE_P2SH, /**< OP_HASH160 <hash of script> OP_EQUAL */
-	CB_TX_OUTPUT_TYPE_MULTISIG, /**< <number of signatures required> <public keys> <number of public keys supplied> OP_CHECKMULTISIG */
-} CBTransactionOutputType;
-
-/**
  @brief Structure for CBTransactionOutput objects. @see CBTransactionOutput.h
 */
 typedef struct{
@@ -119,7 +108,7 @@ bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash);
  @param self The CBTransactionOutput object
  @returns The transaction output type.
  */
-CBTransactionOutputType CBTransactionOutputGetType(CBTransactionOutput * self);
+CBScriptOutputType CBTransactionOutputGetType(CBTransactionOutput * self);
 /**
  @brief Serialises a CBTransactionOutput to the byte data.
  @param self The CBTransactionOutput object

@@ -26,6 +26,7 @@
 #include "CBValidationFunctions.h"
 #include "CBAssociativeArray.h"
 #include "CBChainDescriptor.h"
+#include "CBThreadPoolQueue.h"
 #include <string.h>
 
 // Constants and Macros
@@ -106,6 +107,13 @@ typedef struct{
 	uint16_t working; /**< The number of peers we are receiving this branch from. */
 } CBBlockBranch;
 
+typedef struct{
+	CBQueueItem item;
+	CBScript * outScript;
+	CBTransaction * tx;
+	uint32_t inputIndex;
+} CBScriptProcessItem;
+
 /**
  @brief These functions contain the callback object passed into CBValidatorQueueBlock as the first argument. These functions, except for alreadyValidated, onValidatorError and workingOnBranch, should return false if the validator should terminate with an error due to a error in the callback, and then onValidatorError will still be called.
  */
@@ -123,6 +131,11 @@ typedef struct{
 	bool (*noNewBranches)(void *, CBBlock * block); /**< Called when a block cannot fit onto any new branches */
 	void (*onValidatorError)(void *); /**< Called upon an error with the validator. */
 } CBValidatorCallbacks;
+
+typedef struct{
+	CBThreadPoolQueue threadPool;
+	bool scriptFailure;
+} CBScriptProcessing;
 
 /**
  @brief Structure for CBValidator objects. @see CBValidator.h
@@ -147,6 +160,7 @@ typedef struct{
 	uint8_t queueFront;
 	uint8_t queueSize;
 	bool shutDownThread;
+	CBScriptProcessing scriptProcessing;
 } CBValidator;
 
 /**
@@ -178,6 +192,8 @@ void CBDestroyValidator(void * vself);
  @param self The CBValidator object to free.
  */
 void CBFreeValidator(void * vself);
+
+void CBDestroyScriptProcessItem(void * vscriptItem);
 
 // Functions
 
@@ -292,6 +308,7 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
  @returns The result.
  */
 CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget);
+void CBValidatorProcessScripts(CBThreadPoolQueue * threadPoolQueue, void * vScriptItem);
 bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackObj);
 /**
  @brief Saves the last validated blocks from startBranch to endBranch
@@ -331,6 +348,7 @@ bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlock * block, uint8_t
  @returns true on successful execution or false on error.
  */
 bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward);
-bool CBValidatorVerifyScripts(CBValidator * self, CBTransaction * tx, uint32_t inputIndex, CBTransactionOutput * output, uint32_t * sigOps, bool checkStandard);
+CBInputCheckResult CBValidatorVerifyP2SHAndStandard(CBScript * outputScript, CBScript * inputScript, uint32_t * sigOps, bool checkStandard);
+bool CBValidatorVerifyScripts(CBTransaction * tx, uint32_t inputIndex, CBScript * outScript);
 
 #endif
