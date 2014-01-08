@@ -41,25 +41,15 @@ vpath %.c src
 vpath %.o build
 vpath %.d build
 
-# Non-debugging
+# Main targets
 
-all: CFLAGS += -O3
 all: all-build
-
-test: CFLAGS += -O3
 test: test-build
-
-# Debugging
-
-debug-all: CFLAGS += -g
-debug-all: all-build
-
-debug-test: CFLAGS += -g
-debug-test: test-build
 
 # Build all
 
-all-build: core crypto random threads logging network storage file-ec file-no-ec client
+all-build: library client
+library: core crypto random threads logging network storage file-ec file-no-ec
 
 # Get files for the core library
 
@@ -218,7 +208,7 @@ $(TEST_BINARIES): bin/%: build/%.o
 	$(CC) $< -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-@NOEC@ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o $@
 	$@
 
-$(TEST_OBJS): build/%.o: library/test/%.c all-build
+$(TEST_OBJS): build/%.o: library/test/%.c library
 	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
 	
 # Client Server
