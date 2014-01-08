@@ -102,7 +102,7 @@ uint8_t CBTransactionAddSignature(CBTransaction * self, CBScript * inScript, uin
 	}
 	// Now produce the signature and add push data size for signature
 	uint8_t len = CBKeySign(key->privkey, hash, CBByteArrayGetData(inScript) + offset + 1);
-	CBByteArraySetByte(inScript, offset, len);
+	CBByteArraySetByte(inScript, offset, len + 1);
 	// Add the sign type
 	CBByteArraySetByte(inScript, offset + len + 1, signType);
 	// Adjust length

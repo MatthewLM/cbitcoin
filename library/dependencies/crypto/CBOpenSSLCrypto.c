@@ -48,16 +48,6 @@ void CBAddPoints(uint8_t * point1, uint8_t * point2){
 	EC_GROUP_free(group);
 	BN_CTX_free(ctx);
 }
-uint8_t CBKeyGetSigMaxSize(uint8_t * privKey){
-	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
-	BIGNUM * bn = BN_bin2bn(privKey, 32, NULL);
-	EC_KEY_set_private_key(key, bn);
-	int ret = ECDSA_size(key);
-	// Free key and BIGNUM
-	EC_KEY_free(key);
-	BN_free(bn);
-	return ret;
-}
 void CBKeyGetPublicKey(uint8_t * privKey, uint8_t * pubKey){
 	BIGNUM * privBn = BN_bin2bn(privKey, 32, NULL);
 	EC_GROUP * group = EC_GROUP_new_by_curve_name(NID_secp256k1);
