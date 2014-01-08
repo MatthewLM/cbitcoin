@@ -38,11 +38,9 @@ typedef union{
 
 void CBAddPoints(uint8_t * point1, uint8_t * point2);
 #pragma weak CBAddPoints
-uint8_t CBKeyGetSigSize(uint8_t * privKey);
-#pragma weak CBKeyGetSigSize
 void CBKeyGetPublicKey(uint8_t * privKey, uint8_t * pubKey);
 #pragma weak CBKeyGetPublicKey
-void CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature, uint8_t sigSize);
+uint8_t CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature);
 #pragma weak CBKeySign
 /**
  @brief SHA-256 cryptographic hash function.

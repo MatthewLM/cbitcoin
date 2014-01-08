@@ -48,7 +48,7 @@ void CBAddPoints(uint8_t * point1, uint8_t * point2){
 	EC_GROUP_free(group);
 	BN_CTX_free(ctx);
 }
-uint8_t CBKeyGetSigSize(uint8_t * privKey){
+uint8_t CBKeyGetSigMaxSize(uint8_t * privKey){
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
 	BIGNUM * bn = BN_bin2bn(privKey, 32, NULL);
 	EC_KEY_set_private_key(key, bn);
@@ -70,14 +70,16 @@ void CBKeyGetPublicKey(uint8_t * privKey, uint8_t * pubKey){
 	EC_GROUP_free(group);
 	BN_free(privBn);
 }
-void CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature, uint8_t sigSize){
+uint8_t CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature){
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
 	BIGNUM * bn = BN_bin2bn(privKey, 32, NULL);
 	EC_KEY_set_private_key(key, bn);
-	ECDSA_sign(0, hash, 32, signature, (unsigned int *)&sigSize, key);
+	unsigned int sigSize;
+	ECDSA_sign(0, hash, 32, signature, &sigSize, key);
 	// Free key and BIGNUM
 	EC_KEY_free(key);
 	BN_free(bn);
+	return sigSize;
 }
 void CBSha160(uint8_t * data, uint16_t len, uint8_t * output){
     SHA1(data, len, output);
