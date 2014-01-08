@@ -1838,7 +1838,8 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 			pos->nodeLoc = index->indexCache;
 		pos->index = pos->parentStack.pos[pos->parentStack.cursor--];
 		// Insert the middle value into the parent with the right node.
-		return CBDatabaseIndexInsert(index, middleEl, pos, &new);
+		bool ret = CBDatabaseIndexInsert(index, middleEl, pos, &new);
+		CBDatabaseIndexInsertReturn(ret);
 	}
 }
 bool CBDatabaseIndexMoveChildren(CBDatabaseIndex * index, CBIndexNodeLocation * dest, CBIndexNodeLocation * source, uint8_t startPos, uint8_t endPos, uint8_t amount, bool append){
@@ -2737,6 +2738,7 @@ bool CBDatabaseStage(CBDatabase * self){
 		CBAssociativeArrayForEach(uint8_t * changeKey, &indexTxData->changeKeysOld)
 			if (! CBDatabaseChangeKey(indexTxData->index, changeKey, changeKey + indexTxData->index->keySize, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
+				CBMutexUnlock(self->stagedMutex);
 				return false;
 			}
 		// Write values
@@ -2752,6 +2754,7 @@ bool CBDatabaseStage(CBDatabase * self){
 		CBAssociativeArrayForEach(uint8_t * deleteKey, &indexTxData->deleteKeys)
 			if (! CBDatabaseRemoveValue(indexTxData->index, deleteKey, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
+				CBMutexUnlock(self->stagedMutex);
 				return false;
 			}
 	}
