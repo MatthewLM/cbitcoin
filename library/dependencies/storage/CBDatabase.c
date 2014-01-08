@@ -332,7 +332,7 @@ bool CBDatabaseLoadIndexNode(CBDatabaseIndex * index, CBIndexNode * node, uint16
 		CBLogError("Could not open an index file when loading a node.");
 		return false;
 	}
-	if (! CBFileSeek(file, nodeOffset)){
+	if (! CBFileSeek(file, nodeOffset, SEEK_SET)){
 		CBLogError("Could seek to the node position in an index file when loading a node.");
 		return false;
 	}
@@ -363,7 +363,7 @@ bool CBDatabaseLoadIndexNode(CBDatabaseIndex * index, CBIndexNode * node, uint16
 		}
 	}
 	// Seek past space for elements that do not exist
-	if (! CBFileSeek(file, nodeOffset + 1 + (CB_DATABASE_BTREE_ELEMENTS * (index->keySize + 10)))) {
+	if (! CBFileSeek(file, CB_DATABASE_BTREE_ELEMENTS * (index->keySize + 10), SEEK_CUR)) {
 		for (uint8_t y = 0; y <= node->numElements; y++)
 			CBReleaseObject(node->elements[y]);
 		CBLogError("Could not seek to the children of a btree node.");
@@ -584,23 +584,24 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 	// Write to the log file the rollback information for the changes being made.
 	uint32_t dataTempLen = dataLen + 12;
 	uint8_t * dataTemp = malloc(dataTempLen);
+	uint8_t * dataTempMeta = dataTemp + dataLen;
 	// Write file type
-	dataTemp[CB_OVERWRITE_LOG_FILE_TYPE] = fileType;
+	dataTempMeta[CB_OVERWRITE_LOG_FILE_TYPE] = fileType;
 	// Write index ID
-	dataTemp[CB_OVERWRITE_LOG_INDEX_ID] = (index == NULL) ? 0 : index->ID;
+	dataTempMeta[CB_OVERWRITE_LOG_INDEX_ID] = (index == NULL) ? 0 : index->ID;
 	// Write file ID
-	CBInt16ToArray(dataTemp, CB_OVERWRITE_LOG_FILE_ID, fileID);
+	CBInt16ToArray(dataTempMeta, CB_OVERWRITE_LOG_FILE_ID, fileID);
 	// Write offset
-	CBInt32ToArray(dataTemp, CB_OVERWRITE_LOG_OFFSET, offset);
+	CBInt32ToArray(dataTempMeta, CB_OVERWRITE_LOG_OFFSET, offset);
 	// Write data size
-	CBInt32ToArray(dataTemp, CB_OVERWRITE_LOG_LENGTH, dataLen);
+	CBInt32ToArray(dataTempMeta, CB_OVERWRITE_LOG_LENGTH, dataLen);
 	// Write old data ??? Change to have old data as input to function
-	if (! CBFileSeek(file, offset)){
+	if (! CBFileSeek(file, offset, SEEK_SET)){
 		CBLogError("Could not seek to the read position for previous data in a file to be overwritten.");
 		free(dataTemp);
 		return false;
 	}
-	if (! CBFileRead(file, dataTemp + 12, dataLen)) {
+	if (! CBFileRead(file, dataTemp, dataLen)) {
 		CBLogError("Could not read the previous data to be overwritten.");
 		free(dataTemp);
 		return false;
@@ -612,7 +613,7 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 	}
 	free(dataTemp);
 	// Execute overwrite
-	if (! CBFileSeek(file, offset)){
+	if (! CBFileSeek(file, offset, SEEK_SET)){
 		CBLogError("Could not seek the file to overwrite data.");
 		return false;
 	}
@@ -1224,7 +1225,7 @@ bool CBDatabaseCommitProcess(CBDatabase * self){
 		return false;
 	}
 	// Now we are done, make the logfile inactive. Errors do not matter here.
-	if (CBFileSeek(self->logFile, 0)) {
+	if (CBFileSeek(self->logFile, 0, SEEK_SET)) {
 		data[0] = 0;
 		if (CBFileOverwrite(self->logFile, data, 1))
 			CBFileSync(self->logFile);
@@ -1332,16 +1333,15 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 		if (! access(filename, F_OK))
 			remove(filename);
 	}
-	// Reverse overwrite operations
-	uint32_t logFileLen;
-	if (! CBFileGetLength(logFile, &logFileLen)) {
-		CBLogError("Failed to get the length of the log file.");
+	// Reverse overwrite operations. Do this in reverse order that the overwrites took place. ??? Improve code to only record one overwrite per part of each file, by recording and updating index changes.
+	if (! CBFileSeek(logFile, -12, SEEK_END)) {
+		CBLogError("Failed to seek to the end of a log file for reading the first overwrite entry.");
 		CBFileClose(logFile);
 		return false;
 	}
 	uint8_t * prevData = NULL;
 	uint32_t prevDataSize = 0;
-	for (uint32_t c = 12 + 7 * data[10]; c < logFileLen;) {
+	while (CBFilePos(logFile) > 12 + 7 * data[10]) {
 		// Read file type, index ID and file ID, offset and size
 		if (! CBFileRead(logFile, data, 12)) {
 			CBLogError("Could not read from the log file.");
@@ -1354,7 +1354,8 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 			prevData = realloc(prevData, dataLen);
 			prevDataSize = dataLen;
 		}
-		if (! CBFileRead(logFile, prevData, dataLen)) {
+		if (! CBFileSeek(logFile, -12 - dataLen, SEEK_CUR)
+			|| ! CBFileRead(logFile, prevData, dataLen)) {
 			CBLogError("Could not read previous data from the log file.");
 			CBFileClose(logFile);
 			free(prevData);
@@ -1381,7 +1382,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 			free(prevData);
 			return false;
 		}
-		if (! CBFileSeek(file, CBArrayToInt32(data, CB_OVERWRITE_LOG_OFFSET))){
+		if (! CBFileSeek(file, CBArrayToInt32(data, CB_OVERWRITE_LOG_OFFSET), SEEK_SET)){
 			CBLogError("Could not seek the file for writting the previous data.");
 			CBFileClose(logFile);
 			CBFileClose(file);
@@ -1403,7 +1404,13 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 			return false;
 		}
 		CBFileClose(file);
-		c += 12 + dataLen;
+		// Seek to next overwrite entry
+		if (! CBFileSeek(logFile, -dataLen - 12, SEEK_CUR)) {
+			CBLogError("Could not seek to the next overwrite entry.");
+			CBFileClose(logFile);
+			free(prevData);
+			return false;
+		}
 	}
 	free(prevData);
 	// Sync directory
@@ -1414,7 +1421,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 	}
 	// Now we are done, make the logfile inactive
 	data[0] = 0;
-	if (CBFileSeek(logFile, 0) && CBFileOverwrite(logFile, data, 1))
+	if (CBFileSeek(logFile, 0, SEEK_SET) && CBFileOverwrite(logFile, data, 1))
 		CBFileSync(logFile);
 	CBFileClose(logFile);
 	return true;
@@ -1899,7 +1906,7 @@ void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBInd
 		return;
 	}
 	uint32_t offset = result->data.node.diskNodeLoc.offset;
-	if (! CBFileSeek(file, offset)){
+	if (! CBFileSeek(file, offset, SEEK_SET)){
 		CBLogError("Could seek to the node position in an index file when loading a node.");
 		result->status = CB_DATABASE_INDEX_ERROR;
 		return;
@@ -1945,7 +1952,7 @@ void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBInd
 	}
 	CBReleaseObject(val);
 	// Not found, read child location.
-	if (! CBFileSeek(file, offset + 1 + CB_DATABASE_BTREE_ELEMENTS * (index->keySize + 10) + pos * 6)) {
+	if (! CBFileSeek(file, CB_DATABASE_BTREE_ELEMENTS * (index->keySize + 10) + pos * 6, SEEK_CUR)) {
 		CBLogError("Could not seek to a child in an index node.");
 		result->status = CB_DATABASE_INDEX_ERROR;
 		return;
@@ -2563,7 +2570,7 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 					uint32_t dataOffset = startOffset + readFromLen;
 					uint32_t readOffset = offset + startOffset + readFromLen;
 					if (staged) {
-						if (! CBFileSeek(file, idxVal->pos + readOffset)){
+						if (! CBFileSeek(file, idxVal->pos + readOffset, SEEK_SET)){
 							CBLogError("Could not read seek file for reading part of a value.");
 							CBMutexUnlock(index->database->diskMutex);
 							CBMutexUnlock(index->database->stagedMutex);
@@ -2625,7 +2632,7 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 	}
 	if (!staged)
 		return CBDatabaseReadValue(index, nextKey, data, highestWritten, offset, true);
-	if (! CBFileSeek(file, idxVal->pos + offset)) {
+	if (! CBFileSeek(file, idxVal->pos + offset, SEEK_SET)) {
 		CBLogError("Could not read seek file for reading part of a value.");
 		CBMutexUnlock(index->database->diskMutex);
 		return CB_DATABASE_INDEX_ERROR;

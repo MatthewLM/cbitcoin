@@ -647,6 +647,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_ec
+enable_debug
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1268,6 +1269,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-ec            Disable Error Correction
+  --enable-debug          Enable debug symbols
 
 Some influential environment variables:
   CC          C compiler command
@@ -3470,6 +3472,21 @@ else
 
 fi
 
+# Determine if debug build is enabled
+
+# Check whether --enable-debug was given.
+if test "${enable_debug+set}" = set; then :
+  enableval=$enable_debug;
+fi
+
+
+if test "x$enable_debug" = "xyes"; then :
+  CONFIGFLAGS+=" -g"
+else
+  CONFIGFLAGS+=" -O3"
+
+fi
+
 
 
 
@@ -4608,3 +4625,17 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+
+echo
+echo "CONFIGURE SUMMARY:"
+echo
+
+hasFeature(){
+	printf "$1"
+	[ "$3" = "no" ] && o="yes" || o="no"
+	[ "$2" = "$o" ] && echo $o || echo "$3"
+}
+
+echo Configure flags: $CONFIGFLAGS
+hasFeature "Error correction: " "$enable_ec" "yes"
+hasFeature "Debug build: " "$enable_debug" "no"

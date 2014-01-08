@@ -55,11 +55,14 @@ bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	return fwrite(data, 1, dataLen, file.ptr) == dataLen;
 }
+uint32_t CBFilePos(CBDepObject file){
+	return (uint32_t)ftell(file.ptr);
+}
 bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	return fread(data, 1, dataLen, file.ptr) == dataLen;
 }
-bool CBFileSeek(CBDepObject file, uint32_t pos){
-	return ! fseek(file.ptr, pos, SEEK_SET);
+bool CBFileSeek(CBDepObject file, int32_t pos, int seek){
+	return ! fseek(file.ptr, pos, seek);
 }
 bool CBFileSync(CBDepObject file){
 	if (fflush(file.ptr))

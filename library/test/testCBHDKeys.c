@@ -252,6 +252,13 @@ void checkKey(CBHDKey * key, uint8_t x, uint8_t y){
 }
 
 int main(){
+	CBByteArray * walletKeyString = CBNewByteArrayFromString("xpub6DRhpXssnj7X6CwJgseK9oyFxSC8jk6nJz2SWkf5pjsQs12xv89Dfr627TtaZKkFbG6Aq23fmaNaf5KRo9iGfEXTTXvtd6gsXJTB8Sdah3B", false);
+    CBChecksumBytes * walletKeyData = CBNewChecksumBytesFromString(walletKeyString, false);
+    CBHDKey * cbkey = CBNewHDKeyFromData(CBByteArrayGetData(CBGetByteArray(walletKeyData)));
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(cbkey), CB_NETWORK_PRODUCTION, false);
+	CBByteArray * str = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	printf("%s\n", CBByteArrayGetData(str));
+	CBReleaseObject(address);
 	// Test type
 	if (CBHDKeyGetType(CB_HD_KEY_VERSION_PROD_PRIVATE) != CB_HD_KEY_TYPE_PRIVATE) {
 		printf("CB_HD_KEY_VERSION_PROD_PRIVATE TYPE FAIL\n");

@@ -43,9 +43,19 @@ CFLAGS="$save_cflags"
 AC_ARG_ENABLE([ec],
     AS_HELP_STRING([--disable-ec], [Disable Error Correction]))
 	
-AS_IF([test "x$enable_ec" != "xno"], 
-	[NOEC=""],
-	[NOEC="no-"]
+AS_IF([test "x$enable_ec" = "xno"], 
+	[NOEC="no-"],
+	[NOEC=""]
+)
+
+# Determine if debug build is enabled
+
+AC_ARG_ENABLE([debug],
+    AS_HELP_STRING([--enable-debug], [Enable debug symbols]))
+	
+AS_IF([test "x$enable_debug" = "xyes"], 
+	[CONFIGFLAGS+=" -g"],
+	[CONFIGFLAGS+=" -O3"]
 )
 
 AC_SUBST([CONFIGFLAGS])
@@ -53,3 +63,18 @@ AC_SUBST([NOEC])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
+
+echo
+echo "CONFIGURE SUMMARY:"
+echo
+
+hasFeature(){
+	printf "$1"
+	[[ "$3" = "no" ]] && o="yes" || o="no"
+	[[ "$2" = "$o" ]] && echo $o || echo "$3"
+}
+
+echo Configure flags: $CONFIGFLAGS
+hasFeature "Error correction: " "$enable_ec" "yes"
+hasFeature "Debug build: " "$enable_debug" "no"
+echo

@@ -32,7 +32,7 @@ CBHDKey * CBNewHDKeyFromData(uint8_t * data){
 	}
 	// Allocate memory for key
 	CBHDKey * key = CBNewHDKey(type == CB_HD_KEY_TYPE_PRIVATE);
-	return CBInitHDKeyFromData(key, data, versionBytes, type) ? key : NULL;
+	return CBInitHDKeyFromData(key, data, versionBytes, type) ? key : (free(key), NULL);
 }
 CBKeyPair * CBNewKeyPair(bool priv){
 	CBKeyPair * key = malloc(priv ? sizeof(CBKeyPair) : sizeof(CBPubKeyInfo));

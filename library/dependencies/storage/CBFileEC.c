@@ -21,7 +21,7 @@ bool CBFileAppend(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	CBFile * fileObj = file.ptr;
 	// Look for appending to existing section
 	uint8_t offset = fileObj->dataLength % 8;
-	if (! CBFileSeek(file, fileObj->dataLength)) 
+	if (! CBFileSeek(file, fileObj->dataLength, SEEK_SET))
 		return false;
 	// Increase total data length.
 	fileObj->dataLength += dataLen;
@@ -65,7 +65,7 @@ bool CBFileAppendZeros(CBDepObject file, uint32_t amount){
 	CBFile * fileObj = file.ptr;
 	// Look for appending to existing section
 	uint8_t offset = fileObj->dataLength % 8;
-	if (! CBFileSeek(file, fileObj->dataLength))
+	if (! CBFileSeek(file, fileObj->dataLength, SEEK_SET))
 		return false;
 	// Increase total data length.
 	fileObj->dataLength += amount;
@@ -176,9 +176,12 @@ bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	// Increase cursor
 	fileObj->cursor += dataLen;
 	// Reseek
-	if (! CBFileSeek(file, fileObj->cursor))
+	if (! CBFileSeek(file, fileObj->cursor, SEEK_SET))
 		return false;
 	return true;
+}
+uint32_t CBFilePos(CBDepObject file){
+	return ((CBFile *)file.ptr)->cursor;
 }
 bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	uint8_t section[9];
@@ -214,7 +217,7 @@ bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
 		fileObj->cursor += remaining;
 	}
 	// Reseek for next read
-	if (! CBFileSeek(file, fileObj->cursor))
+	if (! CBFileSeek(file, fileObj->cursor, SEEK_SET))
 		return false;
 	return true;
 }
@@ -240,9 +243,14 @@ bool CBFileReadLength(FILE * rd, uint32_t * length){
 	*length = CBArrayToInt32(data, 0);
 	return true;
 }
-bool CBFileSeek(CBDepObject file, uint32_t pos){
+bool CBFileSeek(CBDepObject file, int32_t pos, int seek){
 	CBFile * fileObj = file.ptr;
-	fileObj->cursor = pos;
+	if (seek == SEEK_SET)
+		fileObj->cursor = pos;
+	else if (seek == SEEK_CUR)
+		fileObj->cursor += pos;
+	else
+		fileObj->cursor = fileObj->dataLength + pos;
 	return ! fseek(fileObj->rdwr, 5 + pos / 8 * 9, SEEK_SET);
 }
 bool CBFileSync(CBDepObject file){

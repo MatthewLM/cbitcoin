@@ -31,6 +31,7 @@
 #pragma weak CBFileGetLength
 #pragma weak CBFileOpen
 #pragma weak CBFileOverwrite
+#pragma weak CBFilePos
 #pragma weak CBFileRead
 #pragma weak CBFileSeek
 #pragma weak CBFileSync
@@ -79,6 +80,7 @@ bool CBFileOpen(CBDepObject * file, char * filename, bool new);
  @returns true on success and false on failure.
  */
 bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen);
+uint32_t CBFilePos(CBDepObject file);
 /**
  @brief Reads from a file
  @param file The file to read from.
@@ -93,7 +95,7 @@ bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen);
  @param pos The data position in the file.
  @returns true on success and false on failure.
  */
-bool CBFileSeek(CBDepObject file, uint32_t pos);
+bool CBFileSeek(CBDepObject file, int32_t pos, int seek);
 /**
  @brief Synchronises a file to disk.
  @param file The file to synchronise
