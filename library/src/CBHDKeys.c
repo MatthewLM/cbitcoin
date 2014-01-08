@@ -70,11 +70,6 @@ bool CBInitHDKeyFromData(CBHDKey * key, uint8_t * data, CBHDKeyVersion versionBy
 			}
 	}else{
 		// Not master
-		// Check fingerprint
-		if (memcpy(CBHDKeyGetHash(key), data + 5, 4) != 0) {
-			CBLogError("The fingerprint of the key is invalid.");
-			return false;
-		}
 		uint32_t childNum = CBArrayToInt32BigEndian(data, 9);
 		key->childID.priv = childNum >> 31;
 		key->childID.childNumber = childNum & 0x8fffffff;
