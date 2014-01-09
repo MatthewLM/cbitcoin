@@ -74,8 +74,10 @@ void CBFreeMutex(CBDepObject mutex){
 }
 void CBMutexLock(CBDepObject mutex){
 	assert(pthread_mutex_lock(mutex.ptr) == 0);
+	//CBLogError("LOCKED %p", mutex.ptr);
 }
 void CBMutexUnlock(CBDepObject mutex){
+	//CBLogError("UNLOCKING %p", mutex.ptr);
 	assert(pthread_mutex_unlock(mutex.ptr) == 0);
 }
 void CBNewCondition(CBDepObject * cond){

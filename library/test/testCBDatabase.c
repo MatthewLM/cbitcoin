@@ -1617,7 +1617,6 @@ int main(){
 		return 1;
 	}
 	CBDatabaseClearCurrent(storage);
-	CBFreeIndex(index4);
 	// Test extra data
 	if (memcmp(storage->current.extraData, (uint8_t [10]){0}, 10)) {
 		printf("INITIAL EXTRA DATA FAIL\n");
@@ -1629,12 +1628,15 @@ int main(){
 		printf("COMMIT EXTRA DATA OBJECT STAGED FAIL\n");
 		return 1;
 	}
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	if (memcmp(storage->extraDataOnDisk, "Satoshi!!", 10)) {
 		printf("COMMIT EXTRA DATA OBJECT ON DISK FAIL\n");
 		return 1;
 	}
 	CBFreeDatabase(storage);
+	CBFreeIndex(index4);
 	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
 	if (memcmp(storage->extraDataOnDisk, "Satoshi!!", 10)) {
 		printf("COMMIT EXTRA DATA REOPEN FAIL\n");
@@ -1647,7 +1649,7 @@ int main(){
 	storage->current.extraData[1] = 'o';
 	storage->current.extraData[3] = 'a';
 	CBDatabaseStage(storage);
-	CBDatabaseCommit(storage);
+	CBDatabaseCommitProcess(storage);
 	if (memcmp(storage->extraDataOnDisk, "Sotashi!!", 10)) {
 		printf("SUBSECTION COMMIT EXTRA DATA OBJECT FAIL\n");
 		return 1;
@@ -1867,7 +1869,6 @@ int main(){
 		printf("TWO INDEXES SECOND INDEX READ DATA DISK FAIL\n");
 		return 1;
 	}
-	CBFreeIndex(index2);
 	// Create new index
 	CBDatabaseIndex * index3 = CBLoadIndex(storage, 2, 10, (10 * CB_DATABASE_BTREE_ELEMENTS + sizeof(CBIndexNode))*10);
 	// Generate 2000 key-value pairs
@@ -1962,6 +1963,7 @@ int main(){
 	}
 	// Close, reopen and recheck data
 	CBFreeDatabase(storage);
+	CBFreeIndex(index2);
 	CBFreeIndex(index3);
 	storage = CBNewDatabase(".", "testDb", 10, 100000, 100000);
 	if (! storage) {
