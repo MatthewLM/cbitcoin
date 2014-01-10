@@ -51,7 +51,8 @@ bool CBNodeStorageLoadUnconfTxs(void * vnode){
 	CBNodeFull * node = vnode;
 	CBNodeStorage * storage = CBGetNode(node)->nodeStorage.ptr;
 	for (CBDatabaseIndex * index = storage->ourTxs; index == storage->ourTxs; index = storage->otherTxs) {
-		CBDatabaseRangeIterator it = {(uint8_t [32]){0}, (uint8_t [32]){0xFF}, index};
+		CBDatabaseRangeIterator it;
+		CBInitDatabaseRangeIterator(&it, (uint8_t [32]){0}, (uint8_t [32]){0xFF}, index);
 		CBIndexFindStatus res = CBDatabaseRangeIteratorFirst(&it);
 		if (res == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("Could not find the first unconfirmed transaction to load");

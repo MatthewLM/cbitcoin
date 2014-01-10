@@ -186,6 +186,16 @@ void CBInitDatabaseTransactionChanges(CBDatabaseTransactionChanges * self, CBDat
 	CBInitAssociativeArray(&self->indexes, CBIndexCompare, NULL, CBFreeIndexTxData);
 	self->extraData = malloc(database->extraDataSize);
 }
+void CBInitDatabaseRangeIterator(CBDatabaseRangeIterator * it, uint8_t * minEl, uint8_t * maxEl, CBDatabaseIndex * index){
+	// Create min and max elements
+	it->minElement = malloc(it->index->keySize + 4);
+	it->maxElement = malloc(it->index->keySize + 4);
+	memcpy(it->minElement, minEl, it->index->keySize);
+	memcpy(it->maxElement, maxEl, it->index->keySize);
+	memset(it->minElement + it->index->keySize, 0, 4);
+	memset(it->maxElement + it->index->keySize, 0xFF, 4);
+	it->index = index;
+}
 CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySize, uint32_t cacheLimit){
 	// Load index
 	CBDatabaseIndex * index = malloc(sizeof(*index));
@@ -525,6 +535,8 @@ void CBFreeIndexTxData(void * vindexTxData){
 	free(indexTxData);
 }
 void CBFreeDatabaseRangeIterator(CBDatabaseRangeIterator * it){
+	free(it->minElement);
+	free(it->maxElement);
 	if (it->foundIndex)
 		CBFreeIndexElementPos(it->indexPos);
 }

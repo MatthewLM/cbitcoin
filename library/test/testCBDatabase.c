@@ -1736,7 +1736,8 @@ int main(){
 		CBDatabaseRemoveValue(index2, data, false);
 	}
 	// Test iterator
-	CBDatabaseRangeIterator it = {(uint8_t []){0,0,0}, (uint8_t []){2,1,244}, index2};
+	CBDatabaseRangeIterator it;
+	CBInitDatabaseRangeIterator(&it, (uint8_t []){0,0,0}, (uint8_t []){2,1,244}, index2);
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		printf("ITERATOR ALL FIRST FAIL\n");
 		return 1;
@@ -1761,7 +1762,7 @@ int main(){
 		}
 	}
 	CBFreeDatabaseRangeIterator(&it);
-	it = (CBDatabaseRangeIterator){(uint8_t []){0,0,50}, (uint8_t []){0,1,194}, index2};
+	CBInitDatabaseRangeIterator(&it, (uint8_t []){0,0,50}, (uint8_t []){0,1,194}, index2);
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		printf("ITERATOR 50 TO 450 FIRST FAIL\n");
 		return 1;
@@ -1784,7 +1785,7 @@ int main(){
 	}
 	CBFreeDatabaseRangeIterator(&it);
 	// Try getting last in iterator
-	it = (CBDatabaseRangeIterator){(uint8_t []){0,0,0}, (uint8_t []){0,0,0}, index2};
+	CBInitDatabaseRangeIterator(&it, (uint8_t []){0,0,0}, (uint8_t []){0,0,0}, index2);
 	for (uint16_t x = 50; x < 450; x++) {
 		((uint8_t *)it.maxElement)[1] = x >> 8;
 		((uint8_t *)it.maxElement)[2] = x;
@@ -1807,7 +1808,7 @@ int main(){
 		}
 	}
 	CBFreeDatabaseRangeIterator(&it);
-	it = (CBDatabaseRangeIterator){(uint8_t []){0,1,245}, (uint8_t []){0,1,250}, index2};
+	CBInitDatabaseRangeIterator(&it, (uint8_t []){0,1,245}, (uint8_t []){0,1,250}, index2);
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_NOT_FOUND) {
 		printf("ITERATOR OUT OF RANGE FIRST FAIL\n");
 		return 1;

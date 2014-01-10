@@ -57,7 +57,8 @@ uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject uself){
 bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 	CBAddressStorage * self = uself.ptr;
 	CBNetworkAddressManager * addrManObj = addrMan;
-	CBDatabaseRangeIterator it = {(uint8_t [18]){0}, (uint8_t [18]){0xFF}, self->addrs};
+	CBDatabaseRangeIterator it;
+	CBInitDatabaseRangeIterator(&it, (uint8_t [18]){0}, (uint8_t [18]){0xFF}, self->addrs);
 	CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not get the first address from the database.");

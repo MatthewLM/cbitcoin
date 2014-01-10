@@ -230,8 +230,8 @@ typedef struct{
  @brief Allows iteration between a min element and a max element in an index. ??? Do NULL for no minimum or maximum?
  */
 typedef struct{
-	void * minElement;
-	void * maxElement;
+	uint8_t * minElement;
+	uint8_t * maxElement;
 	CBDatabaseIndex * index;
 	CBRangeIterator currentIt; /**< Iterator of current value writes */
 	CBRangeIterator stagedIt; /**< Iterator of staged value writes. Those which are to be changed are ignored. */
@@ -271,6 +271,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t e
  @param database The database object.
  */
 void CBInitDatabaseTransactionChanges(CBDatabaseTransactionChanges * self, CBDatabase * database);
+void CBInitDatabaseRangeIterator(CBDatabaseRangeIterator * it, uint8_t * minEl, uint8_t * maxEl, CBDatabaseIndex * index);
 /**
  @brief Loads an index or creates it if it doesn't exist.
  @param self The database object.
