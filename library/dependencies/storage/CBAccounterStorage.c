@@ -777,7 +777,7 @@ bool CBAccounterGetLastAccountBalance(CBAccounterStorage * storage, uint64_t acc
 	CBInt64ToArrayBigEndian(accountTimeTxMax, CB_ACCOUNT_TIME_TX_TIMESTAMP, maxTime);
 	memset(accountTimeTxMax + CB_ACCOUNT_TIME_TX_ORDERNUM, 0xFF, 16);
 	CBDatabaseRangeIterator lastTxIt;
-	CBInitDatabaseRangeIterator(&it, accountTimeTxMin, accountTimeTxMax, storage->accountTimeTx);
+	CBInitDatabaseRangeIterator(&lastTxIt, accountTimeTxMin, accountTimeTxMax, storage->accountTimeTx);
 	CBIndexFindStatus res = CBDatabaseRangeIteratorLast(&lastTxIt);
 	if (res == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not get the last transaction in a branch section to get the last balance for calculating a new balance.");
