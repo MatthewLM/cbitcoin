@@ -364,7 +364,7 @@ int main(){
 	CBDatabaseStage(storage);
 	CBDatabaseCommitProcess(storage);
 	// Check data
-	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 12, 0, false);
+	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 12, 0, false); // ??? Does this read from the cached index data?
 	if (memcmp(readStr, "Another one", 12)) {
 		printf("DELETE 1ST 2ND VALUE FAIL\n");
 		return 1;
@@ -1913,8 +1913,20 @@ int main(){
 	for (uint16_t x = 0; x < 500; x++) {
 		CBDatabaseRemoveValue(index3, keys + x*10, false);
 		CBDatabaseStage(storage);
-		if (! CBDatabaseCommit(storage)){
+		// Verify data is deleted by staged data
+		if (CBDatabaseReadValue(index3, keys + x*10, dataRead, (x % 10) + 1, 0, false)
+			!= CB_DATABASE_INDEX_NOT_FOUND) {
+			printf("DELETE FIRST 500 FAIL NOT DELETED (STAGED) AT %u\n", x);
+			return 1;
+		}
+		if (! CBDatabaseCommit(storage)) {
 			printf("DELETE FIRST 500 FAIL COMMIT AT %u\n",x);
+			return 1;
+		}
+		// Verify data is deleted
+		if (CBDatabaseReadValue(index3, keys + x*10, dataRead, (x % 10) + 1, 0, false)
+			!= CB_DATABASE_INDEX_NOT_FOUND) {
+			printf("DELETE FIRST 500 FAIL NOT DELETED AT %u\n", x);
 			return 1;
 		}
 		if ((x+1) % 100 == 0) {

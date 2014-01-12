@@ -53,13 +53,12 @@ If you wish to test the library then type:
 
     make test
 
-You can install a debug version of cbitcoin with:
+You can also install individual tests such as `make bin/testCBAccounter`.
 
-    make debug-all
+The configure script has the following additonal options:
 
-And you can build debug versions of the test executables with:
-
-    make debug-test
+ * `--disable-ec` cbitcoin produces two libraries, one for ordinary file IO and another for file IO with error correction. Both are built, but using this option means that the tests (except for testCBFile and testCBHamming72) and the cbitcoin client are linked without EC.
+ * `--enable-debug` for debug builds, using `-g` instead of `-O3`.
 
 The library will be built into a ./bin directory; there is no install target yet.
 
@@ -68,7 +67,7 @@ If you are able to get it to work for other systems then please submit the chang
 License
 -------
 
-cbitcoin is licensed under GPLv3, but contains exceptions for linking to OpenSSL and for distributing covered works without needed to distribute the corresponding source. Please read the LICENSE file.
+cbitcoin is licensed under GPLv3, but contains additional permissions for linking to OpenSSL and for distributing covered works without needed to distribute the corresponding source. Please read the LICENSE file.
 
 Making a Contribution
 ---------------------

@@ -13,7 +13,7 @@
 INCDIR = $(CURDIR)/library/include
 BINDIR = $(CURDIR)/bin
 INCCLIENT = -I/$(CURDIR)/client-server/include
-LFLAGS = -L/opt/local/lib -L/usr/local/ssl/lib
+LFLAGS += -L/opt/local/lib -L/usr/local/ssl/lib @CONFIGLFLAGS@
 CFLAGS += -I$(INCDIR) -I$(CURDIR)/library/dependencies/threads @CONFIGFLAGS@
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
@@ -59,7 +59,7 @@ CORE_OBJS = $(patsubst library/src/%.c, build/%.o, $(CORE_FILES))
 # Core library target linking
 
 core : $(CORE_OBJS) | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin$(LIBRARY_EXTENSION) $(CORE_OBJS)
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin$(LIBRARY_EXTENSION)) -o bin/libcbitcoin$(LIBRARY_EXTENSION) $(CORE_OBJS)
 
 # Include header prerequisites
 
@@ -87,12 +87,12 @@ $(CORE_OBJS): build/%.o: library/src/%.c | build
 
 # Dependencies require include/CBDependencies.h as a prerequisite
 
-build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o BLibEventSockets.o: library/include/CBDependencies.h
+build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o CBLibEventSockets.o: library/include/CBDependencies.h
 
 # Crypto library target linking
 
 crypto : build/CBOpenSSLCrypto.o | bin
-	$(CC) $(LFLAGS) $(ADDITIONAL_OPENSSL_FLAGS) -o bin/libcbitcoin-crypto$(LIBRARY_EXTENSION) build/CBOpenSSLCrypto.o -lcrypto -lssl
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-crypto$(LIBRARY_EXTENSION)) $(ADDITIONAL_OPENSSL_FLAGS) -o bin/libcbitcoin-crypto$(LIBRARY_EXTENSION) build/CBOpenSSLCrypto.o -lcrypto -lssl
 
 # Crypto library compile
 
@@ -102,7 +102,7 @@ build/CBOpenSSLCrypto.o: library/dependencies/crypto/CBOpenSSLCrypto.c
 # Random library target linking
 
 random : build/CBRand.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-rand$(LIBRARY_EXTENSION) build/CBRand.o
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-rand$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-rand$(LIBRARY_EXTENSION) build/CBRand.o
 
 # Random library compile
 
@@ -112,7 +112,7 @@ build/CBRand.o: library/dependencies/random/CBRand.c
 # Network library target linking
 
 network : build/CBLibEventSockets.o build/CBCallbackQueue.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-network$(LIBRARY_EXTENSION) build/CBLibEventSockets.o build/CBCallbackQueue.o -levent_core
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-network$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-network$(LIBRARY_EXTENSION) build/CBLibEventSockets.o build/CBCallbackQueue.o -levent_core
 
 # Network library compile
 
@@ -125,7 +125,7 @@ build/CBLibEventSockets.o: library/dependencies/sockets/CBLibEventSockets.c libr
 # Threads library target linking
 
 threads : build/CBThreads.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-threads$(LIBRARY_EXTENSION) build/CBThreads.o
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-threads$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-threads$(LIBRARY_EXTENSION) build/CBThreads.o
 
 # Threads library compile
 
@@ -135,7 +135,7 @@ build/CBThreads.o: library/dependencies/threads/CBThreads.c library/dependencies
 # Logging library target linking
 
 logging : build/CBLog.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-logging$(LIBRARY_EXTENSION) build/CBLog.o
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-logging$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-logging$(LIBRARY_EXTENSION) build/CBLog.o
 
 # Logging library compile
 
@@ -145,10 +145,10 @@ build/CBLog.o: library/dependencies/logging/CBLog.c library/dependencies/logging
 # File IO library target linking
 
 file-ec : build/CBFileEC.o build/CBHamming72.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-file-ec$(LIBRARY_EXTENSION) build/CBFileEC.o build/CBHamming72.o
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-file-ec$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-file-ec$(LIBRARY_EXTENSION) build/CBFileEC.o build/CBHamming72.o
 
 file-no-ec : build/CBFileNoEC.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-file-no-ec$(LIBRARY_EXTENSION) build/CBFileNoEC.o
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-file-no-ec$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-file-no-ec$(LIBRARY_EXTENSION) build/CBFileNoEC.o
 
 # File IO library compile
 
@@ -168,8 +168,8 @@ STORAGE_OBJS = $(patsubst library/dependencies/storage/%.c, build/%.o, $(STORAGE
 
 # Storage library target linking
 
-storage : build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o build/CBAccounterStorage.o build/CBNodeStorage.o | bin
-	$(CC) $(LFLAGS) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o build/CBAccounterStorage.o build/CBNodeStorage.o
+storage : build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o build/CBAccounterStorage.o build/CBNodeStorage.o | bin 
+	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-storage$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o build/CBAccounterStorage.o build/CBNodeStorage.o
 
 # Storage library compile
 
@@ -205,7 +205,7 @@ test-build : $(TEST_BINARIES)
 # REMEMBER to add dependencies after the objects or libraries that depend on them.
 
 $(TEST_BINARIES): bin/%: build/%.o
-	$(CC) $< -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-@NOEC@ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o $@
+	$(CC) $< -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-$(if $(subst bin/testCBFile,,$(subst bin/testCBHamming72,,$@)),@NOEC@,)ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o $@
 	$@
 
 $(TEST_OBJS): build/%.o: library/test/%.c library

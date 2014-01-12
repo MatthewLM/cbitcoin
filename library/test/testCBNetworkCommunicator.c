@@ -183,7 +183,7 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 			CBRunOnEventLoop(tester.comms[1]->eventLoop, stop, tester.comms[1], false);
 			CBLogVerbose("STOPPING COMM CN");
 			CBRunOnEventLoop(tester.comms[2]->eventLoop, stop, tester.comms[2], false);
-			return CB_MESSAGE_ACTION_RETURN;
+			return CB_MESSAGE_ACTION_CONTINUE;
 		}else{
 			CBLogError("ADDR COMPLETE DURING COMPLETE FAIL");
 			exit(EXIT_FAILURE);

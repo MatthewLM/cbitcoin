@@ -467,7 +467,7 @@ bool CBFreeDatabase(CBDatabase * self){
 	CBMutexUnlock(self->commitMutex);
 	// Commit staged changes if we didn't last time
 	if (self->hasStaged
-		&& ! CBDatabaseCommit(self)){
+		&& ! CBDatabaseCommitProcess(self)){
 		CBLogError("Failed to commit when freeing a database transaction.");
 		return false;
 	}
@@ -1553,11 +1553,13 @@ bool CBDatabaseGetLength(CBDatabaseIndex * index, uint8_t * key, uint32_t * leng
 	CBIndexFindWithParentsResult indexRes = CBDatabaseIndexFindWithParents(index, diskKey);
 	if (indexRes.status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error when attempting to find a key in an index to get the data length.");
+		CBMutexUnlock(self->diskMutex);
 		return false;
 	}
 	if (indexRes.status == CB_DATABASE_INDEX_NOT_FOUND){
 		CBFreeIndexElementPos(indexRes.el);
 		*length = CB_DOESNT_EXIST;
+		CBMutexUnlock(self->diskMutex);
 		return true;
 	}
 	*length = indexRes.el.nodeLoc.cachedNode->elements[indexRes.el.index]->length;
@@ -1600,6 +1602,9 @@ bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindWithParentsResult
 		CBLogError("Failed to overwrite the index entry's length with CB_DELETED_VALUE to signify deletion.");
 		return false;
 	}
+	// Make cached data deleted too
+	if (res->el.nodeLoc.cached)
+		res->el.nodeLoc.cachedNode->elements[res->el.index]->length = CB_DELETED_VALUE;
 	return true;
 }
 CBIndexFindResult CBDatabaseIndexFind(CBDatabaseIndex * index, uint8_t * key){
@@ -1999,10 +2004,10 @@ void CBDatabaseIndexNodeBinarySearchMemory(CBDatabaseIndex * index, CBIndexNode 
 			cmp = memcmp(key, node->elements[*pos]->key, index->keySize);
 			if (cmp == 0) {
 				*status = CB_DATABASE_INDEX_FOUND;
-				break;
+				return;
 			}else if (cmp < 0){
 				if (! *pos)
-					break;
+					return;
 				right = *pos - 1;
 			}else
 				left = *pos + 1;
@@ -2749,19 +2754,17 @@ bool CBDatabaseRemoveValue(CBDatabaseIndex * index, uint8_t * key, bool stage) {
 	CBDatabaseRemoveValueReturn(true);
 }
 bool CBDatabaseStage(CBDatabase * self){
-	// Wait for commit to complete
-	CBMutexLock(self->commitMutex);
-	CBMutexUnlock(self->commitMutex);
 	if (self->commitFail)
 		return false;
-	CBMutexLock(self->stagedMutex);
+	// We do not want to commit and change staged changes at the same time. A commit might start whilst we are staging changes. Not good. Do not worry about staged mutex assuming we wont also read simultaneously.
+	CBMutexLock(self->commitMutex);
 	// Go through all indicies
 	CBAssociativeArrayForEach(CBIndexTxData * indexTxData, &self->current.indexes){
 		// Change keys
 		CBAssociativeArrayForEach(uint8_t * changeKey, &indexTxData->changeKeysOld)
 			if (! CBDatabaseChangeKey(indexTxData->index, changeKey, changeKey + indexTxData->index->keySize, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
-				CBMutexUnlock(self->stagedMutex);
+				CBMutexUnlock(self->commitMutex);
 				return false;
 			}
 		// Write values
@@ -2777,16 +2780,16 @@ bool CBDatabaseStage(CBDatabase * self){
 		CBAssociativeArrayForEach(uint8_t * deleteKey, &indexTxData->deleteKeys)
 			if (! CBDatabaseRemoveValue(indexTxData->index, deleteKey, true)) {
 				CBLogError("Could not add a change key change to staged changes.");
-				CBMutexUnlock(self->stagedMutex);
+				CBMutexUnlock(self->commitMutex);
 				return false;
 			}
 	}
-	CBMutexUnlock(self->stagedMutex);
 	// Free index tx data
 	CBFreeAssociativeArray(&self->current.indexes);
 	CBInitAssociativeArray(&self->current.indexes, CBIndexCompare, NULL, CBFreeIndexTxData);
 	// Copy over extra data
 	memcpy(self->staged.extraData, self->current.extraData, self->extraDataSize);
+	CBMutexUnlock(self->commitMutex);
 	// If the staged changes size is more than the cache limit or if the last commit was longer than the commit gap ago, then commit.
 	uint64_t now = CBGetMilliseconds();
 	if (self->stagedSize > self->cacheLimit

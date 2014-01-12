@@ -1214,8 +1214,10 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoPingPong(CBNetw
 	if (peer->receive->type == CB_MESSAGE_TYPE_PING
 		&& peer->versionMessage->version >= CB_PONG_VERSION
 		&& self->version >= CB_PONG_VERSION){
-		peer->receive->type = CB_MESSAGE_TYPE_PONG;
-		if (! CBNetworkCommunicatorSendMessage(self, peer, peer->receive, NULL))
+		// Create pong response
+		CBMessage * pong = CBGetMessage(CBNewPingPong(CBGetPingPong(peer->receive)->ID));
+		pong->type = CB_MESSAGE_TYPE_PONG;
+		if (! CBNetworkCommunicatorSendMessage(self, peer, pong, NULL))
 			return CB_MESSAGE_ACTION_DISCONNECT;
 	}else if (peer->receive->type == CB_MESSAGE_TYPE_PONG){
 		if (self->version < CB_PONG_VERSION || peer->versionMessage->version < CB_PONG_VERSION)

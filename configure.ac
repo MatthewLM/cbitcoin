@@ -5,6 +5,8 @@ AC_CONFIG_SRCDIR([library/dependencies/crypto/CBOpenSSLCrypto.c])
 # Set CONFIGFLAGS
 
 CONFIGFLAGS="-Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include -Werror"
+CONFIGFLAGS+=" $CFLAGS"
+CONFIGLFLAGS=" $LFLAGS"
 
 # Search for OpenSSL and LibEvent.
 AC_SEARCH_LIBS([SHA1], [crypto], [], [echo Default dependencies cannot be installed.])
@@ -59,6 +61,7 @@ AS_IF([test "x$enable_debug" = "xyes"],
 )
 
 AC_SUBST([CONFIGFLAGS])
+AC_SUBST([CONFIGLFLAGS])
 AC_SUBST([NOEC])
 
 AC_CONFIG_FILES([Makefile])
@@ -74,7 +77,8 @@ hasFeature(){
 	[[ "$2" = "$o" ]] && echo $o || echo "$3"
 }
 
-echo Configure flags: $CONFIGFLAGS
+echo Configure compile flags: $CONFIGFLAGS
+echo Configure link flags: $CONFIGLFLAGS
 hasFeature "Error correction: " "$enable_ec" "yes"
 hasFeature "Debug build: " "$enable_debug" "no"
 echo

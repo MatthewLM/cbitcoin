@@ -218,7 +218,7 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 		CBInt64ToArray(txAccountMax, CB_TX_ACCOUNTS_TX_ID, txID);
 		memset(txAccountMin + CB_TX_ACCOUNTS_ACCOUNT_ID, 0, 8);
 		memset(txAccountMax + CB_TX_ACCOUNTS_ACCOUNT_ID, 0xFF, 8);
-		it = (CBDatabaseRangeIterator){txAccountMin, txAccountMax, storage->txAccounts};
+		CBInitDatabaseRangeIterator(&it, txAccountMin, txAccountMax, storage->txAccounts);
 		if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Couldn't find first transaction account data when looping through for a transaction being added to a branch.");
 			return false;
@@ -249,7 +249,7 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 			memset(orderNumTxDetailsMin + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 0, 8);
 			memset(orderNumTxDetailsMax + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 0xFF, 8);
 			CBDatabaseRangeIterator it2;
-			CBInitDatabaseRangeIterator(&it, orderNumTxDetailsMin, orderNumTxDetailsMax, storage->orderNumTxDetails);
+			CBInitDatabaseRangeIterator(&it2, orderNumTxDetailsMin, orderNumTxDetailsMax, storage->orderNumTxDetails);
 			if (CBDatabaseRangeIteratorLast(&it2) != CB_DATABASE_INDEX_FOUND){
 				CBLogError("Could not get the last order number for a transaction.");
 				return false;
@@ -682,7 +682,7 @@ CBErrBool CBAccounterGetNextTransaction(CBDepObject cursoru, CBTransactionDetail
 	if (cursor->started)
 		res = CBDatabaseRangeIteratorNext(&cursor->it);
 	else{
-		cursor->it = (CBDatabaseRangeIterator){txCursor->accountTimeTxMin, txCursor->accountTimeTxMax, cursor->storage->accountTimeTx};
+		CBInitDatabaseRangeIterator(&cursor->it, txCursor->accountTimeTxMin, txCursor->accountTimeTxMax, cursor->storage->accountTimeTx);
 		res = CBDatabaseRangeIteratorFirst(&cursor->it);
 		cursor->started = true;
 	}
@@ -741,7 +741,7 @@ CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursoru, CBUnspentOutputDe
 		if (cursor->started)
 			res = CBDatabaseRangeIteratorNext(&cursor->it);
 		else{
-			cursor->it = (CBDatabaseRangeIterator){uoCursor->accountUnspentOutputsMin, uoCursor->accountUnspentOutputsMax, cursor->storage->accountUnspentOutputs};
+			CBInitDatabaseRangeIterator(&cursor->it, uoCursor->accountUnspentOutputsMin, uoCursor->accountUnspentOutputsMax, cursor->storage->accountUnspentOutputs);
 			res = CBDatabaseRangeIteratorFirst(&cursor->it);
 			cursor->started = true;
 		}
@@ -956,7 +956,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 	memcpy(txAccountsMax + CB_TX_ACCOUNTS_TX_ID, txID, 8);
 	memset(txAccountsMin + CB_TX_ACCOUNTS_ACCOUNT_ID, 0, 8);
 	memset(txAccountsMax + CB_TX_ACCOUNTS_ACCOUNT_ID, 0xFF, 8);
-	it = (CBDatabaseRangeIterator){txAccountsMin, txAccountsMax, storage->txAccounts};
+	CBInitDatabaseRangeIterator(&it, txAccountsMin, txAccountsMax, storage->txAccounts);
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("There was a problem finding the first transaction account entry.");
 		return false;
@@ -1032,7 +1032,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 	memset(outputHashAndIndexToIDMin + CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, 0, 4);
 	memset(outputHashAndIndexToIDMax + CB_OUTPUT_HASH_AND_INDEX_TO_ID_INDEX, 0xFF, 4);
 	// Loop through the range of potential outputs
-	it = (CBDatabaseRangeIterator){outputHashAndIndexToIDMin, outputHashAndIndexToIDMax, storage->outputHashAndIndexToID};
+	CBInitDatabaseRangeIterator(&it, outputHashAndIndexToIDMin, outputHashAndIndexToIDMax, storage->outputHashAndIndexToID);
 	CBIndexFindStatus res = CBDatabaseRangeIteratorFirst(&it);
 	if (res == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error whilst attemping to find the first account output information for a transaction.");
@@ -1054,7 +1054,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 		memset(outputAccountsMin + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0, 8);
 		memset(outputAccountsMax + CB_OUTPUT_ACCOUNTS_ACCOUNTS_ID, 0xFF, 8);
 		CBDatabaseRangeIterator accountIt;
-		CBInitDatabaseRangeIterator(&it, outputAccountsMin, outputAccountsMax, storage->outputAccounts);
+		CBInitDatabaseRangeIterator(&accountIt, outputAccountsMin, outputAccountsMax, storage->outputAccounts);
 		if (CBDatabaseRangeIteratorFirst(&accountIt) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("There was a problem finding the first output account entry.");
 			CBFreeDatabaseRangeIterator(&it);
@@ -1182,7 +1182,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	CBInt64ToArray(accountTxDetailsMax, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountSrc);
 	memset(accountTxDetailsMin + CB_ACCOUNT_TX_DETAILS_TX_ID, 0, 8);
 	memset(accountTxDetailsMax + CB_ACCOUNT_TX_DETAILS_TX_ID, 0xFF, 8);
-	it = (CBDatabaseRangeIterator){accountTxDetailsMin, accountTxDetailsMax, storage->accountTxDetails};
+	CBInitDatabaseRangeIterator(&it, accountTxDetailsMin, accountTxDetailsMax, storage->accountTxDetails);
 	status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first account transaction details entry.");
@@ -1259,7 +1259,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	CBInt64ToArray(accountTimeTxMax, CB_ACCOUNT_TIME_TX_ACCOUNT_ID, accountSrc);
 	memset(accountTimeTxMin + CB_ACCOUNT_TIME_TX_TIMESTAMP, 0, 24);
 	memset(accountTimeTxMax + CB_ACCOUNT_TIME_TX_TIMESTAMP, 0xFF, 24);
-	it = (CBDatabaseRangeIterator){accountTimeTxMin, accountTimeTxMax, storage->accountTimeTx};
+	CBInitDatabaseRangeIterator(&it, accountTimeTxMin, accountTimeTxMax, storage->accountTimeTx);
 	status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first account time tx details.");
@@ -1334,7 +1334,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	uint8_t accountUnspentOutputsMax[20];
 	CBInt64ToArray(accountUnspentOutputsMin, CB_ACCOUNT_UNSPENT_OUTPUTS_ACCOUNT_ID, accountSrc);
 	CBInt64ToArray(accountUnspentOutputsMax, CB_ACCOUNT_UNSPENT_OUTPUTS_ACCOUNT_ID, accountSrc);
-	it = (CBDatabaseRangeIterator){accountUnspentOutputsMin, accountUnspentOutputsMax, storage->accountUnspentOutputs};
+	CBInitDatabaseRangeIterator(&it, accountUnspentOutputsMin, accountUnspentOutputsMax, storage->accountUnspentOutputs);
 	status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first branch section account output details.");

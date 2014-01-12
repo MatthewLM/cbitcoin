@@ -50,7 +50,7 @@ bool CBFileGetLength(CBDepObject file, uint32_t * length){
 }
 bool CBFileOpen(CBDepObject * file, char * filename, bool new){
 	file->ptr = fopen(filename, new ? "wb+" : "rb+");
-	return true;
+	return file->ptr != NULL;
 }
 bool CBFileOverwrite(CBDepObject file, uint8_t * data, uint32_t dataLen){
 	return fwrite(data, 1, dataLen, file.ptr) == dataLen;

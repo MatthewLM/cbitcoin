@@ -21,11 +21,11 @@
 #include <sys/time.h>
 #include "checkTransactions.h"
 
-void CBLogError(char * b, ...);
+/*void CBLogError(char * b, ...);
 void CBLogError(char * b, ...){
 	printf("FAIL -> %s\n", b);
 	exit(1);
-}
+}*/
 
 uint64_t CBGetMilliseconds(void){
 	struct timeval tv;
@@ -907,7 +907,7 @@ int main(){
 		return 1;
 	}
 	// Find tx as unconf
-	printf("CHECKING TX8");
+	printf("CHECKING TX8\n");
 	if (! CBAccounterFoundTransaction(storage, tx8, CB_UNCONFIRMED, 8000, NULL)) {
 		printf("FOUND TX8 FAIL\n");
 		return 1;

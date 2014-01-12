@@ -594,6 +594,7 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 NOEC
+CONFIGLFLAGS
 CONFIGFLAGS
 EGREP
 GREP
@@ -2070,6 +2071,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Set CONFIGFLAGS
 
 CONFIGFLAGS="-Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include -Werror"
+CONFIGFLAGS+=" $CFLAGS"
+CONFIGLFLAGS=" $LFLAGS"
 
 # Search for OpenSSL and LibEvent.
 ac_ext=c
@@ -3465,10 +3468,10 @@ if test "${enable_ec+set}" = set; then :
 fi
 
 
-if test "x$enable_ec" != "xno"; then :
-  NOEC=""
-else
+if test "x$enable_ec" = "xno"; then :
   NOEC="no-"
+else
+  NOEC=""
 
 fi
 
@@ -3486,6 +3489,7 @@ else
   CONFIGFLAGS+=" -O3"
 
 fi
+
 
 
 
@@ -4636,6 +4640,8 @@ hasFeature(){
 	[ "$2" = "$o" ] && echo $o || echo "$3"
 }
 
-echo Configure flags: $CONFIGFLAGS
+echo Configure compile flags: $CONFIGFLAGS
+echo Configure link flags: $CONFIGLFLAGS
 hasFeature "Error correction: " "$enable_ec" "yes"
 hasFeature "Debug build: " "$enable_debug" "no"
+echo

@@ -30,7 +30,6 @@ void CBLogError(char * format, ...){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
-	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
 	remove("./test.dat");
@@ -57,7 +56,7 @@ int main(){
 		printf("NEW APPEND FAIL\n");              
 		return 1;
 	}
-	if (! CBFileSeek(file, 0)) {
+	if (! CBFileSeek(file, 0, SEEK_SET)) {
 		printf("NEW SEEK FAIL\n");
 		return 1;
 	}
@@ -78,7 +77,7 @@ int main(){
 		printf("NEW READ SEEK DATA FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 6)) {
+	if (! CBFileSeek(file, 6, SEEK_SET)) {
 		printf("NEW SEEK 6 FAIL\n");
 		return 1;
 	}
@@ -86,7 +85,7 @@ int main(){
 		printf("NEW OVERWRITE FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 0)) {
+	if (! CBFileSeek(file, 0, SEEK_SET)) {
 		printf("NEW SEEK AFTER OVERWRITE FAIL\n");
 		return 1;
 	}
@@ -102,7 +101,7 @@ int main(){
 		printf("NEW 2ND APPEND FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 0)) {
+	if (! CBFileSeek(file, 0, SEEK_SET)) {
 		printf("NEW SEEK AFTER 2ND APPEND FAIL\n");
 		return 1;
 	}
@@ -138,7 +137,7 @@ int main(){
 		printf("EXISTING READ DATA FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 6)) {
+	if (! CBFileSeek(file, 6, SEEK_SET)) {
 		printf("EXISTING SEEK FAIL\n");
 		return 1;
 	}
@@ -150,7 +149,7 @@ int main(){
 		printf("EXISTING APPEND FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 0)) {
+	if (! CBFileSeek(file, 0, SEEK_SET)) {
 		printf("EXISTING SEEK TO START FAIL\n");
 		return 1;
 	}
@@ -190,7 +189,7 @@ int main(){
 		printf("DATA BIT ERR READ DATA FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 6)) {
+	if (! CBFileSeek(file, 6, SEEK_SET)) {
 		printf("DOUBLE OVERWRITE SEEK FAIL\n");
 		return 1;
 	}
@@ -202,7 +201,7 @@ int main(){
 		printf("DOUBLE OVERWRITE TWO FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 6)) {
+	if (! CBFileSeek(file, 6, SEEK_SET)) {
 		printf("DOUBLE OVERWRITE READ SEEK FAIL\n");
 		return 1;
 	}
@@ -247,7 +246,7 @@ int main(){
 		printf("APPEND ZERO LEN FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 41)) {
+	if (! CBFileSeek(file, 41, SEEK_SET)) {
 		printf("APPEND ZERO SEEK FAIL\n");
 		return 1;
 	}
@@ -269,7 +268,7 @@ int main(){
 		printf("APPEND ZERO REOPEN LEN FAIL\n");
 		return 1;
 	}
-	if (! CBFileSeek(file, 41)) {
+	if (! CBFileSeek(file, 41, SEEK_SET)) {
 		printf("APPEND ZERO REOPEN SEEK FAIL\n");
 		return 1;
 	}
