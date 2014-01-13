@@ -178,11 +178,11 @@ void maybeFinishOrphanTest(void * foo){
 			exit(EXIT_FAILURE);
 		}
 		if (ubalance != -156250000) {
-			printf("UNCONF BALANCE FAIL %lli != -156250000\n", ubalance);
+			printf("UNCONF BALANCE FAIL " PRIi64 " != -156250000\n", ubalance);
 			exit(EXIT_FAILURE);
 		}
 		if (cbalance != 2031250000) {
-			printf("ALL BALANCE FAIL %llu != 312500000\n", cbalance);
+			printf("ALL BALANCE FAIL " PRIu64 " != 312500000\n", cbalance);
 			exit(EXIT_FAILURE);
 		}
 		CBLogVerbose("OPRHAN TO CHAIN complete.");
