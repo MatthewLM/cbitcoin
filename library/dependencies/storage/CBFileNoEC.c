@@ -59,11 +59,7 @@ uint32_t CBFilePos(CBDepObject file){
 	return (uint32_t)ftell(file.ptr);
 }
 bool CBFileRead(CBDepObject file, uint8_t * data, uint32_t dataLen){
-#include <assert.h>
-	assert(fread(data, 1, dataLen, file.ptr) == dataLen);
-	// ??? CHANGE BACK
-	assert(CBFilePos(file) < 100000);
-	return true;
+	return fread(data, 1, dataLen, file.ptr) == dataLen;
 }
 bool CBFileSeek(CBDepObject file, int32_t pos, int seek){
 	return ! fseek(file.ptr, pos, seek);

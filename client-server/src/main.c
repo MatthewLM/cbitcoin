@@ -182,8 +182,8 @@ int main(int argc, char * argv[]){
 		}
 	}
 	// Read the configuration file or use default values
-	uint32_t commitGap = 0;//600;
-	uint32_t cacheLimit = 0;//10000000;
+	uint32_t commitGap = 30000;
+	uint32_t cacheLimit = 10000000;
 	CBNodeFlags nodeFlags = CB_NODE_CHECK_STANDARD | CB_NODE_BOOTSTRAP;
 	uint32_t otherTxsSizeLimit = 10000000;
 	uint32_t maxConnections = 30;
