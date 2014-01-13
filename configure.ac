@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([library/dependencies/crypto/CBOpenSSLCrypto.c])
 
 # Set CONFIGFLAGS
 
-CONFIGFLAGS="-Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include -Werror"
+CONFIGFLAGS="-Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include -Werror"
 CONFIGFLAGS+=" $CFLAGS"
 CONFIGLFLAGS=" $LFLAGS"
 
