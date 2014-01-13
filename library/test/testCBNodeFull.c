@@ -236,7 +236,7 @@ void maybeFinishLoseTest(void){
 				}
 				if (fndTx != NULL){
 					// These are the unconfirmed ones
-					if (fndTx->utx.numUnconfDeps != y > 3) {
+					if (fndTx->utx.numUnconfDeps != (y > 3)) {
 						CBLogError("LOSE CHAIN AND RELAY FINISH DOUBLE SPEND NUM UNCONF DEPS FAIL %u != %u > 3 (node = %u)\n", fndTx->utx.numUnconfDeps, y, x);
 						exit(EXIT_FAILURE);
 					}
@@ -276,11 +276,11 @@ void maybeFinishLoseTest(void){
 			exit(EXIT_FAILURE);
 		}
 		if (ubalance != 156250000) {
-			printf("INITIAL UNCONF BALANCE FAIL %lli != 625000000\n", ubalance);
+			printf("INITIAL UNCONF BALANCE FAIL " PRIi64 " != 625000000\n", ubalance);
 			exit(EXIT_FAILURE);
 		}
 		if (cbalance != 1718750000) {
-			printf("INITIAL ALL BALANCE FAIL %llu != 1875000000\n", cbalance);
+			printf("INITIAL ALL BALANCE FAIL " PRIu64 " != 1875000000\n", cbalance);
 			exit(EXIT_FAILURE);
 		}
 		CBLogVerbose("LOSE_CHAIN_AND_RELAY complete.");
@@ -525,11 +525,11 @@ void maybeFinishReorgTest(void){
 			exit(EXIT_FAILURE);
 		}
 		if (ubalance != 1093750000) {
-			printf("CHAIN REORGANISATION UNCONF BALANCE FAIL %lli != 1093750000\n", ubalance);
+			printf("CHAIN REORGANISATION UNCONF BALANCE FAIL " PRIi64 " != 1093750000\n", ubalance);
 			exit(EXIT_FAILURE);
 		}
 		if (cbalance != 2031250000) {
-			printf("CHAIN REORGANISATION ALL BALANCE FAIL %llu != 2031250000\n", cbalance);
+			printf("CHAIN REORGANISATION ALL BALANCE FAIL " PRIu64 " != 2031250000\n", cbalance);
 			exit(EXIT_FAILURE);
 		}
 		CBLogVerbose("CHAIN_REORGANISATION complete.");
@@ -710,11 +710,11 @@ void finishReceiveInitialTest(void * foo){
 		exit(EXIT_FAILURE);
 	}
 	if (ubalance != 625000000) {
-		printf("INITIAL UNCONF BALANCE FAIL %lli != 625000000\n", ubalance);
+		printf("INITIAL UNCONF BALANCE FAIL " PRIi64 " != 625000000\n", ubalance);
 		exit(EXIT_FAILURE);
 	}
 	if (cbalance != 1875000000) {
-		printf("INITIAL ALL BALANCE FAIL %llu != 1875000000\n", cbalance);
+		printf("INITIAL ALL BALANCE FAIL " PRIu64 " != 1875000000\n", cbalance);
 		exit(EXIT_FAILURE);
 	}
 	CBLogVerbose("RECEIVE INITIAL BLOCKS complete.");
