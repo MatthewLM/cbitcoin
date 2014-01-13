@@ -1165,22 +1165,17 @@ CBErrBool CBNodeFullNewUnconfirmedTransaction(CBNodeFull * self, CBPeer * peer, 
 					// Do not request transaction if we already expect it from this peer, or if it is an orphan
 					CBFindResult res = CBAssociativeArrayFind(&peer->expectedTxs, prevHash);
 					if (!res.found && !CBNodeFullGetOrphanTransaction(self, prevHash)) {
-						assert(res.position.node == peer->expectedTxs.root);
 						char depTxStr[41];
 						CBByteArrayToString(tx->inputs[x]->prevOut.hash, 0, 20, depTxStr, true);
-						assert(res.position.node == peer->expectedTxs.root);
 						CBLogVerbose("Requiring dependency transaction %s from %s", depTxStr, peer->peerStr);
 						// Create getdata if not already
-						assert(res.position.node == peer->expectedTxs.root);
 						if (orphanGetData == NULL)
 							orphanGetData = CBNewInventory();
 						CBRetainObject(tx->inputs[x]->prevOut.hash);
-						assert(res.position.node == peer->expectedTxs.root);
 						CBInventoryTakeInventoryItem(orphanGetData, CBNewInventoryItem(CB_INVENTORY_ITEM_TX, tx->inputs[x]->prevOut.hash));
 						// Add to expected transactions from this peer.
 						uint8_t * insertHash = malloc(20);
 						memcpy(insertHash, prevHash, 20);
-						assert(res.position.node == peer->expectedTxs.root);
 						CBAssociativeArrayInsert(&peer->expectedTxs, insertHash, res.position, NULL);
 					}
 				}
