@@ -189,12 +189,15 @@ void CBInitDatabaseTransactionChanges(CBDatabaseTransactionChanges * self, CBDat
 void CBInitDatabaseRangeIterator(CBDatabaseRangeIterator * it, uint8_t * minEl, uint8_t * maxEl, CBDatabaseIndex * index){
 	// Create min and max elements
 	it->index = index;
+	it->foundIndex = false;
 	it->minElement = malloc(it->index->keySize + 4);
 	it->maxElement = malloc(it->index->keySize + 4);
 	memcpy(it->minElement, minEl, it->index->keySize);
 	memcpy(it->maxElement, maxEl, it->index->keySize);
 	memset(it->minElement + it->index->keySize, 0, 4);
 	memset(it->maxElement + it->index->keySize, 0xFF, 4);
+	// Do not commit during iteration, therefore lock commit mutex until iterator is free'd.
+	CBMutexLock(it->index->database->commitMutex);
 }
 CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySize, uint32_t cacheLimit){
 	// Load index
@@ -484,6 +487,7 @@ bool CBFreeDatabase(CBDatabase * self){
 	CBFreeMutex(self->diskMutex);
 	CBFreeMutex(self->currentMutex);
 	CBFreeMutex(self->stagedMutex);
+	CBFreeCondition(self->commitCond);
 	CBFreeAssociativeArray(&self->deletionIndex);
 	CBFreeAssociativeArray(&self->valueWritingIndexes);
 	// Close files
@@ -521,9 +525,7 @@ void CBFreeIndexElementPos(CBIndexElementPos pos){
 	if (! pos.nodeLoc.cached)
 		CBFreeIndexNode(pos.nodeLoc.cachedNode);
 	for (uint8_t x = 0; x < pos.parentStack.num; x++)
-		if (! pos.parentStack.nodes[x].cached
-			// We may have moved to a parent and thus the nodeLoc is at a parent that we do not want to free twice.
-			&& pos.parentStack.nodes[x].cachedNode != pos.nodeLoc.cachedNode)
+		if (! pos.parentStack.nodes[x].cached)
 			CBFreeIndexNode(pos.parentStack.nodes[x].cachedNode);
 }
 void CBFreeIndexTxData(void * vindexTxData){
@@ -539,6 +541,8 @@ void CBFreeDatabaseRangeIterator(CBDatabaseRangeIterator * it){
 	free(it->maxElement);
 	if (it->foundIndex)
 		CBFreeIndexElementPos(it->indexPos);
+	// Now finished, can commit.
+	CBMutexUnlock(it->index->database->commitMutex);
 }
 
 bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len){
@@ -1638,7 +1642,6 @@ CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * in
 	CBIndexFindWithParentsResult result;
 	CBIndexNodeLocation nodeLoc = index->indexCache;
 	result.el.parentStack.num = 0;
-	result.el.parentStack.cursor = 0;
 	for (;;) {
 		// Do binary search on node
 		CBDatabaseIndexNodeBinarySearchMemory(index, nodeLoc.cachedNode, key, &result.status, &result.el.index);
@@ -1653,10 +1656,9 @@ CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * in
 				|| childLoc->diskNodeLoc.indexFile != 0
 				|| childLoc->diskNodeLoc.offset != 0) {
 				// Set parent information
-				if (nodeLoc.cachedNode != index->indexCache.cachedNode){
+				if (nodeLoc.cachedNode != index->indexCache.cachedNode)
+					// Add to parent stack.
 					result.el.parentStack.nodes[result.el.parentStack.num++] = nodeLoc;
-					result.el.parentStack.cursor++;
-				}
 				result.el.parentStack.pos[result.el.parentStack.num] = result.el.index;
 				// Child exists, move to it
 				nodeLoc = *childLoc;
@@ -1669,6 +1671,8 @@ CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * in
 						CBLogError("Could not load an index node from the disk.");
 						result.status = CB_DATABASE_INDEX_ERROR;
 						CBMutexUnlock(index->database->diskMutex);
+						free(nodeLoc.cachedNode);
+						CBFreeIndexElementPos(result.el);
 						return result;
 					}
 					CBMutexUnlock(index->database->diskMutex);
@@ -1862,14 +1866,22 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 			// All done
 			CBDatabaseIndexInsertReturn(true);
 		}
+		// Free previous node, if it is not cached, as we are going to parent
+		bool cached = pos->nodeLoc.cached;
+		if (!cached) {
+			CBRetainObject(middleEl); // We might have gotten the middle element from the node.
+			CBFreeIndexNode(pos->nodeLoc.cachedNode);
+		}
 		// Get the new pos for inserting the middle value and right node
-		if (pos->parentStack.cursor)
-			pos->nodeLoc = pos->parentStack.nodes[pos->parentStack.cursor-1];
+		if (pos->parentStack.num)
+			pos->nodeLoc = pos->parentStack.nodes[pos->parentStack.num--];
 		else
 			pos->nodeLoc = index->indexCache;
-		pos->index = pos->parentStack.pos[pos->parentStack.cursor--];
+		pos->index = pos->parentStack.pos[pos->parentStack.num];
 		// Insert the middle value into the parent with the right node.
 		bool ret = CBDatabaseIndexInsert(index, middleEl, pos, &new);
+		if (!cached)
+			CBReleaseObject(middleEl);
 		CBDatabaseIndexInsertReturn(ret);
 	}
 }
@@ -2101,11 +2113,11 @@ bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation 
 	return true;
 }
 CBIndexFindStatus CBDatabaseRangeIteratorFirst(CBDatabaseRangeIterator * it){
-	// Ensure commit ended ??? Could also add seperate mutexes per index to allow for more concurrency. Could also allow commiting and iteration at the same time by notifying the iterator that an array or disk iterator has been invalidated.
-	CBMutexLock(it->index->database->commitMutex);
-	CBMutexUnlock(it->index->database->commitMutex);
 	if (it->index->database->commitFail)
 		return false;
+	// Delete index position data if we have some already.
+	if (it->foundIndex)
+		CBFreeIndexElementPos(it->indexPos);
 	// Set the minimum and maximum elements for the iterators.
 	it->currentIt.minElement = it->minElement;
 	it->currentIt.maxElement = it->maxElement;
@@ -2258,10 +2270,11 @@ bool CBDatabaseRangeIteratorKeyIfLesser(uint8_t ** lowestKey, CBRangeIterator * 
 	return false;
 }
 CBIndexFindStatus CBDatabaseRangeIteratorLast(CBDatabaseRangeIterator * it){
-	CBMutexLock(it->index->database->commitMutex);
-	CBMutexUnlock(it->index->database->commitMutex);
 	if (it->index->database->commitFail)
 		return false;
+	// Delete index position data if we have some already.
+	if (it->foundIndex)
+		CBFreeIndexElementPos(it->indexPos);
 	// Go to the end of the txKeys
 	it->currentIt.minElement = it->minElement;
 	it->currentIt.maxElement = it->maxElement;
@@ -2417,10 +2430,8 @@ CBIndexFindStatus CBDatabaseRangeIteratorIterateIndex(CBDatabaseRangeIterator * 
 		bool first = true;
 		for (;;) {
 			// First set the parent information
-			if (it->indexPos.nodeLoc.cachedNode != it->index->indexCache.cachedNode){
+			if (it->indexPos.nodeLoc.cachedNode != it->index->indexCache.cachedNode)
 				it->indexPos.parentStack.nodes[it->indexPos.parentStack.num++] = it->indexPos.nodeLoc;
-				it->indexPos.parentStack.cursor++;
-			}
 			it->indexPos.parentStack.pos[it->indexPos.parentStack.num] = it->indexPos.index + first*(forwards ? 1 : -1);
 			first = false;
 			// Load node from disk if necessary

@@ -138,7 +138,6 @@ typedef struct{
 	CBIndexNodeLocation nodes[7];
 	uint8_t pos[8]; /**< Position of node in parent node. */
 	uint8_t num;
-	uint8_t cursor;
 } CBIndexParentStack;
 
 typedef struct{
