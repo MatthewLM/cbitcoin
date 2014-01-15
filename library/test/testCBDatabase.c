@@ -1883,11 +1883,11 @@ int main(){
 	}
 	uint8_t dataRead[10];
 	// Insert first 1000, one at a time.
-	uint8_t * valptr = values;
+	uint8_t * valptr = values; // ??? MEMLEAK HERE...
 	for (uint16_t x = 0; x < 1000; x++) {
 		CBDatabaseWriteValue(index3, keys + x*10, valptr, (x % 10) + 1);
 		CBDatabaseStage(storage);
-		if (! CBDatabaseCommit(storage)){
+		if (! CBDatabaseCommitProcess(storage)){
 			printf("INSERT FIRST 1000 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}

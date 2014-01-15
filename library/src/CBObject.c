@@ -27,9 +27,15 @@ void CBInitObject(CBObject * self, bool useMutex){
 
 //  Functions
 
+//void * traceObj = NULL; // ??? DEBUG REMOVE
+
 void CBReleaseObject(void * self){
 	CBObject * obj = self;
 	CBDepObject refMutex;
+	/*if (self == traceObj) {
+		CBLogError("RELEASED TRACE OBJ %u", obj->references);
+		
+	}*/
 	bool usesMutex = obj->usesMutex;
 	if (usesMutex){
 		refMutex = ((CBObjectMutex *)self)->refMutex;
@@ -49,6 +55,10 @@ void CBReleaseObject(void * self){
 void CBRetainObject(void * self){
 	// Increment reference counter.
 	CBObject * obj = self;
+	/*if (self == traceObj) {
+		CBLogError("RETAINED TRACE OBJ %u", obj->references);
+		
+	}*/
 	if (obj->usesMutex){
 		CBDepObject mutex = ((CBObjectMutex *)self)->refMutex;
 		CBMutexLock(mutex);

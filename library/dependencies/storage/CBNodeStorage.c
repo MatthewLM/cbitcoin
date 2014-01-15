@@ -56,6 +56,7 @@ bool CBNodeStorageLoadUnconfTxs(void * vnode){
 		CBIndexFindStatus res = CBDatabaseRangeIteratorFirst(&it);
 		if (res == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("Could not find the first unconfirmed transaction to load");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		while (res == CB_DATABASE_INDEX_FOUND) {
@@ -65,11 +66,13 @@ bool CBNodeStorageLoadUnconfTxs(void * vnode){
 			uint32_t len;
 			if (! CBDatabaseRangeIteratorGetLength(&it, &len)) {
 				CBLogError("Could not get the length of an unconfirmed transaction.");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 			CBByteArray * data = CBNewByteArrayOfSize(len);
 			if (! CBDatabaseRangeIteratorRead(&it, CBByteArrayGetData(data), len, 0)) {
 				CBLogError("Could not read data of an unconfirmed transaction from the database.");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 			CBTransaction * tx = CBNewTransactionFromData(data);
@@ -90,9 +93,11 @@ bool CBNodeStorageLoadUnconfTxs(void * vnode){
 			res = CBDatabaseRangeIteratorNext(&it);
 			if (res == CB_DATABASE_INDEX_ERROR) {
 				CBLogError("Could not iterate to the next unconfirmed transaction of ours in the database.");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 		}
+		CBFreeDatabaseRangeIterator(&it);
 	}
 	// Loop through transactions and check dependencies
 	for (CBAssociativeArray * array = &node->ourTxs;; array = &node->otherTxs) {

@@ -178,9 +178,6 @@ CBConnectReturn CBNetworkCommunicatorConnect(CBNetworkCommunicator * self, CBPee
 		// Add event for connection
 		if (CBSocketDidConnectEvent(&peer->connectEvent, self->eventLoop, peer->socketID, CBNetworkCommunicatorDidConnect, peer)) {
 			if (CBSocketAddEvent(peer->connectEvent, self->connectionTimeOut)) {
-				// ??? Connection timeout does not work.
-				// Connection is fine. Retain for waiting for connect.
-				CBRetainObject(peer);
 				self->attemptingOrWorkingConnections++;
 				peer->connecting = true; // In the process of connecting.
 				return CB_CONNECT_OK;
@@ -257,6 +254,9 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 					}
 					CBLogVerbose("Did connect to %s", peer->peerStr);
 					self->callbacks.onPeerConnection(self, peer);
+					/*extern void * traceObj;
+					if (traceObj == NULL)
+						traceObj = peer;*/
 					return;
 				}
 				CBSocketFreeEvent(peer->sendEvent);
@@ -690,10 +690,8 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer 
 			}
 		}
 	}
+	CBLogVerbose("Received a message header from %s with the type %s (%u).", peer->peerStr, CBByteArrayGetData(typeBytes), type);
 	CBReleaseObject(typeBytes);
-	char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
-	CBMessageTypeToString(type, typeStr);
-	CBLogVerbose("Received a message header from %s with the type %s (%u).", peer->peerStr, typeStr, type);
 	char headerHex[49];
 	CBByteArrayToString(header, 0, 24, headerHex, false);
 	CBLogVerbose("HeaderHex = %s", headerHex);
@@ -780,7 +778,10 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 	uint32_t len;
 	switch (peer->receive->type) {
 		case CB_MESSAGE_TYPE_NONE:
-			// Unknown message
+			// Unknown message, reset variables and end.
+			peer->receivedHeader = false;
+			peer->receive = NULL;
+			CBNetworkCommunicatorDisconnect(self, peer, 0, false); // ??? REMOVE TESTING ONLY
 			return;
 		case CB_MESSAGE_TYPE_VERSION:
 			peer->receive = realloc(peer->receive, sizeof(CBVersion)); // For storing additional data
@@ -1098,18 +1099,20 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
 		else{ // Version OK
 			// Check if we have a connection to this peer already and that it is a seperate connection
 			CBPeer * peerCheck = CBNetworkAddressManagerGotPeer(self->addresses, CBGetVersion(peer->receive)->addSource);
-			if (peerCheck && peerCheck != peer){
+			if (peerCheck){
 				// Release the peer check
 				CBReleaseObject(peerCheck);
-				// Sometimes two peers may try to connect to each other at the same time. Then both peers send a version message at the same time. They will both come to this part of the code. We don't want both peers to disconnect the other in this case. We want to keep one connection between the peers going, so we use a deterministic method for both peers to only disconnect one, by comparing the addresses.
-				CBNetworkAddress * ours = CBNetworkCommunicatorGetOurMainAddress(self, CBGetVersion(peer->receive)->addSource->type);
-				CBCompare res = CBNetworkAddressIPPortCompare(NULL, CBGetVersion(peer->receive)->addSource, ours);
-				if (res == CB_COMPARE_MORE_THAN)
-					// Disconnect this connection.
-					return CB_MESSAGE_ACTION_DISCONNECT;
-				else
-					// Disconnect the other connection.
-					CBNetworkCommunicatorDisconnect(self, peerCheck, 0, false);
+				if (peerCheck != peer){
+					// Sometimes two peers may try to connect to each other at the same time. Then both peers send a version message at the same time. They will both come to this part of the code. We don't want both peers to disconnect the other in this case. We want to keep one connection between the peers going, so we use a deterministic method for both peers to only disconnect one, by comparing the addresses.
+					CBNetworkAddress * ours = CBNetworkCommunicatorGetOurMainAddress(self, CBGetVersion(peer->receive)->addSource->type);
+					CBCompare res = CBNetworkAddressIPPortCompare(NULL, CBGetVersion(peer->receive)->addSource, ours);
+					if (res == CB_COMPARE_MORE_THAN)
+						// Disconnect this connection.
+						return CB_MESSAGE_ACTION_DISCONNECT;
+					else
+						// Disconnect the other connection.
+						CBNetworkCommunicatorDisconnect(self, peerCheck, 0, false);
+				}
 			}
 			// Remove the source address from the address manager if it has it. Now that the peer is connected, we identify it by the source address and do not want to try connections to the same address.
 			CBNetworkAddressManagerRemoveAddress(self->addresses, CBGetNetworkAddress(CBGetVersion(peer->receive)->addSource));

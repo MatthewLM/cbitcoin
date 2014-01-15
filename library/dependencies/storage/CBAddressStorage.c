@@ -62,6 +62,7 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 	CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not get the first address from the database.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	while(status == CB_DATABASE_INDEX_FOUND) {
@@ -70,6 +71,7 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 		uint8_t data[20];
 		if (! CBDatabaseRangeIteratorRead(&it, data, 20, 0)) {
 			CBLogError("Could not read address data from database.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		// Create network address object and add to the address manager.
@@ -84,9 +86,11 @@ bool CBAddressStorageLoadAddresses(CBDepObject uself, void * addrMan){
 		status = CBDatabaseRangeIteratorNext(&it);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("Could not iterate to the next address in the database.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 	}
+	CBFreeDatabaseRangeIterator(&it);
 	return true;
 }
 bool CBAddressStorageSaveAddress(CBDepObject uself, void * address){

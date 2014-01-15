@@ -1287,8 +1287,10 @@ void CBDatabaseCommitThread(void * vdatabase){
 			return;
 		}
 		// Commence commit
-		if ((self->commitFail = !CBDatabaseCommitProcess(self)))
+		if ((self->commitFail = !CBDatabaseCommitProcess(self))){
+			CBMutexUnlock(self->commitMutex);
 			return;
+		}
 		self->doCommit = false;
 	}
 }

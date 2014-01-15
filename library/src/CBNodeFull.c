@@ -699,7 +699,7 @@ void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 	// Remove this peer from the block's peers, if found
 	CBFindResult blockPeersRes = CBAssociativeArrayFind(&blockPeers->peers, peer);
 	if (blockPeersRes.found)
-		CBAssociativeArrayDelete(&blockPeers->peers, blockPeersRes.position, true);
+		CBAssociativeArrayDelete(&blockPeers->peers, blockPeersRes.position, false);
 	// Now get the first peer we can get this block from.
 	CBPosition it;
 	if (!CBAssociativeArrayGetFirst(&blockPeers->peers, &it)){
@@ -1591,6 +1591,12 @@ void CBNodeFullPeerFree(void * vpeer){
 	CBMutexUnlock(peer->invResponseMutex);
 	CBFreeMutex(peer->invResponseMutex);
 	CBFreeMutex(peer->requestedDataMutex);
+	// If can download from this peer, decrement numCanDownload
+	if (peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS) {
+		CBMutexLock(fullNode->numCanDownloadMutex);
+		fullNode->numCanDownload--;
+		CBMutexUnlock(fullNode->numCanDownloadMutex);
+	}
 	if (peer->downloading){
 		// If expected a block from the peer, we should ask another
 		if (peer->expectBlock)
@@ -1626,17 +1632,11 @@ void CBNodeFullPeerFree(void * vpeer){
 			}
 		}
 		CBMutexUnlock(fullNode->pendingBlockDataMutex);
-	}
-	// If can download from this peer, decrement numCanDownload
-	if (peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS) {
-		CBMutexLock(fullNode->numCanDownloadMutex);
-		fullNode->numCanDownload--;
-		CBMutexUnlock(fullNode->numCanDownloadMutex);
+		// See if we can download from any other peers
+		CBNodeFullDownloadFromSomePeer(fullNode, peer);
 	}
 	CBFreeAssociativeArray(&peer->expectedTxs);
 	if (peer->requestedData != NULL) CBReleaseObject(peer->requestedData);
-	// See if we can download from any other peers
-	CBNodeFullDownloadFromSomePeer(fullNode, peer);
 	CBFreePeer(peer);
 }
 void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer){
@@ -1907,6 +1907,7 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 						peer->reqBlockStart = 0;
 						// We expect a block
 						CBGetMessage(getData)->expectResponse = CB_MESSAGE_TYPE_BLOCK;
+						CBLogVerbose("Asked for block %s from inv by %s", blockStr, peer->peerStr);
 					}else
 						// Record that this peer has this block
 						CBAssociativeArrayInsert(&blockPeers->peers, peer, blockPeersRes.position, NULL);

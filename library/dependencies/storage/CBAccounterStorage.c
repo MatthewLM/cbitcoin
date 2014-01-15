@@ -125,6 +125,7 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 		CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was a problem finding the first branch section account time tx details.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
@@ -132,6 +133,7 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 			uint8_t data[16];
 			if (!CBDatabaseRangeIteratorRead(&it, data, 16, 0)) {
 				CBLogError("Could not read the cumulative balance for adjustment");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 			// Adjust balances
@@ -164,12 +166,14 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
 		CBIndexFindStatus status = CBDatabaseRangeIteratorLast(&it);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was a problem finding the first branch section account time tx details.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		if (status == CB_DATABASE_INDEX_FOUND){
 			uint8_t data[16];
 			if (!CBDatabaseRangeIteratorRead(&it, data, 16, 0)) {
 				CBLogError("Could not read the cumulative balance for adjustment");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 			if (last)
@@ -202,6 +206,7 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 	CBInitDatabaseRangeIterator(&it, orderNumTxDetailsMin, orderNumTxDetailsMax, storage->orderNumTxDetails);
 	if (CBDatabaseRangeIteratorLast(&it) != CB_DATABASE_INDEX_FOUND){
 		CBLogError("Could not get the last order number for a transaction.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	// Get the key
@@ -221,6 +226,7 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 		CBInitDatabaseRangeIterator(&it, txAccountMin, txAccountMax, storage->txAccounts);
 		if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Couldn't find first transaction account data when looping through for a transaction being added to a branch.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		for (;;) {
@@ -240,6 +246,7 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 			uint8_t timestampAndOrderNum[16];
 			if (CBDatabaseReadValue(storage->txDetails, key + CB_TX_ACCOUNTS_TX_ID, timestampAndOrderNum, 8, CB_TX_DETAILS_TIMESTAMP, false) != CB_DATABASE_INDEX_FOUND) {
 				CBLogError("Could not read a transaction's timestamp when changing the height");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 			// Get the last order number of the transaction
@@ -252,14 +259,18 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 			CBInitDatabaseRangeIterator(&it2, orderNumTxDetailsMin, orderNumTxDetailsMax, storage->orderNumTxDetails);
 			if (CBDatabaseRangeIteratorLast(&it2) != CB_DATABASE_INDEX_FOUND){
 				CBLogError("Could not get the last order number for a transaction.");
+				CBFreeDatabaseRangeIterator(&it);
+				CBFreeDatabaseRangeIterator(&it2);
 				return false;
 			}
 			// Get the key and thus the order number
 			CBDatabaseRangeIteratorGetKey(&it2, orderNumTxDetailsMax);
+			CBFreeDatabaseRangeIterator(&it2);
 			memcpy(timestampAndOrderNum + 8, orderNumTxDetailsMax + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 8);
 			// Adjust the unconf balances.
 			if (!CBAccounterAdjustBalances(storage, timestampAndOrderNum, (uint8_t [16]){0xFF}, accountID, 0, oldHeight == CB_UNCONFIRMED ? -value : value, NULL, NULL)) {
 				CBLogError("Unable to adjust unconfirmed cumulative balances.");
+				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
 			// Iterate if possible
@@ -300,6 +311,7 @@ bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, 
 	CBInitDatabaseRangeIterator(&it, minOutputAccountKey, maxOutputAccountKey, self->outputAccounts);
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("Couldn't get the first output account entry");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	uint8_t outputIDBuf[8];
@@ -314,6 +326,7 @@ bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, 
 		// Delete unspent output
 		if (!CBDatabaseRemoveValue(self->accountUnspentOutputs, keyArr, false)){
 			CBLogError("Could not remove unspent output from accounter.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		// Add txInfo if not NULL
@@ -490,8 +503,8 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * vtx, uint32_t blo
 				if (status == CB_DATABASE_INDEX_NOT_FOUND)
 					break;
 			}
-			CBFreeDatabaseRangeIterator(&it);
 		}
+		CBFreeDatabaseRangeIterator(&it);
 	}
 	// Loop through all accounts seeing what flows have been made
 	CBPosition pos;
@@ -781,21 +794,23 @@ bool CBAccounterGetLastAccountBalance(CBAccounterStorage * storage, uint64_t acc
 	CBIndexFindStatus res = CBDatabaseRangeIteratorLast(&lastTxIt);
 	if (res == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("Could not get the last transaction in a branch section to get the last balance for calculating a new balance.");
+		CBFreeDatabaseRangeIterator(&lastTxIt);
 		return false;
 	}
 	if (res == CB_DATABASE_INDEX_FOUND) {
 		uint8_t data[16];
 		if (! CBDatabaseRangeIteratorRead(&lastTxIt, data, 16, 0)) {
 			CBLogError("Could not read the transaction cumulative balance for an account.");
+			CBFreeDatabaseRangeIterator(&lastTxIt);
 			return false;
 		}
 		*balance = CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_BALANCE);
 		CBAccounterUInt64ToInt64(CBArrayToInt64(data, CB_ACCOUNT_TIME_TX_UNCONF_BALANCE), unconfBalance);
 	}else{
-		CBFreeDatabaseRangeIterator(&lastTxIt);
 		*balance = 0;
 		*unconfBalance = 0;
 	}
+	CBFreeDatabaseRangeIterator(&lastTxIt);
 	return true;
 }
 bool CBAccounterGetTransactionTime(CBDepObject self, uint8_t * txHash, uint64_t * time){
@@ -874,6 +889,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 		CBInitDatabaseRangeIterator(&it, outputAccountsMin, outputAccountsMax, storage->outputAccounts);
 		if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Could not get the first account for an output when removing an output spent status from branchless.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		// Prepare account unspent output key with  and output ID.
@@ -938,6 +954,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 	CBInitDatabaseRangeIterator(&it, orderNumTxDetailsMin, orderNumTxDetailsMax, storage->orderNumTxDetails);
 	if (CBDatabaseRangeIteratorLast(&it) != CB_DATABASE_INDEX_FOUND){
 		CBLogError("Could not get the last order number for a transaction.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	// Get the key and thus the order number, reuse orderNumTxDetailsMax
@@ -959,6 +976,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 	CBInitDatabaseRangeIterator(&it, txAccountsMin, txAccountsMax, storage->txAccounts);
 	if (CBDatabaseRangeIteratorFirst(&it) != CB_DATABASE_INDEX_FOUND) {
 		CBLogError("There was a problem finding the first transaction account entry.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	for (;;) {
@@ -1036,6 +1054,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 	CBIndexFindStatus res = CBDatabaseRangeIteratorFirst(&it);
 	if (res == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was an error whilst attemping to find the first account output information for a transaction.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	if (res == CB_DATABASE_INDEX_FOUND) for (;;) {
@@ -1058,6 +1077,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * vtx, uint32_t height){
 		if (CBDatabaseRangeIteratorFirst(&accountIt) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("There was a problem finding the first output account entry.");
 			CBFreeDatabaseRangeIterator(&it);
+			CBFreeDatabaseRangeIterator(&accountIt);
 			return false;
 		}
 		for (;;) {
@@ -1146,6 +1166,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	CBIndexFindStatus status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first account transaction details entry.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	uint8_t keyArr[33], keyArr2[16];
@@ -1186,6 +1207,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first account transaction details entry.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
@@ -1208,6 +1230,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		CBIndexFindStatus status = CBDatabaseReadValue(storage->accountTxDetails, keyArr, destData, 28, 0, false);
 		if (status == CB_DATABASE_INDEX_ERROR) {
 			CBLogError("There was an error trying to determine if account transaction details exists.");
+			CBFreeDatabaseRangeIterator(&it);
 			return CB_ERROR;
 		}
 		if (status == CB_DATABASE_INDEX_FOUND) {
@@ -1263,6 +1286,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first account time tx details.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	// Set last key as zero
@@ -1274,6 +1298,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		// Adjust balances for everything between last and this key if addedBalance is not 0
 		if (!CBAccounterAdjustBalances(storage, keyArr + CB_ACCOUNT_TIME_TX_TIMESTAMP, key + CB_ACCOUNT_TIME_TX_TIMESTAMP, accountDest, addedBalance, addedUnconfBalance, &last, &lastUnconf)) {
 			CBLogError("Could not adjust the cumulative balanaces.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		// See if the transaction is unconfirmed. If it is then adjust the unconfirmed added balance and last balance.
@@ -1282,6 +1307,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		memcpy(orderNumTxDetailsKey + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, key + CB_ACCOUNT_TIME_TX_ORDERNUM, 8);
 		if (CBDatabaseReadValue(storage->orderNumTxDetails, orderNumTxDetailsKey, data, 4, CB_ORDER_NUM_TX_DETAILS_HEIGHT, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Couldn't read the height of a transaction for the source account.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		bool unconfirmed = CBArrayToInt32BigEndian(data, 0) == CB_UNCONFIRMED;
@@ -1290,6 +1316,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		CBInt64ToArray(keyArr2, CB_ACCOUNT_TX_DETAILS_ACCOUNT_ID, accountSrc);
 		if (CBDatabaseReadValue(storage->accountTxDetails, keyArr2, data, 8, CB_ACCOUNT_TX_DETAILS_VALUE, false) != CB_DATABASE_INDEX_FOUND) {
 			CBLogError("Couldn't read the value of a transaction for the source account.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		int64_t value;
@@ -1338,6 +1365,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 	status = CBDatabaseRangeIteratorFirst(&it);
 	if (status == CB_DATABASE_INDEX_ERROR) {
 		CBLogError("There was a problem finding the first branch section account output details.");
+		CBFreeDatabaseRangeIterator(&it);
 		return false;
 	}
 	if (status == CB_DATABASE_INDEX_FOUND) for (;;) {
@@ -1359,6 +1387,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
 		uint32_t len;
 		if (! CBDatabaseGetLength(storage->accountUnspentOutputs, keyArr, &len)) {
 			CBLogError("Could not determine if the destination account owns an output during a merge.");
+			CBFreeDatabaseRangeIterator(&it);
 			return false;
 		}
 		if (len == CB_DOESNT_EXIST) {
