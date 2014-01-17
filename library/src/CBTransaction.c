@@ -261,9 +261,8 @@ bool CBTransactionGetInputHashForSignature(void * vself, CBByteArray * prevOutSu
 				CBVarIntEncode(data, cursor, CBVarIntFromUInt64(0));
 				cursor++;
 			}
-			if ((signType == CB_SIGHASH_NONE || signType == CB_SIGHASH_SINGLE) && x != input) {
+			if ((signType == CB_SIGHASH_NONE || signType == CB_SIGHASH_SINGLE) && x != input)
 				CBByteArraySetInt32(data, cursor, 0);
-			}
 			else // SIGHASH_ALL or input index for signing sequence
 				CBByteArraySetInt32(data, cursor, self->inputs[x]->sequence);
 			cursor += 4;
