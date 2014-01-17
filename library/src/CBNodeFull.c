@@ -692,6 +692,7 @@ void CBNodeFullCancelBlock(CBNodeFull * self, CBPeer * peer){
 	CBBlockPeers * blockPeers = CBFindResultToPointer(res);
 	if (blockPeers->peers.root->numElements == 1 && blockPeers->peers.root->children[0] == NULL) {
 		// Only this peer has the block so delete the blockPeers and end.
+		CBAssociativeArrayDelete(&self->askedForBlocks, CBAssociativeArrayFind(&self->askedForBlocks, peer->expectedBlock).position, false);
 		CBAssociativeArrayDelete(&self->blockPeers, res.position, true);
 		CBMutexUnlock(self->pendingBlockDataMutex);
 		return;

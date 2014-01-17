@@ -197,6 +197,8 @@ void CBInitDatabaseRangeIterator(CBDatabaseRangeIterator * it, uint8_t * minEl, 
 	memset(it->minElement + it->index->keySize, 0, 4);
 	memset(it->maxElement + it->index->keySize, 0xFF, 4);
 	// Do not commit during iteration, therefore lock commit mutex until iterator is free'd.
+	// The commit lock also applies when staging, so we can use the current and staged data without fear of it changing.
+	// As long as we do not change the data on other threads.
 	CBMutexLock(it->index->database->commitMutex);
 }
 CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySize, uint32_t cacheLimit){
@@ -1747,16 +1749,20 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 				// Copy remainder of elements
 				|| ! CBDatabaseIndexMoveElements(index, &new, &pos->nodeLoc, pos->index, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS, CB_DATABASE_BTREE_ELEMENTS - pos->index, true)
 				// Set remainder of elements as blank
-				|| ! CBDatabaseAppendZeros(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, new.diskNodeLoc.indexFile, CB_DATABASE_BTREE_HALF_ELEMENTS * (index->keySize + 10))) {
+				|| ! CBDatabaseAppendZeros(index->database, CB_DATABASE_FILE_TYPE_INDEX, index, new.diskNodeLoc.indexFile, CB_DATABASE_BTREE_HALF_ELEMENTS * (index->keySize + 10))
+			) {
 				CBLogError("Could not move elements including the new element into the new node");
 				CBDatabaseIndexInsertReturn(false);
 			}
 			if (! bottom
-				&& (! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, 0, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS, true)
+				&& (
+					// Move the children before the right child into place
+					! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, 0, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS, true)
 					// Set the right child
 					|| ! CBDatabaseIndexSetChild(index, &new, right, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS, true)
 					// Set the remaining children
-					|| ! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, pos->index + 1, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS + 1, CB_DATABASE_BTREE_ELEMENTS - pos->index, true))){
+					|| ! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, pos->index + 1, pos->index - CB_DATABASE_BTREE_HALF_ELEMENTS + 1, CB_DATABASE_BTREE_ELEMENTS - pos->index, true))
+				){
 					CBLogError("Could not insert children into new node.");
 					CBDatabaseIndexInsertReturn(false);
 				}
@@ -1798,12 +1804,14 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 				CBDatabaseIndexInsertReturn(false);
 			}
 			if (! bottom
-				&& (// Move children in old node to make room for the right child
-					! CBDatabaseIndexMoveChildren(index, &pos->nodeLoc, &pos->nodeLoc, pos->index + 1, pos->index + 2, CB_DATABASE_BTREE_HALF_ELEMENTS - pos->index - 1, false)
+				&& (// Copy children into new node, must do this before setting right child
+					! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS, 0, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, true)
+					// Move children in old node to make room for the right child
+					|| ! CBDatabaseIndexMoveChildren(index, &pos->nodeLoc, &pos->nodeLoc, pos->index + 1, pos->index + 2, CB_DATABASE_BTREE_HALF_ELEMENTS - pos->index - 1, false)
 					// Insert the right child
 					|| ! CBDatabaseIndexSetChild(index, &pos->nodeLoc, right, pos->index + 1, false)
-					// Copy children into new node
-					|| ! CBDatabaseIndexMoveChildren(index, &new, &pos->nodeLoc, CB_DATABASE_BTREE_HALF_ELEMENTS, 0, CB_DATABASE_BTREE_HALF_ELEMENTS + 1, true))) {
+					)
+				) {
 					CBLogError("Could not insert the children to the new node when the new element is in the first node.");
 					CBDatabaseIndexInsertReturn(false);
 				}
@@ -1875,11 +1883,13 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
 			CBFreeIndexNode(pos->nodeLoc.cachedNode);
 		}
 		// Get the new pos for inserting the middle value and right node
-		if (pos->parentStack.num)
-			pos->nodeLoc = pos->parentStack.nodes[pos->parentStack.num--];
-		else
+		if (pos->parentStack.num){
+			pos->index = pos->parentStack.pos[pos->parentStack.num];
+			pos->nodeLoc = pos->parentStack.nodes[--pos->parentStack.num];
+		}else{
+			pos->index = pos->parentStack.pos[0];
 			pos->nodeLoc = index->indexCache;
-		pos->index = pos->parentStack.pos[pos->parentStack.num];
+		}
 		// Insert the middle value into the parent with the right node.
 		bool ret = CBDatabaseIndexInsert(index, middleEl, pos, &new);
 		if (!cached)
@@ -1994,7 +2004,7 @@ void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBInd
 	}
 	CBReleaseObject(val);
 	// Not found, read child location.
-	if (! CBFileSeek(file, (CB_DATABASE_BTREE_ELEMENTS-elNum) * (index->keySize + 10) + pos * 6, SEEK_CUR)) {
+	if (! CBFileSeek(file, offset + 1 + CB_DATABASE_BTREE_ELEMENTS * (index->keySize + 10) + pos * 6, SEEK_SET)) {
 		CBLogError("Could not seek to a child in an index node.");
 		CBDatabaseIndexNodeSearchDiskReturn(CB_DATABASE_INDEX_ERROR);
 	}
@@ -2798,8 +2808,10 @@ bool CBDatabaseStage(CBDatabase * self){
 			}
 	}
 	// Free index tx data
+	CBMutexLock(self->currentMutex);
 	CBFreeAssociativeArray(&self->current.indexes);
 	CBInitAssociativeArray(&self->current.indexes, CBIndexCompare, NULL, CBFreeIndexTxData);
+	CBMutexUnlock(self->currentMutex);
 	// Copy over extra data
 	memcpy(self->staged.extraData, self->current.extraData, self->extraDataSize);
 	CBMutexUnlock(self->commitMutex);

@@ -44,6 +44,7 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBVersionServices s
 		// By default give null address
 		CBByteArraySetBytes(ip, 0, CB_NULL_ADDRESS, 16);
 		self->ipData[x].ourAddress = CBNewNetworkAddress(0, (CBSocketAddress){ip, 0}, services, false);
+		CBReleaseObject(ip);
 		self->ipData[x].isSet = false;
 		self->ipData[x].listeningPort = 8333;
 	}
@@ -690,11 +691,8 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer 
 			}
 		}
 	}
-	CBLogVerbose("Received a message header from %s with the type %s (%u).", peer->peerStr, CBByteArrayGetData(typeBytes), type);
+	CBLogVerbose("Received a message header from %s with the type %s and expected size of %u.", peer->peerStr, CBByteArrayGetData(typeBytes), size);
 	CBReleaseObject(typeBytes);
-	char headerHex[49];
-	CBByteArrayToString(header, 0, 24, headerHex, false);
-	CBLogVerbose("HeaderHex = %s", headerHex);
 	if (error || !self->callbacks.acceptingType(self, peer, type) || size > CB_MAX_MESSAGE_SIZE) {
 		// Error with the message header type or length
 		CBLogWarning("There was an error with the message.");

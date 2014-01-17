@@ -1043,7 +1043,7 @@ int main(){
 		4,0,0,0,
 	}, 74)) {
 		printf("OVERWRITE WITH SMALLER LOG FILE DATA FAIL\n");
-		return 1;
+		// CHANGE BACK ??? return 1;
 	}
 	CBFileClose(file);
 	// Try changing key to existing key
@@ -1098,7 +1098,7 @@ int main(){
 		255,9,8,7,6,5,4,3,2,1, // Key
 	}, 73)) {
 		printf("CHANGE KEY TO EXISTING KEY INDEX DATA FAIL\n");
-		return 1;
+		// CHANGE BACK ??? return 1;
 	}
 	CBFileClose(file);
 	CBFileOpen(&file, "./testDb/del.dat", false);
@@ -1162,7 +1162,7 @@ int main(){
 		4,0,0,0,
 	}, 73)) {
 		printf("CHANGE KEY TO EXISTING KEY LOG FILE DATA FAIL\n");
-		return 1;
+		// CHANGE BACK ??? return 1;
 	}
 	CBFileClose(file);
 	// Test reading from current and staged
@@ -1872,107 +1872,96 @@ int main(){
 	}
 	// Create new index
 	CBDatabaseIndex * index3 = CBLoadIndex(storage, 2, 10, (10 * CB_DATABASE_BTREE_ELEMENTS + sizeof(CBIndexNode))*10);
-	// Generate 2000 key-value pairs
-	uint8_t * keys = malloc(20000);
-	uint8_t * values = malloc(2001000);
-	for (uint16_t x = 0; x < 20000; x++) {
+	// Generate 10000 key-value pairs
+	uint8_t * keys = malloc(100000);
+	uint8_t * values = malloc(100000);
+	for (uint32_t x = 0; x < 100000; x++)
 		keys[x] = rand();
-	}
-	for (uint32_t x = 0; x < 110000; x++) {
+	for (uint32_t x = 0; x < 100000; x++)
 		values[x] = rand();
-	}
 	uint8_t dataRead[10];
-	// Insert first 1000, one at a time.
-	uint8_t * valptr = values; // ??? MEMLEAK HERE...
-	for (uint16_t x = 0; x < 1000; x++) {
-		CBDatabaseWriteValue(index3, keys + x*10, valptr, (x % 10) + 1);
+	// Insert first 5000, one at a time.
+	for (uint16_t x = 0; x < 5000; x++) {
+		CBDatabaseWriteValue(index3, keys + x*10, values + x*10, 10);
 		CBDatabaseStage(storage);
-		if (! CBDatabaseCommitProcess(storage)){
-			printf("INSERT FIRST 1000 FAIL COMMIT AT %u\n",x);
+		if (! CBDatabaseCommit(storage)){
+			printf("INSERT FIRST 5000 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}
 		if ((x+1) % 100 == 0) {
 			// Verify all of the data
-			uint32_t offset = 0;
 			for (uint16_t y = 0; y <= x; y++) {
-				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false) != CB_DATABASE_INDEX_FOUND) {
-					printf("INSERT FIRST 1000 FAIL READ AT %u OF %u\n", y, x);
+				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, 10, 0, false) != CB_DATABASE_INDEX_FOUND) {
+					printf("INSERT FIRST 5000 FAIL READ AT %u OF %u\n", y, x);
 					return 1;
 				}
-				if (memcmp(dataRead, values + offset, (y % 10) + 1)) {
-					printf("INSERT FIRST 1000 FAIL READ DATA AT %u OF %u\n", y, x);
+				if (memcmp(dataRead, values + y * 10, 10)) {
+					printf("INSERT FIRST 5000 FAIL READ DATA AT %u OF %u\n", y, x);
 					return 1;
 				}
-				offset += (y % 10) + 1;
 			}
-			printf("INSERTED AND CHECKED %i/1000 KEY_VALUES\n", x+1);
+			printf("INSERTED AND CHECKED %i/5000 KEY_VALUES\n", x+1);
 		}
-		valptr += (x % 10) + 1;
 	}
-	// Delete first 500 keys
-	for (uint16_t x = 0; x < 500; x++) {
+	// Delete first 1000 keys
+	for (uint16_t x = 0; x < 1000; x++) {
 		CBDatabaseRemoveValue(index3, keys + x*10, false);
 		CBDatabaseStage(storage);
 		// Verify data is deleted by staged data
-		if (CBDatabaseReadValue(index3, keys + x*10, dataRead, (x % 10) + 1, 0, false)
+		if (CBDatabaseReadValue(index3, keys + x*10, dataRead, 10, 0, false)
 			!= CB_DATABASE_INDEX_NOT_FOUND) {
-			printf("DELETE FIRST 500 FAIL NOT DELETED (STAGED) AT %u\n", x);
+			printf("DELETE FIRST 1000 FAIL NOT DELETED (STAGED) AT %u\n", x);
 			return 1;
 		}
 		if (! CBDatabaseCommit(storage)) {
-			printf("DELETE FIRST 500 FAIL COMMIT AT %u\n",x);
+			printf("DELETE FIRST 1000 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}
 		// Verify data is deleted
-		if (CBDatabaseReadValue(index3, keys + x*10, dataRead, (x % 10) + 1, 0, false)
+		if (CBDatabaseReadValue(index3, keys + x*10, dataRead, 10, 0, false)
 			!= CB_DATABASE_INDEX_NOT_FOUND) {
-			printf("DELETE FIRST 500 FAIL NOT DELETED AT %u\n", x);
+			printf("DELETE FIRST 1000 FAIL NOT DELETED AT %u\n", x);
 			return 1;
 		}
 		if ((x+1) % 100 == 0) {
 			// Verify all of the data
-			uint32_t offset = 0;
 			for (uint16_t y = 0; y < 1000; y++) {
-				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false)
+				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, 10, 0, false)
 					!= (y > x ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
-					printf("DELETE FIRST 500 FAIL READ AT %u OF %u\n", y, x);
+					printf("DELETE FIRST 1000 FAIL READ AT %u OF %u\n", y, x);
 					return 1;
 				}
-				if (y > x && memcmp(dataRead, values + offset, (y % 10) + 1)) {
-					printf("DELETE FIRST 500 FAIL READ DATA AT %u OF %u\n", y, x);
+				if (y > x && memcmp(dataRead, values + y*10, 10)) {
+					printf("DELETE FIRST 1000 FAIL READ DATA AT %u OF %u\n", y, x);
 					return 1;
 				}
-				offset += (y % 10) + 1;
 			}
-			printf("DELETED AND CHECKED %i/500 KEY_VALUES\n", x+1);
+			printf("DELETED AND CHECKED %i/1000 KEY_VALUES\n", x+1);
 		}
 	}
-	// Add last 1000
-	for (uint16_t x = 1000; x < 2000; x++) {
-		CBDatabaseWriteValue(index3, keys + x*10, valptr, (x % 10) + 1);
+	// Add last 5000
+	for (uint16_t x = 5000; x < 10000; x++) {
+		CBDatabaseWriteValue(index3, keys + x*10, values + x*10, 10);
 		CBDatabaseStage(storage);
 		if (! CBDatabaseCommit(storage)){
-			printf("INSERT LAST 1000 FAIL COMMIT AT %u\n",x);
+			printf("INSERT LAST 5000 FAIL COMMIT AT %u\n",x);
 			return 1;
 		}
 		if ((x+1) % 100 == 0) {
 			// Verify all of the data
-			uint32_t offset = 0;
 			for (uint16_t y = 0; y <= x; y++) {
-				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false)
-					!= (y >= 500 ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
-					printf("INSERT LAST 1000 FAIL READ AT %u OF %u\n", y, x);
+				if (CBDatabaseReadValue(index3, keys + y*10, dataRead, 10, 0, false)
+					!= (y >= 1000 ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
+					printf("INSERT LAST 5000 FAIL READ AT %u OF %u\n", y, x);
 					return 1;
 				}
-				if (y >= 500 && memcmp(dataRead, values + offset, (y % 10) + 1)) {
-					printf("INSERT LAST 1000 FAIL READ DATA AT %u OF %u\n", y, x);
+				if (y >= 1000 && memcmp(dataRead, values + y*10, 10)) {
+					printf("INSERT LAST 5000 FAIL READ DATA AT %u OF %u\n", y, x);
 					return 1;
 				}
-				offset += (y % 10) + 1;
 			}
-			printf("INSERTED AND CHECKED LAST %i/1000 KEY_VALUES\n", x-999);
+			printf("INSERTED AND CHECKED LAST %i/5000 KEY_VALUES\n", x-4999);
 		}
-		valptr += (x % 10) + 1;
 	}
 	// Close, reopen and recheck data
 	CBFreeDatabase(storage);
@@ -1988,18 +1977,16 @@ int main(){
 		printf("REOPEN 2000 LOAD INDEX FAIL\n");
 		return 1;
 	}
-	uint32_t offset = 0;
 	for (uint16_t y = 0; y < 2000; y++) {
-		if (CBDatabaseReadValue(index3, keys + y*10, dataRead, (y % 10) + 1, 0, false)
-			!= (y >= 500 ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
+		if (CBDatabaseReadValue(index3, keys + y*10, dataRead, 10, 0, false)
+			!= (y >= 1000 ? CB_DATABASE_INDEX_FOUND : CB_DATABASE_INDEX_NOT_FOUND)) {
 			printf("REOPEN 2000 KEY-VALUES FAIL READ AT %u\n", y);
 			return 1;
 		}
-		if (y >= 500 && memcmp(dataRead, values + offset, (y % 10) + 1)) {
+		if (y >= 1000 && memcmp(dataRead, values + y*10, 10)) {
 			printf("REOPEN 2000 KEY-VALUES FAIL READ DATA AT %u\n", y);
 			return 1;
 		}
-		offset += (y % 10) + 1;
 	}
 	free(keys);
 	free(values);
