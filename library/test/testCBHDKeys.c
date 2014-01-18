@@ -225,7 +225,7 @@ void checkKey(CBHDKey * key, uint8_t x, uint8_t y){
 		exit(EXIT_FAILURE);
 	}
 	// Check serialisation of private key
-	uint8_t * keyData = malloc(82);
+	uint8_t * keyData = malloc(CB_HD_KEY_STR_SIZE);
 	CBHDKeySerialise(key, keyData);
 	CBChecksumBytes * checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
 	str = CBChecksumBytesGetString(checksumBytes);
@@ -237,7 +237,7 @@ void checkKey(CBHDKey * key, uint8_t x, uint8_t y){
 	CBReleaseObject(str);
 	// Check serialisation of public key
 	key->versionBytes = CB_HD_KEY_VERSION_PROD_PUBLIC;
-	keyData = malloc(82);
+	keyData = malloc(CB_HD_KEY_STR_SIZE);
 	CBHDKeySerialise(key, keyData);
 	checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
 	str = CBChecksumBytesGetString(checksumBytes);
@@ -307,7 +307,7 @@ int main(){
 				}
 				CBReleaseObject(str);
 				// Check serialisation of public key
-				uint8_t * keyData = malloc(82);
+				uint8_t * keyData = malloc(CB_HD_KEY_STR_SIZE);
 				CBHDKeySerialise(newKey, keyData);
 				CBChecksumBytes * checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
 				str = CBChecksumBytesGetString(checksumBytes);

@@ -20,62 +20,35 @@
 #include "CBAddress.h"
 #include "CBHDKeys.h"
 
-void getLine(char * ptr);
-void getLine(char * ptr) {
-	int c;
-	int len = 30;
-    for(;;) {
-        c = fgetc(stdin);
-        if(c == EOF)
-            break;
-        if(--len == 0)
-            break;
-		*ptr = c;
-        if(c == '\n')
-            break;
-		ptr++;
-    }
-	*ptr = 0;
-}
-
 int main(){
 	puts("cbitcoin version: " CB_LIBRARY_VERSION_STRING);
 	puts("OpenSSL version: " OPENSSL_VERSION_TEXT);
-	printf("Enter the number of keys: ");
-	fflush(stdout);
-	char stringMatch[31];
-	getLine(stringMatch);
-	unsigned long int i = strtol(stringMatch, NULL, 0);
-	printf("Enter a string of text for the key (30 max): ");
-	fflush(stdout);
-	getLine(stringMatch);
+	puts("Will generate addresses with as many non-lower-case letters as possible.");
 	puts("Waiting for entropy... Move the cursor around...");
 	CBKeyPair * key = CBNewKeyPair(true);
 	CBKeyPairGenerate(key);
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	BN_CTX * ctx = BN_CTX_new();
 	EC_GROUP * group = EC_GROUP_new_by_curve_name(NID_secp256k1);
-	printf("Making %lu addresses for \"%s\"\n\n", i, stringMatch);
-	for (unsigned int x = 0; x < i;) {
+	for (unsigned int x = 1;;) {
 		CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_NETWORK_PRODUCTION, false);
 		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;
-		uint8_t offset = 1;
-		size_t matchSize = strlen(stringMatch);
-		for (uint8_t y = 0; y < matchSize;) {
-			char other = islower(stringMatch[y]) ? toupper(stringMatch[y]) : (isupper(stringMatch[y])? tolower(stringMatch[y]) : '\0');
-			if (CBByteArrayGetByte(string, y+offset) != stringMatch[y] && CBByteArrayGetByte(string, y+offset) != other) {
-				offset++;
-				y = 0;
-				if (string->length < matchSize + offset) {
+		uint8_t amount = 0;
+		for (uint8_t y = 0; y < string->length; y++) {
+			if (islower(CBByteArrayGetByte(string, y))) {
+				if (y < x)
 					match = false;
-					break;
-				}
-			}else y++;
+				amount = y;
+				break;
+			}
 		}
+		if (amount == 0)
+			amount = string->length;
 		if (match) {
 			// Print key data to stdout
+			printf("No lower for %u\n", amount);
 			printf("Private key (WIF): ");
 			CBWIF * wif = CBNewWIFFromPrivateKey(key->privkey, true, CB_NETWORK_PRODUCTION, false);
 			CBByteArray * str = CBChecksumBytesGetString(wif);
@@ -90,6 +63,8 @@ int main(){
 			x++; // Move to next
 		}
 		CBReleaseObject(string);
+		if (amount == string->length)
+			break;
 		// Get next key
 		for (uint8_t x = CB_PRIVKEY_SIZE - 1; ++key->privkey[x--] == 0;);
 		// Get new public key, by adding the base point.

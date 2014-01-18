@@ -45,6 +45,7 @@ vpath %.d build
 
 all: all-build
 test: test-build
+examples: example-build
 
 # Build all
 
@@ -227,4 +228,20 @@ $(CLIENT_OBJS): build/%.o: client-server/src/%.c | build
 
 client : $(CLIENT_OBJS) | bin
 	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-@NOEC@ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o bin/cbitcoin
+
+# Examples
+
+EXAMPLE_FILES = $(wildcard examples/*.c)
+EXAMPLE_BINARIES = $(patsubst examples/%.c, bin/%, $(EXAMPLE_FILES))
+EXAMPLE_OBJS = $(patsubst examples/%.c, build/%.o, $(EXAMPLE_FILES))
+
+example-build : $(EXAMPLE_BINARIES)
+
+# REMEMBER to add dependencies after the objects or libraries that depend on them.
+
+$(EXAMPLE_BINARIES): bin/%: build/%.o
+	$(CC) $< -L$(BINDIR) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-network.$(LIBRARY_VERSION) -lcbitcoin-storage.$(LIBRARY_VERSION) -lcbitcoin-threads.$(LIBRARY_VERSION) -lcbitcoin-logging.$(LIBRARY_VERSION) -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcbitcoin.$(LIBRARY_VERSION) -lcbitcoin-file-@NOEC@ec.$(LIBRARY_VERSION) -lcbitcoin-rand.$(LIBRARY_VERSION) -L/opt/local/lib -lpthread -levent_core -levent_pthreads -lcrypto -o $@
+
+$(EXAMPLE_OBJS): build/%.o: examples/%.c library
+	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
 	

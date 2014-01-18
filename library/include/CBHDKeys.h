@@ -29,6 +29,8 @@
 // Macros
 
 #define CB_PUBKEY_SIZE 33
+#define CB_PRIVKEY_SIZE 32
+#define CB_HD_KEY_STR_SIZE 82
 
 // Enums
 
@@ -53,14 +55,14 @@ typedef struct{
 } CBHDKeyChildID;
 
 typedef struct{
-	uint8_t key[33];
+	uint8_t key[CB_PUBKEY_SIZE];
 	uint8_t hash[20];
 	bool hashSet;
 } CBPubKeyInfo;
 
 typedef struct{
 	CBPubKeyInfo pubkey;
-	uint8_t privkey[32];
+	uint8_t privkey[CB_PRIVKEY_SIZE];
 } CBKeyPair;
 
 typedef struct{
