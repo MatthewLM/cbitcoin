@@ -220,7 +220,7 @@ void maybeFinishLoseTest(void){
 					break;
 				}
 				if (fndTx->utx.numUnconfDeps != (y == 11 || y == 13)) {
-					CBLogError("LOSE CHAIN AND RELAY FINISH NUM UNCONF DEPS FAIL\n");
+					CBLogError("LOSE CHAIN AND RELAY FINISH NUM UNCONF DEPS FAIL NUM = %u Y = %u\n", fndTx->utx.numUnconfDeps, y);
 					exit(EXIT_FAILURE);
 				}
 				if ((fndTx->utx.type == CB_TX_OTHER) == nodeOwns[x][y]) {

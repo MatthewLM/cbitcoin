@@ -1,9 +1,9 @@
 //
-//  addressGenerator.c
+//  noLowerAddressGenerator.c
 //  cbitcoin
 //
-//  Created by Matthew Mitchell on 06/06/2012.
-//  Copyright (c) 2012 Matthew Mitchell
+//  Created by Matthew Mitchell on 18/01/2014.
+//  Copyright (c) 2014 Matthew Mitchell
 //  
 //  This file is part of cbitcoin. It is subject to the license terms
 //  in the LICENSE file found in the top-level directory of this

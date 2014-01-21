@@ -137,11 +137,9 @@ CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, 
 	self->messageQueueBack->message = message;
 	self->messageQueueBack->next = NULL;
 	// Wakeup thread if this is the first in the queue
-	if (self->messageQueue == self->messageQueueBack){
+	if (self->messageQueue == self->messageQueueBack)
 		// We have just added a block to the queue when there was not one before so wake-up the processing thread.
 		CBConditionSignal(self->messageProcessWaitCond);
-		CBLogVerbose("Woken message process thread");
-	}
 	CBMutexUnlock(self->messageProcessMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;
 }

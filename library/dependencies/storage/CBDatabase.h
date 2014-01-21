@@ -421,8 +421,8 @@ void CBDatabaseClearCurrent(CBDatabase * self);
  @param tx The database object with the staged changes.
  @returns true on success and false on failure, and thus the database needs to be recovered with CBDatabaseEnsureConsistent.
  */
-bool CBDatabaseCommit(CBDatabase * tx);
-bool CBDatabaseCommitProcess(CBDatabase * tx);
+bool CBDatabaseCommit(CBDatabase * database);
+bool CBDatabaseCommitProcess(CBDatabase * database);
 void CBDatabaseCommitThread(void * database);
 /**
  @brief Ensure the database is consistent and recover the database if it is not.

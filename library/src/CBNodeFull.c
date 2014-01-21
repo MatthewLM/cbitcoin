@@ -1338,8 +1338,6 @@ bool CBNodeFullProcessNewTransactionProcessDependants(CBNodeFull * self, CBNewTr
 		// See if this transaction has orphan dependants.
 		CBNewTransactionType txType = queue->item;
 		CBTransaction * tx = txType.chain ? txType.txData.chainTx : txType.txData.uTx->utx.tx;
-		char txStr[CB_TX_HASH_STR_SIZE];
-		CBTransactionHashToString(tx, txStr);
 		CBFindResult res = CBAssociativeArrayFind(&self->unfoundDependencies, CBTransactionGetHash(tx));
 		if (res.found) {
 			// Have dependants, loop through orphan dependants, process the inputs and check for newly completed transactions.

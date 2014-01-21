@@ -503,7 +503,7 @@ CBChainPath CBValidatorGetChainPath(CBValidator * self, uint8_t branch, uint32_t
 	// The starting index of the path stack.
 	chainPath.numBranches = 0;
 	// Make the first last block, the last block in the branch we are validating up-to.
-	chainPath.points[chainPath.numBranches].blockIndex = blockIndex;
+	chainPath.points[0].blockIndex = blockIndex;
 	// Get all last blocks and next branches for path information
 	while (self->branches[branch].startHeight > 0) { // While not the genesis branch
 		// Add path information

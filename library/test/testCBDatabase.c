@@ -142,7 +142,9 @@ int main(){
 		printf("READ ALL VALUE STAGED FAIL\n");
 		return 1;
 	}
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Now check over commited data
 	memset(readStr, 0, 15);
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
@@ -253,7 +255,9 @@ int main(){
 		printf("READ REPLACED VALUE STAGED FAIL\n");
 		return 1;
 	}
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	memset(readStr, 0, 15);
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Replacement!!!", 15)) {
@@ -362,7 +366,9 @@ int main(){
 	// Remove first value
 	CBDatabaseRemoveValue(index, key, false);
 	CBDatabaseStage(storage);
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Check data
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 12, 0, false); // ??? Does this read from the cached index data?
 	if (memcmp(readStr, "Another one", 12)) {
@@ -444,7 +450,9 @@ int main(){
 	// Increase size of second key-value to 15 to replace deleted section
 	CBDatabaseWriteValue(index, key2, (uint8_t *)"Annoying code.", 15);
 	CBDatabaseStage(storage);
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Look at data
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
 	if (memcmp(readStr, "Annoying code.", 15)) {
@@ -549,7 +557,9 @@ int main(){
 	CBDatabaseWriteValue(index, key3, (uint8_t *)"cbitcoin", 9);
 	CBDatabaseWriteValue(index, key2, (uint8_t *)"changed", 8);
 	CBDatabaseStage(storage);
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Ensure value is OK
 	CBDatabaseReadValue(index, key3, (uint8_t *)readStr, 9, 0, false);
 	if (memcmp(readStr, "cbitcoin", 9)) {
@@ -684,7 +694,9 @@ int main(){
 	// Add value with smaller length than deleted section
 	CBDatabaseWriteValue(index, key, (uint8_t *)"Maniac", 7);
 	CBDatabaseStage(storage);
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Look at data
 	CBDatabaseReadValue(index, key, (uint8_t *)readStr, 7, 0, false);
 	if (memcmp(readStr, "Maniac", 7)) {
@@ -799,7 +811,9 @@ int main(){
 		printf("CHANGE KEY VALUE STAGED FAIL\n");
 		return 1;
 	}
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Check data in disk
 	memset(readStr, 0, 7);
 	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 7, 0, false);
@@ -943,7 +957,9 @@ int main(){
 		printf("OVERWRITE WITH SMALLER VALUE STAGED FAIL\n");
 		return 1;
 	}
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Check data in disk
 	memset(readStr, 0, 4);
 	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 4, 0, false);
@@ -1062,7 +1078,9 @@ int main(){
 		printf("CHANGE KEY TO EXISTING KEY VALUE STAGED FAIL\n");
 		return 1;
 	}
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	// Check data in disk
 	memset(readStr, 0, 15);
 	CBDatabaseReadValue(index, key4, (uint8_t *)readStr, 15, 0, false);
@@ -1649,7 +1667,9 @@ int main(){
 	storage->current.extraData[1] = 'o';
 	storage->current.extraData[3] = 'a';
 	CBDatabaseStage(storage);
+	CBMutexLock(storage->commitMutex);
 	CBDatabaseCommitProcess(storage);
+	CBMutexUnlock(storage->commitMutex);
 	if (memcmp(storage->extraDataOnDisk, "Sotashi!!", 10)) {
 		printf("SUBSECTION COMMIT EXTRA DATA OBJECT FAIL\n");
 		return 1;

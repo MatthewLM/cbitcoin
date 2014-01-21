@@ -1299,13 +1299,24 @@ void CBDatabaseCommitThread(void * vdatabase){
 bool CBDatabaseEnsureConsistent(CBDatabase * self) {
 	char filename[strlen(self->dataDir) + strlen(self->folder) + 12];
 	sprintf(filename, "%s/%s/log.dat", self->dataDir, self->folder);
-	// Determine if the logfile has been created or not
-	if (access(filename, F_OK))
-		// Not created, so no history.
-		return true;
-	// Open the logfile for reading
 	CBDepObject logFile;
-	if (! CBFileOpen(&logFile,filename, false)) {
+	// Determine if the logfile has been created or not
+	if (access(filename, F_OK)){
+		// Not created, so no history.
+		// Create with only the byte signifying that it is inactive
+		if (! CBFileOpen(&logFile, filename, true)) {
+			CBLogError("The new log file could not be opened.");
+			return false;
+		}
+		if (! CBFileAppend(logFile, (uint8_t []){false}, 1)) {
+			CBLogError("Could not create initial log file data as inactive.");
+			return false;
+		}
+		CBFileClose(logFile);
+		return true;
+	}
+	// Open the logfile for reading
+	if (! CBFileOpen(&logFile, filename, false)) {
 		CBLogError("The log file for reading could not be opened.");
 		return false;
 	}
