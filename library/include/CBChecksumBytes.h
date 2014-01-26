@@ -53,6 +53,13 @@ CBChecksumBytes * CBNewChecksumBytesFromString(CBByteArray * string, bool cacheS
  @returns A new CBChecksumBytes object.
  */
 CBChecksumBytes * CBNewChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString);
+/**
+ @brief Creates a new CBChecksumBytes object from a hex string.
+ @param hex
+ @param cacheString If true, the bitcoin string for this object will be cached in memory.
+ @returns A new CBChecksumBytes object.
+ */
+CBChecksumBytes * CBNewChecksumBytesFromHex(char * hex, bool cacheString);
 
 /**
  @brief Initialises a CBChecksumBytes object from a string.
@@ -70,6 +77,13 @@ bool CBInitChecksumBytesFromString(CBChecksumBytes * self, CBByteArray * string,
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  */
 void CBInitChecksumBytesFromBytes(CBChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString);
+/**
+ @brief Initialises a new CBChecksumBytes object from a hex string.
+ @param self The CBChecksumBytes object to initialise.
+ @param hex
+ @param cacheString If true, the bitcoin string for this object will be cached in memory.
+ */
+void CBInitChecksumBytesFromHex(CBChecksumBytes * self, char * hex, bool cacheString);
 
 /**
  @brief Release and free all of the objects stored by the CBChecksumBytes object.

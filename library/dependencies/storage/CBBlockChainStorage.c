@@ -428,8 +428,8 @@ bool CBBlockChainStorageSaveBlock(void * validator, void * block, uint8_t branch
 	CBBlock * blockObj = block;
 	// Write the block data
 	uint8_t key[5];
-	key[0] = branch;
-	CBInt32ToArray(key, 1, blockIndex);
+	key[CB_BLOCK_HASH_REF_BRANCH] = branch;
+	CBInt32ToArray(key, CB_BLOCK_HASH_REF_INDEX, blockIndex);
 	uint8_t * dataParts[2] = {CBBlockGetHash(blockObj), CBByteArrayGetData(CBGetMessage(blockObj)->bytes)};
 	uint32_t dataSizes[2] = {32, CBGetMessage(blockObj)->bytes->length};
 	CBDatabaseWriteConcatenatedValue(storageObj->blockIndex, key, 2, dataParts, dataSizes);

@@ -32,6 +32,12 @@ CBChecksumBytes * CBNewChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bo
 	CBInitChecksumBytesFromBytes(self, bytes, size, cacheString);
 	return self;
 }
+CBChecksumBytes * CBNewChecksumBytesFromHex(char * hex, bool cacheString){
+	CBChecksumBytes * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeChecksumBytes;
+	CBInitChecksumBytesFromHex(self, hex, cacheString);
+	return self;
+}
 
 //  Initialisers
 
@@ -63,6 +69,18 @@ void CBInitChecksumBytesFromBytes(CBChecksumBytes * self, uint8_t * bytes, uint3
 	CBSha256(checksum, 32, checksum2);
 	memmove(bytes+size-4, checksum2, 4);
 	CBInitByteArrayWithData(CBGetByteArray(self), bytes, size);
+}
+void CBInitChecksumBytesFromHex(CBChecksumBytes * self, char * hex, bool cacheString){
+	uint32_t size = (uint32_t)strlen(hex)/2;
+	CBInitByteArrayOfSize(CBGetByteArray(self), size + 4);
+	uint8_t * bytes = CBByteArrayGetData(CBGetByteArray(self));
+	CBStrHexToBytes(hex, bytes);
+	// Make checksum
+	uint8_t checksum[32];
+	uint8_t checksum2[32];
+	CBSha256(bytes, size, checksum);
+	CBSha256(checksum, 32, checksum2);
+	memmove(bytes + size, checksum2, 4);
 }
 
 //  Destructor

@@ -15,6 +15,7 @@
 #include "CBLog.h"
 
 pthread_mutex_t logMutex = PTHREAD_MUTEX_INITIALIZER;
+FILE * logFile = NULL;
 
 // Implementation
 
@@ -23,8 +24,8 @@ void CBLog(CBLogType type, char * prog, char * format, va_list argptr){
 	time_t now = time(NULL);
 	strftime(date, sizeof(date), "%d/%m/%Y %H:%M:%S", gmtime(&now));
 	pthread_mutex_lock(&logMutex);
-	FILE * output = type == CB_LOG_ERROR ? stderr : stdout;
-	fprintf(output, " %c | %-10s | %s GMT | %02u | ", type, prog, date, CBGetTID());
+	bool err = type == CB_LOG_ERROR;
+	CBPrintf(err, " %c | %-10s | %s GMT | %02u | ", type, prog, date, CBGetTID());
 	// Write to buffer to replace new lines
 	va_list bufCount;
 	va_copy(bufCount, argptr);
@@ -37,10 +38,11 @@ void CBLog(CBLogType type, char * prog, char * format, va_list argptr){
 		char * nl = strchr(bufPtr, '\n');
 		if (nl != NULL)
 			*nl = '\0';
-		puts(bufPtr);
+		CBPuts(bufPtr, err);
+		CBPuts("\n", err);
 		if (nl != NULL) {
 			bufPtr = nl + 1;
-			fputs("   |            |                         |    | ", output);
+			CBPuts("   |            |                         |    | ", err);
 		}else
 			break;
 	}
@@ -49,13 +51,13 @@ void CBLog(CBLogType type, char * prog, char * format, va_list argptr){
 		void * array[20];
 		int size = backtrace(array, 20);
 		char ** strings = backtrace_symbols(array, size);
-		fputs("   |            |                         |    |\n", stderr);
-		fputs("   |            |                         |    | ERROR VERSION: " CB_LIBRARY_VERSION_STRING "\n", stderr);
-		fputs("   |            |                         |    | ERROR STACK TRACE:\n", stderr);
+		CBPuts("   |            |                         |    |\n", true);
+		CBPuts("   |            |                         |    | ERROR VERSION: " CB_LIBRARY_VERSION_STRING "\n", true);
+		CBPuts("   |            |                         |    | ERROR STACK TRACE:\n", true);
 		for (int x = 2; x < size; x++)
-			fprintf(stderr, "   |            |                         |    | %s\n", strings[x]);
+			CBPrintf(err, "   |            |                         |    | %s\n", strings[x]);
 		free(strings);
-		fputs("   |            |                         |    |\n", stderr);
+		CBPuts("   |            |                         |    |\n", true);
 	}
 	pthread_mutex_unlock(&logMutex);
 }
@@ -76,4 +78,31 @@ void CBLogVerbose(char * format, ...){
 	va_list argptr;
     va_start(argptr, format);
 	CBLog(CB_LOG_VERBOSE, "cbitcoin", format, argptr);
+}
+
+void CBLogFile(char * file){
+	// Set the file
+	if (logFile)
+		fclose(logFile);
+	logFile = fopen(file, "a");
+	fputs("\n\n\n\n\n", logFile);
+}
+
+void CBPrintf(bool err, char * message, ...){
+	va_list argptr;
+    va_start(argptr, message);
+	if (logFile){
+		va_list argptr2;
+		va_copy(argptr2, argptr);
+		vfprintf(logFile, message, argptr2);
+		va_end(argptr2);
+	}
+	vfprintf(err ? stderr : stdout, message, argptr);
+	va_end(argptr);
+}
+
+void CBPuts(char * message, bool err){
+	if (logFile)
+		fputs(message, logFile);
+	fputs(message, err ? stderr : stdout);
 }

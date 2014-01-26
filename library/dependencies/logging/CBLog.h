@@ -30,5 +30,7 @@ typedef enum{
 } CBLogType;
 
 void CBLog(CBLogType type, char * prog, char * format, va_list list);
+void CBPrintf(bool err, char * message, ...);
+void CBPuts(char * message, bool err);
 
 #endif

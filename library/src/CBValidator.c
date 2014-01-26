@@ -204,6 +204,13 @@ bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * b
 		CBLogError("Could not save a block");
 		return false;
 	}
+	CBLogVerbose("ADDED PREV BLOCK %02x%02x%02x%02x AT %u:%u",
+				 CBBlockGetHash(block)[31],
+				 CBBlockGetHash(block)[30],
+				 CBBlockGetHash(block)[29],
+				 CBBlockGetHash(block)[28],
+				 branch, self->branches[branch].numBlocks
+				 );
 	// Increase number of blocks.
 	self->branches[branch].numBlocks++; 
 	// Modify branch information
@@ -630,6 +637,13 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 			CBLogError("Could not get the location of a previous block.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
+		CBLogVerbose("GOT PREV BLOCK %02x%02x%02x%02x AT %u:%u",
+					 CBByteArrayGetData(block->prevBlockHash)[31],
+					 CBByteArrayGetData(block->prevBlockHash)[30],
+					 CBByteArrayGetData(block->prevBlockHash)[29],
+					 CBByteArrayGetData(block->prevBlockHash)[28],
+					 prevBranch, prevBlockIndex
+					 );
 		// Get previous block target
 		prevBlockTarget = CBBlockChainStorageGetBlockTarget(self, prevBranch, prevBlockIndex);
 		if (!prevBlockTarget) {

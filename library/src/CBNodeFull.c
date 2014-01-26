@@ -186,6 +186,12 @@ bool CBNodeFullAcceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage
 }
 bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType addType) {
 	CBNodeFull * self = CBGetPeer(vpeer)->nodeObj;
+	CBLogVerbose("ADD BLOCK %02x%02x%02x%02x FOR %u: %u FROM %u",
+				 CBBlockGetHash(block)[31],
+				 CBBlockGetHash(block)[30],
+				 CBBlockGetHash(block)[29],
+				 CBBlockGetHash(block)[28]
+				 , self->base.base.ipData[0].ourAddress->sockAddr.port, blockHeight,  CBGetPeer(vpeer)->addr ? CBGetPeer(vpeer)->addr->sockAddr.port : 0);
 	// If last block call newBlock
 	if (addType == CB_ADD_BLOCK_LAST) {
 		// Update block height
@@ -380,9 +386,11 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 					free(dep);
 					// Loop through dependants and add to the number of unconf dependencies.
 					CBAssociativeArrayForEach(CBUnconfTransaction * dependant, &fndTx->dependants)
-						if (dependant->numUnconfDeps++ == 0 && dependant->type != CB_TX_ORPHAN)
+					if (dependant->numUnconfDeps++ == 0 && dependant->type != CB_TX_ORPHAN){
+						CBLogVerbose("INC (%u: %u) TO %u UNCONF",CBGetNode(self)->base.ipData[0].ourAddress->sockAddr.port,dependant->tx->lockTime,dependant->numUnconfDeps);
 							// Came off allChainFoundTxs
 							CBAssociativeArrayDelete(&self->allChainFoundTxs, CBAssociativeArrayFind(&self->allChainFoundTxs, dependant).position, false);
+					}
 				}else
 					CBInitAssociativeArray(&fndTx->dependants, CBTransactionPtrCompare, NULL, NULL);
 				// Add our tx to the node storage.
@@ -413,6 +421,7 @@ bool CBNodeFullAddBlock(void * vpeer, uint8_t branch, CBBlock * block, uint32_t 
 						CBAssociativeArrayInsert(&fndTx->dependants, fndDep, CBAssociativeArrayFind(&fndTx->dependants, fndDep).position, NULL);
 						// Add to the number of unconf dependencies
 						fndDep->utx.numUnconfDeps++;
+						CBLogVerbose("INC (%u: %u) TO %u UNCONF DEP",CBGetNode(self)->base.ipData[0].ourAddress->sockAddr.port,fndDep->utx.tx->lockTime,fndDep,fndDep->utx.numUnconfDeps);
 					}
 				}else{
 					// Add these dependants to the chain dependency
@@ -985,6 +994,9 @@ bool CBNodeFullIsOrphan(void * vpeer, CBBlock * block){
 	CBPeer * peer = vpeer;
 	CBNodeFull * node = peer->nodeObj;
 	CBLogVerbose("Is orphan");
+	// We have finished with the block, so remove it from the blockPeers and askedForBlocks.
+	CBNodeFullFinishedWithBlock(node, block);
+	// If we are up-to-date it means this is an unsolicited block with dependencies
 	if (peer->upToDate){
 		// Get previous blocks
 		CBByteArray * stopAtHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
@@ -1130,6 +1142,7 @@ CBErrBool CBNodeFullNewUnconfirmedTransaction(CBNodeFull * self, CBPeer * peer, 
 			}
 			// Increase the amount of unconfirmed dependencies this transaction has
 			utx.numUnconfDeps++;
+			CBLogVerbose("INC (%u: %u) TO %u NEW FOUND UNCONF",CBGetNode(self)->base.ipData[0].ourAddress->sockAddr.port,utx.tx->lockTime,&utx,utx.numUnconfDeps);
 			// Dependency is found unconf
 			depData[x].type = CB_DEP_FOUND;
 			depData[x].data = prevTx;
@@ -1368,9 +1381,11 @@ bool CBNodeFullProcessNewTransactionProcessDependants(CBNodeFull * self, CBNewTr
 				if (inRes == CB_INPUT_OK) {
 					// Increase the input value
 					orphanDep->orphan->inputValue += output->value;
-					if (!txType.chain)
+					if (!txType.chain){
 						// Increase the number of unconfirmed dependencies.
 						orphanDep->orphan->utx.numUnconfDeps++;
+						CBLogVerbose("INC (%u: %u) TO %u FOUND FOR ORPHAN",CBGetNode(self)->base.ipData[0].ourAddress->sockAddr.port,orphanDep->orphan->utx.tx->lockTime,orphanDep->orphan->utx.numUnconfDeps);
+					}
 					// Reduce the number of missing inputs and if there are no missing inputs left do final processing on orphan
 					if (--orphanDep->orphan->missingInputNum == 0) {
 						rm = true; // No longer an orphan
@@ -2266,6 +2281,7 @@ bool CBNodeFullStartValidation(void * vpeer){
 	return true;
 }
 bool CBNodeFullUnconfToChain(CBNodeFull * self, CBUnconfTransaction * uTx, uint32_t blockHeight, uint32_t time){
+	CBLogVerbose("UNCONF TO CHAIN FOR (%u: %u)", CBGetNode(self)->base.ipData[0].ourAddress->sockAddr.port, uTx->tx->lockTime);
 	// ??? Remove redundant code with CBNodeFullRemoveUnconfTx?
 	if (uTx->type == CB_TX_ORPHAN){
 		CBAssociativeArrayDelete(&self->orphanTxs, CBAssociativeArrayFind(&self->orphanTxs, uTx).position, false);
@@ -2305,6 +2321,7 @@ bool CBNodeFullUnconfToChain(CBNodeFull * self, CBUnconfTransaction * uTx, uint3
 	CBNodeFullRemoveFoundTransactionFromDependencies(self, uTx);
 	// Decrement the number of unconfirmed dependencies for all dependants.
 	CBAssociativeArrayForEach(CBUnconfTransaction * dependant, &dep->dependants){
+		CBLogVerbose("DEC (%u: %u) TO %u UNCONF TO CHAIN",CBGetNode(self)->base.ipData[0].ourAddress->sockAddr.port,dependant->tx->lockTime,dependant->numUnconfDeps);
 		if (--dependant->numUnconfDeps == 0 && dependant->type != CB_TX_ORPHAN)
 			// Add this to the allChainFoundTxs
 			CBAssociativeArrayInsert(&self->allChainFoundTxs, dependant, CBAssociativeArrayFind(&self->allChainFoundTxs, dependant).position, NULL);
@@ -2356,6 +2373,7 @@ bool CBNodeFullValidatorFinish(void * vpeer, CBBlock * block){
 			// Has not yet been asked for by another node. Do we have the block peer information?
 			CBFindResult res = CBAssociativeArrayFind(&self->blockPeers, hash);
 			if (res.found) {
+				assert(CBBlockChainStorageBlockExists(self->base.validator, hash) == CB_FALSE); // DEBUG, orphan blocks being asked again.
 				// Yes we have found it, this means the block is waiting to be received and processed.
 				CBNodeFullAskForBlock(self, peer, hash);
 				// Add to askedFor

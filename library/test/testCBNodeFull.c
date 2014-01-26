@@ -194,9 +194,12 @@ void maybeFinishOrphanTest(void * foo){
 	}
 }
 
-void maybeFinishLoseTest(void);
-void maybeFinishLoseTest(void){
+void maybeFinishLoseTest(void * foo);
+void maybeFinishLoseTest(void * foo){
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 2 && doubleSpendNum == 4 && unconfirmedNum == 4 && confirmedNum == 2) {
+		// Make sure node 0 has processed tx 0, as it needs to be confirmed to ensure the number of unconf dependencies is OK for tx 4, ie. 0.
+		CBMutexLock(CBGetNode(nodes[0])->blockAndTxMutex);
+		CBMutexUnlock(CBGetNode(nodes[0])->blockAndTxMutex);
 		for (uint8_t x = 0; x < 3; x++) {
 			CBNodeFull * node = nodes[x];
 			if (CBGetNetworkCommunicator(node)->blockHeight != 1003) {
@@ -220,7 +223,7 @@ void maybeFinishLoseTest(void){
 					break;
 				}
 				if (fndTx->utx.numUnconfDeps != (y == 11 || y == 13)) {
-					CBLogError("LOSE CHAIN AND RELAY FINISH NUM UNCONF DEPS FAIL NUM = %u Y = %u\n", fndTx->utx.numUnconfDeps, y);
+					CBLogError("LOSE CHAIN AND RELAY FINISH NUM UNCONF DEPS FAIL NUM = %u Y = %u NODE = %u \n", fndTx->utx.numUnconfDeps, y, x);
 					exit(EXIT_FAILURE);
 				}
 				if ((fndTx->utx.type == CB_TX_OTHER) == nodeOwns[x][y]) {
@@ -903,7 +906,7 @@ void newBlock(CBNode * node, CBBlock * block, uint32_t forkPoint){
 				receiveInitialBlocksAndTxs |= NODE1_FORK;
 			// Node 2 might fork if got blocks from node 1 first
 		}else if (forkPoint != CB_NO_FORK) {
-			CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK\n");
+			CBLogError("RECEIVE INITIAL BLOCKS AND TXS NEW BLOCK FORK FAIL NODE = %u POINT = %u\n",nodeNum,forkPoint);
 			exit(EXIT_FAILURE);
 		}
 		if (receiveInitialBlocksAndTxs & nodeNum) {
@@ -1111,7 +1114,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 			exit(EXIT_FAILURE);
 		}
 		gotTxNum++;
-		maybeFinishLoseTest();
+		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
 	}else if (testPhase == ORPHAN_TO_CHAIN){
 		for (uint8_t x = 0;; x++) {
 			if (memcmp(CBTransactionGetHash(tx), CBTransactionGetHash(doubleSpends[x]), 32) == 0) {
@@ -1208,7 +1211,7 @@ void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight)
 		confirmedNum++;
 		maybeFinishReorgTest();
 	}else if (testPhase == LOSE_CHAIN_AND_RELAY){
-		for (uint8_t x = 0;; x += 2) { // Only txs 0 and 2 were added onto the other branch, so we have all of them back
+		for (uint8_t x = 0;; x += 2) { // tx 0 and 2 are reconfirmed
 			if (memcmp(txHash, CBTransactionGetHash(initialTxs[x]), 32) == 0)
 				break;
 			if (x == 2) {
@@ -1217,7 +1220,7 @@ void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight)
 			}
 		}
 		confirmedNum++;
-		maybeFinishLoseTest();
+		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
 	}else if (testPhase == ORPHAN_TO_CHAIN){
 		for (uint8_t x = 3;; x++) {
 			if (memcmp(txHash, CBTransactionGetHash(doubleSpends[x]), 32) == 0) {
@@ -1273,7 +1276,7 @@ void doubleSpend(CBNode * node, uint8_t * txHash){
 			}
 		}
 		doubleSpendNum++;
-		maybeFinishLoseTest();
+		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
 	}else if (testPhase == ORPHAN_TO_CHAIN){
 		if (memcmp(txHash, CBTransactionGetHash(chainDoubleSpend), 32) != 0) {
 			CBLogError("OPRHAN TO CHAIN TX DOUBLE SPEND HASH FAIL\n");
@@ -1332,7 +1335,7 @@ void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
 			}
 		}
 		unconfirmedNum++;
-		maybeFinishLoseTest();
+		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
 	}else{
 		CBLogError("TX UNCONFIRMED BAD TEST PHASE\n");
 		exit(EXIT_FAILURE);
@@ -1384,7 +1387,7 @@ int main(){
 		remove(filename);
 		sprintf(filename, "%s/cbitcoin/val_0.dat", directory);
 		remove(filename);
-		for (uint8_t x = 0; x < 22; x++) {
+		for (uint8_t y = 0; y < 22; y++) {
 			sprintf(filename, "%s/cbitcoin/idx_%u_0.dat", directory, x);
 			remove(filename);
 		}
@@ -1486,7 +1489,7 @@ int main(){
 	block->transactions = realloc(block->transactions, sizeof(*block->transactions)*5);
 	block->transactionNum = 5;
 	for (uint8_t x = 1; x < 5; x++) {
-		block->transactions[x] = CBNewTransaction(0, 1);
+		block->transactions[x] = CBNewTransaction(x-1, 1);
 		CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0}, 1);
 		CBTransactionTakeInput(block->transactions[x], CBNewTransactionInput(script, CB_TX_INPUT_FINAL, firstCoinbase, x-1));
 		CBReleaseObject(script);
@@ -1507,7 +1510,7 @@ int main(){
 	// Broadcast transactions
 	CBTransaction * deps[2];
 	for (uint8_t x = 0; x < 10; x++) {
-		CBTransaction * tx = CBNewTransaction(x, 1);
+		CBTransaction * tx = CBNewTransaction(x+4, 1);
 		CBByteArray * prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(block->transactions[x % 4 + 1]), 32);
 		CBTransactionTakeInput(tx, CBNewTransactionInput(NULL, CB_TX_INPUT_FINAL, prev, x/4));
 		CBReleaseObject(prev);

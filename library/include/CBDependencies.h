@@ -934,6 +934,8 @@ void CBLogWarning(char * warning, ...);
 #pragma weak CBLogWarning
 void CBLogVerbose(char * message, ...);
 #pragma weak CBLogVerbose
+void CBLogFile(char * file);
+#pragma weak CBLogFile
 
 // TIME DEPENDENCIES
 

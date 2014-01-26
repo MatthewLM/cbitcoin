@@ -200,8 +200,8 @@ TEST_FILES = $(wildcard library/test/*.c)
 TEST_BINARIES = $(patsubst library/test/%.c, bin/%, $(TEST_FILES))
 TEST_OBJS = $(patsubst library/test/%.c, build/%.o, $(TEST_FILES))
 
-test-build : $(TEST_BINARIES)
-	rm -f -r cbitcoin 0 1 2 test.dat testDb
+test-build : clean-tests $(TEST_BINARIES)
+	rm -f -r cbitcoin 0 1 2 test.dat testDb test.log
 	$(info ALL TESTS SUCCESSFUL)
 
 # REMEMBER to add dependencies after the objects or libraries that depend on them.
@@ -212,6 +212,9 @@ $(TEST_BINARIES): bin/%: build/%.o
 
 $(TEST_OBJS): build/%.o: library/test/%.c library
 	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
+	
+clean-tests:
+	rm -f $(TEST_BINARIES)
 	
 # Client Server
 
