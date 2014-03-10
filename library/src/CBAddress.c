@@ -18,10 +18,10 @@
 
 //  Constructors
 
-CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBNetwork network, bool cacheString){
+CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBBase58Prefix prefix, bool cacheString){
 	CBAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeAddress;
-	CBInitAddressFromRIPEMD160Hash(self, network, hash, cacheString);
+	CBInitAddressFromRIPEMD160Hash(self, hash, prefix, cacheString);
 	return self;
 }
 CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
@@ -35,11 +35,11 @@ CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
 
 //  Initialiser
 
-void CBInitAddressFromRIPEMD160Hash(CBAddress * self, CBNetwork network, uint8_t * hash, bool cacheString){
+void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t * hash, CBBase58Prefix prefix, bool cacheString){
 	// Build address and then complete intitialisation with CBChecksumBytes
 	uint8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
 	// Set network byte
-	data[0] = (network == CB_NETWORK_PRODUCTION) ? CB_PREFIX_PRODUCTION_ADDRESS : CB_PREFIX_TEST_ADDRESS;
+	data[0] = prefix;
 	// Move hash
 	memmove(data+1, hash, 20);
 	// Initialise CBChecksumBytes

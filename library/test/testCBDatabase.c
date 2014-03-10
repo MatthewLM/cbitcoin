@@ -726,7 +726,7 @@ int main(){
 		
 		0,0, // Data file
 		7,0,0,0, // Length
-		36,0,0,0, // Offsetx
+		36,0,0,0, // Offset
 		255,9,8,7,6,5,4,3,2,1, // Key
 	}, 53)) {
 		printf("SMALLER INDEX DATA FAIL\n");
@@ -1432,7 +1432,7 @@ int main(){
 	}
 	CBDatabaseReadValue(index, key2, (uint8_t *)readStr, 15, 0, false);
 	if (strcmp(readStr, "Change the key")) {
-		printf("READ FROM NEW KEY IN DISK DATA FAIL\n");
+		printf("READ FROM NEW KEY IN DISK DATA FAIL %s != Change the key\n", readStr);
 		return 1;
 	}
 	CBDatabaseReadValue(index, key3, (uint8_t *)readStr, 8, 0, false);

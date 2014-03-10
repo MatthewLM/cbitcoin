@@ -18,10 +18,10 @@
 
 //  Constructors
 
-CBWIF * CBNewWIFFromPrivateKey(uint8_t * privKey, bool useCompression, CBNetwork network, bool cacheString){
+CBWIF * CBNewWIFFromPrivateKey(uint8_t * privKey, bool useCompression, CBBase58Prefix prefix, bool cacheString){
 	CBWIF * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeWIF;
-	CBInitWIFFromPrivateKey(self, privKey, useCompression, network, cacheString);
+	CBInitWIFFromPrivateKey(self, privKey, useCompression, prefix, cacheString);
 	return self;
 }
 CBWIF * CBNewWIFFromString(CBByteArray * string, bool cacheString){
@@ -35,11 +35,11 @@ CBWIF * CBNewWIFFromString(CBByteArray * string, bool cacheString){
 
 //  Initialiser
 
-void CBInitWIFFromPrivateKey(CBWIF * self, uint8_t * privKey, bool useCompression, CBNetwork network, bool cacheString){
+void CBInitWIFFromPrivateKey(CBWIF * self, uint8_t * privKey, bool useCompression, CBBase58Prefix prefix, bool cacheString){
 	// Build WIF and then complete intitialisation with CBChecksumBytes
 	uint8_t * data = malloc(37 + useCompression); // 1 byte for 0x80, 32 key bytes, 4 checksum bytes. Extra byte for compression.
 	// Set prefix
-	data[0] = (network == CB_NETWORK_PRODUCTION) ? CB_PREFIX_PRODUCTION_PRIVATE_KEY : CB_PREFIX_TEST_PRIVATE_KEY;
+	data[0] = prefix;
 	// Move key
 	memmove(data+1, privKey, 32);
 	if (useCompression)

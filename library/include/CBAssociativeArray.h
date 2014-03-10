@@ -232,6 +232,7 @@ void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(
  @returns If the first key is longer than the second key, or if the first key has data which is higher than the second key then CB_COMPARE_MORE_THAN is returned. If the keys are entirely equal thrn CB_COMPARE_EQUAL is returned. If the first key is shorter or has lower data than the second key CB_COMPARE_LESS_THAN is returned.
  */
 CBCompare CBKeyCompare(CBAssociativeArray * self, void * key1, void * key2);
+CBCompare CBFixedKeyCompare(CBAssociativeArray * self, void * key1, void * key2);
 /**
  @brief Gets the element pointer from a CBRangeIterator
  @param it The iterator object.

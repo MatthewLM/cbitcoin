@@ -33,9 +33,10 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 	self->storage = storage;
 	self->flags = flags;
 	self->callbacks = callbacks;
-	self->queueFront = 0;
-	self->queueSize = 0;
+	self->blockQueueFirst = NULL;
 	self->shutDownThread = false;
+	self->numOrphans = 0;
+	self->firstOrphan = 0;
 	// Check whether the database has been created.
 	if (CBBlockChainStorageExists(self->storage)) {
 		// Found now load information from storage
@@ -43,13 +44,6 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 		if (! CBBlockChainStorageLoadBasicValidator(self)){
 			CBLogError("There was an error when loading the validator information.");
 			return false;
-		}
-		// Loop through the orphans
-		for (uint8_t x = 0; x < self->numOrphans; x++) {
-			if (! CBBlockChainStorageLoadOrphan(self, x)) {
-				CBLogError("Could not load orphan %u.", x);
-				return false;
-			}
 		}
 		// Loop through the branches
 		for (uint8_t x = 0; x < self->numBranches; x++) {
@@ -77,8 +71,6 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
 		// Create initial data
 		self->mainBranch = 0;
 		self->numBranches = 1;
-		self->numOrphans = 0;
-		self->firstOrphan = 0;
 		// Write basic validator information
 		if (! CBBlockChainStorageSaveBasicValidator(self)) {
 			CBLogError("Could not save the initial basic validation information.");
@@ -122,14 +114,20 @@ void CBDestroyValidator(void * vself){
 	CBValidator * self = vself;
 	self->shutDownThread = true;
 	CBMutexLock(self->blockQueueMutex);
-	if (self->queueSize == 0)
+	if (self->blockQueueFirst == NULL)
 		// The thread is waiting for blocks so wake it.
 		CBConditionSignal(self->blockProcessWaitCond);
 	CBMutexUnlock(self->blockQueueMutex);
 	CBThreadJoin(self->blockProcessThread);
 	CBFreeThread(self->blockProcessThread);
-	for (uint8_t x = 0; x < self->queueSize; x++)
-		CBReleaseObject(self->blockQueue[(self->queueFront + x) % CB_MAX_BLOCK_QUEUE]);
+	// Destroy block queue
+	for (CBBlockQueueItem * item = self->blockQueueFirst; item;){
+		CBReleaseObject(item->block);
+		CBBlockQueueItem * next = item->next;
+		free(item);
+		item = next;
+	}
+	self->blockQueueFirst = NULL;
 	CBFreeMutex(self->blockQueueMutex);
 	CBFreeMutex(self->orphanMutex);
 	CBFreeCondition(self->blockProcessWaitCond);
@@ -169,7 +167,7 @@ bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block, void * cal
 	}
 	self->branches[self->mainBranch].lastValidation = self->branches[self->mainBranch].numBlocks;
 	// Update unspent outputs
-	if (!CBValidatorAddBlockToMainChain(self, block, self->mainBranch, self->branches[self->mainBranch].numBlocks, CB_ADD_BLOCK_LAST, callbackObj)) {
+	if (!CBValidatorAddBlockToMainChain(self, (CBBlockQueueItem){block, callbackObj}, self->mainBranch, self->branches[self->mainBranch].numBlocks, CB_ADD_BLOCK_LAST)) {
 		CBLogError("Could not update the unspent outputs when adding a block directly to the main chain.");
 		return false;
 	}
@@ -204,13 +202,6 @@ bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * b
 		CBLogError("Could not save a block");
 		return false;
 	}
-	CBLogVerbose("ADDED PREV BLOCK %02x%02x%02x%02x AT %u:%u",
-				 CBBlockGetHash(block)[31],
-				 CBBlockGetHash(block)[30],
-				 CBBlockGetHash(block)[29],
-				 CBBlockGetHash(block)[28],
-				 branch, self->branches[branch].numBlocks
-				 );
 	// Increase number of blocks.
 	self->branches[branch].numBlocks++; 
 	// Modify branch information
@@ -257,17 +248,6 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block){
 	self->orphans[pos] = block;
 	CBMutexUnlock(self->orphanMutex);
 	CBRetainObject(block);
-	// Add to storage
-	if (! ((self->flags & CB_VALIDATOR_HEADERS_ONLY) ?
-			 CBBlockChainStorageSaveOrphanHeader : CBBlockChainStorageSaveOrphan)(self, block, pos)) {
-		CBLogError("Could not save an orphan.");
-		return false;
-	}
-	// Call isOrphan
-	if (!self->callbacks.isOrphan(self->callbackQueue[self->queueFront], block)) {
-		CBLogError("isOrphan returned false.");
-		return false;
-	}
 	return true;
 }
 CBBlockValidationResult CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime){
@@ -306,21 +286,21 @@ CBErrBool CBValidatorBlockExists(CBValidator * self, uint8_t * hash){
 	CBMutexUnlock(self->orphanMutex);
 	// Check block queue
 	CBMutexLock(self->blockQueueMutex);
-	for (uint8_t x = 0; x < self->queueSize; x++)
-		if (!memcmp(hash, CBBlockGetHash(self->blockQueue[(self->queueFront + x) % CB_MAX_BLOCK_QUEUE]), 32)){
+	for (CBBlockQueueItem * item = self->blockQueueFirst; item; item = item->next)
+		if (!memcmp(hash, CBBlockGetHash(item->block), 32)){
 			CBMutexUnlock(self->blockQueueMutex);
 			return CB_TRUE;
 		}
 	CBMutexUnlock(self->blockQueueMutex);
 	// Look in block hash index
 	CBErrBool res = CBBlockChainStorageBlockExists(self, hash);
-	return  res;
+	return res;
 }
 void CBValidatorBlockProcessThread(void * validator){
 	CBValidator * self = validator;
 	CBMutexLock(self->blockQueueMutex);
 	for (;;) {
-		if (self->queueSize == 0 && !self->shutDownThread)
+		if (self->blockQueueFirst == NULL && !self->shutDownThread)
 			// Wait for more blocks
 			CBConditionWait(self->blockProcessWaitCond, self->blockQueueMutex);
 		// Check to see if the thread should terminate
@@ -328,49 +308,47 @@ void CBValidatorBlockProcessThread(void * validator){
 			CBMutexUnlock(self->blockQueueMutex);
 			return;
 		}
-		// Get the block
-		CBBlock * block = self->blockQueue[self->queueFront];
+		// Get the queue item.
+		CBBlockQueueItem * item = self->blockQueueFirst;
 		char blockStr[CB_BLOCK_HASH_STR_SIZE];
-		CBBlockHashToString(block, blockStr);
+		CBBlockHashToString(item->block, blockStr);
 		CBLogVerbose("Processing block %s", blockStr);
-		void * callbackObj = self->callbackQueue[self->queueFront];
 		CBMutexUnlock(self->blockQueueMutex);
-		switch (CBValidatorProcessBlock(self, block)) {
+		switch (CBValidatorProcessBlock(self, *item)) {
 			case CB_BLOCK_VALIDATION_BAD:
 				CBLogWarning("Block %s is bad.", blockStr);
-				if (!self->callbacks.invalidBlock(callbackObj, block)) {
+				if (!self->callbacks.invalidBlock(item->callbackObj, item->block)) {
 					CBLogError("invalidBlock returned false");
-					self->callbacks.onValidatorError(callbackObj);
+					self->callbacks.onValidatorError(item->callbackObj);
 				}
 				break;
 			case CB_BLOCK_VALIDATION_ERR:
-				self->callbacks.onValidatorError(callbackObj);
+				self->callbacks.onValidatorError(item->callbackObj);
 				break;
-			case CB_BLOCK_VALIDATION_NO_NEW:
-				CBLogWarning("There are no more branches available for block %s.", blockStr);
-				if (!self->callbacks.noNewBranches(callbackObj, block)) {
-					CBLogError("noNewBranches returned false");
-					self->callbacks.onValidatorError(callbackObj);
+			case CB_BLOCK_VALIDATION_ORPHAN:
+				CBLogVerbose("Block %s is an orphan.", blockStr);
+				if (!self->callbacks.isOrphan(item->callbackObj, item->block)) {
+					CBLogError("isOrphan returned false.");
+					self->callbacks.onValidatorError(item->callbackObj);
 				}
 				break;
 			default:
 				CBLogVerbose("Block %s finished processing.", blockStr);
-				if (!self->callbacks.finish(callbackObj, block)) {
+				if (!self->callbacks.finish(item->callbackObj, item->block)) {
 					CBLogError("finish returned false");
-					self->callbacks.onValidatorError(callbackObj);
+					self->callbacks.onValidatorError(item->callbackObj);
 				}
 				break;
 		}
-		// Now we have finished with the block, remove it from the queue
+		// Now we have finished with the block, free the data
+		CBReleaseObject(item->block);
+		if (item->callbackObj) CBReleaseObject(item->callbackObj);
 		CBMutexLock(self->blockQueueMutex);
-		CBReleaseObject(block);
-		if (callbackObj) CBReleaseObject(callbackObj);
-		if (++self->queueFront == CB_MAX_BLOCK_QUEUE)
-			self->queueFront = 0;
-		self->queueSize--;
+		self->blockQueueFirst = item->next;
 	}
 }
-CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t height){
+CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlockQueueItem item, uint32_t height){
+	CBBlock * block = item.block;
 	// No script failures
 	self->scriptProcessing.scriptFailure = false;
 	// Check that the first transaction is a coinbase transaction.
@@ -382,7 +360,7 @@ CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, u
 	// Do validation for transactions.
 	for (uint32_t x = 0; x < block->transactionNum; x++) {
 		// Skip transaction validation if validated already
-		uint64_t alreadyValidatedInputVal = self->callbacks.alreadyValidated(self->callbackQueue[self->queueFront], block->transactions[x]);
+		uint64_t alreadyValidatedInputVal = self->callbacks.alreadyValidated(item.callbackObj, block->transactions[x]);
 		uint64_t outputValue = 0;
 		if (alreadyValidatedInputVal == 0) {
 			// Check for duplicate transactions which have unspent outputs, except for two blocks (See BIP30 https://en.bitcoin.it/wiki/BIP_0030 and https://github.com/bitcoin/bitcoin/blob/master/src/main.cpp#L1568)
@@ -621,15 +599,16 @@ CBErrBool CBValidatorLoadUnspentOutputAndCheckMaturity(CBValidator * self, CBPre
 	// Check coinbase maturity
 	return !coinbase || blockHeight - outputHeight >= CB_COINBASE_MATURITY;
 }
-CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block){
+CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlockQueueItem item){
 	uint8_t prevBranch;
 	uint32_t prevBlockIndex;
 	uint32_t prevBlockTarget;
 	// Call start
-	if (!self->callbacks.start(self->callbackQueue[self->queueFront])) {
+	if (!self->callbacks.start(item.callbackObj)) {
 		CBLogError("start returned false");
 		return CB_BLOCK_VALIDATION_ERR;
 	}
+	CBBlock * block = item.block;
 	// Determine what type of block this is.
 	if (CBBlockChainStorageBlockExists(self, CBByteArrayGetData(block->prevBlockHash))) {
 		// Has a block in the block hash index. Get branch and index.
@@ -637,13 +616,6 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 			CBLogError("Could not get the location of a previous block.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
-		CBLogVerbose("GOT PREV BLOCK %02x%02x%02x%02x AT %u:%u",
-					 CBByteArrayGetData(block->prevBlockHash)[31],
-					 CBByteArrayGetData(block->prevBlockHash)[30],
-					 CBByteArrayGetData(block->prevBlockHash)[29],
-					 CBByteArrayGetData(block->prevBlockHash)[28],
-					 prevBranch, prevBlockIndex
-					 );
 		// Get previous block target
 		prevBlockTarget = CBBlockChainStorageGetBlockTarget(self, prevBranch, prevBlockIndex);
 		if (!prevBlockTarget) {
@@ -654,7 +626,7 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 		// Orphan block. End here.
 		// Add block to orphans
 		if (CBValidatorAddBlockToOrphans(self, block))
-			return CB_BLOCK_VALIDATION_OK;
+			return CB_BLOCK_VALIDATION_ORPHAN;
 		else
 			return CB_BLOCK_VALIDATION_ERR;
 	}
@@ -662,30 +634,24 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 	uint8_t branch;
 	if (prevBlockIndex == self->branches[prevBranch].numBlocks - 1){
 		// Call workingOnBranch
-		if (! self->callbacks.workingOnBranch(self->callbackQueue[self->queueFront], prevBranch))
+		if (! self->callbacks.workingOnBranch(item.callbackObj, prevBranch))
 			return CB_BLOCK_VALIDATION_BAD;
 		// Extension
 		branch = prevBranch;
 	}else{
 		// New branch
 		if (self->numBranches == CB_MAX_BRANCH_CACHE) {
-			// ??? SINCE BRANCHES ARE TRIMMED OR DELETED THERE ARE SECURITY IMPLICATIONS: A peer could prevent other branches having a chance by creating many branches when the node is not up-to-date. To protect against this potential attack peers should only be allowed to provide one branch at a time and before accepting new branches from peers there should be a completed branch which is not the main branch.
-			// Trim branch from longest ago which is not being worked on and isn't main branch
+			// Trim branch from longest ago
 			uint8_t earliestBranch = 0;
 			uint32_t earliestIndex = self->branches[0].parentBlockIndex + self->branches[0].numBlocks;
 			for (uint8_t x = 1; x < self->numBranches; x++) {
-				if (self->branches[x].working == 0
-					&& self->branches[x].parentBlockIndex + self->branches[x].numBlocks < earliestIndex) {
+				if (self->branches[x].parentBlockIndex + self->branches[x].numBlocks < earliestIndex) {
 					earliestIndex = self->branches[x].parentBlockIndex + self->branches[x].numBlocks;
 					earliestBranch = x;
 				}
 			}
-			// ??? Add check if only the peer we got this block from was previously working on the earliest branch
-			if (self->branches[earliestBranch].working || earliestBranch == self->mainBranch)
-				// Cannot overwrite branch
-				return CB_BLOCK_VALIDATION_NO_NEW;
 			// Call workingOnBranch
-			if (! self->callbacks.workingOnBranch(self->callbackQueue[self->queueFront], earliestBranch))
+			if (! self->callbacks.workingOnBranch(item.callbackObj, earliestBranch))
 				return CB_BLOCK_VALIDATION_BAD;
 			// Check to see the highest block dependency for other branches.
 			uint32_t highestDependency = 0;
@@ -748,7 +714,7 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 					}
 				}
 				// Call the delete branch callback
-				if (!self->callbacks.deleteBranchCallback(self->callbackQueue[self->queueFront], earliestBranch)){
+				if (!self->callbacks.deleteBranchCallback(item.callbackObj, earliestBranch)){
 					CBLogError("deleteBranchCallback returned false");
 					return CB_BLOCK_VALIDATION_ERR;
 				}
@@ -787,7 +753,6 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 			free(tempWork.data); 
 		}
 		// Set the remaining data
-		self->branches[branch].working = 0;
 		self->branches[branch].numBlocks = 0;
 		self->branches[branch].lastValidation = CB_NO_VALIDATION;
 		self->branches[branch].startHeight = self->branches[prevBranch].startHeight + prevBlockIndex + 1;
@@ -802,13 +767,13 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 			return CB_BLOCK_VALIDATION_ERR;
 		}
 		// Call newBranchCallback
-		if (!self->callbacks.newBranchCallback(self->callbackQueue[self->queueFront], branch, prevBranch, self->branches[branch].startHeight)){
+		if (!self->callbacks.newBranchCallback(item.callbackObj, branch, prevBranch, self->branches[branch].startHeight)){
 			CBLogError("newBranchCallback returned false.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
 	}
 	// Got branch ready for block. Now process into the branch.
-	CBBlockValidationResult result = CBValidatorProcessIntoBranch(self, block, branch, prevBranch, prevBlockIndex, prevBlockTarget);
+	CBBlockValidationResult result = CBValidatorProcessIntoBranch(self, item, branch, prevBranch, prevBlockIndex, prevBlockTarget);
 	if (result != CB_BLOCK_VALIDATION_OK)
 		return result;
 	// Now go through any orphans
@@ -830,7 +795,8 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 				return CB_BLOCK_VALIDATION_ERR;
 			}
 			// Process into the branch.
-			result = CBValidatorProcessIntoBranch(self, self->orphans[x], branch, branch, self->branches[branch].numBlocks - 1, target);
+			item.block = self->orphans[x];
+			result = CBValidatorProcessIntoBranch(self, item, branch, branch, self->branches[branch].numBlocks - 1, target);
 			if (result == CB_BLOCK_VALIDATION_ERR) {
 				CBLogError("There was an error when processing an orphan into a branch.");
 				return CB_BLOCK_VALIDATION_ERR;
@@ -856,7 +822,8 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
 	CBMutexUnlock(self->orphanMutex);
 	return result;
 }
-CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget){
+CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget){
+	CBBlock * block = item.block;
 	// Check timestamp
 	if (block->time <= CBValidatorGetMedianTime(self, prevBranch, prevBlockIndex)){
 		CBBlockChainStorageRevert(self->storage);
@@ -903,7 +870,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 						// Above fork point, go down to fork point
 						for (;; tempBlockIndex--) {
 							// Change unspent output and transaction information, as going backwards through the main-chain.
-							if (! CBValidatorUpdateMainChain(self, tempBranch, tempBlockIndex, false)){
+							if (! CBValidatorUpdateMainChain(self, tempBranch, tempBlockIndex, false, item.callbackObj)){
 								CBLogError("Could not remove a block from the main chain.");
 								return CB_BLOCK_VALIDATION_ERR;
 							}
@@ -937,7 +904,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 			// Update information for all the blocks in the branch
 			for (tempBlockIndex++; tempBlockIndex--;) {
 				// Change unspent output and transaction information, going backwards.
-				if (! CBValidatorUpdateMainChain(self, tempBranch, tempBlockIndex, false)){
+				if (! CBValidatorUpdateMainChain(self, tempBranch, tempBlockIndex, false, item.callbackObj)){
 					CBLogError("Could not remove a block from the main chain.");
 					return CB_BLOCK_VALIDATION_ERR;
 				}
@@ -952,7 +919,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 			if (chainPath.points[pathIndex].blockIndex >= self->branches[chainPath.points[pathIndex].branch].lastValidation) {
 				// Go up to last validation point, updating unspent output and transaction information.
 				for (;tempBlockIndex <= self->branches[chainPath.points[pathIndex].branch].lastValidation; tempBlockIndex++) {
-					if (! CBValidatorUpdateMainChain(self, chainPath.points[pathIndex].branch, tempBlockIndex, true)) {
+					if (! CBValidatorUpdateMainChain(self, chainPath.points[pathIndex].branch, tempBlockIndex, true, item.callbackObj)) {
 						CBLogError("Could not update indicies for going to a previously validated point during reorganisation.");
 						return CB_BLOCK_VALIDATION_ERR;
 					}
@@ -961,7 +928,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 			}else if (self->branches[chainPath.points[pathIndex].branch].lastValidation != CB_NO_VALIDATION){
 				// The branch is validated enough to reach the last block. Go up to last block, updating unspent output and transaction information.
 				for (;tempBlockIndex <= chainPath.points[pathIndex].blockIndex; tempBlockIndex++) {
-					if (! CBValidatorUpdateMainChain(self, chainPath.points[pathIndex].branch, tempBlockIndex, true)){
+					if (! CBValidatorUpdateMainChain(self, chainPath.points[pathIndex].branch, tempBlockIndex, true, item.callbackObj)){
 						CBLogError("Could not update indicies for going to the last block for a path during reorganisation.");
 						return CB_BLOCK_VALIDATION_ERR;
 					}
@@ -997,7 +964,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 				}
 				// Validate block if not headers only
 				if (! (self->flags & CB_VALIDATOR_HEADERS_ONLY)) {
-					CBBlockValidationResult res = CBValidatorCompleteBlockValidation(self, tempBranch, tempBlock, self->branches[tempBranch].startHeight + tempBlockIndex);
+					CBBlockValidationResult res = CBValidatorCompleteBlockValidation(self, tempBranch, (CBBlockQueueItem){tempBlock, item.callbackObj}, self->branches[tempBranch].startHeight + tempBlockIndex);
 					if (res == CB_BLOCK_VALIDATION_BAD
 						|| res == CB_BLOCK_VALIDATION_ERR){
 						CBReleaseObject(tempBlock);
@@ -1024,7 +991,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 					}
 				}
 				// Update the unspent output indicies.
-				if (!CBValidatorAddBlockToMainChain(self, tempBlock, tempBranch, self->branches[tempBranch].lastValidation, CB_ADD_BLOCK_NEW, self->callbackQueue[self->queueFront])) {
+				if (!CBValidatorAddBlockToMainChain(self, (CBBlockQueueItem){tempBlock, item.callbackObj}, tempBranch, self->branches[tempBranch].lastValidation, CB_ADD_BLOCK_NEW)) {
 					CBLogError("Could not update the unspent outputs when validating a block during reorganisation.");
 					return CB_BLOCK_VALIDATION_ERR;
 				}
@@ -1054,7 +1021,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 	}
 	if (! (self->flags & CB_VALIDATOR_HEADERS_ONLY)) {
 		// Validate a new block for the main chain.
-		CBBlockValidationResult res = CBValidatorCompleteBlockValidation(self, branch, block, self->branches[branch].startHeight + self->branches[branch].numBlocks);
+		CBBlockValidationResult res = CBValidatorCompleteBlockValidation(self, branch, item, self->branches[branch].startHeight + self->branches[branch].numBlocks);
 		// If the validation was bad then reset the pending IO and return.
 		if (res == CB_BLOCK_VALIDATION_BAD) {
 			CBBlockChainStorageRevert(self->storage);
@@ -1064,13 +1031,13 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 			return res;
 		self->branches[branch].lastValidation = self->branches[branch].numBlocks;
 		// Update the unspent output indicies.
-		if (!CBValidatorAddBlockToMainChain(self, block, branch, self->branches[branch].lastValidation, CB_ADD_BLOCK_LAST, self->callbackQueue[self->queueFront])) {
+		if (!CBValidatorAddBlockToMainChain(self, item, branch, self->branches[branch].lastValidation, CB_ADD_BLOCK_LAST)) {
 			CBLogError("Could not update the unspent outputs when adding a block to the main chain.");
 			return CB_BLOCK_VALIDATION_ERR;
 		}
 	}else
 		// Call addBlock 
-		if (!self->callbacks.addBlock(self->callbackQueue[self->queueFront], branch, block, self->branches[branch].startHeight + self->branches[branch].numBlocks, CB_ADD_BLOCK_LAST)) {
+		if (!self->callbacks.addBlock(item.callbackObj, branch, block, self->branches[branch].startHeight + self->branches[branch].numBlocks, CB_ADD_BLOCK_LAST)) {
 			CBLogError("addBlock returned false");
 			return false;
 		}
@@ -1107,15 +1074,16 @@ bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackO
 	CBRetainObject(block);
 	if (callbackObj) CBRetainObject(callbackObj);
 	CBMutexLock(self->blockQueueMutex);
-	if (self->queueSize == CB_MAX_BLOCK_QUEUE)
-		return false;
-	uint8_t index = (self->queueFront + self->queueSize) % CB_MAX_BLOCK_QUEUE;
-	self->blockQueue[index] = block;
-	self->callbackQueue[index] = callbackObj;
-	self->queueSize++;
-	if (self->queueSize == 1)
+	CBBlockQueueItem * newItem = malloc(sizeof(*newItem));
+	newItem->block = block;
+	newItem->callbackObj = callbackObj;
+	newItem->next = NULL;
+	if (self->blockQueueFirst == NULL){
+		self->blockQueueFirst = self->blockQueueLast = newItem;
 		// We have just added a block to the queue when there was not one before so wake-up the processing thread.
 		CBConditionSignal(self->blockProcessWaitCond);
+	}else
+		self->blockQueueLast = self->blockQueueLast->next = newItem;
 	CBMutexUnlock(self->blockQueueMutex);
 	return true;
 }
@@ -1129,9 +1097,10 @@ bool CBValidatorSaveLastValidatedBlocks(CBValidator * self, uint8_t branches){
 	}
 	return true;
 }
-bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex){
+bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint32_t blockIndex){
 	// Call rmBlock
-	if (!self->callbacks.rmBlock(self->callbackQueue[self->queueFront], branch, self->branches[branch].startHeight + blockIndex, block)) {
+	CBBlock * block = item.block;
+	if (!self->callbacks.rmBlock(item.callbackObj, branch, self->branches[branch].startHeight + blockIndex, block)) {
 		CBLogError("rmBlock returned false");
 		return false;
 	}
@@ -1200,9 +1169,10 @@ bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, ui
 	free(txReadData);
 	return true;
 }
-bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType, void * callbackObj){
+bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType){
+	CBBlock * block = item.block;
 	// Call addBlock
-	if (!self->callbacks.addBlock(callbackObj, branch, block, self->branches[branch].startHeight + blockIndex, addType)) {
+	if (!self->callbacks.addBlock(item.callbackObj, branch, block, self->branches[branch].startHeight + blockIndex, addType)) {
 		CBLogError("addBlock returned false");
 		return false;
 	}
@@ -1261,7 +1231,7 @@ bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlock * block, uint8_t
 	}
 	return true;
 }
-bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward){
+bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward, void * callbackObj){
 	// Load the block
 	CBBlock * block = CBBlockChainStorageLoadBlock(self, blockIndex, branch);
 	if (! block) {
@@ -1276,9 +1246,9 @@ bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blo
 	}
 	bool res;
 	if (forward)
-		res = CBValidatorAddBlockToMainChain(self, block, branch, blockIndex, CB_ADD_BLOCK_PREV, self->callbackQueue[self->queueFront]);
+		res = CBValidatorAddBlockToMainChain(self, (CBBlockQueueItem){block, callbackObj}, branch, blockIndex, CB_ADD_BLOCK_PREV);
 	else
-		res = CBValidatorRemoveBlockFromMainChain(self, block, branch, blockIndex);
+		res = CBValidatorRemoveBlockFromMainChain(self, (CBBlockQueueItem){block, callbackObj}, branch, blockIndex);
 	if (! res)
 		CBLogError("Could not update the unspent outputs and transaction indices.");
 	// Free the block

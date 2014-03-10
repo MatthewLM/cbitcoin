@@ -503,14 +503,6 @@ bool CBBlockChainStorageLoadBranch(void * validator, uint8_t branchNum);
 bool CBBlockChainStorageLoadBranchWork(void * validator, uint8_t branchNum);
 #pragma weak CBBlockChainStorageLoadBranchWork
 /**
- @brief Loads an orphan.
- @param validator A CBValidator object. The storage object can be found within this.
- @param orphanNum The number of the orphan to load.
- @returns true on sucess or false on failure.
- */
-bool CBBlockChainStorageLoadOrphan(void * validator, uint8_t orphanNum);
-#pragma weak CBBlockChainStorageLoadOrphan
-/**
  @brief Obtains the outputs for a transaction
  @param validator A CBValidator object. The storage object can be found within this.
  @param txHash The transaction hash to load the output data for.
@@ -592,24 +584,6 @@ bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branch);
  */
 bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branch);
 #pragma weak CBBlockChainStorageSaveBranchWork
-/**
- @brief Saves a block as an orphan
- @param validator A CBValidator object. The storage object can be found within this.
- @param block The block to save.
- @param orphanNum The number of the orphan.
- @returns true on sucess or false on failure.
- */
-bool CBBlockChainStorageSaveOrphan(void * validator, void * block, uint8_t orphanNum);
-#pragma weak CBBlockChainStorageSaveOrphan
-/**
- @brief Saves a block as an orphan, with only the header.
- @param validator A CBValidator object. The storage object can be found within this.
- @param block The block to save.
- @param orphanNum The number of the orphan.
- @returns true on sucess or false on failure.
- */
-bool CBBlockChainStorageSaveOrphanHeader(void * validator, void * block, uint8_t orphanNum);
-#pragma weak CBBlockChainStorageSaveOrphanHeader
 /**
  @brief Saves a transaction reference. If the transaction exists in the block chain already, increment a counter. Else add a new reference.
  @param validator A CBValidator object. The storage object can be found within this.

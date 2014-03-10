@@ -36,15 +36,18 @@ void CBNewThread(CBDepObject * uthread, void (*function)(void *), void * arg){
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); // May need to be joinable.
 	// Set ID and associate data with thread
-	assert(pthread_mutex_lock(&idMutex) == 0);
+	int r = pthread_mutex_lock(&idMutex);
+	assert(r == 0);
 	thread->ID = nextId++;
 	if (!keyCreated) {
 		keyCreated = true;
 		pthread_key_create(&key, NULL);
 	}
-	assert(pthread_mutex_unlock(&idMutex) == 0);
+	r = pthread_mutex_unlock(&idMutex);
+	assert(r == 0);
 	// Create joinable thread
-	assert(pthread_create(&thread->thread, &attr, CBRunThread, thread) == 0);
+	r = pthread_create(&thread->thread, &attr, CBRunThread, thread);
+	assert(r == 0);
 	pthread_attr_destroy(&attr);
 	uthread->ptr = thread;
 }
@@ -58,41 +61,66 @@ void * CBRunThread(void * vthread){
 	return NULL;
 }
 void CBThreadJoin(CBDepObject thread){
-	assert(pthread_join(*(pthread_t *)thread.ptr, NULL) == 0);
+	int r = pthread_join(*(pthread_t *)thread.ptr, NULL);
+	assert(r == 0);
 } 
 void CBNewMutex(CBDepObject * mutex){
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-	mutex->ptr = malloc(sizeof(pthread_mutex_t));
-	assert(pthread_mutex_init(mutex->ptr, &attr) == 0);
+	mutex->ptr = malloc(sizeof(CBMutex));
+	int r = pthread_mutex_init(mutex->ptr, &attr);
+	assert(r == 0);
 	pthread_mutexattr_destroy(&attr);
+	#ifdef CBDEBUG
+	((CBMutex *)mutex->ptr)->lockStackSize = 0;
+	#endif
 }
 void CBFreeMutex(CBDepObject mutex){
-	assert(pthread_mutex_destroy(mutex.ptr) == 0);
+	int r = pthread_mutex_destroy(mutex.ptr);
+	assert(r == 0);
+	#ifdef CBDEBUG
+	assert(((CBMutex *)mutex.ptr)->lockStackSize == 0);
+	#endif
 	free(mutex.ptr);
 }
 void CBMutexLock(CBDepObject mutex){
-	assert(pthread_mutex_lock(mutex.ptr) == 0);
-	//CBLogError("LOCKED %p", mutex.ptr);
+	int r = pthread_mutex_lock(mutex.ptr);
+	assert(r == 0);
+	#ifdef CBDEBUG
+	CBMutex * mu = mutex.ptr;
+	void * array[5];
+	mu->lockStackBTSizes[mu->lockStackSize] = backtrace(array, 5);
+	mu->lockStack[mu->lockStackSize] = backtrace_symbols(array, mu->lockStackBTSizes[mu->lockStackSize]);
+	mu->lockStackSize++;
+	mu->threadID = CBGetTID();
+	#endif
 }
 void CBMutexUnlock(CBDepObject mutex){
-	//CBLogError("UNLOCKING %p", mutex.ptr);
-	assert(pthread_mutex_unlock(mutex.ptr) == 0);
+	#ifdef CBDEBUG
+	CBMutex * mu = mutex.ptr;
+	free(mu->lockStack[--mu->lockStackSize]);
+	#endif
+	int r = pthread_mutex_unlock(mutex.ptr);
+	assert(r == 0);
 }
 void CBNewCondition(CBDepObject * cond){
 	cond->ptr = malloc(sizeof(pthread_cond_t));
-	assert(pthread_cond_init(cond->ptr, NULL) == 0);
+	int r = pthread_cond_init(cond->ptr, NULL);
+	assert(r == 0);
 }
 void CBFreeCondition(CBDepObject cond){
-	assert(pthread_cond_destroy(cond.ptr) == 0);
+	int r = pthread_cond_destroy(cond.ptr);
+	assert(r == 0);
 	free(cond.ptr);
 }
 void CBConditionWait(CBDepObject cond, CBDepObject mutex){
-	assert(pthread_cond_wait(cond.ptr, mutex.ptr) == 0);
+	int r = pthread_cond_wait(cond.ptr, mutex.ptr);
+	assert(r == 0);
 }
 void CBConditionSignal(CBDepObject cond){
-	assert(pthread_cond_signal(cond.ptr) == 0);
+	int r = pthread_cond_signal(cond.ptr);
+	assert(r == 0);
 }
 uint8_t CBGetNumberOfCores(void){
 	return sysconf(_SC_NPROCESSORS_ONLN);

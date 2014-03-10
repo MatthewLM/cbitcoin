@@ -109,10 +109,15 @@ void CBFreeNode(void * self){
 
 //  Functions
 
-void CBNodeDisconnectPeer(void * vpeer){
+void CBNodeDisconnectPeer(CBPeer * peer){
+	CBRetainObject(peer);
+	CBRunOnEventLoop(CBGetNetworkCommunicator(peer->nodeObj)->eventLoop, CBNodeDisconnectPeerRun, peer, false);
+}
+void CBNodeDisconnectPeerRun(void * vpeer){
 	CBPeer * peer = vpeer;
 	CBNetworkCommunicator * comm = peer->nodeObj;
 	CBNetworkCommunicatorDisconnect(comm, peer, CB_24_HOURS, false);
+	CBReleaseObject(peer);
 }
 void CBNodeOnBadTime(void * vself){
 	CBNode * self = vself;
@@ -143,8 +148,8 @@ CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, 
 	CBMutexUnlock(self->messageProcessMutex);
 	return CB_MESSAGE_ACTION_CONTINUE;
 }
-void CBNodeOnValidatorError(void * vpeer){
-	CBNode * self = CBGetPeer(vpeer)->nodeObj;
+void CBNodeOnValidatorError(void * vself){
+	CBNode * self = vself;
 	CBMutexUnlock(CBGetNode(self)->blockAndTxMutex);
 	CBLogError("There was a validation error.");
 	self->callbacks.onFatalNodeError(self, CB_ERROR_VALIDATION);
@@ -180,7 +185,7 @@ void CBNodeProcessMessages(void * node){
 			action = self->onMessageReceived(self, toProcess->peer, toProcess->message);
 		if (action == CB_MESSAGE_ACTION_DISCONNECT)
 			// We need to disconnect the node
-			CBRunOnEventLoop(CBGetNetworkCommunicator(self)->eventLoop, CBNodeDisconnectPeer, toProcess->peer, false);
+			CBNodeDisconnectPeer(toProcess->peer);
 		CBMutexLock(self->messageProcessMutex);
 		// Remove this from queue
 		CBReleaseObject(toProcess->message);

@@ -19,24 +19,9 @@
 #include <openssl/rand.h>
 #include "CBAddress.h"
 #include "CBHDKeys.h"
+#include "getLine.h"
 
-void getLine(char * ptr);
-void getLine(char * ptr) {
-	int c;
-	int len = 30;
-    for(;;) {
-        c = fgetc(stdin);
-        if(c == EOF)
-            break;
-        if(--len == 0)
-            break;
-		*ptr = c;
-        if(c == '\n')
-            break;
-		ptr++;
-    }
-	*ptr = 0;
-}
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 int main(){
 	puts("cbitcoin version: " CB_LIBRARY_VERSION_STRING);
@@ -52,12 +37,11 @@ int main(){
 	puts("Waiting for entropy... Move the cursor around...");
 	CBKeyPair * key = CBNewKeyPair(true);
 	CBKeyPairGenerate(key);
-	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	BN_CTX * ctx = BN_CTX_new();
 	EC_GROUP * group = EC_GROUP_new_by_curve_name(NID_secp256k1);
 	printf("Making %lu addresses for \"%s\"\n\n", i, stringMatch);
 	for (unsigned int x = 0; x < i;) {
-		CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_NETWORK_PRODUCTION, false);
+		CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_PREFIX_PRODUCTION_ADDRESS, false);
 		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;

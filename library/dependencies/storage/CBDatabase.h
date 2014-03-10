@@ -36,7 +36,7 @@
 #define CB_DATABASE_BTREE_ELEMENTS 64
 #define CB_DATABASE_BTREE_HALF_ELEMENTS (CB_DATABASE_BTREE_ELEMENTS/2)
 #define CB_BRANCH_DATA_SIZE 42 // 20 for general data, 20 For branch work and 1 for branch work length
-#define CB_BLOCK_CHAIN_EXTRA_SIZE (5 + CB_BRANCH_DATA_SIZE * CB_MAX_BRANCH_CACHE)
+#define CB_BLOCK_CHAIN_EXTRA_SIZE (3 + CB_BRANCH_DATA_SIZE * CB_MAX_BRANCH_CACHE)
 #define CB_MAX_BRANCH_SECTIONS (CB_MAX_BRANCH_CACHE*2 - 1)
 #define CB_ACCOUNTER_EXTRA_SIZE 32
 #define CB_ADDRESS_EXTRA_SIZE 4
@@ -61,7 +61,6 @@ typedef enum{
 typedef enum{
 	CB_INDEX_BLOCK_HASH,
 	CB_INDEX_BLOCK,
-	CB_INDEX_ORPHAN,
 	CB_INDEX_TX,
 	CB_INDEX_UTXOUT,
 	CB_INDEX_ADDRS,
@@ -87,6 +86,13 @@ typedef enum{
 	CB_OVERWRITE_LOG_LENGTH = 8,
 } CBOverwriteLogFileOffsets;
 
+typedef enum{
+	CB_DELETION_KEY_ACTIVE = 0,
+	CB_DELETION_KEY_LENGTH = 1,
+	CB_DELETION_KEY_FILE_ID = 5,
+	CB_DELETION_KEY_OFFSET = 7,
+} CBDeletionKeyOffsets;
+
 /**
  @brief An index value which references the value's data position with a key.
  */
@@ -102,7 +108,7 @@ typedef struct{
  @brief Describes a deleted section of the database.
  */
 typedef struct{
-	uint8_t key[12]; /**< The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active, then has four bytes for the length of the deleted section in big-endian, then the file ID in little-endian and finally the offset of the deleted section in little-endian. */
+	uint8_t key[11]; /**< The key for this deleted section which begins with 0x01 if the deleted section is active or 0x00 if it is no longer active, then has four bytes for the length of the deleted section in big-endian, then the file ID in little-endian and finally the offset of the deleted section in little-endian. */
 	uint32_t indexPos; /**< The position in the index file where this value exists */
 } CBDeletedSection;
 

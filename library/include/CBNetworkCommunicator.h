@@ -98,11 +98,10 @@ typedef struct{
 typedef struct CBNetworkCommunicator CBNetworkCommunicator;
 
 typedef struct{
-	void (*onPeerConnection)(CBNetworkCommunicator *, CBPeer *); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
-	bool (*onTimeOut)(CBNetworkCommunicator *, void *); /**< Timeout event callback when an expected response timeouts. The callback should return as quickly as possible. Use threads for operations that would otherwise delay the event loop for too long. The first argument is the CBNetworkCommunicator responsible for the timeout. The second argument is the peer with the timeout. Return true if the peer should be disconnected, else false. */
-	bool (*acceptingType)(CBNetworkCommunicator *, CBPeer *, CBMessageType); /**< Return true if the network communicator should accept the message type, else false. */
-	CBOnMessageReceivedAction (*onMessageReceived)(CBNetworkCommunicator *, CBPeer *, CBMessage *); /**< The callback for when a message has been received from a peer. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
-	void (*onNetworkError)(CBNetworkCommunicator *, CBErrorReason reason); /**< Called when both IPv4 and IPv6 fails. Has an argument for the network communicator. */
+	void (*onPeerConnection)(CBNetworkCommunicator * self, CBPeer * peer); /**< Callback for when a peer connection has been established. The first argument is the CBNetworkCommunicator and the second is the peer. */
+	bool (*acceptingType)(CBNetworkCommunicator * self, CBPeer * peer, CBMessageType type); /**< Return true if the network communicator should accept the message type, else false. */
+	CBOnMessageReceivedAction (*onMessageReceived)(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message); /**< The callback for when a message has been received from a peer. The first argument is the CBNetworkCommunicator responsible for receiving the message. The second argument is the CBNetworkAddress peer the message was received from. Return the action that should be done after returning. Access the message by the "receive" feild in the CBNetworkAddress peer. Lookup the type of the message and then cast and/or handle the message approriately. The alternative message bytes can be found in the peer's "alternativeTypeBytes" field. Do not delay the thread for very long. */
+	void (*onNetworkError)(CBNetworkCommunicator * self, CBErrorReason reason); /**< Called when both IPv4 and IPv6 fails. Has an argument for the network communicator. */
 } CBNetworkCommunicatorCallbacks;
 
 /**

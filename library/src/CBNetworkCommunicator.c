@@ -62,12 +62,12 @@ bool CBInitNetworkCommunicator(CBNetworkCommunicator * self, CBVersionServices s
 	self->maxAddresses = 1000000;
 	self->maxConnections = 8;
 	self->maxIncommingConnections = 4;
-	self->recvTimeOut = 0;//100;
-	self->responseTimeOut = 0;//10000;
-	self->sendTimeOut = 0;//1000;
-	self->timeOut = 0;// 5400000;
+	self->recvTimeOut = 1000;
+	self->responseTimeOut = 10000;
+	self->sendTimeOut = 1000;
+	self->timeOut = 5400000;
 	self->heartBeat = 1800000;
-	self->connectionTimeOut = 0;//5000;
+	self->connectionTimeOut = 5000;
 	self->flags = 0;
 	self->services = services;
 	self->blockHeight = 0;
@@ -248,7 +248,7 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 					// Connection OK, so begin handshake if auto handshaking is enabled.
 					if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE){
 						CBVersion * version = CBNetworkCommunicatorGetVersion(self, peer->addr);
-						CBGetMessage(version)->expectResponse = CB_MESSAGE_TYPE_VERSION; // Expect a version in return.
+						peer->typeExpected = CB_MESSAGE_TYPE_VERSION;
 						CBGetMessage(version)->type = CB_MESSAGE_TYPE_VERSION;
 						CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(version), NULL);
 						CBReleaseObject(version);
@@ -280,6 +280,10 @@ void CBNetworkCommunicatorDidConnect(void * vself, void * vpeer){
 		CBNetworkCommunicatorNoPeers(self);
 }
 void CBNetworkCommunicatorDisconnect(CBNetworkCommunicator * self, CBPeer * peer, uint32_t penalty, bool stopping){
+	if (peer->disconnected)
+		// Already disconnected.
+		return;
+	peer->disconnected = true;
 	CBLogVerbose("Disconnecting from %s", peer->peerStr);
 	bool wasWorking = peer->connectionWorking;
 	peer->connectionWorking = false;
@@ -561,21 +565,8 @@ void CBNetworkCommunicatorOnCanSend(void * vself, void * vpeer){
 		peer->messageSent = 0;
 		peer->sentHeader = false;
 		// Done sending message.
-		if (toSend->expectResponse){
+		if (peer->typeExpected != CB_MESSAGE_TYPE_NONE)
 			CBSocketAddEvent(peer->receiveEvent, self->responseTimeOut); // Expect response.
-			// Add to list of expected responses.
-			if (peer->typesExpectedNum == CB_MAX_RESPONSES_EXPECTED) {
-				CBNetworkCommunicatorDisconnect(self, peer, CB_24_HOURS, false);
-				return;
-			}
-			peer->typesExpected[peer->typesExpectedNum] = toSend->expectResponse;
-			peer->typesExpectedNum++;
-			// Start timer for latency measurement, if not already waiting.
-			if (peer->latencyTimerStart == 0) {
-				peer->latencyTimerStart = CBGetMilliseconds();
-				peer->latencyExpected = toSend->expectResponse;
-			}
-		}
 		// Remove message from queue.
 		peer->sendQueueSize--;
 		char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
@@ -670,7 +661,7 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer 
 			// Alert message
 			type = CB_MESSAGE_TYPE_ALERT;
 		}else{
-			// Either alternative or unknown.
+			// Either alternative or unknown. ??? Add tests for this.
 			if (self->alternativeMessages) {
 				for (uint16_t x = 0; x < self->alternativeMessages->length / 12; x++) {
 					// Check this alternative message
@@ -692,40 +683,24 @@ void CBNetworkCommunicatorOnHeaderRecieved(CBNetworkCommunicator * self, CBPeer 
 		}
 	}
 	CBLogVerbose("Received a message header from %s with the type %s and expected size of %u.", peer->peerStr, CBByteArrayGetData(typeBytes), size);
+	if (!self->callbacks.acceptingType(self, peer, type) ) {
+		CBLogWarning("Not accepting messages of type %s", CBByteArrayGetData(typeBytes));
+		error = true;
+	}else if (size > CB_MAX_MESSAGE_SIZE){
+		CBLogWarning("Message size is above the maximum allowed SIZE = 0x%x MAX = 0x02000000", size);
+		error = true;
+	}
 	CBReleaseObject(typeBytes);
-	if (error || !self->callbacks.acceptingType(self, peer, type) || size > CB_MAX_MESSAGE_SIZE) {
+	if (error) {
 		// Error with the message header type or length
 		CBLogWarning("There was an error with the message.");
 		CBNetworkCommunicatorDisconnect(self, peer, CB_24_HOURS, false);
 		CBReleaseObject(header);
 		return;
 	}
-	if (type != CB_MESSAGE_TYPE_NONE) {
-		// If this is a response we have been waiting for, no longer wait for it
-		for (uint8_t x = 0; x < peer->typesExpectedNum; x++) {
-			if (type == peer->typesExpected[x]) {
-				// Record latency
-				if (peer->latencyTimerStart && peer->latencyExpected == type) {
-					peer->latencyTime += CBGetMilliseconds() - peer->latencyTimerStart;
-					peer->responses++;
-					peer->latencyTimerStart = 0;
-				}
-				// Remove
-				bool remove = true;
-				if (self->flags & CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE)
-					if (type == CB_MESSAGE_TYPE_VERACK && ! peer->versionMessage){
-						// We expect the version
-						peer->typesExpected[x] = CB_MESSAGE_TYPE_VERSION;
-						remove = false;
-					}
-				if (remove) {
-					peer->typesExpectedNum--;
-					memmove(peer->typesExpected + x, peer->typesExpected + x + 1, peer->typesExpectedNum - x);
-				}
-				break;
-			}
-		}
-	}
+	// If this is a response we have been waiting for, no longer wait for it
+	if (peer->typeExpected != CB_MESSAGE_TYPE_NONE && type == peer->typeExpected)
+		peer->typeExpected = CB_MESSAGE_TYPE_NONE;
 	// The type and size is OK, make the message
 	peer->receive->type = type;
 	// Get checksum
@@ -753,8 +728,8 @@ void CBNetworkCommunicatorOnMessageReceived(CBNetworkCommunicator * self, CBPeer
 	// Record download time
 	peer->downloadTime += CBGetMilliseconds() - peer->downloadTimerStart;
 	peer->downloadAmount += 24 + (peer->receive->bytes ? peer->receive->bytes->length : 0);
-	// Change timeout of receive event, depending on wether or not we want more responses.
-	CBSocketAddEvent(peer->receiveEvent, peer->typesExpectedNum ? self->responseTimeOut : self->timeOut);
+	// If not expecting a response still, put timeout back to normal.
+	CBSocketAddEvent(peer->receiveEvent, peer->typeExpected != CB_MESSAGE_TYPE_NONE ? self->responseTimeOut : self->timeOut);
 	// Check checksum
 	uint8_t hash[32];
 	uint8_t hash2[32];
@@ -893,18 +868,7 @@ void CBNetworkCommunicatorOnTimeOut(void * vself, void * vpeer, CBTimeOutType ty
 	CBNetworkCommunicator * self = vself;
 	CBPeer * peer = vpeer;
 	CBLogWarning("%s from peer: %s", (char *[4]){"Connection timeout", "Send timeout", "Receive timeout", "Connection error"}[type], peer->peerStr);
-	if (type == CB_TIMEOUT_RECEIVE && peer->messageReceived == 0 && ! peer->receivedHeader) {
-		// Not responded
-		if (peer->typesExpectedNum
-			// This is a timeout of an expected response. Call onTimeOut to see if we should disconnect the node or not
-			&& !self->callbacks.onTimeOut(self, peer)){
-			// Should not be disconnected, remove expected types
-			peer->typesExpectedNum = 0;
-			return;
-		}
-	}
-	// Remove CBNetworkAddress. 1 day penalty.
-	CBNetworkCommunicatorDisconnect(self, peer, CB_24_HOURS, false);
+	CBNetworkCommunicatorDisconnect(self, peer, CB_HOUR, false);
 }
 CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoDiscovery(CBNetworkCommunicator * self, CBPeer * peer){
 	if (peer->receive->type == CB_MESSAGE_TYPE_ADDR) {
@@ -1135,7 +1099,7 @@ CBOnMessageReceivedAction CBNetworkCommunicatorProcessMessageAutoHandshake(CBNet
 			if (! (peer->handshakeStatus & CB_HANDSHAKE_SENT_VERSION)) {
 				CBVersion * version = CBNetworkCommunicatorGetVersion(self, peer->addr);
 				if (version) {
-					CBGetMessage(version)->expectResponse = CB_MESSAGE_TYPE_VERACK; // Expect a response for this message.
+					peer->typeExpected  = CB_MESSAGE_TYPE_VERACK;
 					CBGetMessage(version)->type = CB_MESSAGE_TYPE_VERSION;
 					bool ok = CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(version), NULL);
 					CBReleaseObject(version);
@@ -1351,7 +1315,7 @@ void CBNetworkCommunicatorSendPings(void * vself){
 			// Only send pings after handshake
 			if (peer->handshakeStatus == CB_HANDSHAKE_DONE){
 				if (peer->versionMessage->version >= CB_PONG_VERSION){
-					CBGetMessage(pingPong)->expectResponse = CB_MESSAGE_TYPE_PONG; // Expect a pong.
+					peer->typeExpected = CB_MESSAGE_TYPE_PONG; // Expect a pong.
 					CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(pingPong), NULL);
 				}else
 					CBNetworkCommunicatorSendMessage(self, peer, CBGetMessage(ping), NULL);

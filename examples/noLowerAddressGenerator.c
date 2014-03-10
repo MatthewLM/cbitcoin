@@ -19,21 +19,28 @@
 #include <openssl/rand.h>
 #include "CBAddress.h"
 #include "CBHDKeys.h"
+#include "getLine.h"
+
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 int main(){
+	char prefixStr[4];
 	puts("cbitcoin version: " CB_LIBRARY_VERSION_STRING);
 	puts("OpenSSL version: " OPENSSL_VERSION_TEXT);
 	puts("Will generate addresses with as many non-lower-case letters as possible.");
+	printf("Type the number of the address prefix (0 default for Bitcoin pubkeyhash):");
+	getLine(prefixStr);
+	uint8_t prefix = strlen(prefixStr)? atoi(prefixStr): 0;
 	puts("Waiting for entropy... Move the cursor around...");
 	CBKeyPair * key = CBNewKeyPair(true);
 	CBKeyPairGenerate(key);
-	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	BN_CTX * ctx = BN_CTX_new();
 	EC_GROUP * group = EC_GROUP_new_by_curve_name(NID_secp256k1);
+	CBAddress address;
 	for (unsigned int x = 1;;) {
-		CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_NETWORK_PRODUCTION, false);
-		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
-		CBReleaseObject(address);
+		CBInitAddressFromRIPEMD160Hash(&address, CBKeyPairGetHash(key), prefix, false);
+		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(&address));
+		CBDestroyAddress(&address);
 		bool match = true;
 		uint8_t amount = 0;
 		for (uint8_t y = 0; y < string->length; y++) {
@@ -50,9 +57,10 @@ int main(){
 			// Print key data to stdout
 			printf("No lower for %u\n", amount);
 			printf("Private key (WIF): ");
-			CBWIF * wif = CBNewWIFFromPrivateKey(key->privkey, true, CB_NETWORK_PRODUCTION, false);
-			CBByteArray * str = CBChecksumBytesGetString(wif);
-			CBReleaseObject(wif);
+			CBWIF wif;
+			CBInitWIFFromPrivateKey(&wif, key->privkey, true, CB_NETWORK_PRODUCTION, false);
+			CBByteArray * str = CBChecksumBytesGetString(&wif);
+			CBDestroyWIF(&wif);
 			puts((char *)CBByteArrayGetData(str));
 			CBReleaseObject(str);
 			// Print public key

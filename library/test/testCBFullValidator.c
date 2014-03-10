@@ -112,11 +112,6 @@ bool invalidBlock(void * foo, CBBlock * block){
 	return true;
 }
 
-bool noNewBranches(void * foo, CBBlock * block);
-bool noNewBranches(void * foo, CBBlock * block){
-	return true;
-}
-
 void onValidatorError(void * foo);
 void onValidatorError(void * foo){
 	printf("ON VALIDATE ERROR\n");
@@ -133,7 +128,7 @@ uint64_t alreadyValidated(void * foo, CBTransaction * tx){
 }
 bool isOrphan(void *, CBBlock *);
 bool isOrphan(void * foo, CBBlock * block){
-	return true;
+	return finish(foo, block);
 }
 bool deleteBranchCallback(void *, uint8_t branch);
 bool deleteBranchCallback(void * foo, uint8_t branch){
@@ -180,7 +175,6 @@ int main(){
 		rmBlock,
 		finish,
 		invalidBlock,
-		noNewBranches,
 		onValidatorError
 	};
 	CBValidator * validator = CBNewValidator(storage, 0, callbacks);
@@ -1442,24 +1436,5 @@ int main(){
 	CBReleaseObject(validator);
 	CBFreeStorageDatabase(database);
 	CBFreeBlockChainStorage(storage);
-	CBNewStorageDatabase(&database, "./", 100000000, 100000000);
-	CBNewBlockChainStorage(&storage, database);
-	validator = CBNewValidator(storage, 0, callbacks);
-	if (! validator) {
-		printf("LOAD VALIDATOR WITH ORPHAN FAIL\n");
-		return 1;
-	}
-	if (validator->numOrphans != 1) {
-		printf("ORPHAN NUM FAIL\n");
-		return 1;
-	}
-	if (memcmp(CBBlockGetHash(validator->orphans[0]), CBBlockGetHash(testBlock), 32)) {
-		printf("ORPHAN DATA FAIL\n");
-		return 1;
-	}
-	CBRetainObject(validator);
-	CBFreeStorageDatabase(database);
-	CBFreeBlockChainStorage(storage);
-	// ??? Add test for loading orphans. Does it deserialise?
 	return 0;
 }

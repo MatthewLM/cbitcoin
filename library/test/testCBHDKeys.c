@@ -192,7 +192,7 @@ void checkKey(CBHDKey * key, uint8_t x, uint8_t y){
 		exit(EXIT_FAILURE);
 	}
 	// Check address
-	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(key), CB_NETWORK_PRODUCTION, false);
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(key), CB_PREFIX_PRODUCTION_ADDRESS, false);
 	CBByteArray * str = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 	CBReleaseObject(address);
 	if (memcmp(CBByteArrayGetData(str), testVectors[x][y].addr, 34) != 0) {
@@ -255,7 +255,7 @@ int main(){
 	CBByteArray * walletKeyString = CBNewByteArrayFromString("xpub6DRhpXssnj7X6CwJgseK9oyFxSC8jk6nJz2SWkf5pjsQs12xv89Dfr627TtaZKkFbG6Aq23fmaNaf5KRo9iGfEXTTXvtd6gsXJTB8Sdah3B", false);
     CBChecksumBytes * walletKeyData = CBNewChecksumBytesFromString(walletKeyString, false);
     CBHDKey * cbkey = CBNewHDKeyFromData(CBByteArrayGetData(CBGetByteArray(walletKeyData)));
-	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(cbkey), CB_NETWORK_PRODUCTION, false);
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(cbkey), CB_PREFIX_PRODUCTION_ADDRESS, false);
 	CBByteArray * str = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 	printf("%s\n", CBByteArrayGetData(str));
 	CBReleaseObject(address);
@@ -298,7 +298,7 @@ int main(){
 				key->versionBytes = CB_HD_KEY_VERSION_PROD_PUBLIC;
 				CBHDKeyDeriveChild(key, testVectors[x][y+1].childID, newKey);
 				key->versionBytes = CB_HD_KEY_VERSION_PROD_PRIVATE;
-				CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(newKey), CB_NETWORK_PRODUCTION, false);
+				CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(newKey), CB_PREFIX_PRODUCTION_ADDRESS, false);
 				CBByteArray * str = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 				CBReleaseObject(address);
 				if (memcmp(CBByteArrayGetData(str), testVectors[x][y + 1].addr, 34) != 0) {

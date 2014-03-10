@@ -43,10 +43,10 @@ typedef enum{
  */
 typedef enum{
 	CB_BLOCK_VALIDATION_OK, /**< The validation passed with no problems. */
+	CB_BLOCK_VALIDATION_ORPHAN, /**< The block is an orphan. */
 	CB_BLOCK_VALIDATION_BAD, /**< The block failed validation. */
 	CB_BLOCK_VALIDATION_ERR, /**< There was an error during the validation processing. */
 	CB_BLOCK_VALIDATION_BAD_TIME, /**< The block failed validation due to a bad timestamp */
-	CB_BLOCK_VALIDATION_NO_NEW, /**< No new branches are available. */
 } CBBlockValidationResult;
 
 typedef enum{
@@ -67,7 +67,6 @@ typedef enum{
 #define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
 #define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours from network time
-#define CB_MAX_BLOCK_QUEUE CB_MAX_ORPHAN_CACHE
 
 /**
  @brief Describes a point on a chain.
@@ -104,7 +103,6 @@ typedef struct{
 	uint32_t startHeight; /**< The starting height where this branch begins */
 	uint32_t lastValidation; /**< The index of the last block in this branch that has been fully validated. */
 	CBBigInt work; /**< The total work for this branch. The branch with the highest work is the winner! */
-	uint16_t working; /**< The number of peers we are receiving this branch from. */
 } CBBlockBranch;
 
 typedef struct{
@@ -126,9 +124,8 @@ typedef struct{
 	bool (*newBranchCallback)(void *, uint8_t branch, uint8_t parent, uint32_t blockHeight); /**< Callback for when a new branch is made. "branch" is the index of the new branch, parent is the parent branch and "blockHeight" is the height of the first block on the branch. */
 	bool (*addBlock)(void *, uint8_t branch, CBBlock * block, uint32_t blockHeight, CBAddBlockType addType); /**< Callback for when the validator adds a block to the main chain (tentatively during reorg). "branch" is the index of the branch the block is on. "block" is the block. "blockHeight" is the height of the block. For "addType" @see CBAddBlockType. */
 	bool (*rmBlock)(void *, uint8_t branch, uint32_t blockHeight, CBBlock * block); /**< Callback for when the validator removes a block from the main chain (tentatively during reorg). "branch" is the index of the branch the block is on. "block" is the block. */
-	bool (*finish)(void *, CBBlock * block); /**< Called once the validator is finished processing a block which is not determined to be invalid yet, and when it is safe to commit the changes to the database. */
+	bool (*finish)(void *, CBBlock * block); /**< Called once the validator is finished processing a block which has been added to the block-chain including side chains. It is safe to stage the changes to the database. */
 	bool (*invalidBlock)(void *, CBBlock * block); /**< Called when a block is found to be invalid. */
-	bool (*noNewBranches)(void *, CBBlock * block); /**< Called when a block cannot fit onto any new branches */
 	void (*onValidatorError)(void *); /**< Called upon an error with the validator. */
 } CBValidatorCallbacks;
 
@@ -136,6 +133,14 @@ typedef struct{
 	CBThreadPoolQueue threadPool;
 	bool scriptFailure;
 } CBScriptProcessing;
+
+typedef struct CBBlockQueueItem CBBlockQueueItem;
+
+struct CBBlockQueueItem{
+	CBBlock * block;
+	void * callbackObj;
+	CBBlockQueueItem * next;
+};
 
 /**
  @brief Structure for CBValidator objects. @see CBValidator.h
@@ -155,10 +160,8 @@ typedef struct{
 	CBDepObject blockQueueMutex; /**< Mutex for accessing and modifying the block queue. */
 	CBDepObject orphanMutex;
 	CBDepObject blockProcessWaitCond; /**< Condition for waiting for more queued blocks. */
-	CBBlock * blockQueue[CB_MAX_BLOCK_QUEUE];
-	void * callbackQueue[CB_MAX_BLOCK_QUEUE];
-	uint8_t queueFront;
-	uint8_t queueSize;
+	CBBlockQueueItem * blockQueueFirst;
+	CBBlockQueueItem * blockQueueLast;
 	bool shutDownThread;
 	CBScriptProcessing scriptProcessing;
 } CBValidator;
@@ -233,7 +236,7 @@ void CBValidatorBlockProcessThread(void * validator);
  @param height The height of the block.
  @returns CB_BLOCK_VALIDATION_OK if the block passed validation, CB_BLOCK_VALIDATION_BAD if the block failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
-CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t height);
+CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlockQueueItem item, uint32_t height);
 /**
  @brief Gets the block height of the alst block in the main chain.
  @param self The CBValidator
@@ -295,7 +298,7 @@ CBErrBool CBValidatorLoadUnspentOutputAndCheckMaturity(CBValidator * self, CBPre
  @param block The block to process.
  @return @see CBBlockValidationResult
  */
-CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * block);
+CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlockQueueItem item);
 /**
  @brief Processes a block into a branch. This is used once basic validation is done on a block and it is determined what branch it needs to go into and when this branch is ready to receive the block.
  @param self The CBValidator object.
@@ -307,7 +310,7 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlock * bl
  @param txHashes The transaction hashes for the block.
  @returns The result.
  */
-CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock * block, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget);
+CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget);
 void CBValidatorProcessScripts(CBThreadPoolQueue * threadPoolQueue, void * vScriptItem);
 bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackObj);
 /**
@@ -326,7 +329,7 @@ bool CBValidatorSaveLastValidatedBlocks(CBValidator * self, uint8_t branches);
  @param blockIndex The block index in the branch.
  @returns true on successful execution or false on error.
  */
-bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex);
+bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint32_t blockIndex);
 /**
  @brief Updates the unspent outputs and transaction index for a branch, for adding a block's transaction information.
  @param self The CBValidator object.
@@ -337,7 +340,7 @@ bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlock * block, ui
  @param callbackObj The callback object for calling the validator newBlock callback.
  @returns true on successful execution or false on error.
  */
-bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlock * block, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType, void * callbackObj);
+bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType);
 /**
  @brief Updates the unspent outputs and transaction index for a branch in reverse and loads a block to do this.
  @param self The CBValidator object.
@@ -347,7 +350,7 @@ bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlock * block, uint8_t
  @param forward If true the indices will be updated when adding blocks, else it will be updated removing blocks for re-organisation.
  @returns true on successful execution or false on error.
  */
-bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward);
+bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blockIndex, bool forward, void * callbackObj);
 CBInputCheckResult CBValidatorVerifyP2SHAndStandard(CBScript * outputScript, CBScript * inputScript, uint32_t * sigOps, bool checkStandard);
 bool CBValidatorVerifyScripts(CBTransaction * tx, uint32_t inputIndex, CBScript * outScript);
 

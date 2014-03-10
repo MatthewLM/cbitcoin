@@ -26,10 +26,8 @@
  @brief The offsets to parts of the main validation data
  */
 typedef enum{
-	CB_VALIDATION_FIRST_ORPHAN = 0, 
-	CB_VALIDATION_NUM_ORPHANS = 1, 
-	CB_VALIDATION_MAIN_BRANCH = 2, 
-	CB_VALIDATION_NUM_BRANCHES = 3, 
+	CB_VALIDATION_MAIN_BRANCH = 1,
+	CB_VALIDATION_NUM_BRANCHES = 2,
 } CBValidationOffsets;
 
 /**
@@ -40,7 +38,7 @@ typedef enum{
 	CB_BRANCH_LAST_VALIDATION = 4, 
 	CB_BRANCH_NUM_BLOCKS = 8, 
 	CB_BRANCH_PARENT_BLOCK_INDEX = 12, 
-	CB_BRANCH_PARENT_BRANCH = 16, 
+	CB_BRANCH_PARENT_BRANCH = 16,
 	CB_BRANCH_START_HEIGHT = 17,
 	CB_BRANCH_WORK = 21,
 } CBBranchOffsets;
@@ -96,7 +94,6 @@ typedef enum{
 // ??? Optimise smaller indices.
 typedef struct{
 	CBDatabase * database;
-	CBDatabaseIndex * orphanIndex; /**< key = [orphanID] */
 	CBDatabaseIndex * blockIndex; /**< key = [branchID, blockID * 4] */
 	CBDatabaseIndex * blockHashIndex; /**< key = [hash * 20] Links to the block branch id and position. */
 	CBDatabaseIndex * unspentOutputIndex; /**< key = [hash * 32, outputID * 4] */

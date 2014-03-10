@@ -41,19 +41,16 @@ void CBInitPeer(CBPeer * self, CBNetworkAddress * addr){
 	self->time = 0;
 	self->connectionWorking = false;
 	self->connecting = false;
-	self->typesExpectedNum = 0;
 	self->downloadTime = 0;
 	self->downloadAmount = 0;
-	self->latencyTime = 0;
-	self->responses = 0;
-	self->latencyTimerStart = 0;
 	self->downloadTimerStart = 0;
 	self->sendQueueFront = 0;
 	self->sendQueueSize = 0;
 	self->messageReceived = false;
 	self->requestedData = NULL;
-	self->branchWorkingOn = CB_PEER_NO_WORKING;
 	self->allowRelay = true;
+	self->disconnected = false;
+	self->typeExpected = CB_MESSAGE_TYPE_NONE;
 	strcpy(self->peerStr, "unknown");
 }
 

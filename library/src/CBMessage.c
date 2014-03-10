@@ -30,14 +30,12 @@ CBMessage * CBNewMessageByObject(){
 void CBInitMessageByObject(CBMessage * self){
 	CBInitObject(CBGetObject(self), true);
 	self->bytes = NULL;
-	self->expectResponse = false;
 	self->serialised = false;
 }
 void CBInitMessageByData(CBMessage * self, CBByteArray * data){
 	CBInitObject(CBGetObject(self), true);
 	self->bytes = data;
 	CBRetainObject(data); // Retain data for this object.
-	self->expectResponse = false;
 	self->serialised = true;
 }
 
@@ -100,9 +98,6 @@ void CBMessageTypeToString(CBMessageType type, char output[CB_MESSAGE_TYPE_STR_S
 			break;
 		case CB_MESSAGE_TYPE_VERSION:
 			strcpy(output, "version");
-			break;
-		case CB_MESSAGE_TYPE_NOT_GIVEN_INV:
-			strcpy(output, "noinv");
 			break;
 		default:
 			strcpy(output, "unknown");

@@ -31,6 +31,7 @@ void callback(void * arg){
 
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
+	s = 1393368855;
 	printf("Session = %ui\n", s);
 	srand(s);
 	CBNewEventLoop(&eventLoop, NULL, NULL, NULL);

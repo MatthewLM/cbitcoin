@@ -200,7 +200,8 @@ CBWIF * CBHDKeyGetWIF(CBHDKey * key){
 		return NULL;
 	if (CBHDKeyGetType(key->versionBytes) != CB_HD_KEY_TYPE_PRIVATE)
 		return NULL;
-	return CBNewWIFFromPrivateKey(CBHDKeyGetPrivateKey(key), true, network, false);
+	CBBase58Prefix prefix = network == CB_NETWORK_PRODUCTION ? CB_PREFIX_PRODUCTION_PRIVATE_KEY : CB_PREFIX_TEST_PRIVATE_KEY;
+	return CBNewWIFFromPrivateKey(CBHDKeyGetPrivateKey(key), true, prefix, false);
 }
 void CBHDKeyHmacSha512(uint8_t * inputData, uint8_t * chainCode, uint8_t * output){
 	uint8_t msg[192], inner[32], outer[32], hash[64]; // SHA512 has block size of 1024 bits or 128 bytes

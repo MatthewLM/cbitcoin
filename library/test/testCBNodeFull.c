@@ -69,7 +69,6 @@ CBBlock * lastInitialBlock;
 CBByteArray * lastNode1BlockHash;
 CBByteArray * reorgTestBlockHash;
 CBDepObject testMutex;
-CBPeer * dummyPeer;
 
 uint64_t CBGetMilliseconds(void){
 	struct timeval tv;
@@ -95,8 +94,35 @@ void stop(void * comm){
 	CBReleaseObject(comm);
 }
 
-void maybeFinishOrphanTest(void * foo);
-void maybeFinishOrphanTest(void * foo){
+pthread_mutex_t uptodateMutex[3] = {PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER};
+pthread_cond_t uptodateCond[3] = {PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER};
+bool uptodateBool[3] = {true, true, true};
+
+void uptodate(CBNode * node, bool uptodate);
+void uptodate(CBNode * node, bool uptodate){
+	uint8_t x = 0;
+	for (; nodes[x] != CBGetNodeFull(node); x++);
+	pthread_mutex_lock(&uptodateMutex[x]);
+	uptodateBool[x] = uptodate;
+	if (uptodate)
+		pthread_cond_signal(&uptodateCond[x]);
+	pthread_mutex_unlock(&uptodateMutex[x]);
+}
+
+void waitForDownloadEnd(void);
+void waitForDownloadEnd(void){
+	// Wait for downloads to end before continuing with tests
+	for (uint8_t x = 0; x < 3; x++){
+		pthread_mutex_lock(&uptodateMutex[x]);
+		if (!uptodateBool[x])
+			// Still downloading
+			pthread_cond_wait(&uptodateCond[x], &uptodateMutex[x]);
+		pthread_mutex_unlock(&uptodateMutex[x]);
+	}
+}
+
+void * maybeFinishOrphanTest(void * foo);
+void * maybeFinishOrphanTest(void * foo){
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 5 && doubleSpendNum == 2 && confirmedNum == 4) {
 		// Ensure validation is complete for second node, so that all double spends are processed
 		CBMutexLock(CBGetNode(nodes[1])->blockAndTxMutex);
@@ -192,10 +218,11 @@ void maybeFinishOrphanTest(void * foo){
 		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[1])->eventLoop, stop, nodes[1], false);
 		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[2])->eventLoop, stop, nodes[2], false);
 	}
+	return NULL;
 }
 
-void maybeFinishLoseTest(void * foo);
-void maybeFinishLoseTest(void * foo){
+void * maybeFinishLoseTest(void * foo);
+void * maybeFinishLoseTest(void * foo){
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 2 && doubleSpendNum == 4 && unconfirmedNum == 4 && confirmedNum == 2) {
 		// Make sure node 0 has processed tx 0, as it needs to be confirmed to ensure the number of unconf dependencies is OK for tx 4, ie. 0.
 		CBMutexLock(CBGetNode(nodes[0])->blockAndTxMutex);
@@ -291,7 +318,7 @@ void maybeFinishLoseTest(void * foo){
 		chainReorg = 0;
 		confirmedNum = 0;
 		doubleSpendNum = 0;
-		dummyPeer->nodeObj = nodes[0];
+		waitForDownloadEnd();
 		// Test giving orphan transaction to node 0, and then giving a false dependency.
 		CBTransaction * falseTx = CBNewTransaction(19, 1);
 		CBGetMessage(falseTx)->type = CB_MESSAGE_TYPE_TX;
@@ -409,12 +436,8 @@ void maybeFinishLoseTest(void * foo){
 		CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
 		CBBlockSerialise(block, true, false);
 		// Add to node 0
-		CBBlockPeers * blockPeers = malloc(sizeof(*blockPeers));
-		memcpy(blockPeers->hash, CBBlockGetHash(block), 20);
-		CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
-		CBAssociativeArrayInsert(&nodes[0]->blockPeers, blockPeers, CBAssociativeArrayFind(&nodes[0]->blockPeers, blockPeers).position, NULL);
-		CBAssociativeArrayInsert(&nodes[0]->askedForBlocks, blockPeers, CBAssociativeArrayFind(&nodes[0]->askedForBlocks, blockPeers).position, NULL);
-		CBValidatorQueueBlock(CBGetNode(nodes[0])->validator, block, dummyPeer);
+		nodes[0]->downloadingPeer = NULL;
+		CBValidatorQueueBlock(CBGetNode(nodes[0])->validator, block, nodes[0]);
 		// The next block will contain the orphan
 		CBBlock * block2 = CBNewBlock();
 		block2->prevBlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
@@ -443,18 +466,14 @@ void maybeFinishLoseTest(void * foo){
 		CBGetMessage(block2)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block2, true));
 		CBBlockSerialise(block2, true, true);
 		// Add to node 0
-		blockPeers = malloc(sizeof(*blockPeers));
-		memcpy(blockPeers->hash, CBBlockGetHash(block2), 20);
-		CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
-		CBAssociativeArrayInsert(&nodes[0]->blockPeers, blockPeers, CBAssociativeArrayFind(&nodes[0]->blockPeers, blockPeers).position, NULL);
-		CBAssociativeArrayInsert(&nodes[0]->askedForBlocks, blockPeers, CBAssociativeArrayFind(&nodes[0]->askedForBlocks, blockPeers).position, NULL);
-		CBValidatorQueueBlock(CBGetNode(nodes[0])->validator, block2, dummyPeer);
+		CBValidatorQueueBlock(CBGetNode(nodes[0])->validator, block2, nodes[0]);
 		CBReleaseObject(block2);
 	}
+	return NULL;
 }
 
-void maybeFinishReorgTest(void);
-void maybeFinishReorgTest(void){
+void * maybeFinishReorgTest(void * foo);
+void * maybeFinishReorgTest(void * foo){
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 8 && doubleSpendNum == 4 && confirmedNum == 4 && unconfirmedNum == 2) {
 		for (uint8_t x = 0; x < 3; x++) {
 			CBNodeFull * node = nodes[x];
@@ -542,7 +561,7 @@ void maybeFinishReorgTest(void){
 		unconfirmedNum = 0;
 		confirmedNum = 0;
 		doubleSpendNum = 0;
-		dummyPeer->nodeObj = nodes[2];
+		waitForDownloadEnd();
 		// Test double spending one of the transactions on the chain with two dependants on the chain.
 		// Test unconfirming a transaction with two dependants, and that are not dependencies of any unconfirmed transactions
 		// Test re-relaying unconfirmed transactions and losing some due to oldness.
@@ -589,12 +608,8 @@ void maybeFinishReorgTest(void){
 		CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
 		CBBlockSerialise(block, true, false);
 		// Add to node 2
-		CBBlockPeers * blockPeers = malloc(sizeof(*blockPeers));
-		memcpy(blockPeers->hash, CBBlockGetHash(block), 20);
-		CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
-		CBAssociativeArrayInsert(&nodes[2]->blockPeers, blockPeers, CBAssociativeArrayFind(&nodes[2]->blockPeers, blockPeers).position, NULL);
-		CBAssociativeArrayInsert(&nodes[2]->askedForBlocks, blockPeers, CBAssociativeArrayFind(&nodes[2]->askedForBlocks, blockPeers).position, NULL);
-		CBValidatorQueueBlock(CBGetNode(nodes[2])->validator, block, dummyPeer);
+		nodes[2]->downloadingPeer = NULL;
+		CBValidatorQueueBlock(CBGetNode(nodes[2])->validator, block, nodes[2]);
 		// The next block will contain all the other transactions except those of the second double spend in the last test
 		CBBlock * block2 = CBNewBlock();
 		block2->prevBlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
@@ -626,18 +641,14 @@ void maybeFinishReorgTest(void){
 		CBGetMessage(block2)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block2, true));
 		CBBlockSerialise(block2, true, true);
 		// Add to node 2
-		blockPeers = malloc(sizeof(*blockPeers));
-		memcpy(blockPeers->hash, CBBlockGetHash(block2), 20);
-		CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
-		CBAssociativeArrayInsert(&nodes[2]->blockPeers, blockPeers, CBAssociativeArrayFind(&nodes[2]->blockPeers, blockPeers).position, NULL);
-		CBAssociativeArrayInsert(&nodes[2]->askedForBlocks, blockPeers, CBAssociativeArrayFind(&nodes[2]->askedForBlocks, blockPeers).position, NULL);
-		CBValidatorQueueBlock(CBGetNode(nodes[2])->validator, block2, dummyPeer);
+		CBValidatorQueueBlock(CBGetNode(nodes[2])->validator, block2, nodes[2]);
 		CBReleaseObject(block2);
 	}
+	return NULL;
 }
 
-void finishReceiveInitialTest(void * foo);
-void finishReceiveInitialTest(void * foo){
+void * finishReceiveInitialTest(void * foo);
+void * finishReceiveInitialTest(void * foo){
 	// Ensure nodes finished processing transactions
 	for (uint8_t x = 0; x < 3; x++) {
 		CBMutexLock(CBGetNode(nodes[x])->blockAndTxMutex);
@@ -721,6 +732,7 @@ void finishReceiveInitialTest(void * foo){
 		exit(EXIT_FAILURE);
 	}
 	CBLogVerbose("RECEIVE INITIAL BLOCKS complete.");
+	waitForDownloadEnd();
 	// Test processing transaction spending unconf transaction which has been spent
 	CBTransaction * falseTx = CBNewTransaction(22, 1);
 	CBGetMessage(falseTx)->type = CB_MESSAGE_TYPE_TX;
@@ -753,7 +765,6 @@ void finishReceiveInitialTest(void * foo){
 	// Add double spend of 11
 	testPhase = CHAIN_REORGANISATION;
 	gotTxNum = 0;
-	dummyPeer->nodeObj = nodes[1];
 	CBBlock * block = CBNewBlock();
 	block->prevBlockHash = lastNode1BlockHash;
 	block->time = 1231471166;
@@ -810,17 +821,9 @@ void finishReceiveInitialTest(void * foo){
 	CBBlockCalculateAndSetMerkleRoot(block);
 	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
 	CBBlockSerialise(block, true, false);
-	// Add to node 1
-	CBBlockPeers *  blockPeers = malloc(sizeof(*blockPeers));
-	memcpy(blockPeers->hash, CBBlockGetHash(block), 20);
-	CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
-	CBAssociativeArrayInsert(&nodes[1]->blockPeers, blockPeers, CBAssociativeArrayFind(&nodes[1]->blockPeers, blockPeers).position, NULL);
-	CBAssociativeArrayInsert(&nodes[1]->askedForBlocks, blockPeers, CBAssociativeArrayFind(&nodes[1]->askedForBlocks, blockPeers).position, NULL);
-	CBValidatorQueueBlock(CBGetNode(nodes[1])->validator, block, dummyPeer);
 	// Second block
 	CBBlock * block2 = CBNewBlock();
 	block2->prevBlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
-	CBReleaseObject(block);
 	block2->time = 1231471167;
 	block2->target = CB_MAX_TARGET;
 	block2->nonce = 2573394690;
@@ -876,15 +879,13 @@ void finishReceiveInitialTest(void * foo){
 	CBGetMessage(block2)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block2, true));
 	CBBlockSerialise(block2, true, true);
 	reorgTestBlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block2), 32);
-	// Add to node 1
-	// Add block to block peers and asked for blocks
-	blockPeers = malloc(sizeof(*blockPeers));
-	memcpy(blockPeers->hash, CBBlockGetHash(block2), 20);
-	CBInitAssociativeArray(&blockPeers->peers, CBPtrCompare, NULL, NULL);
-	CBAssociativeArrayInsert(&nodes[1]->blockPeers, blockPeers, CBAssociativeArrayFind(&nodes[1]->blockPeers, blockPeers).position, NULL);
-	CBAssociativeArrayInsert(&nodes[1]->askedForBlocks, blockPeers, CBAssociativeArrayFind(&nodes[1]->askedForBlocks, blockPeers).position, NULL);
-	CBValidatorQueueBlock(CBGetNode(nodes[1])->validator, block2, dummyPeer);
+	// Add blocks to node 1
+	nodes[1]->downloadingPeer = NULL;
+	CBValidatorQueueBlock(CBGetNode(nodes[1])->validator, block, nodes[1]);
+	CBValidatorQueueBlock(CBGetNode(nodes[1])->validator, block2, nodes[1]);
+	CBReleaseObject(block);
 	CBReleaseObject(block2);
+	return NULL;
 }
 
 void newBlock(CBNode *, CBBlock * block, uint32_t forkPoint);
@@ -971,6 +972,7 @@ void newBlock(CBNode * node, CBBlock * block, uint32_t forkPoint){
 
 void newTransaction(CBNode *, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details);
 void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details){
+	pthread_t thread;
 	CBNodeFull * nodeFull = CBGetNodeFull(node);
 	int nodeNum = (nodes[0] == nodeFull) ? 0 : ((nodes[1] == nodeFull)? 1 : 2);
 	CBMutexLock(testMutex);
@@ -1046,7 +1048,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 		}
 		gotTxNum++;
 		if (gotTxNum == 15 && receiveInitialBlocksAndTxs == COMPLETE_RECEIVE_INITAL)
-			CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, finishReceiveInitialTest, NULL, false);
+			pthread_create(&thread, NULL, finishReceiveInitialTest, NULL);
 	}else if (testPhase == CHAIN_REORGANISATION) {
 		uint8_t txNum;
 		for (uint8_t x = 0;; x++) {
@@ -1087,7 +1089,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 			exit(EXIT_FAILURE);
 		}
 		gotTxNum++;
-		maybeFinishReorgTest();
+		pthread_create(&thread, NULL, maybeFinishReorgTest, NULL);
 	}else if (testPhase == LOSE_CHAIN_AND_RELAY) {
 		if (memcmp(CBTransactionGetHash(tx), CBTransactionGetHash(chainDoubleSpend), 32)) {
 			CBLogError("LOSE CHAIN AND RELAY NEW TX HASH FAIL");
@@ -1114,7 +1116,7 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 			exit(EXIT_FAILURE);
 		}
 		gotTxNum++;
-		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
+		pthread_create(&thread, NULL, maybeFinishLoseTest, NULL);
 	}else if (testPhase == ORPHAN_TO_CHAIN){
 		for (uint8_t x = 0;; x++) {
 			if (memcmp(CBTransactionGetHash(tx), CBTransactionGetHash(doubleSpends[x]), 32) == 0) {
@@ -1177,13 +1179,14 @@ void newTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint3
 			exit(EXIT_FAILURE);
 		}
 		gotTxNum++;
-		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishOrphanTest, NULL, false);
+		pthread_create(&thread, NULL, maybeFinishOrphanTest, NULL);
 	}
 	CBMutexUnlock(testMutex);
 }
 
 void transactionConfirmed(CBNode *, uint8_t * txHash, uint32_t blockHeight);
 void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight){
+	pthread_t thread;
 	CBMutexLock(testMutex);
 	if (testPhase == CHAIN_REORGANISATION) {
 		if (blockHeight == 1001) {
@@ -1209,7 +1212,7 @@ void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight)
 			exit(EXIT_FAILURE);
 		}
 		confirmedNum++;
-		maybeFinishReorgTest();
+		pthread_create(&thread, NULL, maybeFinishReorgTest, NULL);
 	}else if (testPhase == LOSE_CHAIN_AND_RELAY){
 		for (uint8_t x = 0;; x += 2) { // tx 0 and 2 are reconfirmed
 			if (memcmp(txHash, CBTransactionGetHash(initialTxs[x]), 32) == 0)
@@ -1220,7 +1223,7 @@ void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight)
 			}
 		}
 		confirmedNum++;
-		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
+		pthread_create(&thread, NULL, maybeFinishLoseTest, NULL);
 	}else if (testPhase == ORPHAN_TO_CHAIN){
 		for (uint8_t x = 3;; x++) {
 			if (memcmp(txHash, CBTransactionGetHash(doubleSpends[x]), 32) == 0) {
@@ -1240,7 +1243,7 @@ void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight)
 			}
 		}
 		confirmedNum++;
-		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishOrphanTest, NULL, false);
+		pthread_create(&thread, NULL, maybeFinishOrphanTest, NULL);
 	}else{
 		CBLogError("TX CONFIRMED BAD TEST PHASE\n");
 		exit(EXIT_FAILURE);
@@ -1250,6 +1253,7 @@ void transactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight)
 
 void doubleSpend(CBNode *, uint8_t * txHash);
 void doubleSpend(CBNode * node, uint8_t * txHash){
+	pthread_t thread;
 	CBNodeFull * nodeFull = CBGetNodeFull(node);
 	int nodeNum = (nodes[0] == nodeFull)? 0 : ((nodes[1] == nodeFull)? 1 : 2);
 	CBMutexLock(testMutex);
@@ -1260,7 +1264,7 @@ void doubleSpend(CBNode * node, uint8_t * txHash){
 			exit(EXIT_FAILURE);
 		}
 		doubleSpendNum++;
-		maybeFinishReorgTest();
+		pthread_create(&thread, NULL, maybeFinishReorgTest, NULL);
 	}else if (testPhase == LOSE_CHAIN_AND_RELAY){
 		for (uint8_t x = 0;; x++) {
 			if (memcmp(txHash, CBTransactionGetHash(doubleSpends[x]), 32) == 0) {
@@ -1276,7 +1280,7 @@ void doubleSpend(CBNode * node, uint8_t * txHash){
 			}
 		}
 		doubleSpendNum++;
-		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
+		pthread_create(&thread, NULL, maybeFinishLoseTest, NULL);
 	}else if (testPhase == ORPHAN_TO_CHAIN){
 		if (memcmp(txHash, CBTransactionGetHash(chainDoubleSpend), 32) != 0) {
 			CBLogError("OPRHAN TO CHAIN TX DOUBLE SPEND HASH FAIL\n");
@@ -1287,7 +1291,7 @@ void doubleSpend(CBNode * node, uint8_t * txHash){
 			exit(EXIT_FAILURE);
 		}
 		doubleSpendNum++;
-		maybeFinishReorgTest();
+		pthread_create(&thread, NULL, maybeFinishOrphanTest, NULL);
 	}else{
 		CBLogError("DOUBLE SPEND BAD TEST PHASE\n");
 		exit(EXIT_FAILURE);
@@ -1297,6 +1301,7 @@ void doubleSpend(CBNode * node, uint8_t * txHash){
 
 void transactionUnconfirmed(CBNode *, uint8_t * txHash);
 void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
+	pthread_t thread;
 	CBNodeFull * nodeFull = CBGetNodeFull(node);
 	int nodeNum = (nodes[0] == nodeFull)? 0 : ((nodes[1] == nodeFull)? 1 : 2);
 	CBMutexLock(testMutex);
@@ -1312,7 +1317,7 @@ void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
 					exit(EXIT_FAILURE);
 				}
 				unconfirmedNum++;
-				maybeFinishReorgTest();
+				pthread_create(&thread, NULL, maybeFinishReorgTest, NULL);
 				break;
 			}
 			if (x == 2) {
@@ -1335,7 +1340,7 @@ void transactionUnconfirmed(CBNode * node, uint8_t * txHash){
 			}
 		}
 		unconfirmedNum++;
-		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, maybeFinishLoseTest, NULL, false);
+		pthread_create(&thread, NULL, maybeFinishLoseTest, NULL);
 	}else{
 		CBLogError("TX UNCONFIRMED BAD TEST PHASE\n");
 		exit(EXIT_FAILURE);
@@ -1356,15 +1361,6 @@ void CBNetworkCommunicatorStartListeningVoid(void * comm){
 int main(){
 	puts("You may need to move your mouse around if this test stalls.");
 	CBNewMutex(&testMutex);
-	// Make dummy peer for callback object
-	CBObject * dummyAddr = malloc(sizeof(*dummyAddr));
-	CBInitObject(dummyAddr, false);
-	dummyPeer = CBNewPeer(CBGetNetworkAddress(dummyAddr));
-	dummyPeer->downloading = false;
-	dummyPeer->allowNewBranch = true;
-	dummyPeer->branchWorkingOn = CB_NO_BRANCH;
-	dummyPeer->upToDate = true;
-	CBReleaseObject(dummyAddr);
 	// Create three nodes to talk to each other
 	CBDepObject databases[3];
 	CBNodeCallbacks callbacks = {
@@ -1373,7 +1369,8 @@ int main(){
 		newTransaction,
 		transactionConfirmed,
 		doubleSpend,
-		transactionUnconfirmed
+		transactionUnconfirmed,
+		uptodate
 	};
 	for (uint8_t x = 0; x < 3; x++) {
 		char directory[5], filename[26];
@@ -1387,8 +1384,8 @@ int main(){
 		remove(filename);
 		sprintf(filename, "%s/cbitcoin/val_0.dat", directory);
 		remove(filename);
-		for (uint8_t y = 0; y < 22; y++) {
-			sprintf(filename, "%s/cbitcoin/idx_%u_0.dat", directory, x);
+		for (uint8_t y = 0; y < 19; y++) {
+			sprintf(filename, "%s/cbitcoin/idx_%u_0.dat", directory, y);
 			remove(filename);
 		}
 		CBNewStorageDatabase(&databases[x], directory, 10000000, 10000000);
@@ -1400,17 +1397,20 @@ int main(){
 		CBNetworkCommunicator * comm = CBGetNetworkCommunicator(nodes[x]);
 		comm->maxConnections = 3;
 		comm->maxIncommingConnections = 3;
-		comm->recvTimeOut = 0;
-		comm->responseTimeOut = 0;
-		comm->sendTimeOut = 0;
-		comm->timeOut = 0;
-		comm->heartBeat = 0;
-		comm->connectionTimeOut = 0;
+		comm->responseTimeOut = 5000;
 		CBNetworkCommunicatorSetUserAgent(comm, userAgent);
 		CBNetworkCommunicatorSetOurIPv4(comm, addr);
 		CBNetworkCommunicatorSetReachability(comm, CB_IP_IP4 | CB_IP_LOCAL, true);
 		// Disable POW check
 		CBGetNode(nodes[x])->validator->flags |= CB_VALIDATOR_DISABLE_POW_CHECK;
+		// If debug, disable timeouts
+		#ifdef CBDEBUG
+		comm->connectionTimeOut = 0;
+		comm->recvTimeOut = 0;
+		comm->responseTimeOut = 0;
+		comm->sendTimeOut = 0;
+		comm->timeOut = 0;
+		#endif
 	}
 	// Give node 0 the addresses for node 1 and 2
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);

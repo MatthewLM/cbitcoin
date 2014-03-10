@@ -65,7 +65,7 @@ int main(){
 	uint8_t * hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_NETWORK_PRODUCTION, false);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PREFIX_PRODUCTION_ADDRESS, false);
 	free(hash);
 	v = CBChecksumBytesGetPrefix(CBGetChecksumBytes(add));
 	if (v != CB_PREFIX_PRODUCTION_ADDRESS) {
@@ -76,7 +76,7 @@ int main(){
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = rand();
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_NETWORK_TEST, false);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PREFIX_TEST_ADDRESS, false);
 	free(hash);
 	v = CBChecksumBytesGetPrefix(CBGetChecksumBytes(add));
 	if (v != CB_PREFIX_TEST_ADDRESS) {
@@ -88,7 +88,7 @@ int main(){
 	hash = malloc(20);
 	for (int x = 0; x < 20; x++)
 		hash[x] = x;
-	add = CBNewAddressFromRIPEMD160Hash(hash, CB_NETWORK_PRODUCTION, false);
+	add = CBNewAddressFromRIPEMD160Hash(hash, CB_PREFIX_PRODUCTION_ADDRESS, false);
 	free(hash);
 	str = CBChecksumBytesGetString(CBGetChecksumBytes(add));
 	if (strcmp((char *)CBByteArrayGetData(str), "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB")){

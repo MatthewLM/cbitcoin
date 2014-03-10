@@ -616,6 +616,15 @@ CBCompare CBKeyCompare(CBAssociativeArray * self, void * key1, void * key2){
 		return CB_COMPARE_EQUAL;
 	return CB_COMPARE_LESS_THAN;
 }
+CBCompare CBFixedKeyCompare(CBAssociativeArray * self, void * key1, void * key2){
+	uint8_t size = *(uint8_t *)self->compareObject;
+	int cmp = memcmp(key1, key2, size);
+	if (cmp > 0)
+		return CB_COMPARE_MORE_THAN;
+	if (! cmp)
+		return CB_COMPARE_EQUAL;
+	return CB_COMPARE_LESS_THAN;
+}
 void * CBRangeIteratorGetPointer(CBRangeIterator * it){
 	return it->pos.node->elements[it->pos.index];
 }

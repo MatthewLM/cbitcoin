@@ -43,5 +43,7 @@ void CBFreeSecureRandomGenerator(CBDepObject gen){
 }
 bool CBGet32RandomBytes(uint8_t * bytes){
 	FILE * f = fopen("/dev/random", "r");
-	return fread(bytes, 1, 32, f) == 32;
+	bool result = fread(bytes, 1, 32, f) == 32;
+	fclose(f);
+	return result;
 }

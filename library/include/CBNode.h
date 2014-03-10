@@ -52,6 +52,7 @@ typedef struct{
 	void (*transactionConfirmed)(CBNode *, uint8_t * txHash, uint32_t blockHeight);
 	void (*doubleSpend)(CBNode *, uint8_t * txHash);
 	void (*transactionUnconfirmed)(CBNode *, uint8_t * txHash);
+	void (*uptodate)(CBNode *, bool); /**< Called after the uptodate status changes. True if uptodate and false if we need updating from peer. */
 } CBNodeCallbacks;
 
 typedef struct CBMessageQueue CBMessageQueue;
@@ -114,10 +115,11 @@ void CBFreeNode(void * self);
 
 // Functions
 
-void CBNodeDisconnectPeer(void * vpeer);
+void CBNodeDisconnectPeer(CBPeer * peer);
+void CBNodeDisconnectPeerRun(void * vpeer);
 void CBNodeOnBadTime(void * self);
 CBOnMessageReceivedAction CBNodeOnMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * message);
-void CBNodeOnValidatorError(void *);
+void CBNodeOnValidatorError(void * vself);
 CBOnMessageReceivedAction CBNodeProcessAlert(CBNode * self, CBPeer * peer, CBAlert * alert);
 void CBNodeProcessMessages(void * node);
 CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err);

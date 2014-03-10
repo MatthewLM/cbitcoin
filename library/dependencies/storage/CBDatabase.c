@@ -19,6 +19,8 @@
 #include "CBDatabase.h"
 #include <assert.h>
 
+uint8_t deletionIndexLength = 11;
+
 bool CBNewStorageDatabase(CBDepObject * database, char * dataDir, uint32_t commitGap, uint32_t cacheLimit){
 	database->ptr = CBNewDatabase(dataDir, "cbitcoin", CB_DATABASE_EXTRA_DATA_SIZE, commitGap, cacheLimit);
 	return database->ptr != NULL;
@@ -71,7 +73,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t e
 		return false;
 	}
 	// Load deletion index
-	CBInitAssociativeArray(&self->deletionIndex, CBKeyCompare, NULL, free);
+	CBInitAssociativeArray(&self->deletionIndex, CBFixedKeyCompare, &deletionIndexLength, free);
 	strcat(filename, "del.dat");
 	// Check that the index exists
 	if (! access(filename, F_OK)) {
@@ -426,10 +428,9 @@ bool CBDatabaseReadAndOpenDeletionIndex(CBDatabase * self, char * filename){
 			CBLogError("Could not read entry from the database deletion index.");
 			return false;
 		}
-		// The key length is 11.
-		section->key[0] = 11;
 		// Add data to index
-		memcpy(section->key + 1, data, 11);
+		memcpy(section->key, data, 11);
+		assert(CBArrayToInt32BigEndian(section->key, CB_DELETION_KEY_LENGTH) < 0xf0000000);
 		section->indexPos = x;
 		CBAssociativeArrayInsert(&self->deletionIndex, section->key, CBAssociativeArrayFind(&self->deletionIndex, section->key).position, NULL);
 	}
@@ -550,13 +551,16 @@ void CBFreeDatabaseRangeIterator(CBDatabaseRangeIterator * it){
 bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len){
 	// First look for inactive deletion that can be used.
 	CBPosition res;
-	if (CBAssociativeArrayGetFirst(&self->deletionIndex, &res) && ! ((uint8_t *)res.node->elements[0])[1]) {
+	if (CBAssociativeArrayGetFirst(&self->deletionIndex, &res)
+		// Got first section, now check to see if it is active
+		&& ! ((uint8_t *)res.node->elements[0])[CB_DELETION_KEY_ACTIVE]) {
 		// Inactive deletion entry. We will use this one.
 		CBDeletedSection * section = (CBDeletedSection *)res.node->elements[0];
-		section->key[1] = 1; // Re-activate.
-		CBInt32ToArrayBigEndian(section->key, 2, len);
-		CBInt16ToArray(section->key, 6, fileID);
-		CBInt32ToArray(section->key, 8, pos);
+		section->key[CB_DELETION_KEY_ACTIVE] = 1; // Re-activate.
+		assert(len < 0xf0000000);
+		CBInt32ToArrayBigEndian(section->key, CB_DELETION_KEY_LENGTH, len);
+		CBInt16ToArray(section->key, CB_DELETION_KEY_FILE_ID, fileID);
+		CBInt32ToArray(section->key, CB_DELETION_KEY_OFFSET, pos);
 		// Remove from index
 		res.index = 0;
 		CBAssociativeArrayDelete(&self->deletionIndex, res, false);
@@ -564,7 +568,7 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
 		CBAssociativeArrayInsert(&self->deletionIndex, section->key, CBAssociativeArrayFind(&self->deletionIndex, (uint8_t *)section).position, NULL);
 		// Overwrite deletion index
 		uint8_t data[11];
-		memcpy(data, section->key + 1, 11);
+		memcpy(data, section->key, 11);
 		if (! CBDatabaseAddOverwrite(self, CB_DATABASE_FILE_TYPE_DELETION_INDEX, 0, 0, data, 4 + section->indexPos * 11, 11)) {
 			CBLogError("There was an error when adding a deletion entry by overwritting an inactive one.");
 			return false;
@@ -572,18 +576,18 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
 	}else{
 		// We need a new entry.
 		CBDeletedSection * section = malloc(sizeof(*section));
-		section->key[0] = 11;
-		section->key[1] = 1;
-		CBInt32ToArrayBigEndian(section->key, 2, len);
-		CBInt16ToArray(section->key, 6, fileID);
-		CBInt32ToArray(section->key, 8, pos);
+		section->key[CB_DELETION_KEY_ACTIVE] = 1;
+		assert(len < 0xf0000000);
+		CBInt32ToArrayBigEndian(section->key, CB_DELETION_KEY_LENGTH, len);
+		CBInt16ToArray(section->key, CB_DELETION_KEY_FILE_ID, fileID);
+		CBInt32ToArray(section->key, CB_DELETION_KEY_OFFSET, pos);
 		section->indexPos = self->numDeletionValues;
 		// Insert the entry into the array
 		CBAssociativeArrayInsert(&self->deletionIndex, section->key, CBAssociativeArrayFind(&self->deletionIndex, section->key).position, NULL);
 		self->numDeletionValues++;
 		// Append deletion index
 		uint8_t data[11];
-		memcpy(data, section->key + 1, 11);
+		memcpy(data, section->key, 11);
 		if (! CBDatabaseAppend(self, CB_DATABASE_FILE_TYPE_DELETION_INDEX, 0, 0, data, 11)) {
 			CBLogError("There was an error when adding a deletion entry by appending a new one.");
 			return false;
@@ -616,7 +620,7 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
 	CBInt32ToArray(dataTempMeta, CB_OVERWRITE_LOG_LENGTH, dataLen);
 	// Write old data ??? Change to have old data as input to function
 	if (! CBFileSeek(file, offset, SEEK_SET)){
-		CBLogError("Could not seek to the read position for previous data in a file to be overwritten.");
+		CBLogError("Could not seek to the read position for previous data in a file to be overwritten. Trying to read at %u of file %u of type %u (index = %u)", offset, fileID, fileType, (index) ? index->ID : 0);
 		free(dataTemp);
 		return false;
 	}
@@ -653,9 +657,9 @@ bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CB
 		// ??? Is there a more effecient method for changing the key of the associative array than deleting and re-inserting with new key?
 		// Found a deleted section we can use for the data
 		CBDeletedSection * section = (CBDeletedSection *)CBFindResultToPointer(res);
-		uint32_t sectionLen = CBArrayToInt32BigEndian(section->key, 2);
-		uint16_t sectionFileID = CBArrayToInt16(section->key, 6);
-		uint32_t sectionOffset = CBArrayToInt32(section->key, 8);
+		uint32_t sectionLen = CBArrayToInt32BigEndian(section->key, CB_DELETION_KEY_LENGTH);
+		uint16_t sectionFileID = CBArrayToInt16(section->key, CB_DELETION_KEY_FILE_ID);
+		uint32_t sectionOffset = CBArrayToInt32(section->key, CB_DELETION_KEY_OFFSET);
 		uint32_t newSectionLen = sectionLen - dataSize;
 		// Use the section
 		if (! CBDatabaseAddOverwrite(self, CB_DATABASE_FILE_TYPE_DATA, 0, sectionFileID, data, sectionOffset + newSectionLen, dataSize)){
@@ -671,13 +675,14 @@ bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CB
 		CBAssociativeArrayDelete(&self->deletionIndex, res.position, false);
 		if (newSectionLen){
 			// Change deletion section length
-			CBInt32ToArrayBigEndian(section->key, 2, newSectionLen);
+			assert(newSectionLen < 0xf0000000);
+			CBInt32ToArrayBigEndian(section->key, CB_DELETION_KEY_LENGTH, newSectionLen);
 		}else
 			// Make deleted section inactive.
-			section->key[1] = 0; // Not active
+			section->key[CB_DELETION_KEY_ACTIVE] = 0; // Not active
 		// Re-insert into array
 		CBAssociativeArrayInsert(&self->deletionIndex, section->key, CBAssociativeArrayFind(&self->deletionIndex, section->key).position, NULL);
-		if (! CBDatabaseAddOverwrite(self, CB_DATABASE_FILE_TYPE_DELETION_INDEX, 0, 0, section->key + 1, 4 + 11 * section->indexPos, 5)) {
+		if (! CBDatabaseAddOverwrite(self, CB_DATABASE_FILE_TYPE_DELETION_INDEX, 0, 0, section->key, 4 + 11 * section->indexPos, 5)) {
 			CBLogError("Failed to add an overwrite operation to update the deletion index for writting data to a deleted section");
 			return false;
 		}
@@ -1472,8 +1477,8 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length){
 	CBFindResult res;
 	if (CBAssociativeArrayGetLast(&self->deletionIndex, &res.position)) {
 		// Found when there are elements, the deleted section is active and the deleted section length is equal or greater to "length".
-		res.found = ((uint8_t *)CBFindResultToPointer(res))[1]
-		&& CBArrayToInt32BigEndian(((uint8_t *)CBFindResultToPointer(res)), 2) >= length;
+		res.found = ((uint8_t *)CBFindResultToPointer(res))[CB_DELETION_KEY_ACTIVE]
+		&& CBArrayToInt32BigEndian((uint8_t *)CBFindResultToPointer(res), CB_DELETION_KEY_LENGTH) >= length;
 	}else
 		res.found = false;
 	return res;
@@ -2547,14 +2552,13 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 	CBIndexTxData * indexTxData;
 	uint8_t * nextKey;
 	// Get the index tx data
-	if (staged)
-		CBMutexLock(index->database->stagedMutex);
+	CBDepObject mu = staged ? index->database->stagedMutex : index->database->currentMutex;
+	CBMutexLock(mu);
 	indexTxData = CBDatabaseGetIndexTxData(staged ? &index->database->staged : &index->database->current, index, false);
 	if (indexTxData) {
 		// If there is a delete entry, it cannot be found.
 		if (CBAssociativeArrayFind(&indexTxData->deleteKeys, key).found){
-			if (staged)
-				CBMutexUnlock(index->database->stagedMutex);
+			CBMutexUnlock(mu);
 			return CB_DATABASE_INDEX_NOT_FOUND;
 		}
 		// Look to see if this key is being changed to by searching changeKeysNew so that we use the old key for staged or disk.
@@ -2564,8 +2568,7 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 		indexTxData->changeKeysNew.compareFunc = CBNewKeyCompare;
 		// If there is a change key entry with this being the old key, without there being an entry with this as the new key, it cannot be found.
 		if (!ckres.found && CBAssociativeArrayFind(&indexTxData->changeKeysOld, key).found) {
-			if (staged)
-				CBMutexUnlock(index->database->stagedMutex);
+			CBMutexUnlock(mu);
 			return CB_DATABASE_INDEX_NOT_FOUND;
 		}
 		// Loop through write entrys
@@ -2584,8 +2587,7 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 			if (valOffset == CB_OVERWRITE_DATA) {
 				// Take data from this
 				memcpy(data, writeValue + offset, dataSize);
-				if (staged)
-					CBMutexUnlock(index->database->stagedMutex);
+				CBMutexUnlock(mu);
 				return CB_DATABASE_INDEX_FOUND;
 			}
 			// Read from this subsection write if possible
@@ -2616,7 +2618,7 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 							if (res.status == CB_DATABASE_INDEX_ERROR) {
 								CBLogError("Could not find an index value for reading.");
 								CBMutexUnlock(index->database->diskMutex);
-								CBMutexUnlock(index->database->stagedMutex);
+								CBMutexUnlock(mu);
 								return CB_DATABASE_INDEX_ERROR;
 							}
 							idxVal = res.data.el;
@@ -2624,7 +2626,7 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 								CBLogError("Could not open file for reading part of a value.");
 								CBReleaseObject(idxVal);
 								CBMutexUnlock(index->database->diskMutex);
-								CBMutexUnlock(index->database->stagedMutex);
+								CBMutexUnlock(mu);
 								return CB_DATABASE_INDEX_ERROR;
 							}
 						}
@@ -2637,17 +2639,18 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 						if (! CBFileSeek(file, idxVal->pos + readOffset, SEEK_SET)){
 							CBLogError("Could not read seek file for reading part of a value.");
 							CBMutexUnlock(index->database->diskMutex);
-							CBMutexUnlock(index->database->stagedMutex);
+							CBMutexUnlock(mu);
 							return CB_DATABASE_INDEX_ERROR;
 						}
 						if (! CBFileRead(file, data + dataOffset, readLen)) {
 							CBLogError("Could not read from file for value.");
 							CBMutexUnlock(index->database->diskMutex);
-							CBMutexUnlock(index->database->stagedMutex);
+							CBMutexUnlock(mu);
 							return CB_DATABASE_INDEX_ERROR;
 						}
 					}else if (CBDatabaseReadValue(index, nextKey, data + dataOffset, readLen, readOffset, true) != CB_DATABASE_INDEX_FOUND){
 						CBLogError("Could not read from staged changes for reading part of a value.");
+						CBMutexUnlock(mu);
 						return CB_DATABASE_INDEX_ERROR;
 					}
 				}
@@ -2657,12 +2660,13 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
 			if (CBAssociativeArrayRangeIteratorNext(&indexTxData->valueWrites, &it))
 				break;
 		}
-		if (highestWritten == 0)
+		if (highestWritten == 0) {
+			CBMutexUnlock(mu);
 			return CB_DATABASE_INDEX_FOUND;
+		}
 	}else
 		nextKey = key;
-	if (staged)
-		CBMutexUnlock(index->database->stagedMutex);
+	CBMutexUnlock(mu);
 	// Read in the rest of the data
 	if (! readyForNext) {
 		if (staged) {

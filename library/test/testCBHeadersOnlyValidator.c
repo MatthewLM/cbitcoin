@@ -125,7 +125,7 @@ uint64_t alreadyValidated(void * foo, CBTransaction * tx){
 }
 bool isOrphan(void *, CBBlock *);
 bool isOrphan(void * foo, CBBlock * block){
-	return true;
+	return finish(foo, block);
 }
 bool deleteBranchCallback(void *, uint8_t branch);
 bool deleteBranchCallback(void * foo, uint8_t branch){
@@ -172,7 +172,6 @@ int main(){
 		rmBlock,
 		finish,
 		invalidBlock,
-		noNewBranches,
 		onValidatorError
 	};
 	CBValidator * validator = CBNewValidator(storage, CB_VALIDATOR_HEADERS_ONLY, callbacks);

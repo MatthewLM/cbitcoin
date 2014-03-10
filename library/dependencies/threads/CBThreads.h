@@ -22,6 +22,25 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef CBDEBUG
+
+#include <execinfo.h>
+
+// Debug mutexes
+typedef struct{
+	pthread_mutex_t base;
+	char ** lockStack[5];
+	int lockStackBTSizes[5];
+	uint8_t lockStackSize;
+	uint16_t threadID; /**< ID of thread that last locked mutex */
+} CBMutex;
+
+#else
+
+typedef pthread_mutex_t CBMutex;
+
+#endif
+
 typedef struct{
 	pthread_t thread;
 	uint16_t ID;

@@ -1,45 +1,33 @@
 cbitcoin 2.0 - A Bitcoin Library In The C Programming Language
 ==========================================================
 
-cbitcoin is a bitcoin library written in standard C99. It is currently in development stage and should only be used experimentally. The purpose of the library is to make it easier for developers to create bitcoin applications and the library should be versatile enough to be used in many bitcoin projects. 
+cbitcoin is a bitcoin library written in standard C99 and is licensed under the GPLv3 with additional permissions. It is currently in development stage and should only be used experimentally. The purpose of the library is to make it easier for developers to create bitcoin applications and the library should be versatile enough to be used in many bitcoin projects.
 
-The features includes:
+The features include:
 
 * Bitcoin message structures including serialisation and deserialisation functions.
 * A bitcoin script interpreter.
-* Functions for building and verifying Merkle trees.
-* Basic functions which can be used in various validation models (full nodes, pruning nodes, SPV nodes or whatever).
-* Asynchronous networking code which provides a simple interface to the bitcoin network for sending and receiving messages.
-* Automatic bitcoin handshakes.
-* Automatic peer discovery.
-* Automatic pings.
+* Functions used for validation of POW, merkle trees, transactions etc.
+* Automated bitcoin handshakes, peer discovery and pings.
 * A network address manager.
-* Full block-chain validation.
-* Headers only validation.
+* Network seeding, including DNS.
+* Both full and headers only validation.
 * Transaction accounting.
 * A fully validating node.
 * Base-58 encoding/decoding.
 * Bitcoin address/WIF functions.
 * Hierarchical Deterministic keys (BIP0032)
-* Simple reference counting memory management.
 * Doxygen documentation and well-documented source code.
-* Purely standard C99 with weakly linked function prototypes for cryptography, PRNG, file-IO and network dependencies.
-* Implementations of the dependencies using libevent, OpenSSL and POSIX.
+* Dependencies can easily be swapped and changed by implementing weakly linked functions.
+* Implementations included that require libevent, OpenSSL and POSIX.
+* Very fast compilation. Much faster than the Satoshi client.
+* Client implementing bitcoin RPC protocol (Incomplete)
 * SPV validation (Planned)
 * SPV node (Planned)
 
 If you wish to contact the project leader, Matthew Mitchell, about this project please email cbitcoin@thelibertyportal.com
 
 **To help support cbitcoin financially, please send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9 Thank you**
-
-Contributors
-------------
-
-The following list is for all people that have contributed work that has been accepted into cbitcoin. Please consider making your own contribution to be added to the list.
-
-Matthew Mitchell <matthewmitchell@thelibertyportal.com> - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
-Christian von Roques  
-Andrew Miller <amiller@dappervision.com>
 
 Installation
 ------------
@@ -53,21 +41,28 @@ If you wish to test the library then type:
 
     make test
 
-You can also install individual tests such as `make bin/testCBAccounter`.
+You can install individual tests such as `make bin/testCBAccounter`.
 
 The configure script has the following additonal options:
 
  * `--disable-ec` cbitcoin produces two libraries, one for ordinary file IO and another for file IO with error correction. Both are built, but using this option means that the tests (except for testCBFile and testCBHamming72) and the cbitcoin client are linked without EC.
  * `--enable-debug` for debug builds, using `-g` instead of `-O3`.
+ * `--disable-werror` disables the -Werror flag.
 
-The library will be built into a ./bin directory; there is no install target yet.
+You can also change CFLAGS, LFLAGS and CC before running ./configure to make changes to how cbitcoin is built.
+
+The library will be built into a ./bin directory.
 
 If you are able to get it to work for other systems then please submit the changes. If you think you have found a debug, then you may wish to submit an issue on the gitbub repository page (https://github.com/MatthewLM/cbitcoin/). Otherwise you may wish to try to fix the problem yourself, in which case please submit fixes. You should check to see that the issue is not being worked upon already.
 
-License
--------
+Contributors
+------------
 
-cbitcoin is licensed under GPLv3, but contains additional permissions for linking to OpenSSL and for distributing covered works without needed to distribute the corresponding source. Please read the LICENSE file.
+The following list is for all people that have contributed work that has been accepted into cbitcoin. Please consider making your own contribution to be added to the list.
+
+Matthew Mitchell <matthewmitchell@thelibertyportal.com> - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
+Christian von Roques  
+Andrew Miller <amiller@dappervision.com>
 
 Making a Contribution
 ---------------------

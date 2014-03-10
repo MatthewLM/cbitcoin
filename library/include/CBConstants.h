@@ -32,7 +32,8 @@ struct CBForEachData{
 #define CB_PRODUCTION_NETWORK_BYTES 0xD9B4BEF9 // The normal network for trading
 #define CB_TEST_NETWORK_BYTES 0xDAB5BFFA // The network for testing
 #define CB_ONE_BITCOIN 100000000LL // Each bitcoin has 100 million satoshis (individual units).
-#define CB_24_HOURS 86400
+#define CB_HOUR 3600
+#define CB_24_HOURS 24*CB_HOUR
 #define CB_SCAN_START ((CB_NETWORK_TIME_ALLOWED_TIME_DRIFT + CB_BLOCK_ALLOWED_TIME_DRIFT)*2)
 #define CB_NO_SCAN 0xFFFFFFFFFFFFFFFF
 #define CB_MAX_MESSAGE_SIZE 0x02000000

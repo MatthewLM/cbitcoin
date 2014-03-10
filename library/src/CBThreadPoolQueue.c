@@ -83,9 +83,9 @@ void CBThreadPoolQueueAdd(CBThreadPoolQueue * self, CBQueueItem * item){
 		// Queue may change in the meantime but this wont cause any problems
 	}
 	CBWorker * worker = self->workers + workerI;
+	CBMutexLock(worker->queueMutex); // Must get queue mutex first before finish mutex.
 	CBMutexLock(self->finishMutex);
 	self->finished = false;
-	CBMutexLock(worker->queueMutex);
 	worker->queue.itemNum++;
 	if (!worker->queue.start) {
 		worker->queue.end = worker->queue.start = item;
@@ -98,7 +98,6 @@ void CBThreadPoolQueueAdd(CBThreadPoolQueue * self, CBQueueItem * item){
 	CBMutexUnlock(self->finishMutex);
 }
 void CBThreadPoolQueueClear(CBThreadPoolQueue * self){
-	CBMutexLock(self->finishMutex);
 	for (uint16_t x = 0; x < self->numThreads; x++) {
 		CBMutexLock(self->workers[x].queueMutex);
 		// Empty queue
@@ -106,6 +105,7 @@ void CBThreadPoolQueueClear(CBThreadPoolQueue * self){
 		self->workers[x].queue.itemNum = 0;
 		CBMutexUnlock(self->workers[x].queueMutex);
 	}
+	CBMutexLock(self->finishMutex);
 	self->finished = true;
 	CBConditionSignal(self->finishCond);
 	CBMutexUnlock(self->finishMutex);

@@ -8,13 +8,15 @@
 #  LICENSE file.
 
 
-# Flags
+# Setup
 
 INCDIR = $(CURDIR)/library/include
 BINDIR = $(CURDIR)/bin
 INCCLIENT = -I/$(CURDIR)/client-server/include
 LFLAGS += -L/opt/local/lib -L/usr/local/ssl/lib @CONFIGLFLAGS@
 CFLAGS += -I$(INCDIR) -I$(CURDIR)/library/dependencies/threads @CONFIGFLAGS@
+CC = @CC@
+
 ifndef OSTYPE
   OSTYPE = $(shell uname -s|awk '{print tolower($$0)}')
   #export OSTYPE
@@ -31,8 +33,6 @@ else # Assuming Linux for now
 	export LD_LIBRARY_PATH = $(BINDIR):/usr/local/lib
 	CFLAGS += -DCB_LINUX
 endif
-
-# Directory names
 
 # Set vpath search paths
 

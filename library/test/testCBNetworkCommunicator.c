@@ -244,7 +244,6 @@ int main(){
 	addrManListen->maxAddressesInBucket = 2;
 	CBNetworkCommunicatorCallbacks callbacks = {
 		onPeerWhatever,
-		onTimeOut,
 		acceptType,
 		onMessageReceived,
 		onNetworkError
