@@ -251,7 +251,7 @@ bool CBFileSeek(CBDepObject file, int32_t pos, int seek){
 		fileObj->cursor += pos;
 	else
 		fileObj->cursor = fileObj->dataLength + pos;
-	return ! fseek(fileObj->rdwr, 5 + pos / 8 * 9, SEEK_SET);
+	return ! fseek(fileObj->rdwr, 5 + fileObj->cursor / 8 * 9, SEEK_SET);
 }
 bool CBFileSync(CBDepObject file){
 	CBFile * fileObj = file.ptr;

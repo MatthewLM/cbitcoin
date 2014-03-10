@@ -354,7 +354,7 @@ void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, 
 	// Create output object
 	CBTransactionOutput * output = CBNewTransactionOutputFromData(outputBytes);
 	CBReleaseObject(outputBytes);
-	if (! CBTransactionOutputDeserialise(output)) {
+	if (CBTransactionOutputDeserialise(output) == CB_DESERIALISE_ERROR) {
 		CBLogError("Could not deserialise an unspent output");
 		CBReleaseObject(output);
 		return NULL;

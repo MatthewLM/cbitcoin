@@ -16,9 +16,9 @@
 #define CBTHREADSH
 
 #include "CBDependencies.h" // cbitcoin dependencies to implement
+#include "CBAssert.h"
 #include <pthread.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <unistd.h>
 

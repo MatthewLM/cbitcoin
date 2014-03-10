@@ -48,6 +48,7 @@ The configure script has the following additonal options:
  * `--disable-ec` cbitcoin produces two libraries, one for ordinary file IO and another for file IO with error correction. Both are built, but using this option means that the tests (except for testCBFile and testCBHamming72) and the cbitcoin client are linked without EC.
  * `--enable-debug` for debug builds, using `-g` instead of `-O3`.
  * `--disable-werror` disables the -Werror flag.
+ * `--disable-stack-protector` disables stack protection in the form of `-fstack-protector-strong` or `-fstack-protector-all` if strong is not available.
 
 You can also change CFLAGS, LFLAGS and CC before running ./configure to make changes to how cbitcoin is built.
 

@@ -21,6 +21,7 @@
 #define CBDATABASEH
 
 #include "CBDependencies.h"
+#include "CBAssert.h"
 #include "CBAssociativeArray.h"
 #include "CBFileDependencies.h"
 #include "CBValidator.h"

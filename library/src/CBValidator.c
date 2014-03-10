@@ -958,7 +958,7 @@ CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlock
 					CBLogError("Could not load a block from storage for validating onto the main chain.");
 					return CB_BLOCK_VALIDATION_ERR;
 				}
-				if (! CBBlockDeserialise(tempBlock, ! (self->flags & CB_VALIDATOR_HEADERS_ONLY))){
+				if (CBBlockDeserialise(tempBlock, ! (self->flags & CB_VALIDATOR_HEADERS_ONLY)) == CB_DESERIALISE_ERROR){
 					CBLogError("Could not deserailise a block to validate during reorganisation.");
 					return CB_BLOCK_VALIDATION_ERR;
 				}
@@ -1240,7 +1240,7 @@ bool CBValidatorUpdateMainChain(CBValidator * self, uint8_t branch, uint32_t blo
 		return false;
 	}
 	// Deserialise block
-	if (! CBBlockDeserialise(block, ! (self->flags & CB_VALIDATOR_HEADERS_ONLY))) {
+	if (CBBlockDeserialise(block, ! (self->flags & CB_VALIDATOR_HEADERS_ONLY)) == CB_DESERIALISE_ERROR) {
 		CBLogError("Could not open a block for re-organisation.");
 		return false;
 	}
