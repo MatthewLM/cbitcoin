@@ -42,6 +42,7 @@ typedef struct{
  @returns A new CBPingPong object.
 */
 CBPingPong * CBNewPingPong(uint64_t ID);
+
 /**
 @brief Creates a new CBPingPong object from serialised data.
  @param data Serialised CBPingPong data.
@@ -55,6 +56,7 @@ CBPingPong * CBNewPingPongFromData(CBByteArray * data);
  @param ID The identifier used in a ping/pong communcation. Use zero for no identification.
 */
 void CBInitPingPong(CBPingPong * self, uint64_t ID);
+
 /**
  @brief Initialises a CBPingPong object from serialised data
  @param self The CBPingPong object to initialise
@@ -67,6 +69,7 @@ void CBInitPingPongFromData(CBPingPong * self, CBByteArray * data);
  @param self The CBPingPong object to destroy.
  */
 void CBDestroyPingPong(void * self);
+
 /**
  @brief Frees a CBPingPong object and also calls CBDestroyPingPong.
  @param self The CBPingPong object to free.
@@ -81,6 +84,9 @@ void CBFreePingPong(void * self);
  @returns Length read if successful, zero otherwise.
 */
 uint32_t CBPingPongDeserialise(CBPingPong * self);
+
+void CBPingPongPrepareBytes(CBPingPong * self);
+
 /**
  @brief Serialises a CBPingPong to the byte data.
  @param self The CBPingPong object

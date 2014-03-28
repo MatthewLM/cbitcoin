@@ -104,6 +104,7 @@ struct CBAssociativeArray{
  @returns true if the final element has been found, or false if there are no elements to be found.
  */
 bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeIterator * it);
+
 /**
  @brief Iterates to the next element.
  @param self The array object
@@ -112,6 +113,7 @@ bool CBAssociativeArrayRangeIteratorLast(CBAssociativeArray * self, CBRangeItera
  */
 bool CBAssociativeArrayRangeIteratorNext(CBAssociativeArray * self, CBRangeIterator * it);
 bool CBAssociativeArrayRangeIteratorPrev(CBAssociativeArray * self, CBRangeIterator * it);
+
 /**
  @brief Starts the iteration between two elements
  @param self The array object
@@ -119,11 +121,13 @@ bool CBAssociativeArrayRangeIteratorPrev(CBAssociativeArray * self, CBRangeItera
  @returns true if an initial element has been found, or false if there are no elements to be found.
  */
 bool CBAssociativeArrayRangeIteratorStart(CBAssociativeArray * self, CBRangeIterator * it);
+
 /**
  @brief Clears an array of all elements.
  @param self The array object
  */
 void CBAssociativeArrayClear(CBAssociativeArray * self);
+
 /**
  @brief Deletes an element from an array.
  @param self The array object
@@ -131,6 +135,7 @@ void CBAssociativeArrayClear(CBAssociativeArray * self);
  @param doFree If true, this will call the onFree function for the element being removed.
  */
 void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool doFree);
+
 /**
  @brief Finds data for a key in the array
  @param self The array object
@@ -138,6 +143,7 @@ void CBAssociativeArrayDelete(CBAssociativeArray * self, CBPosition pos, bool do
  @returns The result of the find.
  */
 CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element);
+
 /**
  @brief Gets the element in the array at a specified index.
  @param self The array object
@@ -146,6 +152,7 @@ CBFindResult CBAssociativeArrayFind(CBAssociativeArray * self, void * element);
  @returns true if the element exists at the index, or false.
  */
 bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBPosition * it, uint32_t index);
+
 /**
  @brief Gets the first element (lowest key) in the array.
  @param self The array object
@@ -153,6 +160,7 @@ bool CBAssociativeArrayGetElement(CBAssociativeArray * self, CBPosition * it, ui
  @returns true if there is at least one element, or false.
  */
 bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it);
+
 /**
  @brief Gets the last element (highest key) in the array.
  @param self The array object
@@ -160,6 +168,7 @@ bool CBAssociativeArrayGetFirst(CBAssociativeArray * self, CBPosition * it);
  @returns true if there is at least one element, or false.
  */
 bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it);
+
 /**
  @brief Gets the last element (highest key) in the array.
  @param self The array object
@@ -167,6 +176,7 @@ bool CBAssociativeArrayGetLast(CBAssociativeArray * self, CBPosition * it);
  @returns true if there is at least one element, or false.
  */
 bool CBAssociativeArrayGet(CBAssociativeArray * self, CBPosition * it);
+
 /**
  @brief Inserts an element into an array.
  @param self The array object.
@@ -176,6 +186,7 @@ bool CBAssociativeArrayGet(CBAssociativeArray * self, CBPosition * it);
  */
 void CBAssociativeArrayInsert(CBAssociativeArray * self, void * element, CBPosition pos, CBBTreeNode * right);
 bool CBAssociativeArrayIsEmpty(CBAssociativeArray * self);
+
 /**
  @brief Iterates to the next element, in order.
  @param self The array object.
@@ -184,11 +195,13 @@ bool CBAssociativeArrayIsEmpty(CBAssociativeArray * self);
  */
 bool CBAssociativeArrayIterate(CBAssociativeArray * self, CBPosition * it);
 bool CBAssociativeArrayIterateBack(CBAssociativeArray * self, CBPosition * it);
+
 /**
  @brief Determines if an associative array is empty or not.
  @returns true if not empty and false if empty.
  */
 bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self);
+
 /**
  @brief Does a binary search on a B-tree node.
  @param array The array object.
@@ -197,17 +210,20 @@ bool CBAssociativeArrayNotEmpty(CBAssociativeArray * self);
  @returns The position and wether or not the key exists at this position.
  */
 void CBBTreeNodeBinarySearch(CBAssociativeArray * array, CBBTreeNode * node, void * key, CBFindResult * result);
+
 /**
  @brief Gets the pointer to an element from a CBFindResult
  @param res The CBFindResult.
  @returns The element pointer.
  */
 void * CBFindResultToPointer(CBFindResult res);
+
 /**
  @brief Frees an associative array and calls onFree for each element, unless onFree is NULL
  @param self The array object.
  */
 void CBFreeAssociativeArray(CBAssociativeArray * self);
+
 /**
  @brief Frees a B-tree node.
  @param self The node
@@ -216,6 +232,7 @@ void CBFreeAssociativeArray(CBAssociativeArray * self);
  @param elDel If true, delete elements.
  */
 void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildren);
+
 /**
  @brief Initialises an empty associative array.
  @param self The array object
@@ -224,6 +241,7 @@ void CBFreeBTreeNode(CBBTreeNode * self, void (*onFree)(void *), bool onlyChildr
  @param onFree Called for each element in the array when CBFreeAssociativeArray is called. The argument is the element. If assigned to NULL, instead nothing will happen.
  */
 void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(CBAssociativeArray *, void *, void *), void * compareObject, void (*onFree)(void *));
+
 /**
  @brief Reads the first byte in each key as the length, and then compares both keys from the remaining data.
  @param self The array object
@@ -233,6 +251,7 @@ void CBInitAssociativeArray(CBAssociativeArray * self, CBCompare (*compareFunc)(
  */
 CBCompare CBKeyCompare(CBAssociativeArray * self, void * key1, void * key2);
 CBCompare CBFixedKeyCompare(CBAssociativeArray * self, void * key1, void * key2);
+
 /**
  @brief Gets the element pointer from a CBRangeIterator
  @param it The iterator object.

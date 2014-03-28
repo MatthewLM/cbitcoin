@@ -44,11 +44,13 @@ typedef struct{
  @returns A new CBTransactionOutput object.
  */
 CBTransactionOutput * CBNewTransactionOutput(uint64_t value, CBScript * script);
+
 /**
  @brief Creates a new CBTransactionOutput object and does not retain the script object.
  @returns A new CBTransactionOutput object.
  */
 CBTransactionOutput * CBNewTransactionOutputTakeScript(uint64_t value, CBScript * script);
+
 /**
  @brief Creates a new CBTransactionOutput object from byte data. Should be serialised for object data.
  @returns A new CBTransactionOutput object.
@@ -60,11 +62,13 @@ CBTransactionOutput * CBNewTransactionOutputFromData(CBByteArray * data);
  @param self The CBTransactionOutput object to initialise.
  */
 void CBInitTransactionOutput(CBTransactionOutput * self, uint64_t value, CBScript * script);
+
 /**
  @brief Initialises a CBTransactionOutput object and does not retain the script object.
  @param self The CBTransactionOutput object to initialise.
  */
 void CBInitTransactionOutputTakeScript(CBTransactionOutput * self, uint64_t value, CBScript * script);
+
 /**
  @brief Initialises a CBTransactionOutput object.
  @param self The CBTransactionOutput object to initialise.
@@ -76,6 +80,7 @@ void CBInitTransactionOutputFromData(CBTransactionOutput * self, CBByteArray * d
  @param self The CBTransactionOutput object to destroy.
  */
 void CBDestroyTransactionOutput(void * self);
+
 /**
  @brief Frees a CBTransactionOutput object and also calls CBDestroyTransactionOutput.
  @param self The CBTransactionOutput object to free.
@@ -90,12 +95,14 @@ void CBFreeTransactionOutput(void * self);
  @returns The calculated length.
  */
 uint32_t CBTransactionOutputCalculateLength(CBTransactionOutput * self);
+
 /**
  @brief Deserialises a CBTransactionOutput so that it can be used as an object.
  @param self The CBTransactionOutput object
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self);
+
 /**
  @brief Create a hash that identifies this output by the public-key hash, the P2SH hash or twenty bytes of the SHA-256 of a multisig script. Nothing is set, if the output is not supported.
  @param self The CBTransactionOutput object.
@@ -103,12 +110,16 @@ uint32_t CBTransactionOutputDeserialise(CBTransactionOutput * self);
  @returns true on success, false on failure.
  */
 bool CBTransactionOuputGetHash(CBTransactionOutput * self, uint8_t * hash);
+
 /**
  @brief Determines the type of this output.
  @param self The CBTransactionOutput object
  @returns The transaction output type.
  */
 CBScriptOutputType CBTransactionOutputGetType(CBTransactionOutput * self);
+
+void CBTransactionOutputPrepareBytes(CBTransactionOutput * self);
+
 /**
  @brief Serialises a CBTransactionOutput to the byte data.
  @param self The CBTransactionOutput object

@@ -106,9 +106,11 @@ typedef struct{
  @brief Changes the number of unspent outputs for a transaction.
  @param storage The storage object
  @param txHash The hash of the transaction
- @param change This number will be added to the number of unspent outputs.
+ @param add If true add to the number, else take away.
  @returns true on success and false on failure.
  */
-bool CBBlockChainStorageChangeUnspentOutputsNum(CBBlockChainStorage * storage, uint8_t * txHash, int8_t change);
+bool CBBlockChainStorageChangeUnspentOutputsNum(CBBlockChainStorage * storage, uint8_t * txHash, bool add);
+
+uint32_t CBBlockChainStorageGetUInt32(CBBlockChainStorage * storage, uint8_t branch, uint32_t blockIndex, CBBlockOffsets offset);
 
 #endif

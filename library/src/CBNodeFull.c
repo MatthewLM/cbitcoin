@@ -363,6 +363,9 @@ bool CBNodeFullAddBlock(void * vself, uint8_t branch, CBBlock * block, uint32_t 
 				CBRetainObject(fndTx->utx.tx);
 				CBAssociativeArray * txArray = tx->ours ? &self->ourTxs : &self->otherTxs;
 				CBAssociativeArrayInsert(txArray, fndTx, CBAssociativeArrayFind(txArray, fndTx).position, NULL);
+				char txStr[CB_TX_HASH_STR_SIZE];
+				CBTransactionHashToString(fndTx->utx.tx, txStr);
+				CBLogVerbose("Added lost tx %s to unconfirmed.", txStr);
 				// If this was a chain dependency, move dependency data to CBFoundTransaction, else init empty dependant's array
 				CBFindResult res = CBAssociativeArrayFind(&self->chainDependencies, CBTransactionGetHash(fndTx->utx.tx));
 				if (res.found) {
@@ -581,7 +584,7 @@ CBErrBool CBNodeFullAddOurOrOtherFoundTransaction(CBNodeFull * self, bool ours, 
 		fndTx->utx.type = CB_TX_OURS;
 		CBAssociativeArrayInsert(&self->ourTxs, fndTx, CBAssociativeArrayFind(&self->ourTxs, fndTx).position, NULL);
 		// We save to storage
-		if (!CBNodeStorageAddOurTx(CBGetNode(self)->nodeStorage, utx.tx)){
+		if (!CBNodeStorageAddOurTx(CBGetNode(self)->nodeStorage, utx.tx)) {
 			CBLogError("Unable to add our transaction %s to storage.", txStr);
 			return CB_ERROR;
 		}
@@ -1873,6 +1876,9 @@ bool CBNodeFullRemoveUnconfTx(CBNodeFull * self, CBUnconfTransaction * txRm){
 			// Remove from ours or other array
 			CBAssociativeArray * arr = (uTx->type == CB_TX_OURS) ? &self->ourTxs : &self->otherTxs;
 			CBAssociativeArrayDelete(arr, CBAssociativeArrayFind(arr, fndTx).position, false);
+			char txStr[CB_TX_HASH_STR_SIZE];
+			CBTransactionHashToString(fndTx->utx.tx, txStr);
+			CBLogVerbose("Removed tx %s from unconfirmed.", txStr);
 			// Also delete from allChainFoundTxs if in there
 			CBFindResult res = CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx);
 			if (res.found)
@@ -2063,6 +2069,9 @@ bool CBNodeFullUnconfToChain(CBNodeFull * self, CBUnconfTransaction * uTx, uint3
 	// Remove from ours or other array
 	CBAssociativeArray * arr = (uTx->type == CB_TX_OURS) ? &self->ourTxs : &self->otherTxs;
 	CBAssociativeArrayDelete(arr, CBAssociativeArrayFind(arr, fndTx).position, false);
+	char txStr[CB_TX_HASH_STR_SIZE];
+	CBTransactionHashToString(fndTx->utx.tx, txStr);
+	CBLogVerbose("Removed tx %s from unconfirmed, added to chain.", txStr);
 	// Also delete from allChainFoundTxs if in there
 	CBFindResult res = CBAssociativeArrayFind(&self->allChainFoundTxs, fndTx);
 	if (res.found)

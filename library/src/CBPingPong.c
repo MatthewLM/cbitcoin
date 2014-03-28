@@ -18,42 +18,59 @@
 
 //  Constructors
 
-CBPingPong * CBNewPingPong(uint64_t ID){
+CBPingPong * CBNewPingPong(uint64_t ID) {
+	
 	CBPingPong * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreePingPong;
 	CBInitPingPong(self, ID);
+	
 	return self;
+	
 }
-CBPingPong * CBNewPingPongFromData(CBByteArray * data){
+
+CBPingPong * CBNewPingPongFromData(CBByteArray * data) {
+	
 	CBPingPong * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreePingPong;
 	CBInitPingPongFromData(self, data);
+	
 	return self;
+	
 }
 
 //  Initialisers
 
-void CBInitPingPong(CBPingPong * self, uint64_t ID){
+void CBInitPingPong(CBPingPong * self, uint64_t ID) {
+	
 	self->ID = ID;
 	CBInitMessageByObject(CBGetMessage(self));
+	
 }
-void CBInitPingPongFromData(CBPingPong * self, CBByteArray * data){
+
+void CBInitPingPongFromData(CBPingPong * self, CBByteArray * data) {
+	
 	CBInitMessageByData(CBGetMessage(self), data);
+	
 }
 
 //  Destructor
 
-void CBDestroyPingPong(void * self){
+void CBDestroyPingPong(void * self) {
+	
 	CBDestroyMessage(self);
+	
 }
-void CBFreePingPong(void * self){
+void CBFreePingPong(void * self) {
+	
 	CBDestroyPingPong(self);
 	free(self);
+	
 }
 
 //  Functions
 
-uint32_t CBPingPongDeserialise(CBPingPong * self){
+uint32_t CBPingPongDeserialise(CBPingPong * self) {
+	
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to deserialise a CBPingPong with no bytes.");
@@ -63,10 +80,21 @@ uint32_t CBPingPongDeserialise(CBPingPong * self){
 		CBLogError("Attempting to deserialise a CBPingPong with less than 8 bytes.");
 		return CB_DESERIALISE_ERROR;
 	}
+	
 	self->ID = CBByteArrayReadInt64(bytes, 0);
+	
 	return 8;
+	
 }
-uint8_t CBPingPongSerialise(CBPingPong * self){
+
+void CBPingPongPrepareBytes(CBPingPong * self) {
+	
+	CBMessagePrepareBytes(CBGetMessage(self), 8);
+	
+}
+
+uint8_t CBPingPongSerialise(CBPingPong * self) {
+	
 	CBByteArray * bytes = CBGetMessage(self)->bytes;
 	if (! bytes) {
 		CBLogError("Attempting to serialise a CBPingPong with no bytes.");
@@ -76,9 +104,13 @@ uint8_t CBPingPongSerialise(CBPingPong * self){
 		CBLogError("Attempting to serialise a CBPingPong with less than 8 bytes.");
 		return 0;
 	}
+	
 	CBByteArraySetInt64(bytes, 0, self->ID);
 	bytes->length = 8;
+	
 	CBGetMessage(self)->serialised = true;
+	
 	return 8;
+	
 }
 

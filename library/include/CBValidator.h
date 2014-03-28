@@ -190,6 +190,7 @@ bool CBInitValidator(CBValidator * self, CBDepObject storage, CBValidatorFlags f
  @param self The CBValidator object to destroy.
  */
 void CBDestroyValidator(void * vself);
+
 /**
  @brief Frees a CBValidator object and also calls CBDestroyValidator.
  @param self The CBValidator object to free.
@@ -202,6 +203,7 @@ void CBDestroyScriptProcessItem(void * vscriptItem);
 
 CBCompare CBPtrCompare(CBAssociativeArray *, void * ptr1, void * ptr2);
 bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block, void * callbackObj);
+
 /**
  @brief Adds a block to a branch.
  @param self The CBValidator object.
@@ -211,6 +213,7 @@ bool CBValidatorAddBlockDirectly(CBValidator * self, CBBlock * block, void * cal
  @returns true on success and false on failure.
  */
 bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * block, CBBigInt work);
+
 /**
  @brief Adds a block to the orphans.
  @param self The CBValidator object.
@@ -218,6 +221,7 @@ bool CBValidatorAddBlockToBranch(CBValidator * self, uint8_t branch, CBBlock * b
  @returns true on success and false on error.
  */
 bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block);
+
 /**
  @brief Does basic validation on a block. It does not check if a block is a duplicate so this should be checked beforehand. Do not request blocks that the node already owns.
  @param self The CBValidator object.
@@ -228,6 +232,7 @@ bool CBValidatorAddBlockToOrphans(CBValidator * self, CBBlock * block);
 CBBlockValidationResult CBValidatorBasicBlockValidation(CBValidator * self, CBBlock * block, uint64_t networkTime);
 CBErrBool CBValidatorBlockExists(CBValidator * self, uint8_t * hash);
 void CBValidatorBlockProcessThread(void * validator);
+
 /**
  @brief Completes the validation for a block during main branch extention or reorganisation.
  @param self The CBValidator object.
@@ -237,18 +242,21 @@ void CBValidatorBlockProcessThread(void * validator);
  @returns CB_BLOCK_VALIDATION_OK if the block passed validation, CB_BLOCK_VALIDATION_BAD if the block failed validation and CB_BLOCK_VALIDATION_ERR on an error.
  */
 CBBlockValidationResult CBValidatorCompleteBlockValidation(CBValidator * self, uint8_t branch, CBBlockQueueItem item, uint32_t height);
+
 /**
  @brief Gets the block height of the alst block in the main chain.
  @param self The CBValidator
  @returns The block height.
  */
 uint32_t CBValidatorGetBlockHeight(CBValidator * self);
+
 /**
  @brief Gets a chain descriptor object for the main chain.
  @param self The CBValidator
  @returns The chain descriptor or NULL on failure.
  */
 CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self, uint8_t branch, uint8_t * extraBlock);
+
 /**
  @brief Determines the point on chain1 where chain2 intersects (The fork point or where the second chain ends).
  @param chain1 The first chain to get the path point for.
@@ -256,6 +264,7 @@ CBChainDescriptor * CBValidatorGetChainDescriptor(CBValidator * self, uint8_t br
  @returns The point of intersection on the first chain.
  */
 CBChainPathPoint CBValidatorGetChainIntersection(CBChainPath * chain1, CBChainPath * chain2);
+
 /**
  @brief Gets the chain path for a branch going back down to the genesis branch.
  @param self The CBValidator object.
@@ -264,12 +273,14 @@ CBChainPathPoint CBValidatorGetChainIntersection(CBChainPath * chain1, CBChainPa
  @returns The chain path for the branch and block index going back to the genesis branch.
  */
 CBChainPath CBValidatorGetChainPath(CBValidator * self, uint8_t branch, uint32_t blockIndex);
+
 /**
  @brief Gets the chain path for the main chain.
  @param self The CBValidator object.
  @returns The chain path for the main chain.
  */
 CBChainPath CBValidatorGetMainChainPath(CBValidator * self);
+
 /**
  @brief Gets the mimimum time minus one allowed for a new block onto a branch.
  @param self The CBValidator object.
@@ -278,6 +289,7 @@ CBChainPath CBValidatorGetMainChainPath(CBValidator * self);
  @returns The time on success, or 0 on failure.
  */
 uint32_t CBValidatorGetMedianTime(CBValidator * self, uint8_t branch, uint32_t prevIndex);
+
 /**
  @brief Validates a transaction input.
  @param self The CBValidator object.
@@ -292,6 +304,7 @@ uint32_t CBValidatorGetMedianTime(CBValidator * self, uint8_t branch, uint32_t p
  */
 CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex, uint32_t inputIndex, uint64_t * value, uint32_t * sigOps);
 CBErrBool CBValidatorLoadUnspentOutputAndCheckMaturity(CBValidator * self, CBPrevOut prevOutRef, uint32_t blockHeight, CBTransactionOutput ** output);
+
 /**
  @brief Processes a block. Without calling CBValidatorBasicBlockValidation (should be called beforehand), blocks are validated, ensuring the integrity of the transaction data is OK, checking the block's proof of work and calculating the total branch work to the genesis block. If the block extends the main branch complete validation is done. If the block extends a branch to become the new main branch because it has the most work, a re-organisation of the block-chain is done. This function only calls the newBranchCallback and newValidBlock callbacks.
  @param self The CBValidator object.
@@ -299,6 +312,7 @@ CBErrBool CBValidatorLoadUnspentOutputAndCheckMaturity(CBValidator * self, CBPre
  @return @see CBBlockValidationResult
  */
 CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlockQueueItem item);
+
 /**
  @brief Processes a block into a branch. This is used once basic validation is done on a block and it is determined what branch it needs to go into and when this branch is ready to receive the block.
  @param self The CBValidator object.
@@ -313,6 +327,7 @@ CBBlockValidationResult CBValidatorProcessBlock(CBValidator * self, CBBlockQueue
 CBBlockValidationResult CBValidatorProcessIntoBranch(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint8_t prevBranch, uint32_t prevBlockIndex, uint32_t prevBlockTarget);
 void CBValidatorProcessScripts(CBThreadPoolQueue * threadPoolQueue, void * vScriptItem);
 bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackObj);
+
 /**
  @brief Saves the last validated blocks from startBranch to endBranch
  @param self The CBValidator object.
@@ -321,6 +336,7 @@ bool CBValidatorQueueBlock(CBValidator * self, CBBlock * block, void * callbackO
  @returns true if the function executed successfully or false on an error.
  */
 bool CBValidatorSaveLastValidatedBlocks(CBValidator * self, uint8_t branches);
+
 /**
  @brief Updates the unspent outputs and transaction index for a branch, for removing a block's transaction information.
  @param self The CBValidator object.
@@ -330,6 +346,7 @@ bool CBValidatorSaveLastValidatedBlocks(CBValidator * self, uint8_t branches);
  @returns true on successful execution or false on error.
  */
 bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint32_t blockIndex);
+
 /**
  @brief Updates the unspent outputs and transaction index for a branch, for adding a block's transaction information.
  @param self The CBValidator object.
@@ -341,6 +358,7 @@ bool CBValidatorRemoveBlockFromMainChain(CBValidator * self, CBBlockQueueItem it
  @returns true on successful execution or false on error.
  */
 bool CBValidatorAddBlockToMainChain(CBValidator * self, CBBlockQueueItem item, uint8_t branch, uint32_t blockIndex, CBAddBlockType addType);
+
 /**
  @brief Updates the unspent outputs and transaction index for a branch in reverse and loads a block to do this.
  @param self The CBValidator object.

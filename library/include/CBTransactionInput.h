@@ -54,11 +54,13 @@ typedef struct{
  @returns A new CBTransactionInput object.
  */
 CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+
 /**
  @brief Creates a new CBTransactionInput object and does not retain the prevOutHash and script.
  @returns A new CBTransactionInput object.
  */
 CBTransactionInput * CBNewTransactionInputTakeScriptAndHash(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+
 /**
  @brief Creates a new CBTransactionInput object from the byte data.
  @param data The byte data.
@@ -72,12 +74,14 @@ CBTransactionInput * CBNewTransactionInputFromData(CBByteArray * data);
  @returns true on success, false on failure.
  */
 void CBInitTransactionInput(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+
 /**
  @brief Initialises a CBTransactionInput object and does not retain the prevOutHash and script.
  @param self The CBTransactionInput object to initialise
  @returns true on success, false on failure.
  */
 void CBInitTransactionInputTakeScriptAndHash(CBTransactionInput * self, CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex);
+
 /**
  @brief Initialises a new CBTransactionInput object from the byte data.
  @param self The CBTransactionInput object to initialise
@@ -91,6 +95,7 @@ void CBInitTransactionInputFromData(CBTransactionInput * self, CBByteArray * dat
  @param self The CBTransactionInput object to free.
  */
 void CBDestroyTransactionInput(void * self);
+
 /**
  @brief Frees a CBTransactionInput object and also calls CBDestroyTransactionInput.
  @param self The CBTransactionInput object to free.
@@ -105,12 +110,16 @@ void CBFreeTransactionInput(void * self);
  @returns The calculated length.
  */
 uint32_t CBTransactionInputCalculateLength(CBTransactionInput * self);
+
 /**
  @brief Deserialises a CBTransactionInput so that it can be used as an object.
  @param self The CBTransactionInput object
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBTransactionInputDeserialise(CBTransactionInput * self);
+
+void CBTransactionInputPrepareBytes(CBTransactionInput * self);
+
 /**
  @brief Serialises a CBTransactionInput to the byte data.
  @param self The CBTransactionInput object

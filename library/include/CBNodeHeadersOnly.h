@@ -76,6 +76,7 @@ bool CBInitNodeHeadersOnly(CBNode * self, CBDepObject database, CBNodeFlags flag
  @param self The CBNode object to destroy.
  */
 void CBDestroyNodeHeadersOnly(void * self);
+
 /**
  @brief Frees a CBNode object and also calls CBDestroyNode.
  @param self The CBNode object to free.
@@ -98,18 +99,21 @@ bool CBNodeHeadersOnlyNewBranchCallback(void *, uint8_t branch, uint8_t parent, 
 bool CBNodeHeadersOnlyNewValidBlock(void *, uint8_t branch, CBBlock * block, uint32_t blockHeight, bool last);
 void CBNodeHeadersOnlyOnNetworkError(CBNetworkCommunicator * comm);
 void CBNodeHeadersOnlyOnTimeOut(CBNetworkCommunicator * comm, void * peer, CBTimeOutType type);
+
 /**
  @brief Frees data associated with the peer.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  */
 void CBNodeHeadersOnlyPeerFree(CBNetworkCommunicator * self, CBPeer * peer);
+
 /**
  @brief Setups the peer.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  */
 void CBNodeHeadersOnlyPeerSetup(CBNetworkCommunicator * self, CBPeer * peer);
+
 /**
  @brief Processes transactions, block headers, inventory broadcasts, header requests and data requests.
  @param self The CBNetworkCommunicator object.
@@ -118,6 +122,7 @@ void CBNodeHeadersOnlyPeerSetup(CBNetworkCommunicator * self, CBPeer * peer);
  */
 CBOnMessageReceivedAction CBNodeHeadersOnlyProcessMessage(CBNetworkCommunicator * self, CBPeer * peer);
 bool CBNodeHeadersOnlyScanBlock(CBNode * self, CBBlock * block, uint32_t blockHeight, uint8_t branch);
+
 /**
  @brief Sends data requested by an inventory broadcast.
  @param self The CBNetworkCommunicator object.
@@ -125,12 +130,14 @@ bool CBNodeHeadersOnlyScanBlock(CBNode * self, CBBlock * block, uint32_t blockHe
  @returns true if the peer was disconnected, or false otherwise.
  */
 bool CBNodeHeadersOnlySendRequestedData(CBNode * self, CBPeer * peer);
+
 /**
  @brief Same as CBNodeSendRequestedData but takes void pointers and does not return anything.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  */
 void CBNodeHeadersOnlySendRequestedDataVoid(void * self, void * peer);
+
 /**
  @brief Compares two transactions by their hash
  @param tx1 The first transaction.
@@ -138,6 +145,7 @@ void CBNodeHeadersOnlySendRequestedDataVoid(void * self, void * peer);
  @returns A CBCompare value corresponding to the transaction hashes.
  */
 CBCompare CBTransactionCompare(CBAssociativeArray * foo, void * tx1, void * tx2);
+
 /**
  @brief Compares a hash with a transaction's hash.
  @param hash A hash for a transaction.

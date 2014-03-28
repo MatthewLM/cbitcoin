@@ -19,13 +19,18 @@ FILE * logFile = NULL;
 
 // Implementation
 
-void CBLog(CBLogType type, char * prog, char * format, va_list argptr){
+void CBLog(CBLogType type, char * prog, char * format, va_list argptr) {
+	
 	char date[20];
+	bool err = type == CB_LOG_ERROR;
+	
 	time_t now = time(NULL);
 	strftime(date, sizeof(date), "%d/%m/%Y %H:%M:%S", gmtime(&now));
+	
 	pthread_mutex_lock(&logMutex);
-	bool err = type == CB_LOG_ERROR;
+	
 	CBPrintf(err, " %c | %-10s | %s GMT | %02u | ", type, prog, date, CBGetTID());
+	
 	// Write to buffer to replace new lines
 	va_list bufCount;
 	va_copy(bufCount, argptr);
@@ -33,19 +38,28 @@ void CBLog(CBLogType type, char * prog, char * format, va_list argptr){
 	va_end(bufCount);
 	vsprintf(buf, format, argptr);
 	va_end(argptr);
+	
+	// Only allow certain characters
+	CBSanitiseOutput(buf);
+	
+	// Set to begining of buffer
 	bufPtr = buf;
+	
 	for (;;){
 		char * nl = strchr(bufPtr, '\n');
 		if (nl != NULL)
 			*nl = '\0';
+		
 		CBPuts(bufPtr, err);
 		CBPuts("\n", err);
+		
 		if (nl != NULL) {
 			bufPtr = nl + 1;
 			CBPuts("   |            |                         |    | ", err);
 		}else
 			break;
 	}
+	
 	if (type == CB_LOG_ERROR) {
 		// Print stacktrace
 		void * array[20];
@@ -59,36 +73,47 @@ void CBLog(CBLogType type, char * prog, char * format, va_list argptr){
 		free(strings);
 		CBPuts("   |            |                         |    |\n", true);
 	}
+	
 	pthread_mutex_unlock(&logMutex);
+	
 }
 
-void CBLogError(char * format, ...){
+void CBLogError(char * format, ...) {
+	
 	va_list argptr;
     va_start(argptr, format);
 	CBLog(CB_LOG_ERROR, "cbitcoin", format, argptr);
+	
 }
 
-void CBLogWarning(char * format, ...){
+void CBLogWarning(char * format, ...) {
+	
 	va_list argptr;
     va_start(argptr, format);
 	CBLog(CB_LOG_WARNING, "cbitcoin", format, argptr);
+	
 }
 
-void CBLogVerbose(char * format, ...){
+void CBLogVerbose(char * format, ...) {
+	
 	va_list argptr;
     va_start(argptr, format);
 	CBLog(CB_LOG_VERBOSE, "cbitcoin", format, argptr);
+	
 }
 
-void CBLogFile(char * file){
+void CBLogFile(char * file) {
+	
 	// Set the file
 	if (logFile)
 		fclose(logFile);
 	logFile = fopen(file, "a");
 	fputs("\n\n\n\n\n", logFile);
+	
 }
 
-void CBPrintf(bool err, char * message, ...){
+void CBPrintf(bool err, char * message, ...) {
+	
 	va_list argptr;
     va_start(argptr, message);
 	if (logFile){
@@ -99,10 +124,13 @@ void CBPrintf(bool err, char * message, ...){
 	}
 	vfprintf(err ? stderr : stdout, message, argptr);
 	va_end(argptr);
+	
 }
 
-void CBPuts(char * message, bool err){
+void CBPuts(char * message, bool err) {
+	
 	if (logFile)
 		fputs(message, logFile);
 	fputs(message, err ? stderr : stdout);
+	
 }

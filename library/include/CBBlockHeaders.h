@@ -42,6 +42,7 @@ typedef struct{
  @returns A new CBBlockHeaders object.
 */
 CBBlockHeaders * CBNewBlockHeaders(void);
+
 /**
 @brief Creates a new CBBlockHeaders object from serialised data.
  @param data Serialised CBBlockHeaders data.
@@ -54,6 +55,7 @@ CBBlockHeaders * CBNewBlockHeadersFromData(CBByteArray * data);
  @param self The CBBlockHeaders object to initialise
 */
 void CBInitBlockHeaders(CBBlockHeaders * self);
+
 /**
  @brief Initialises a CBBlockHeaders object from serialised data
  @param self The CBBlockHeaders object to initialise
@@ -66,6 +68,7 @@ void CBInitBlockHeadersFromData(CBBlockHeaders * self, CBByteArray * data);
  @param self The CBBlockHeaders object to destory.
  */
 void CBDestroyBlockHeaders(void * self);
+
 /**
  @brief Frees a CBBlockHeaders object and also calls CBDestroyBlockHeaders.
  @param self The CBBlockHeaders object to free.
@@ -80,18 +83,23 @@ void CBFreeBlockHeaders(void * self);
  @param address The CBBlock to add.
  */
 void CBBlockHeadersAddBlockHeader(CBBlockHeaders * self, CBBlock * header);
+
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBBlockHeaders object.
  @returns The length
  */
 uint32_t CBBlockHeadersCalculateLength(CBBlockHeaders * self);
+
 /**
  @brief Deserialises a CBBlockHeaders so that it can be used as an object.
  @param self The CBBlockHeaders object
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self);
+
+void CBBlockHeadersPrepareBytes(CBBlockHeaders * self);
+
 /**
  @brief Serialises a CBBlockHeaders to the byte data.
  @param self The CBBlockHeaders object
@@ -99,6 +107,7 @@ uint32_t CBBlockHeadersDeserialise(CBBlockHeaders * self);
  @returns The length written on success, 0 on failure.
 */
 uint32_t CBBlockHeadersSerialise(CBBlockHeaders * self, bool force);
+
 /**
  @brief Takes a CBBlock for the block header list. This does not retain the CBBlock so you can pass an CBBlock into this while releasing control from the calling function.
  @param self The CBBlockHeaders object

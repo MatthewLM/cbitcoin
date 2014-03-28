@@ -45,6 +45,7 @@ typedef struct{
  @returns true on success and false on failure.
  */
 bool CBFileReadLength(FILE * rd, uint32_t * length);
+
 /**
  @brief Writes to a section were an overwrite or append will start midway through.
  @param rd The file pointer whcih is readable.

@@ -94,6 +94,22 @@ void stop(void * comm){
 	CBReleaseObject(comm);
 }
 
+void lockMessageProcessing(void);
+void lockMessageProcessing() {
+	
+	for (uint8_t x = 0; x < 3; x++)
+		CBMutexLock(CBGetNode(nodes[x])->messageProcessMutex);
+	
+}
+
+void unlockMessageProcessing(void);
+void unlockMessageProcessing() {
+	
+	for (uint8_t x = 0; x < 3; x++)
+		CBMutexUnlock(CBGetNode(nodes[x])->messageProcessMutex);
+	
+}
+
 pthread_mutex_t uptodateMutex[3] = {PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER};
 pthread_cond_t uptodateCond[3] = {PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER};
 bool uptodateBool[3] = {true, true, true};
@@ -122,8 +138,12 @@ void waitForDownloadEnd(void){
 }
 
 void * maybeFinishOrphanTest(void * foo);
-void * maybeFinishOrphanTest(void * foo){
+void * maybeFinishOrphanTest(void * foo) {
+	
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 5 && doubleSpendNum == 2 && confirmedNum == 4) {
+		
+		lockMessageProcessing();
+		
 		// Ensure validation is complete for second node, so that all double spends are processed
 		CBMutexLock(CBGetNode(nodes[1])->blockAndTxMutex);
 		CBMutexUnlock(CBGetNode(nodes[1])->blockAndTxMutex);
@@ -217,13 +237,20 @@ void * maybeFinishOrphanTest(void * foo){
 		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[0])->eventLoop, stop, nodes[0], false);
 		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[1])->eventLoop, stop, nodes[1], false);
 		CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[2])->eventLoop, stop, nodes[2], false);
+		
+		unlockMessageProcessing();
+		
 	}
 	return NULL;
 }
 
 void * maybeFinishLoseTest(void * foo);
-void * maybeFinishLoseTest(void * foo){
+void * maybeFinishLoseTest(void * foo) {
+	
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 2 && doubleSpendNum == 4 && unconfirmedNum == 4 && confirmedNum == 2) {
+		
+		lockMessageProcessing();
+		
 		// Make sure node 0 has processed tx 0, as it needs to be confirmed to ensure the number of unconf dependencies is OK for tx 4, ie. 0.
 		CBMutexLock(CBGetNode(nodes[0])->blockAndTxMutex);
 		CBMutexUnlock(CBGetNode(nodes[0])->blockAndTxMutex);
@@ -313,12 +340,14 @@ void * maybeFinishLoseTest(void * foo){
 			printf("INITIAL ALL BALANCE FAIL %" PRIu64 " != 1875000000\n", cbalance);
 			exit(EXIT_FAILURE);
 		}
+		unlockMessageProcessing();
 		CBLogVerbose("LOSE_CHAIN_AND_RELAY complete.");
 		gotTxNum = 0;
 		chainReorg = 0;
 		confirmedNum = 0;
 		doubleSpendNum = 0;
 		waitForDownloadEnd();
+		lockMessageProcessing();
 		// Test giving orphan transaction to node 0, and then giving a false dependency.
 		CBTransaction * falseTx = CBNewTransaction(19, 1);
 		CBGetMessage(falseTx)->type = CB_MESSAGE_TYPE_TX;
@@ -328,7 +357,7 @@ void * maybeFinishLoseTest(void * foo){
 		CBScript * script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys + 1));
 		CBTransactionTakeOutput(falseTx, CBNewTransactionOutput(312500000, script));
 		CBTransactionSignPubKeyHashInput(falseTx, keys + 1, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(falseTx);
+		CBTransactionPrepareBytes(falseTx);
 		CBTransactionSerialise(falseTx, true);
 		CBTransaction * orphan = CBNewTransaction(20, 1);
 		CBGetMessage(orphan)->type = CB_MESSAGE_TYPE_TX;
@@ -342,7 +371,7 @@ void * maybeFinishLoseTest(void * foo){
 		CBReleaseObject(script);
 		CBTransactionSignPubKeyHashInput(orphan, keys, initialTxs[4]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
 		CBTransactionSignPubKeyHashInput(orphan, keys + 1, falseTx->outputs[0]->scriptObject, 1, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(orphan);
+		CBTransactionPrepareBytes(orphan);
 		CBTransactionSerialise(orphan, true);
 		// Get some peer for node 0
 		CBPosition pos;
@@ -376,7 +405,7 @@ void * maybeFinishLoseTest(void * foo){
 		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 		CBTransactionTakeOutput(falseTx, CBNewTransactionOutput(312500000, script));
 		CBTransactionSignPubKeyHashInput(falseTx, keys + 1, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(falseTx);
+		CBTransactionPrepareBytes(falseTx);
 		CBTransactionSerialise(falseTx, true);
 		if (CBNodeFullNewUnconfirmedTransaction(nodes[0], peer, falseTx) != CB_TRUE){
 			CBLogError("PROCESS FALSE TX 2 ERROR");
@@ -394,7 +423,7 @@ void * maybeFinishLoseTest(void * foo){
 		script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 		CBTransactionTakeOutput(orphanSpendOtherBranch, CBNewTransactionOutput(312500000, script));
 		CBTransactionSignPubKeyHashInput(orphanSpendOtherBranch, keys, doubleSpends[2]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(orphanSpendOtherBranch);
+		CBTransactionPrepareBytes(orphanSpendOtherBranch);
 		CBTransactionSerialise(orphanSpendOtherBranch, true);
 		CBGetMessage(orphanSpendOtherBranch)->type = CB_MESSAGE_TYPE_TX;
 		if (CBNodeFullNewUnconfirmedTransaction(nodes[0], peer, orphanSpendOtherBranch) != CB_TRUE){
@@ -425,7 +454,7 @@ void * maybeFinishLoseTest(void * foo){
 		script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 		CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 		CBReleaseObject(script);
-		CBTransactionMakeBytes(block->transactions[0]);
+		CBTransactionPrepareBytes(block->transactions[0]);
 		CBTransactionSerialise(block->transactions[0], false);
 		// Add transactions 0 and 2
 		block->transactions[1] = initialTxs[0];
@@ -457,7 +486,7 @@ void * maybeFinishLoseTest(void * foo){
 		script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 		CBTransactionTakeOutput(block2->transactions[0], CBNewTransactionOutput(1250000000, script));
 		CBReleaseObject(script);
-		CBTransactionMakeBytes(block2->transactions[0]);
+		CBTransactionPrepareBytes(block2->transactions[0]);
 		CBTransactionSerialise(block2->transactions[0], false);
 		// Add orphan
 		block2->transactions[1] = orphanSpendOtherBranch;
@@ -468,13 +497,19 @@ void * maybeFinishLoseTest(void * foo){
 		// Add to node 0
 		CBValidatorQueueBlock(CBGetNode(nodes[0])->validator, block2, nodes[0]);
 		CBReleaseObject(block2);
+		
+		unlockMessageProcessing();
+		
 	}
 	return NULL;
 }
 
 void * maybeFinishReorgTest(void * foo);
-void * maybeFinishReorgTest(void * foo){
+void * maybeFinishReorgTest(void * foo) {
 	if (chainReorg == COMPLETE_CHAIN_REORGANISATION && gotTxNum == 8 && doubleSpendNum == 4 && confirmedNum == 4 && unconfirmedNum == 2) {
+		
+		lockMessageProcessing();
+		
 		for (uint8_t x = 0; x < 3; x++) {
 			CBNodeFull * node = nodes[x];
 			if (CBGetNetworkCommunicator(node)->blockHeight != 1002) {
@@ -554,6 +589,9 @@ void * maybeFinishReorgTest(void * foo){
 			printf("CHAIN REORGANISATION ALL BALANCE FAIL %" PRIu64 " != 2031250000\n", cbalance);
 			exit(EXIT_FAILURE);
 		}
+		
+		unlockMessageProcessing();
+		
 		CBLogVerbose("CHAIN_REORGANISATION complete.");
 		testPhase = LOSE_CHAIN_AND_RELAY;
 		chainReorg = 0;
@@ -561,7 +599,10 @@ void * maybeFinishReorgTest(void * foo){
 		unconfirmedNum = 0;
 		confirmedNum = 0;
 		doubleSpendNum = 0;
+		
 		waitForDownloadEnd();
+		lockMessageProcessing();
+		
 		// Test double spending one of the transactions on the chain with two dependants on the chain.
 		// Test unconfirming a transaction with two dependants, and that are not dependencies of any unconfirmed transactions
 		// Test re-relaying unconfirmed transactions and losing some due to oldness.
@@ -589,7 +630,7 @@ void * maybeFinishReorgTest(void * foo){
 		script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 		CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 		CBReleaseObject(script);
-		CBTransactionMakeBytes(block->transactions[0]);
+		CBTransactionPrepareBytes(block->transactions[0]);
 		CBTransactionSerialise(block->transactions[0], false);
 		// Double spend the first double spend on the other chain
 		block->transactions[1] = CBNewTransaction(14, 1);
@@ -600,7 +641,7 @@ void * maybeFinishReorgTest(void * foo){
 		CBTransactionTakeOutput(block->transactions[1], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
 		CBTransactionSignPubKeyHashInput(block->transactions[1], keys + 2, initialTxs[1]->outputs[3]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(block->transactions[1]);
+		CBTransactionPrepareBytes(block->transactions[1]);
 		CBTransactionSerialise(block->transactions[1], true);
 		chainDoubleSpend = block->transactions[1];
 		CBRetainObject(chainDoubleSpend);
@@ -629,7 +670,7 @@ void * maybeFinishReorgTest(void * foo){
 		script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 		CBTransactionTakeOutput(block2->transactions[0], CBNewTransactionOutput(1250000000, script));
 		CBReleaseObject(script);
-		CBTransactionMakeBytes(block2->transactions[0]);
+		CBTransactionPrepareBytes(block2->transactions[0]);
 		CBTransactionSerialise(block2->transactions[0], false);
 		// Transaction 5
 		block2->transactions[1] = initialTxs[5];
@@ -643,17 +684,24 @@ void * maybeFinishReorgTest(void * foo){
 		// Add to node 2
 		CBValidatorQueueBlock(CBGetNode(nodes[2])->validator, block2, nodes[2]);
 		CBReleaseObject(block2);
+		
+		unlockMessageProcessing();
+		
 	}
 	return NULL;
 }
 
 void * finishReceiveInitialTest(void * foo);
-void * finishReceiveInitialTest(void * foo){
+void * finishReceiveInitialTest(void * foo) {
+	
 	// Ensure nodes finished processing transactions
 	for (uint8_t x = 0; x < 3; x++) {
 		CBMutexLock(CBGetNode(nodes[x])->blockAndTxMutex);
 		CBMutexUnlock(CBGetNode(nodes[x])->blockAndTxMutex);
 	}
+	
+	lockMessageProcessing();
+	
 	// Transactions look like this
 	// [  Block  ]
 	// ---------------------
@@ -731,8 +779,14 @@ void * finishReceiveInitialTest(void * foo){
 		printf("INITIAL ALL BALANCE FAIL %" PRIu64 " != 1875000000\n", cbalance);
 		exit(EXIT_FAILURE);
 	}
+	
+	unlockMessageProcessing();
+	
 	CBLogVerbose("RECEIVE INITIAL BLOCKS complete.");
+	
 	waitForDownloadEnd();
+	lockMessageProcessing();
+	
 	// Test processing transaction spending unconf transaction which has been spent
 	CBTransaction * falseTx = CBNewTransaction(22, 1);
 	CBGetMessage(falseTx)->type = CB_MESSAGE_TYPE_TX;
@@ -742,7 +796,7 @@ void * finishReceiveInitialTest(void * foo){
 	CBScript * script = CBNewScriptPubKeyHashOutput(CBKeyPairGetHash(keys));
 	CBTransactionTakeOutput(falseTx, CBNewTransactionOutput(312500000, script));
 	CBTransactionSignPubKeyHashInput(falseTx, keys, initialTxs[0]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-	CBTransactionMakeBytes(falseTx);
+	CBTransactionPrepareBytes(falseTx);
 	CBTransactionSerialise(falseTx, true);
 	// Get some peer for node 0
 	CBPosition pos;
@@ -782,7 +836,7 @@ void * finishReceiveInitialTest(void * foo){
 	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 	CBReleaseObject(script);
-	CBTransactionMakeBytes(block->transactions[0]);
+	CBTransactionPrepareBytes(block->transactions[0]);
 	CBTransactionSerialise(block->transactions[0], false);
 	// Transaction 1
 	block->transactions[1] = initialTxs[1];
@@ -799,7 +853,7 @@ void * finishReceiveInitialTest(void * foo){
 	CBTransactionTakeOutput(block->transactions[3], CBNewTransactionOutput(312500000, script));
 	CBReleaseObject(script);
 	CBTransactionSignPubKeyHashInput(block->transactions[3], keys + 2, initialTxs[1]->outputs[3]->scriptObject, 0, CB_SIGHASH_ALL);
-	CBTransactionMakeBytes(block->transactions[3]);
+	CBTransactionPrepareBytes(block->transactions[3]);
 	CBTransactionSerialise(block->transactions[3], true);
 	doubleSpends[0] = block->transactions[3];
 	CBRetainObject(doubleSpends[0]);
@@ -813,7 +867,7 @@ void * finishReceiveInitialTest(void * foo){
 		CBTransactionTakeOutput(block->transactions[4 + x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
 		CBTransactionSignPubKeyHashInput(block->transactions[4 + x], keys, block->transactions[3 + x]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(block->transactions[4 + x]);
+		CBTransactionPrepareBytes(block->transactions[4 + x]);
 		CBTransactionSerialise(block->transactions[4 + x], true);
 		doubleSpends[1 + x] = block->transactions[4 + x];
 		CBRetainObject(doubleSpends[1 + x]);
@@ -839,7 +893,7 @@ void * finishReceiveInitialTest(void * foo){
 	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 	CBTransactionTakeOutput(block2->transactions[0], CBNewTransactionOutput(1250000000, script));
 	CBReleaseObject(script);
-	CBTransactionMakeBytes(block2->transactions[0]);
+	CBTransactionPrepareBytes(block2->transactions[0]);
 	CBTransactionSerialise(block2->transactions[0], false);
 	// Transaction 3
 	block2->transactions[1] = initialTxs[3];
@@ -856,7 +910,7 @@ void * finishReceiveInitialTest(void * foo){
 	CBTransactionTakeOutput(block2->transactions[3], CBNewTransactionOutput(312500000, script));
 	CBReleaseObject(script);
 	CBTransactionSignPubKeyHashInput(block2->transactions[3], keys + 1, initialTxs[3]->outputs[1]->scriptObject, 0, CB_SIGHASH_ALL);
-	CBTransactionMakeBytes(block2->transactions[3]);
+	CBTransactionPrepareBytes(block2->transactions[3]);
 	CBTransactionSerialise(block2->transactions[3], true);
 	doubleSpends[3] = block2->transactions[3];
 	CBRetainObject(doubleSpends[3]);
@@ -870,7 +924,7 @@ void * finishReceiveInitialTest(void * foo){
 		CBTransactionTakeOutput(block2->transactions[4 + x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
 		CBTransactionSignPubKeyHashInput(block2->transactions[4 + x], keys, block2->transactions[3 + x]->outputs[0]->scriptObject, 0, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(block2->transactions[4 + x]);
+		CBTransactionPrepareBytes(block2->transactions[4 + x]);
 		CBTransactionSerialise(block2->transactions[4 + x], true);
 		doubleSpends[4 + x] = block2->transactions[4 + x];
 		CBRetainObject(doubleSpends[4 + x]);
@@ -885,6 +939,9 @@ void * finishReceiveInitialTest(void * foo){
 	CBValidatorQueueBlock(CBGetNode(nodes[1])->validator, block2, nodes[1]);
 	CBReleaseObject(block);
 	CBReleaseObject(block2);
+	
+	unlockMessageProcessing();
+	
 	return NULL;
 }
 
@@ -1358,11 +1415,15 @@ void CBNetworkCommunicatorStartListeningVoid(void * comm){
 	CBNetworkCommunicatorStartListening(comm);
 }
 
-int main(){
+int main() {
+	
 	puts("You may need to move your mouse around if this test stalls.");
+	
 	CBNewMutex(&testMutex);
+	
 	// Create three nodes to talk to each other
 	CBDepObject databases[3];
+	
 	CBNodeCallbacks callbacks = {
 		onFatalNodeError,
 		newBlock,
@@ -1372,11 +1433,15 @@ int main(){
 		transactionUnconfirmed,
 		uptodate
 	};
+	
 	for (uint8_t x = 0; x < 3; x++) {
+		
 		char directory[5], filename[26];
+		
 		sprintf(directory, "./%u", x);
 		mkdir(directory, S_IRWXU | S_IRWXG);
 		chmod(directory, S_IRWXU | S_IRWXG);
+		
 		// Delete data
 		sprintf(filename, "%s/cbitcoin/log.dat", directory);
 		remove(filename);
@@ -1388,21 +1453,30 @@ int main(){
 			sprintf(filename, "%s/cbitcoin/idx_%u_0.dat", directory, y);
 			remove(filename);
 		}
+		
 		CBNewStorageDatabase(&databases[x], directory, 10000000, 10000000);
+		
 		nodes[x] = CBNewNodeFull(databases[x], CB_NODE_CHECK_STANDARD, 100000, callbacks);
+		
 		CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
 		CBNetworkAddress * addr = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45562 + x}, 0, false);
 		CBReleaseObject(loopBack);
-		CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
+		
 		CBNetworkCommunicator * comm = CBGetNetworkCommunicator(nodes[x]);
 		comm->maxConnections = 3;
 		comm->maxIncommingConnections = 3;
 		comm->responseTimeOut = 5000;
+		
+		CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
 		CBNetworkCommunicatorSetUserAgent(comm, userAgent);
+		CBReleaseObject(userAgent);
+		
 		CBNetworkCommunicatorSetOurIPv4(comm, addr);
 		CBNetworkCommunicatorSetReachability(comm, CB_IP_IP4 | CB_IP_LOCAL, true);
+		
 		// Disable POW check
 		CBGetNode(nodes[x])->validator->flags |= CB_VALIDATOR_DISABLE_POW_CHECK;
+		
 		// If debug, disable timeouts
 		#ifdef CBDEBUG
 		comm->connectionTimeOut = 0;
@@ -1412,17 +1486,23 @@ int main(){
 		comm->timeOut = 0;
 		#endif
 	}
+	
 	// Give node 0 the addresses for node 1 and 2
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
 	CBNetworkAddress * addr = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45563}, 0, true);
 	CBNetworkAddress * addr2 = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45564}, 0, true);
 	CBReleaseObject(loopBack);
+	
 	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr);
 	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr2);
+	
 	CBReleaseObject(addr);
 	CBReleaseObject(addr2);
+	
 	// Give 1001 blocks to node 0 with last block containing four transactions. Also give 500 of them to node 1 and then give 500 other blocks to node 1.
+	
 	CBBlock * block = CBNewBlock();
+	
 	block->prevBlockHash = CBNewByteArrayWithDataCopy((uint8_t []){0x6F, 0xE2, 0x8C, 0x0A, 0xB6, 0xF1, 0xB3, 0x72, 0xC1, 0xA6, 0xA2, 0x46, 0xAE, 0x63, 0xF7, 0x4F, 0x93, 0x1E, 0x83, 0x65, 0xE1, 0x5A, 0x08, 0x9C, 0x68, 0xD6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00}, 32);
 	block->time = 1231469665;
 	block->target = CB_MAX_TARGET;
@@ -1430,64 +1510,83 @@ int main(){
 	block->transactionNum = 1;
 	block->transactions = malloc(sizeof(*block->transactions));
 	block->transactions[0] = CBNewTransaction(0, 1);
+	
 	CBByteArray * nullHash = CBNewByteArrayOfSize(32);
 	memset(CBByteArrayGetData(nullHash), 0, 32);
 	CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0,0}, 2);
 	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(script, CB_TX_INPUT_FINAL, nullHash, 0xFFFFFFFF));
 	CBReleaseObject(script);
 	CBReleaseObject(nullHash);
+	
 	script = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1);
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(1250000000, script));
 	CBReleaseObject(script);
-	CBTransactionMakeBytes(block->transactions[0]);
+	
+	CBTransactionPrepareBytes(block->transactions[0]);
 	CBTransactionSerialise(block->transactions[0], false);
+	
 	CBBlockCalculateAndSetMerkleRoot(block);
-	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
+	CBBlockPrepareBytes(block, true);
 	CBBlockSerialise(block, true, false);
+	
 	// Add blocks
 	CBNodeFullAddBlockDirectly(nodes[0], block);
 	CBNodeFullAddBlockDirectly(nodes[1], block);
+	
 	CBByteArray * firstCoinbase = CBNewByteArrayWithDataCopy(CBTransactionGetHash(block->transactions[0]), 32);
+	
 	// Add 999 more
 	CBByteArray * prevToFork, * lastNode0BlockHash;
+	
 	for (uint16_t x = 0; x < 1499; x++) {
+		
 		if (x == 999)
 			block->prevBlockHash = prevToFork;
 		else
 			block->prevBlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
+		
 		block->time++;
-		CBByteArraySetInt16(block->transactions[0]->inputs[0]->scriptObject, 0, x+1);
+		CBByteArraySetInt16(block->transactions[0]->inputs[0]->scriptObject, 0, x + 1);
+		
 		CBTransactionSerialise(block->transactions[0], true);
 		CBBlockCalculateAndSetMerkleRoot(block);
 		CBBlockSerialise(block, true, true);
+		
 		if (x < 999)
 			CBNodeFullAddBlockDirectly(nodes[0], block);
+		
 		if (x < 499 || x >= 999){
 			CBNodeFullAddBlockDirectly(nodes[1], block);
 			if (x == 498)
 				prevToFork = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
 		}
+		
 		if (x == 998) 
 			lastNode0BlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
 		else if (x == 1498)
 			lastNode1BlockHash = CBNewByteArrayWithDataCopy(CBBlockGetHash(block), 32);
 	}
+	
 	// Create three keys and add watched hash to the accounters
 	for (uint8_t x = 0; x < 3; x++) {
 		CBInitKeyPair(keys + x);
 		CBKeyPairGenerate(keys + x);
 		CBAccounterAddWatchedOutputToAccount(CBGetNode(nodes[x])->accounterStorage, CBKeyPairGetHash(keys + x), CBAccounterNewAccount(CBGetNode(nodes[x])->accounterStorage));
 	}
+	
 	// Add block with fours additional transactions for node 0
 	block->prevBlockHash = lastNode0BlockHash;
 	block->time++;
 	CBByteArraySetInt16(block->transactions[0]->inputs[0]->scriptObject, 0, 1500);
+	
 	CBTransactionSerialise(block->transactions[0], true);
+	
 	block->transactions = realloc(block->transactions, sizeof(*block->transactions)*5);
 	block->transactionNum = 5;
+	
 	for (uint8_t x = 1; x < 5; x++) {
 		block->transactions[x] = CBNewTransaction(x-1, 1);
 		CBScript * script = CBNewScriptWithDataCopy((uint8_t []){0}, 1);
@@ -1497,18 +1596,25 @@ int main(){
 		for (uint8_t y = 0; y < 4; y++)
 			CBTransactionTakeOutput(block->transactions[x], CBNewTransactionOutput(312500000, script));
 		CBReleaseObject(script);
-		CBTransactionMakeBytes(block->transactions[x]);
+		CBTransactionPrepareBytes(block->transactions[x]);
 		CBTransactionSerialise(block->transactions[x], true);
 		initialTxs[x-1] = block->transactions[x];
 		CBRetainObject(block->transactions[x]);
 	}
+	
 	CBBlockCalculateAndSetMerkleRoot(block);
-	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
+	
+	CBBlockPrepareBytes(block, true);
 	CBBlockSerialise(block, true, true);
+	
 	CBNodeFullAddBlockDirectly(nodes[0], block);
+	
 	lastInitialBlock = block;
+	
 	// Broadcast transactions
+	
 	CBTransaction * deps[2];
+	
 	for (uint8_t x = 0; x < 10; x++) {
 		CBTransaction * tx = CBNewTransaction(x+4, 1);
 		CBByteArray * prev = CBNewByteArrayWithDataCopy(CBTransactionGetHash(block->transactions[x % 4 + 1]), 32);
@@ -1531,20 +1637,26 @@ int main(){
 		CBTransactionSignPubKeyHashInput(tx, keys + (x % 4 + 1) % 3, block->transactions[x % 4 + 1]->outputs[x/4]->scriptObject, 0, CB_SIGHASH_ALL);
 		if (x >= 6)
 			CBTransactionSignPubKeyHashInput(tx, keys + (x % 2)*2, deps[x % 2]->outputs[(x-6)/2]->scriptObject, 1, CB_SIGHASH_ALL);
-		CBTransactionMakeBytes(tx);
+		CBTransactionPrepareBytes(tx);
 		CBTransactionSerialise(tx, true);
 		CBNodeFullNewUnconfirmedTransaction(nodes[0], NULL, tx);
 		initialTxs[x+4] = tx;
 	}
+	
 	testPhase = RECEIVE_INITIAL_BLOCKS_AND_TXS;
+	
 	// Start nodes and listen on node 1 and 2
 	for (uint8_t x = 3; x--;) {
+		
 		if (x > 0)
 			// Block, thus ensuring nodes are listening before we try to connect.
 			CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[x])->eventLoop, CBNetworkCommunicatorStartListeningVoid, nodes[x], true);
 		else
 			CBRunOnEventLoop(CBGetNetworkCommunicator(nodes[x])->eventLoop, CBNetworkCommunicatorTryConnectionsVoid, nodes[x], false);
+		
 	}
+	
 	CBThreadJoin(((CBEventLoop *)CBGetNetworkCommunicator(nodes[0])->eventLoop.ptr)->loopThread);
+	
 	return EXIT_SUCCESS;
 }

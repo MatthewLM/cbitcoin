@@ -68,6 +68,7 @@ typedef struct{
  @returns A new CBNetworkAddress object.
  */
 CBNetworkAddress * CBNewNetworkAddress(uint64_t lastSeen, CBSocketAddress addr, CBVersionServices services, bool isPublic);
+
 /**
  @brief Creates a new CBNetworkAddress object from serialised data.
  @param isPublic If true the address is public and thus can be relayed and returned to the address manager.
@@ -86,6 +87,7 @@ CBNetworkAddress * CBNewNetworkAddressFromData(CBByteArray * data, bool isPublic
  @returns true on success, false on failure.
  */
 void CBInitNetworkAddress(CBNetworkAddress * self, uint64_t lastSeen, CBSocketAddress addr, CBVersionServices services, bool isPublic);
+
 /**
  @brief Initialises a CBNetworkAddress object from serialised data
  @param self The CBNetworkAddress object to initialise
@@ -99,6 +101,7 @@ void CBInitNetworkAddressFromData(CBNetworkAddress * self, CBByteArray * data, b
  @param self The CBNetworkAddress object to destroy.
  */
 void CBDestroyNetworkAddress(void * self);
+
 /**
  @brief Frees a CBNetworkAddress object and also calls CBDestroyNetworkAddress.
  @param self The CBNetworkAddress object to free.
@@ -114,6 +117,7 @@ void CBFreeNetworkAddress(void * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp);
+
 /**
  @brief Compares two network addresses
  @param self The CBNetworkAddress object
@@ -121,6 +125,7 @@ uint32_t CBNetworkAddressDeserialise(CBNetworkAddress * self, bool timestamp);
  @returns true if the IP and port match and the IP is not NULL. False otherwise.
  */
 bool CBNetworkAddressEquals(CBNetworkAddress * self, CBNetworkAddress * addr);
+
 /**
  @brief Serialises a CBNetworkAddress to the byte data.
  @param self The CBNetworkAddress object

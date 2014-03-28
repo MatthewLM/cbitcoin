@@ -54,6 +54,7 @@ typedef struct{
  @returns A new CBVersion object.
  */
 CBVersion * CBNewVersion(int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight);
+
 /**
  @brief Creates a new CBVersion object from serialised data.
  @param data A CBByteArray holding the serialised data.
@@ -66,6 +67,7 @@ CBVersion * CBNewVersionFromData(CBByteArray * data);
  @param self The CBVersion object to initialise
  */
 void CBInitVersion(CBVersion * self, int32_t version, CBVersionServices services, int64_t time, CBNetworkAddress * addRecv, CBNetworkAddress * addSource, uint64_t nonce, CBByteArray * userAgent, int32_t blockHeight);
+
 /**
  @brief Initialises a new CBVersion object from serialised data.
  @param self The CBVersion object to initialise
@@ -78,6 +80,7 @@ void CBInitVersionFromData(CBVersion * self, CBByteArray * data);
  @param self The CBVersion object to destroy.
  */
 void CBDestroyVersion(void * self);
+
 /**
  @brief Frees a CBVersion object and also calls CBDestroyVersion.
  @param self The CBVersion object to free.
@@ -92,12 +95,16 @@ void CBFreeVersion(void * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBVersionDeserialise(CBVersion * self);
+
 /**
  @brief Calculates the length needed to serialise the object
  @param self The CBVersion object
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBVersionCalculateLength(CBVersion * self);
+
+void CBVersionPrepareBytes(CBVersion * self);
+
 /**
  @brief Serialises a CBVersion to the byte data.
  @param self The CBVersion object

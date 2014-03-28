@@ -45,6 +45,7 @@ typedef struct{
  @returns A new CBChecksumBytes object or NULL on failure.
  */
 CBChecksumBytes * CBNewChecksumBytesFromString(CBByteArray * string, bool cacheString);
+
 /**
  @brief Creates a new CBChecksumBytes object from bytes.
  @param bytes The bytes for the CBChecksumBytes object.
@@ -53,6 +54,7 @@ CBChecksumBytes * CBNewChecksumBytesFromString(CBByteArray * string, bool cacheS
  @returns A new CBChecksumBytes object.
  */
 CBChecksumBytes * CBNewChecksumBytesFromBytes(uint8_t * bytes, uint32_t size, bool cacheString);
+
 /**
  @brief Creates a new CBChecksumBytes object from a hex string.
  @param hex
@@ -69,6 +71,7 @@ CBChecksumBytes * CBNewChecksumBytesFromHex(char * hex, bool cacheString);
  @returns true on success, false on failure.
  */
 bool CBInitChecksumBytesFromString(CBChecksumBytes * self, CBByteArray * string, bool cacheString);
+
 /**
  @brief Initialises a new CBChecksumBytes object from bytes.
  @param self The CBChecksumBytes object to initialise.
@@ -77,6 +80,7 @@ bool CBInitChecksumBytesFromString(CBChecksumBytes * self, CBByteArray * string,
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  */
 void CBInitChecksumBytesFromBytes(CBChecksumBytes * self, uint8_t * bytes, uint32_t size, bool cacheString);
+
 /**
  @brief Initialises a new CBChecksumBytes object from a hex string.
  @param self The CBChecksumBytes object to initialise.
@@ -90,6 +94,7 @@ void CBInitChecksumBytesFromHex(CBChecksumBytes * self, char * hex, bool cacheSt
  @param self The CBChecksumBytes object to destroy.
  */
 void CBDestroyChecksumBytes(void * self);
+
 /**
  @brief Frees a CBChecksumBytes object and also calls CBdestroyChecksumBytes.
  @param self The CBChecksumBytes object to free.
@@ -104,6 +109,7 @@ void CBFreeChecksumBytes(void * self);
  @returns The prefix code. @see CBBase58Prefix
  */
 CBBase58Prefix CBChecksumBytesGetPrefix(CBChecksumBytes * self);
+
 /**
  @brief Gets the string representation for a CBChecksumBytes object as a base-58 encoded CBString.
  @param self The CBChecksumBytes object.

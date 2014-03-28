@@ -41,11 +41,13 @@ struct CBMerkleNode{
  @returns The root CBMerkleNode for the tree.
  */
 CBMerkleNode * CBBuildMerkleTree(CBByteArray ** hashes, uint32_t numHashes);
+
 /**
  @brief Frees a merkle tree from a given root.
  @param root The merkle tree root node.
  */
 void CBFreeMerkleTree(CBMerkleNode * root);
+
 /**
  @brief Gets a list of hashes for a level in a merkle tree. If the merkle tree's deepest level is smaller than specified by "level", the lowest level in the tree is returned.
  @param root The merkle tree root node.

@@ -1214,65 +1214,66 @@ bool CBNetworkCommunicatorSendMessage(CBNetworkCommunicator * self, CBPeer * pee
 	// Serialise message if needed.
 	if (! message->serialised) {
 		uint32_t len;
+		
 		switch (message->type) {
+				
 			case CB_MESSAGE_TYPE_VERSION:
-				len = CBVersionCalculateLength(CBGetVersion(message));
-				if (len == 0)
-					return false;
-				message->bytes = CBNewByteArrayOfSize(len);
+				CBVersionPrepareBytes(CBGetVersion(message));
 				len = CBVersionSerialise(CBGetVersion(message), false);
 				break;
+				
 			case CB_MESSAGE_TYPE_ADDR:
-				// "CBNetworkAddressCalculateLength" cannot fail.
-				message->bytes = CBNewByteArrayOfSize(CBNetworkAddressListCalculateLength(CBGetNetworkAddressList(message)));
+				CBNetworkAddressListPrepareBytes(CBGetNetworkAddressList(message));
 				len = CBNetworkAddressListSerialise(CBGetNetworkAddressList(message), false);
 				break;
+				
 			case CB_MESSAGE_TYPE_INV:
 			case CB_MESSAGE_TYPE_GETDATA:
-				// "CBInventoryCalculateLength" cannot fail.
-				message->bytes = CBNewByteArrayOfSize(CBInventoryCalculateLength(CBGetInventory(message)));
+				CBInventoryPrepareBytes(CBGetInventory(message));
 				len = CBInventorySerialise(CBGetInventory(message), false);
 				break;
+				
 			case CB_MESSAGE_TYPE_GETBLOCKS:
 			case CB_MESSAGE_TYPE_GETHEADERS:
-				// "CBGetBlocksCalculateLength" cannot fail.
-				message->bytes = CBNewByteArrayOfSize(CBGetBlocksCalculateLength(CBGetGetBlocks(message)));
+				CBGetBlocksPrepareBytes(CBGetGetBlocks(message));
 				len = CBGetBlocksSerialise(CBGetGetBlocks(message), false);
 				break;
+				
 			case CB_MESSAGE_TYPE_TX:
-				len = CBTransactionCalculateLength(CBGetTransaction(message));
-				if (len == 0)
-					return false;
-				message->bytes = CBNewByteArrayOfSize(len);
+				CBTransactionPrepareBytes(CBGetTransaction(message));
 				len = CBTransactionSerialise(CBGetTransaction(message), false);
 				break;
+				
 			case CB_MESSAGE_TYPE_BLOCK:
-				len = CBBlockCalculateLength(CBGetBlock(message), true);
-				if (len == 0)
-					return false;
-				message->bytes = CBNewByteArrayOfSize(len);
-				len = CBBlockSerialise(CBGetBlock(message), true, false); // true -> Including transactions.
+				// true -> Including transactions.
+				CBBlockPrepareBytes(CBGetBlock(message), true);
+				len = CBBlockSerialise(CBGetBlock(message), true, false);
 				break;
+				
 			case CB_MESSAGE_TYPE_HEADERS:
-				// "CBBlockHeadersCalculateLength" cannot fail.
-				message->bytes = CBNewByteArrayOfSize(CBBlockHeadersCalculateLength(CBGetBlockHeaders(message)));
+				CBBlockHeadersPrepareBytes(CBGetBlockHeaders(message));
 				len = CBBlockHeadersSerialise(CBGetBlockHeaders(message), false);
 				break;
+				
 			case CB_MESSAGE_TYPE_PING:
 				if (peer->versionMessage->version >= 60000 && self->version >= 60000){
-					message->bytes = CBNewByteArrayOfSize(8);
+					CBPingPongPrepareBytes(CBGetPingPong(message));
 					len = CBPingPongSerialise(CBGetPingPong(message));
 				}
+				
 			case CB_MESSAGE_TYPE_PONG:
-				message->bytes = CBNewByteArrayOfSize(8);
+				CBPingPongPrepareBytes(CBGetPingPong(message));
 				len = CBPingPongSerialise(CBGetPingPong(message));
 				break;
+				
 			case CB_MESSAGE_TYPE_ALERT:
 				// This should have been serialised before!
 				return false;
 				break;
+				
 			default:
 				break;
+				
 		}
 		if (message->bytes) {
 			if (message->bytes->length != len)

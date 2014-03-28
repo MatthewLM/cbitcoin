@@ -40,6 +40,7 @@ typedef CBChecksumBytes CBWIF;
  @returns A new CBWIF object.
  */
 CBWIF * CBNewWIFFromPrivateKey(uint8_t * privKey, bool useCompression, CBBase58Prefix prefix, bool cacheString);
+
 /**
  @brief Creates a new CBWIF object from a base-58 encoded string.
  @param self The CBWIF object to initialise.
@@ -56,6 +57,7 @@ CBWIF * CBNewWIFFromString(CBByteArray * string, bool cacheString);
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  */
 void CBInitWIFFromPrivateKey(CBWIF * self, uint8_t * privKey, bool useCompression, CBBase58Prefix prefix, bool cacheString);
+
 /**
  @brief Initialises a CBWIF object from a base-58 encoded string.
  @param self The CBWIF object to initialise.
@@ -70,6 +72,7 @@ bool CBInitWIFFromString(CBWIF * self, CBByteArray * string, bool cacheString);
  @param self The CBWIF object to destroy.
  */
 void CBDestroyWIF(void * self);
+
 /**
  @brief Frees a CBWIF object and also calls CBDestoryWIF
  @param self The CBWIF object to free.

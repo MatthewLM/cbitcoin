@@ -197,7 +197,7 @@ int main(){
 	}
 	CBReleaseObject(genesisBlock);
 	CBReleaseObject(block);
-	// Test serailisation of a block, and then move a transaction. Then reserialise without forcing full serialisation
+	// Test serialisation of a block, and then move a transaction. Then reserialise without forcing full serialisation
 	block = CBNewBlock();
 	block->prevBlockHash = CBNewByteArrayOfSize(32);
 	memset(CBByteArrayGetData(block->prevBlockHash), 0, 32);
@@ -230,5 +230,31 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(block);
+	// Test serialising the transaction before serialising the block and that the bytes are all of the same data.
+	block = CBNewBlock();
+	block->prevBlockHash = CBNewByteArrayOfSize(32);
+	memset(CBByteArrayGetData(block->prevBlockHash), 0, 32);
+	block->merkleRoot = CBNewByteArrayOfSize(32);
+	block->target = 0x1D00FFFF;
+	block->time = 1231006505;
+	block->nonce = 2083236893;
+	block->transactionNum = 1;
+	block->transactions = malloc(sizeof(*block->transactions));
+	block->transactions[0] = CBNewTransaction(0, 1);
+	CBTransactionTakeInput(block->transactions[0], CBNewTransactionInput(genesisInScript, CB_TX_INPUT_FINAL, block->prevBlockHash, 0xFFFFFFFF));
+	CBTransactionTakeOutput(block->transactions[0], CBNewTransactionOutput(5000000000, genesisOutScript));
+	CBGetMessage(block->transactions[0])->bytes = CBNewByteArrayOfSize(CBTransactionCalculateLength(block->transactions[0]));
+	CBTransactionSerialise(block->transactions[0], true);
+	CBGetMessage(block)->bytes = CBNewByteArrayOfSize(CBBlockCalculateLength(block, true));
+	if (CBBlockSerialise(block, true, false) != CBBlockCalculateLength(block, true)){
+		printf("SERAILISATION OF OTHER BLOCK FAIL\n");
+		return 1;
+	}
+	if (CBGetMessage(block)->bytes->sharedData != CBGetMessage(block->transactions[0])->bytes->sharedData
+		|| CBGetMessage(block)->bytes->sharedData != CBGetMessage(block->transactions[0]->outputs[0])->bytes->sharedData
+		|| CBGetMessage(block)->bytes->sharedData != CBGetMessage(block->transactions[0]->inputs[0])->bytes->sharedData) {
+		printf("BYTE DATA NOT ALL THE SAME\n");
+		return 1;
+	}
 	return 0;
 }

@@ -262,6 +262,7 @@ typedef struct{
  @returns The database object or NULL on failure.
  */
 CBDatabase * CBNewDatabase(char * dataDir, char * folder, uint32_t extraDataSize, uint32_t commitGap, uint32_t cacheLimit);
+
 /**
  @brief Initialises a database object.
  @param self The CBDatabase object to initialise.
@@ -271,6 +272,7 @@ CBDatabase * CBNewDatabase(char * dataDir, char * folder, uint32_t extraDataSize
  @returns true on success and false on failure.
  */
 bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t extraDataSize, uint32_t commitGap, uint32_t cacheLimit);
+
 /**
  @brief Initialises a database transaction changes object.
  @param self The CBDatabaseTransactionChanges object to initialise.
@@ -278,6 +280,7 @@ bool CBInitDatabase(CBDatabase * self, char * dataDir, char * folder, uint32_t e
  */
 void CBInitDatabaseTransactionChanges(CBDatabaseTransactionChanges * self, CBDatabase * database);
 void CBInitDatabaseRangeIterator(CBDatabaseRangeIterator * it, uint8_t * minEl, uint8_t * maxEl, CBDatabaseIndex * index);
+
 /**
  @brief Loads an index or creates it if it doesn't exist.
  @param self The database object.
@@ -287,6 +290,7 @@ void CBInitDatabaseRangeIterator(CBDatabaseRangeIterator * it, uint8_t * minEl, 
  @returns The index or NULL on failure.
  */
 CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySize, uint32_t cacheLimit);
+
 /**
  @brief Loads a node from the disk into memory.
  @param index The index object.
@@ -295,6 +299,7 @@ CBDatabaseIndex * CBLoadIndex(CBDatabase * self, uint8_t indexID, uint8_t keySiz
  @param nodeOffset The offset from the begining of the file where the node exists.
  */
 bool CBDatabaseLoadIndexNode(CBDatabaseIndex * index, CBIndexNode * node, uint16_t nodeFile, uint32_t nodeOffset);
+
 /**
  @brief Reads and opens the deletion index during initialisation
  @param self The storage object.
@@ -302,6 +307,7 @@ bool CBDatabaseLoadIndexNode(CBDatabaseIndex * index, CBIndexNode * node, uint16
  @returns true on success or false on failure.
  */
 bool CBDatabaseReadAndOpenDeletionIndex(CBDatabase * self, char * filename);
+
 /**
  @brief Creates a deletion index during the first initialisation
  @param self The storage object.
@@ -326,16 +332,19 @@ CBDatabase * CBGetDatabase(void * self);
  @param true on success or false on commit error.
  */
 bool CBFreeDatabase(CBDatabase * self);
+
 /**
  @brief Frees the database transaction changes object.
  @param self The database transaction changes object.
  */
 void CBFreeDatabaseTransactionChanges(CBDatabaseTransactionChanges * self);
+
 /**
  @brief Frees the node of an index.
  @param node The node to free.
  */
 void CBFreeIndexNode(CBIndexNode * node);
+
 /**
  @brief Frees an index.
  @param index The index to free.
@@ -343,6 +352,7 @@ void CBFreeIndexNode(CBIndexNode * node);
 void CBFreeIndex(CBDatabaseIndex * index);
 void CBFreeIndexElementPos(CBIndexElementPos pos);
 void CBFreeIndexTxData(void * indexTxData);
+
 /**
  @brief Free a database range iterator. Only use after CBDatabaseRangeIteratorFirst or CBDatabaseRangeIteratorLast returns found.
  @param it The iterator.
@@ -360,6 +370,7 @@ void CBFreeDatabaseRangeIterator(CBDatabaseRangeIterator * it);
  @retruns true on success and false on failure
  */
 bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos, uint32_t len);
+
 /**
  @brief Add an overwrite operation.
  @param self The storage object.
@@ -372,6 +383,7 @@ bool CBDatabaseAddDeletionEntry(CBDatabase * self, uint16_t fileID, uint32_t pos
  @retruns true on success and false on failure
  */
 bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint8_t * data, uint32_t offset, uint32_t dataLen);
+
 /**
  @brief Adds a value to the database without overwriting previous indexed data.
  @param self The storage object.
@@ -381,12 +393,14 @@ bool CBDatabaseAddOverwrite(CBDatabase * self, CBDatabaseFileType fileType, CBDa
  @retruns true on success and false on failure
  */
 bool CBDatabaseAddValue(CBDatabase * self, uint32_t dataSize, uint8_t * data, CBIndexValue * indexValue);
+
 /**
  @brief Adds a write value to the valueWrites array for the transaction.
  @param writeValue The write value element data.
  @param stage If true stage change.
  */
 void CBDatabaseAddWriteValue(uint8_t * writeValue, CBDatabaseIndex * index, uint8_t * key, uint32_t dataLen, uint8_t * dataPtr, uint32_t offset, bool stage);
+
 /**
  @brief Add an append operation.
  @param self The database object.
@@ -398,6 +412,7 @@ void CBDatabaseAddWriteValue(uint8_t * writeValue, CBDatabaseIndex * index, uint
  @retruns true on success and false on failure
  */
 bool CBDatabaseAppend(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint8_t * data, uint32_t dataLen);
+
 /**
  @brief Add an append operation of zeros.
  @param self The database object.
@@ -408,6 +423,7 @@ bool CBDatabaseAppend(CBDatabase * self, CBDatabaseFileType fileType, CBDatabase
  @retruns true on success and false on failure
  */
 bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, CBDatabaseIndex * index, uint16_t fileID, uint32_t amount);
+
 /**
  @brief Replaces a key for a value with a key of the same length.
  @param self The database object.
@@ -418,11 +434,13 @@ bool CBDatabaseAppendZeros(CBDatabase * self, CBDatabaseFileType fileType, CBDat
  @returns true on success and false on failure.
  */
 bool CBDatabaseChangeKey(CBDatabaseIndex * index, uint8_t * previousKey, uint8_t * newKey, bool stage);
+
 /**
  @brief Removes all of the current value write, delete and change key operations.
  @param self The database object.
  */
 void CBDatabaseClearCurrent(CBDatabase * self);
+
 /**
  @brief The data is written to the disk.
  @param tx The database object with the staged changes.
@@ -431,12 +449,14 @@ void CBDatabaseClearCurrent(CBDatabase * self);
 bool CBDatabaseCommit(CBDatabase * database);
 bool CBDatabaseCommitProcess(CBDatabase * database);
 void CBDatabaseCommitThread(void * database);
+
 /**
  @brief Ensure the database is consistent and recover the database if it is not.
  @param self The database object.
  @returns true if the database is consistent and false on failure.
  */
 bool CBDatabaseEnsureConsistent(CBDatabase * self);
+
 /**
  @brief Returns a CBFindResult for largest active deleted section and "found" will be true if the largest active deleted section is above a length.
  @param self The database object.
@@ -444,6 +464,7 @@ bool CBDatabaseEnsureConsistent(CBDatabase * self);
  @returns The largest active deleted section as a CBFindResult.
  */
 CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length);
+
 /**
  @brief Gets a file object for a file number (eg. 0 for index, 1 for deleted index and 2 for first data file)
  @param self The database object.
@@ -453,6 +474,7 @@ CBFindResult CBDatabaseGetDeletedSection(CBDatabase * self, uint32_t length);
  @returns true on success and false on failure.
  */
 bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType type, CBDatabaseIndex * index, uint16_t fileID);
+
 /**
  @brief Gets the length of a value in the database or CB_DOESNT_EXIST if it does not exist.
  @param index The database index.
@@ -461,6 +483,7 @@ bool CBDatabaseGetFile(CBDatabase * self, CBDepObject * file, CBDatabaseFileType
  @returns true on success and false on failure.
  */
 bool CBDatabaseGetLength(CBDatabaseIndex * index, uint8_t * key, uint32_t * length);
+
 /**
  @brief Gets a pointer to the CBIndexTxData for a database index.
  @param changes The database transaction changes object.
@@ -469,6 +492,7 @@ bool CBDatabaseGetLength(CBDatabaseIndex * index, uint8_t * key, uint32_t * leng
  @returns @see CBIndexTxData or NULL if read is true and no index data is available.
  */
 CBIndexTxData * CBDatabaseGetIndexTxData(CBDatabaseTransactionChanges * changes, CBDatabaseIndex * index, bool create);
+
 /**
  @brief Deletes an index element.
  @param index The index object.
@@ -477,6 +501,7 @@ CBIndexTxData * CBDatabaseGetIndexTxData(CBDatabaseTransactionChanges * changes,
  */
 bool CBDatabaseIndexDelete(CBDatabaseIndex * index, CBIndexFindWithParentsResult * res);
 CBIndexFindResult CBDatabaseIndexFind(CBDatabaseIndex * index, uint8_t * key);
+
 /**
  @brief Finds an index entry, or where the index should be inserted.
  @param index The index object.
@@ -484,6 +509,7 @@ CBIndexFindResult CBDatabaseIndexFind(CBDatabaseIndex * index, uint8_t * key);
  @returns @see CBIndexFindResult
  */
 CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * index, uint8_t * key);
+
 /**
  @brief Inserts an index value into an index.
  @param index The index object.
@@ -493,6 +519,7 @@ CBIndexFindWithParentsResult CBDatabaseIndexFindWithParents(CBDatabaseIndex * in
  @returns true on success and false on failure.
  */
 bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBIndexElementPos * pos, CBIndexNodeLocation * right);
+
 /**
  @brief Copies children in an index node.
  @param index The index object.
@@ -505,6 +532,7 @@ bool CBDatabaseIndexInsert(CBDatabaseIndex * index, CBIndexValue * indexVal, CBI
  @param true on success or false on failure.
  */
 bool CBDatabaseIndexMoveChildren(CBDatabaseIndex * index, CBIndexNodeLocation * dest, CBIndexNodeLocation * source, uint8_t startPos, uint8_t endPos, uint8_t amount, bool append);
+
 /**
  @brief Copies elements in an index node.
  @param index The index object.
@@ -518,6 +546,7 @@ bool CBDatabaseIndexMoveChildren(CBDatabaseIndex * index, CBIndexNodeLocation * 
  */
 bool CBDatabaseIndexMoveElements(CBDatabaseIndex * index, CBIndexNodeLocation * dest, CBIndexNodeLocation * source, uint8_t startPos, uint8_t endPos, uint8_t amount, bool append);
 void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBIndexFindResult * result);
+
 /**
  @brief Does a binary search on a node in the cache and returns the location and index data.
  @param index The index object.
@@ -525,6 +554,7 @@ void CBDatabaseIndexNodeSearchDisk(CBDatabaseIndex * index, uint8_t * key, CBInd
  @param key The key to search for.
  */
 void CBDatabaseIndexNodeBinarySearchMemory(CBDatabaseIndex * index, CBIndexNode * node, uint8_t * key, CBIndexFindStatus * status, uint8_t * pos);
+
 /**
  @brief Sets blank children
  @param index The index object.
@@ -534,6 +564,7 @@ void CBDatabaseIndexNodeBinarySearchMemory(CBDatabaseIndex * index, CBIndexNode 
  @param true on success or false on failure.
  */
 bool CBDatabaseIndexSetBlankChildren(CBDatabaseIndex * index, CBIndexNodeLocation * dest, uint8_t offset, uint8_t amount);
+
 /**
  @brief Sets a child in an index node.
  @param index The index object.
@@ -544,6 +575,7 @@ bool CBDatabaseIndexSetBlankChildren(CBDatabaseIndex * index, CBIndexNodeLocatio
  @returns true on success or false on failure.
  */
 bool CBDatabaseIndexSetChild(CBDatabaseIndex * index, CBIndexNodeLocation * node, CBIndexNodeLocation * child, uint8_t pos, bool append);
+
 /**
  @brief Sets an element in an index node.
  @param index The index object.
@@ -554,12 +586,14 @@ bool CBDatabaseIndexSetChild(CBDatabaseIndex * index, CBIndexNodeLocation * node
  @returns true on success or false on failure.
  */
 bool CBDatabaseIndexSetElement(CBDatabaseIndex * index, CBIndexNodeLocation * node, CBIndexValue * element, uint8_t pos, bool append);
+
 /**
  @brief Sets a new nodes position in the index files.
  @param index The index.
  @param new The new node.
  */
 void CBDatabaseIndexSetNewNodePosition(CBDatabaseIndex * index, CBIndexNodeLocation * new);
+
 /**
  @brief Sets the number of elements for an index node.
  @param index The index object.
@@ -569,12 +603,14 @@ void CBDatabaseIndexSetNewNodePosition(CBDatabaseIndex * index, CBIndexNodeLocat
  @returns true on success or false on failure.
  */
 bool CBDatabaseIndexSetNumElements(CBDatabaseIndex * index, CBIndexNodeLocation * node, uint8_t numElements, bool append);
+
 /**
  @brief Goes to the first elment of the iterator.
  @param it The iterator.
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorFirst(CBDatabaseRangeIterator * it);
+
 /**
  @brief Copies the key at the current position into "key" and does not iterate.
  @param it The iterator.
@@ -582,11 +618,13 @@ CBIndexFindStatus CBDatabaseRangeIteratorFirst(CBDatabaseRangeIterator * it);
  */
 bool CBDatabaseRangeIteratorGetKey(CBDatabaseRangeIterator * it, uint8_t * key);
 bool CBDatabaseRangeIteratorGetLength(CBDatabaseRangeIterator * it, uint32_t * length);
+
 /**
  @param it The iterator.
  @returns the highest key
  */
 CBIteratorWhatKey CBDatabaseRangeIteratorGetHigher(CBDatabaseRangeIterator * it);
+
 /**
  @param it The iterator.
  @returns the lowest key
@@ -594,24 +632,28 @@ CBIteratorWhatKey CBDatabaseRangeIteratorGetHigher(CBDatabaseRangeIterator * it)
 CBIteratorWhatKey CBDatabaseRangeIteratorGetLesser(CBDatabaseRangeIterator * it);
 bool CBDatabaseRangeIteratorKeyIfHigher(uint8_t ** highestKey, CBRangeIterator * it, uint8_t keySize, bool changed);
 bool CBDatabaseRangeIteratorKeyIfLesser(uint8_t ** lowestKey, CBRangeIterator * it, uint8_t keySize, bool changed);
+
 /**
  @brief Goes to the last element of the iterator.
  @param it The iterator.
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorLast(CBDatabaseRangeIterator * it);
+
 /**
  @brief Goes to the next element of the iterator.
  @param it The iterator.
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorNext(CBDatabaseRangeIterator * it);
+
 /**
  @brief Goes to the next or previous index element of the iterator. Does not iterate the transaction iterator.
  @param it The iterator.
  @returns @see CBIndexFindStatus
  */
 CBIndexFindStatus CBDatabaseRangeIteratorIterateIndex(CBDatabaseRangeIterator * it, bool forwards);
+
 /**
  @brief Goes to the next element of the iterator if the current key is deleted.
  @param it The iterator.
@@ -622,6 +664,7 @@ CBIndexFindStatus CBDatabaseRangeIteratorIterateIndexIfDeleted(CBDatabaseRangeIt
 void CBDatabaseRangeIteratorIterateStagedIfInvalid(CBDatabaseRangeIterator * it, CBIndexTxData * currentIndexTxData, CBIndexTxData * stagedIndexTxData, bool forward);
 void CBDatabaseRangeIteratorIterateStagedIfInvalidParticular(CBIndexTxData * currentIndexTxData, CBRangeIterator * it, CBAssociativeArray * arr, bool * got, bool forward);
 void CBDatabaseRangeIteratorNextMinimum(CBDatabaseRangeIterator * it);
+
 /**
  @brief Reads from the iterator at the current position and does not iterate.
  @param it The iterator.
@@ -631,6 +674,7 @@ void CBDatabaseRangeIteratorNextMinimum(CBDatabaseRangeIterator * it);
  @returns true on success and false on failure.
  */
 bool CBDatabaseRangeIteratorRead(CBDatabaseRangeIterator * it, uint8_t * data, uint32_t dataLen, uint32_t offset);
+
 /**
  @brief Queues a key-value read operation.
  @param index The index where the value is to be read.
@@ -642,6 +686,7 @@ bool CBDatabaseRangeIteratorRead(CBDatabaseRangeIterator * it, uint8_t * data, u
  @returns The found status of the value.
  */
 CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t dataSize, uint32_t offset, bool staged);
+
 /**
  @brief Queues a key-value delete operation.
  @param index The index object.
@@ -650,12 +695,14 @@ CBIndexFindStatus CBDatabaseReadValue(CBDatabaseIndex * index, uint8_t * key, ui
  @returns true on success and false on failure.
  */
 bool CBDatabaseRemoveValue(CBDatabaseIndex * index, uint8_t * key, bool stage);
+
 /**
  @brief Stages current changes for commiting to disk such that they are no longer to be reversed. Will commit if commit gap reached or cache limit reached.
  @param self The database object.
  @returns true on success and false on failure.
  */
 bool CBDatabaseStage(CBDatabase * self);
+
 /**
  @brief Queues a key-value write operation from a many data parts. The data is concatenated.
  @param index The inex object.
@@ -665,6 +712,7 @@ bool CBDatabaseStage(CBDatabase * self);
  @param dataSize A list of the data sizes
  */
 void CBDatabaseWriteConcatenatedValue(CBDatabaseIndex * index, uint8_t * key, uint8_t numDataParts, uint8_t ** data, uint32_t * dataSize);
+
 /**
  @brief Queues a key-value write operation.
  @param index The index object.
@@ -673,6 +721,7 @@ void CBDatabaseWriteConcatenatedValue(CBDatabaseIndex * index, uint8_t * key, ui
  @param size The size of the data to store. A new value replaces the old one.
  */
 void CBDatabaseWriteValue(CBDatabaseIndex * index, uint8_t * key, uint8_t * data, uint32_t size);
+
 /**
  @brief Queues a key-value write operation for a sub-section of existing data.
  @param index The index object

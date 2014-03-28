@@ -44,7 +44,7 @@ int main(){
 	};
 	CBByteArray * versionBytes = CBNewByteArrayWithDataCopy(data, 91);
 	CBVersion * version = CBNewVersionFromData(versionBytes);
-	if(CBVersionDeserialise(version) != 91){
+	if (CBVersionDeserialise(version) != 91){
 		printf("DESERIALISATION LEN FAIL\n");
 		return 1;
 	}
@@ -135,74 +135,6 @@ int main(){
 		printf("\n!=\n0x");
 		for (int x = 0; x < 91; x++) {
 			printf("%.2X", data[x]);
-		}
-		return 1;
-	}
-	CBReleaseObject(version);
-	CBReleaseObject(versionBytes);
-	// Test deserilisation for older version
-	uint8_t data2[46] = {
-		0x69, 0x00, 0x00, 0x00, // Version 105
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // CB_SERVICE_FULL_BLOCKS
-		0xFA, 0x3A, 0xF3, 0x4F, 0x00, 0x00, 0x00, 0x00, // Time 1341340410
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01, 0x20, 0x8D, // Destination socket and services
-	};
-	versionBytes = CBNewByteArrayWithDataCopy(data2, 46);
-	version = CBNewVersionFromData(versionBytes);
-	if(CBVersionDeserialise(version) != 46){
-		printf("DESERIALISATION OLD LEN FAIL\n");
-		return 1;
-	}
-	if (version->version != 105) {
-		printf("DESERIALISATION OLD VERSION FAIL\n");
-		return 1;
-	}
-	if (version->services != 1) {
-		printf("DESERIALISATION OLD SERVICES FAIL\n");
-		return 1;
-	}
-	if (version->time != 1341340410) {
-		printf("DESERIALISATION OLD TIME FAIL\n");
-		return 1;
-	}
-	if (version->addRecv->services != 1) {
-		printf("DESERIALISATION OLD ADD RECV SERVICES FAIL\n");
-		return 1;
-	}
-	if (memcmp(CBByteArrayGetData(version->addRecv->sockAddr.ip), (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16)) {
-		printf("DESERIALISATION OLD ADD RECV IP FAIL\n0x");
-		uint8_t * d = CBByteArrayGetData(version->addRecv->sockAddr.ip);
-		for (int x = 0; x < 16; x++) {
-			printf("%.2X", d[x]);
-		}
-		printf("\n!=\n0x");
-		d = (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01};
-		for (int x = 0; x < 16; x++) {
-			printf("%.2X", d[x]);
-		}
-		return 1;
-	}
-	if (version->addRecv->sockAddr.port != 0x208D) {
-		printf("DESERIALISATION OLD ADD RECV PORT FAIL 0x%x != 0x8D20\n", version->addRecv->sockAddr.port);
-		return 1;
-	}
-	// Test old serialisation
-	memset(CBByteArrayGetData(versionBytes), 0, 46);
-	CBReleaseObject(version->addRecv->sockAddr.ip);
-	version->addRecv->sockAddr.ip = CBNewByteArrayWithDataCopy((uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x01}, 16);
-	if(CBVersionSerialise(version, true) != 46){
-		printf("SERIALISATION OLD LEN FAIL\n");
-		return 1;
-	}
-	if (memcmp(data2, CBByteArrayGetData(versionBytes), 46)) {
-		printf("SERIALISATION OLD FAIL\n0x");
-		uint8_t * d = CBByteArrayGetData(versionBytes);
-		for (int x = 0; x < 46; x++) {
-			printf("%.2X", d[x]);
-		}
-		printf("\n!=\n0x");
-		for (int x = 0; x < 46; x++) {
-			printf("%.2X", data2[x]);
 		}
 		return 1;
 	}

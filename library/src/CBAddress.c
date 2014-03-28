@@ -18,47 +18,68 @@
 
 //  Constructors
 
-CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBBase58Prefix prefix, bool cacheString){
+CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBBase58Prefix prefix, bool cacheString) {
+	
 	CBAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeAddress;
 	CBInitAddressFromRIPEMD160Hash(self, hash, prefix, cacheString);
 	return self;
+	
 }
-CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString){
+
+CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString) {
+	
 	CBAddress * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeAddress;
+	
 	if (CBInitAddressFromString(self, string, cacheString))
 		return self;
+	
 	free(self);
 	return NULL;
+	
 }
 
 //  Initialiser
 
-void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t * hash, CBBase58Prefix prefix, bool cacheString){
+void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t * hash, CBBase58Prefix prefix, bool cacheString) {
+	
 	// Build address and then complete intitialisation with CBChecksumBytes
 	uint8_t * data = malloc(25); // 1 Network byte, 20 hash bytes, 4 checksum bytes.
+	
 	// Set network byte
 	data[0] = prefix;
+	
 	// Move hash
-	memmove(data+1, hash, 20);
+	memmove(data + 1, hash, 20);
+	
 	// Initialise CBChecksumBytes
 	CBInitChecksumBytesFromBytes(CBGetChecksumBytes(self), data, 25, cacheString);
+	
 }
-bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheString){
+
+bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheString) {
+	
 	if (! CBInitChecksumBytesFromString(CBGetChecksumBytes(self), string, cacheString))
 		return false;
+	
 	return true;
+	
 }
 
 //  Destructor
 
-void CBDestroyAddress(void * self){
+void CBDestroyAddress(void * self) {
+	
 	CBDestroyChecksumBytes(CBGetChecksumBytes(self));
+	
 }
-void CBFreeAddress(void * self){
+
+void CBFreeAddress(void * self) {
+	
 	CBDestroyAddress(self);
 	free(self);
+	
 }
 
 //  Functions

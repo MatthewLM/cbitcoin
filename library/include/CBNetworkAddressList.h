@@ -43,6 +43,7 @@ typedef struct{
  @returns A new CBNetworkAddressList object.
  */
 CBNetworkAddressList * CBNewNetworkAddressList(bool timeStamps);
+
 /**
  @brief Creates a new CBNetworkAddressList object from serialised data.
  @param data Serialised CBNetworkAddressList data.
@@ -56,6 +57,7 @@ CBNetworkAddressList * CBNewNetworkAddressListFromData(CBByteArray * data, bool 
  @returns true on success, false on failure.
 */
 void CBInitNetworkAddressList(CBNetworkAddressList * self, bool timeStamps);
+
 /**
  @brief Initialises a CBNetworkAddressList object from serialised data
  @param self The CBNetworkAddressList object to initialise
@@ -69,6 +71,7 @@ void CBInitNetworkAddressListFromData(CBNetworkAddressList * self, bool timeStam
  @param self The CBNetworkAddress object to destroy.
  */
 void CBDestroyNetworkAddressList(void * self);
+
 /**
  @brief Frees a CBNetworkAddressList object and also calls CBDestroyNetworkAddressList.
  @param self The CBNetworkAddressList object to free.
@@ -83,18 +86,23 @@ void CBFreeNetworkAddressList(void * self);
  @param address The CBNetworkAddress to add.
  */
 void CBNetworkAddressListAddNetworkAddress(CBNetworkAddressList * self, CBNetworkAddress * address);
+
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBNetworkAddressList object.
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBNetworkAddressListCalculateLength(CBNetworkAddressList * self);
+
 /**
  @brief Deserialises a CBNetworkAddressList so that it can be used as an object.
  @param self The CBNetworkAddressList object
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBNetworkAddressListDeserialise(CBNetworkAddressList * self);
+
+void CBNetworkAddressListPrepareBytes(CBNetworkAddressList * self);
+
 /**
  @brief Serialises a CBNetworkAddressList to the byte data.
  @param self The CBNetworkAddressList object
@@ -104,6 +112,7 @@ uint32_t CBNetworkAddressListDeserialise(CBNetworkAddressList * self);
 uint32_t CBNetworkAddressListSerialise(CBNetworkAddressList * self, bool force);
 uint16_t CBNetworkAddressListStringMaxSize(CBNetworkAddressList * self);
 void CBNetworkAddressListToString(CBNetworkAddressList * self, char * output);
+
 /**
  @brief Takes a CBNetworkAddress to the list for broadcasting. This does not retain the CBNetworkAddress so you can pass an CBNetworkAddress into this while releasing control in the calling function.
  @param self The CBNetworkAddressList object

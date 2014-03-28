@@ -200,11 +200,13 @@ typedef CBByteArray CBScript;
  @returns A new CBScript object.
  */
 CBScript * CBNewScriptFromReference(CBByteArray * program, uint32_t offset, uint32_t len);
+
 /**
  @brief Creates a new CBScript object with a given size.
  @returns A new CBScript object.
  */
 CBScript * CBNewScriptOfSize(uint32_t size);
+
 /**
  @brief Creates a new CBScript object from a string. The script text should follow the following Backus–Naur Form:
  /code
@@ -232,6 +234,7 @@ CBScript * CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n);
 CBScript * CBNewScriptP2SHOutput(CBScript * script);
 CBScript * CBNewScriptPubKeyHashOutput(uint8_t * pubKeyHash);
 CBScript * CBNewScriptPubKeyOutput(uint8_t * pubKey);
+
 /**
  @brief Creates a new CBScript using data.
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
@@ -239,6 +242,7 @@ CBScript * CBNewScriptPubKeyOutput(uint8_t * pubKey);
  @returns The new CBScript object.
  */
 CBScript * CBNewScriptWithData(uint8_t * data, uint32_t size);
+
 /**
  @brief Creates a new CBScript using data which is copied.
  @param data The data. This data is copied.
@@ -265,6 +269,7 @@ void CBInitScriptPubKeyOutput(CBScript * self, uint8_t * pubKey);
  @param self The CBScript object to destroy.
  */
 void CBDestroyScript(void * self);
+
 /**
  @brief Frees a CBScript object and also calls CBDestroyScript.
  @param self The CBScript object to free.
@@ -278,11 +283,13 @@ void CBFreeScript(void * self);
  @param stack The stack to free
  */
 void CBFreeScriptStack(CBScriptStack stack);
+
 /**
  @brief Returns a new empty stack.
  @returns The new empty stack.
  */
 CBScriptStack CBNewEmptyScriptStack(void);
+
 /**
  @brief Executes a bitcoin script.
  @param self The CBScript object with the program
@@ -295,6 +302,7 @@ CBScriptStack CBNewEmptyScriptStack(void);
  */
 CBScriptExecuteReturn CBScriptExecute(CBScript * self, CBScriptStack * stack, bool (*getHashForSig)(void *, CBByteArray *, uint32_t, CBSignType, uint8_t *), void * transaction, uint32_t inputIndex, bool p2sh);
 uint8_t CBScriptGetLengthOfPushOp(uint32_t dataLen);
+
 /**
  @brief Gets the amount being pushed from a script op at a given offset.
  @param self The script object.
@@ -302,6 +310,7 @@ uint8_t CBScriptGetLengthOfPushOp(uint32_t dataLen);
  @retuns The push amount or CB_NOT_A_PUSH_OP (inc. when invalid).
  */
 uint32_t CBScriptGetPushAmount(CBScript * self, uint32_t * offset);
+
 /**
  @brief Returns the number of sigops.
  @param self The CBScript object.
@@ -309,36 +318,42 @@ uint32_t CBScriptGetPushAmount(CBScript * self, uint32_t * offset);
  @retuns the number of sigops as used for validation.
  */
 uint32_t CBScriptGetSigOpCount(CBScript * self, bool inP2SH);
+
 /**
  @brief Determines if a script object matches the public-key hash verification template. 
  @param self The CBScript object.
  @retuns true if the script matches the template, false otherwise.
  */
 bool CBScriptIsKeyHash(CBScript * self);
+
 /**
  @brief Determines if a script object matches the multisignature template.
  @param self The CBScript object.
  @retuns true if the script matches the template, false otherwise.
  */
 bool CBScriptIsMultisig(CBScript * self);
+
 /**
  @brief Determines if a script object matches the P2SH template.
  @param self The CBScript object.
  @retuns true if the script matches the P2SH template, false otherwise.
  */
 bool CBScriptIsP2SH(CBScript * self);
+
 /**
  @brief Determines if a script object matches the public-key verification template.
  @param self The CBScript object.
  @retuns true if the script matches the public key template, false otherwise.
  */
 bool CBScriptIsPubkey(CBScript * self);
+
 /**
  @brief Determines if a script has only push operations.
  @param self The CBScript object.
  @retuns The number of push operations found if the script has only push operations, 0 otherwise. Also returns 0 when an invalid push operation if found.
  */
 uint16_t CBScriptIsPushOnly(CBScript * self);
+
 /**
  @brief Gets the number of a script operation number, which can be OP_0 or OP_1 to OP_16.
  @param op The operation.
@@ -346,6 +361,7 @@ uint16_t CBScriptIsPushOnly(CBScript * self);
  */
 uint8_t CBScriptOpGetNumber(CBScriptOp op);
 CBScriptOutputType CBScriptOutputGetType(CBScript * self);
+
 /**
  @brief Removes occurances of a signature from script data
  @param subScript The sub script to remove signatures from.
@@ -353,6 +369,7 @@ CBScriptOutputType CBScriptOutputGetType(CBScript * self);
  @param signature The signature to be found and removed.
  */
 void CBSubScriptRemoveSignature(uint8_t * subScript, uint32_t * subScriptLen, CBScriptStackItem signature);
+
 /**
  @brief Returns a copy of a stack item, "fromTop" from the top.
  @param stack A pointer to the stack.
@@ -360,30 +377,35 @@ void CBSubScriptRemoveSignature(uint8_t * subScript, uint32_t * subScriptLen, CB
  @returns A copy of the stack item which should be freed.
  */
 CBScriptStackItem CBScriptStackCopyItem(CBScriptStack * stack, uint8_t fromTop);
+
 /**
  @brief Evaluates the top stack item as a bool. False if 0 or -0.
  @param stack The stack.
  @returns The boolean result.
  */
 bool CBScriptStackEvalBool(CBScriptStack * stack);
+
 /**
  @brief Converts a CBScriptStackItem to an int64_t
  @param item The CBScriptStackItem to convert
  @returns A 64 bit signed integer.
  */
 int64_t CBScriptStackItemToInt64(CBScriptStackItem item);
+
 /**
  @brief Removes the top item from the stack and returns it.
  @param stack A pointer to the stack to pop the data.
  @returns The top item. This must be freed.
  */
 CBScriptStackItem CBScriptStackPopItem(CBScriptStack * stack);
+
 /**
  @brief Push data onto the stack which is freed by the stack.
  @param stack A pointer to the stack to push data onto.
  @param data The item to push on the stack.
  */
 void CBScriptStackPushItem(CBScriptStack * stack, CBScriptStackItem item);
+
 /**
  @brief Removes top item from the stack.
  @param stack A pointer to the stack to remove the data.
@@ -392,6 +414,7 @@ void CBScriptStackRemoveItem(CBScriptStack * stack);
 uint32_t CBScriptStringMaxSize(CBScript * self);
 void CBScriptToString(CBScript * self, char * output);
 void CBScriptWritePushOp(CBScript * self, uint32_t offset, uint8_t * data, uint32_t dataLen);
+
 /**
  @brief Converts a int64_t to a CBScriptStackItem
  @param item Pass in a CBScriptStackItem for reallocating data.

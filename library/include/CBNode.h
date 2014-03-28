@@ -107,6 +107,7 @@ bool CBInitNode(CBNode * self, CBDepObject database, CBNodeFlags flags, CBNodeCa
  @param self The CBNode object to destroy.
  */
 void CBDestroyNode(void * self);
+
 /**
  @brief Frees a CBNode object and also calls CBDestroyNode.
  @param self The CBNode object to free.
@@ -126,6 +127,7 @@ CBOnMessageReceivedAction CBNodeReturnError(CBNode * self, char * err);
 CBOnMessageReceivedAction CBNodeSendBlocksInvOrHeaders(CBNode * self, CBPeer * peer, CBGetBlocks * getBlocks, bool full);
 void CBNodeSendMessageOnNetworkThread(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message, void (*callback)(void *, void *));
 void CBNodeSendMessageOnNetworkThreadVoid(void * data);
+
 /**
  @brief Compares two transactions by their hash
  @param tx1 The first transaction
@@ -134,6 +136,7 @@ void CBNodeSendMessageOnNetworkThreadVoid(void * data);
  */
 CBCompare CBTransactionCompare(CBAssociativeArray * foo, void * tx1, void * tx2);
 CBCompare CBTransactionPtrCompare(CBAssociativeArray * foo, void * tx1, void * tx2);
+
 /**
  @brief Compares a hash with a transaction's hash.
  @param hash A hash for a transaction.

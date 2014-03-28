@@ -208,6 +208,7 @@ typedef struct{
 // Functions
 
 bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint8_t * high, uint64_t accountID, int64_t adjustment, int64_t unconfAdjustment, uint64_t * last, int64_t * unconfLast);
+
 /**
  @brief Changes the spent status of an output reference on a branch to spent
  @param self The accounter storage object.
@@ -217,6 +218,7 @@ bool CBAccounterAdjustBalances(CBAccounterStorage * storage, uint8_t * low, uint
  @returns true on success, false on failure.
  */
 bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, uint32_t blockHeight, CBAssociativeArray * txInfo);
+
 /**
  @brief Gets the last cumulative balance for a branch section.
  @param self The accounter storage object.
@@ -225,6 +227,7 @@ bool CBAccounterMakeOutputSpent(CBAccounterStorage * self, CBPrevOut * prevOut, 
  @returns true on success, false on failure.
  */
 bool CBAccounterGetLastAccountBalance(CBAccounterStorage * self, uint64_t accountID, uint64_t maxTime, uint64_t * balance, int64_t * unconfBalance);
+
 /**
  @brief Gets the value of a transction for an account.
  @param self The accounter storage object.
@@ -236,6 +239,7 @@ bool CBAccounterGetLastAccountBalance(CBAccounterStorage * self, uint64_t accoun
 bool CBAccounterGetTxAccountValue(CBAccounterStorage * self, uint64_t txID, uint64_t accountID, int64_t * value);
 uint64_t CBAccounterInt64ToUInt64(int64_t value);
 void CBAccounterUInt64ToInt64(uint64_t raw, int64_t * value);
+
 /**
  @brief Compares 32-bit integers.
  @param int1 A pointer to the first 32-bit integer.

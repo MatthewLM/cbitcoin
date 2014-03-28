@@ -64,6 +64,7 @@ The following list is for all people that have contributed work that has been ac
 Matthew Mitchell <matthewmitchell@thelibertyportal.com> - 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
 Christian von Roques  
 Andrew Miller <amiller@dappervision.com>
+linuxdoctor - 1KB3RsW8H7TFV9awpt6MiXsjDqLD15oax3
 
 Making a Contribution
 ---------------------

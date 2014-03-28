@@ -42,6 +42,7 @@ typedef struct{
  @returns A new CBChainDescriptor object.
 */
 CBChainDescriptor * CBNewChainDescriptor(void);
+
 /**
  @brief Creates a new CBChainDescriptor object from serialised data.
  @param data Serialised CBChainDescriptor data.
@@ -55,6 +56,7 @@ CBChainDescriptor * CBNewChainDescriptorFromData(CBByteArray * data);
  @returns true on success, false on failure.
 */
 void CBInitChainDescriptor(CBChainDescriptor * self);
+
 /**
  @brief Initialises a CBChainDescriptor object from serialised data
  @param self The CBChainDescriptor object to initialise
@@ -68,6 +70,7 @@ void CBInitChainDescriptorFromData(CBChainDescriptor * self, CBByteArray * data)
  @param self The CBChainDescriptor object to destroy.
  */
 void CBDestroyChainDescriptor(void * self);
+
 /**
  @brief Frees a CBChainDescriptor object and also calls CBDestoryChainDescriptor.
  @param self The CBChainDescriptor object to free.
@@ -82,18 +85,21 @@ void CBFreeChainDescriptor(void * self);
  @param hash The hash to add.
  */
 void CBChainDescriptorAddHash(CBChainDescriptor * self, CBByteArray * hash);
+
 /**
  @brief Deserialises a CBChainDescriptor so that it can be used as an object.
  @param self The CBChainDescriptor object
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBChainDescriptorDeserialise(CBChainDescriptor * self);
+
 /**
  @brief Serialises a CBChainDescriptor to the byte data.
  @param self The CBChainDescriptor object
  @returns The length written on success, 0 on failure.
 */
 uint16_t CBChainDescriptorSerialise(CBChainDescriptor * self);
+
 /**
  @brief Takes a hash for the CBChainDescriptor and puts it on the end. The hash is not retained so the calling function is releasing control.
  @param self The CBChainDescriptor object

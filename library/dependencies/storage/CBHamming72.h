@@ -35,6 +35,7 @@
  @returns CB_DOUBLE_BIT_ERROR if a double error was detected, CB_ZERO_BIT_ERROR if no errors were detected or the index of the byte which was corrected.
  */
 uint8_t CBHamming72Check(uint8_t * data, uint32_t dataLen);
+
 /**
  @brief Encodes parity bits for hamming (72, 64) SECDED codes.
  @param data A pointer to the data bytes. Should be no more than eight bytes of data followed by another byte to set the parity bits.

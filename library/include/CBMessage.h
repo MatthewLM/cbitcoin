@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include "CBByteArray.h"
 #include "CBVarInt.h"
 #include "CBDependencies.h"
 
@@ -81,6 +82,7 @@ CBMessage * CBNewMessageByObject(void);
  @returns true on success, false on failure.
  */
 void CBInitMessageByObject(CBMessage * self);
+
 /**
  @brief Initialises a CBMessage object from byte data.
  @param self The CBMessage object to initialise
@@ -93,6 +95,7 @@ void CBInitMessageByData(CBMessage * self, CBByteArray * data);
  @param self The CBMessage object to free.
  */
 void CBDestroyMessage(void * self);
+
 /**
  @brief Frees a CBMessage object and also calles CBDestroyMessage.
  @param self The CBMessage object to free.
@@ -101,6 +104,8 @@ void CBFreeMessage(void * self);
 
 //  Functions
 
+void CBMessagePrepareBytes(CBMessage * message, uint32_t length);
+						 
 void CBMessageTypeToString(CBMessageType type, char output[CB_MESSAGE_TYPE_STR_SIZE]);
 
 #endif

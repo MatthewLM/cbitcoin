@@ -43,6 +43,7 @@ typedef struct{
  @returns A new CBInventory object.
 */
 CBInventory * CBNewInventory(void);
+
 /**
 @brief Creates a new CBInventory object from serialised data.
  @param data Serialised CBInventory data.
@@ -55,6 +56,7 @@ CBInventory * CBNewInventoryFromData(CBByteArray * data);
  @param self The CBInventory object to initialise
 */
 void CBInitInventory(CBInventory * self);
+
 /**
  @brief Initialises a CBInventory object from serialised data
  @param self The CBInventory object to initialise
@@ -67,6 +69,7 @@ void CBInitInventoryFromData(CBInventory * self, CBByteArray * data);
  @param self The CBInventory object to destroy.
  */
 void CBDestroyInventory(void * self);
+
 /**
  @brief Frees a CBInventory object and also calls CBDestroyInventory.
  @param self The CBInventory object to free.
@@ -76,19 +79,25 @@ void CBFreeInventory(void * self);
 //  Functions
 
 bool CBInventoryAddInventoryItem(CBInventory * self, CBInventoryItem * item);
+
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBInventory object.
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBInventoryCalculateLength(CBInventory * self);
+
 /**
  @brief Deserialises a CBInventory so that it can be used as an object.
  @param self The CBInventory object
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBInventoryDeserialise(CBInventory * self);
+
+void CBInventoryPrepareBytes(CBInventory * self);
+
 CBInventoryItem * CBInventoryPopInventoryItem(CBInventory * self);
+
 /**
  @brief Serialises a CBInventory to the byte data.
  @param self The CBInventory object

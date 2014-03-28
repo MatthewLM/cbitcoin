@@ -42,7 +42,7 @@ int main(){
 	CBByteArray * bytes = CBNewByteArrayOfSize(42);
 	CBByteArraySetBytes(bytes, 0, hash, 32);
 	CBByteArraySetBytes(bytes, 32, (uint8_t []){0x05, 0xFA, 0x4B, 0x51}, 4);
-	CBVarIntEncode(bytes, 36, CBVarIntFromUInt64(1));
+	CBByteArraySetVarInt(bytes, 36, CBVarIntFromUInt64(1));
 	CBByteArraySetByte(bytes, 37, CB_SCRIPT_OP_TRUE);
 	uint32_t sequence = rand();
 	CBByteArraySetInt32(bytes, 38, sequence);
@@ -100,7 +100,7 @@ int main(){
 	bytes = CBNewByteArrayOfSize(10);
 	uint64_t value = rand();
 	CBByteArraySetInt64(bytes, 0, value);
-	CBVarIntEncode(bytes, 8, CBVarIntFromUInt64(1));
+	CBByteArraySetVarInt(bytes, 8, CBVarIntFromUInt64(1));
 	CBByteArraySetByte(bytes, 9, CB_SCRIPT_OP_TRUE);
 	CBTransactionOutput * output = CBNewTransactionOutputFromData(bytes);
 	CBTransactionOutputDeserialise(output);
@@ -151,34 +151,34 @@ int main(){
 	// Protocol version
 	CBByteArraySetInt32(bytes, 0, 2);
 	// Input number
-	CBVarIntEncode(bytes, 4, CBVarIntFromUInt64(3));
+	CBByteArraySetVarInt(bytes, 4, CBVarIntFromUInt64(3));
 	// First input test
 	CBByteArraySetBytes(bytes, 5, hash, 32);
 	CBByteArraySetInt32(bytes, 37, randInt);
-	CBVarIntEncode(bytes, 41, CBVarIntFromUInt64(7));
+	CBByteArraySetVarInt(bytes, 41, CBVarIntFromUInt64(7));
 	CBByteArraySetBytes(bytes, 42, scripts[0], 7);
 	CBByteArraySetInt32(bytes, 49, randInt);
 	// Second input test
 	CBByteArraySetBytes(bytes, 53, hash, 32);
 	CBByteArraySetInt32(bytes, 85, randInt);
-	CBVarIntEncode(bytes, 89, CBVarIntFromUInt64(8));
+	CBByteArraySetVarInt(bytes, 89, CBVarIntFromUInt64(8));
 	CBByteArraySetBytes(bytes, 90, scripts[1], 8);
 	CBByteArraySetInt32(bytes, 98, randInt);
 	// Third input test
 	CBByteArraySetBytes(bytes, 102, hash, 32);
 	CBByteArraySetInt32(bytes, 134, randInt);
-	CBVarIntEncode(bytes, 138, CBVarIntFromUInt64(8));
+	CBByteArraySetVarInt(bytes, 138, CBVarIntFromUInt64(8));
 	CBByteArraySetBytes(bytes, 139, scripts[2], 8);
 	CBByteArraySetInt32(bytes, 147, randInt);
 	// Output number
-	CBVarIntEncode(bytes, 151, CBVarIntFromUInt64(2));
+	CBByteArraySetVarInt(bytes, 151, CBVarIntFromUInt64(2));
 	// First output test
 	CBByteArraySetInt64(bytes, 152, randInt64);
-	CBVarIntEncode(bytes, 160, CBVarIntFromUInt64(7));
+	CBByteArraySetVarInt(bytes, 160, CBVarIntFromUInt64(7));
 	CBByteArraySetBytes(bytes, 161, scripts[3], 7);
 	// Second output test
 	CBByteArraySetInt64(bytes, 168, randInt64);
-	CBVarIntEncode(bytes, 176, CBVarIntFromUInt64(6));
+	CBByteArraySetVarInt(bytes, 176, CBVarIntFromUInt64(6));
 	CBByteArraySetBytes(bytes, 177, scripts[4], 7);
 	// Lock time
 	CBByteArraySetInt32(bytes, 183, randInt);
@@ -251,8 +251,7 @@ int main(){
 	CBReleaseObject(outPointerHash);
 	for (uint8_t x = 3; x < 5; x++) {
 		scriptObj = CBNewScriptWithDataCopy(scripts[x], (x == 3)? 7 : 6);
-		output = CBNewTransactionOutput(randInt64, scriptObj);
-		CBTransactionTakeOutput(tx, output);
+		CBTransactionTakeOutput(tx, CBNewTransactionOutput(randInt64, scriptObj));
 		CBReleaseObject(scriptObj);
 	}
 	CBGetMessage(tx)->bytes = CBNewByteArrayOfSize(187);
@@ -272,6 +271,11 @@ int main(){
 	}
 	if (CBTransactionCalculateLength(tx) != 187) {
 		printf("TX LENGTH CALC FAILURE\n");
+		return 1;
+	}
+	// Also check output data is same as transaction data
+	for (uint8_t x = 0; x < 2; x++) if (CBGetMessage(tx->outputs[x])->bytes->sharedData != CBGetMessage(tx)->bytes->sharedData){
+		printf("OUTPUT %u BYTES NOT EQUAL TO TX BYTES\n", x);
 		return 1;
 	}
 	CBReleaseObject(tx);
@@ -1370,7 +1374,7 @@ int main(){
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(666, script));
 	// Sign transaction
 	CBTransactionSignPubKeyHashInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
-	CBTransactionMakeBytes(tx);
+	CBTransactionPrepareBytes(tx);
 	CBTransactionSerialise(tx, true);
 	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
@@ -1389,7 +1393,7 @@ int main(){
 	// Sign transaction
 	CBTransactionSignMultisigInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
 	CBTransactionSignMultisigInput(tx, keyPairs[1], script, 0, CB_SIGHASH_ALL);
-	CBTransactionMakeBytes(tx);
+	CBTransactionPrepareBytes(tx);
 	CBTransactionSerialise(tx, true);
 	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
@@ -1407,7 +1411,7 @@ int main(){
 	CBTransactionTakeOutput(tx, CBNewTransactionOutput(42, script));
 	// Sign transaction
 	CBTransactionSignPubKeyInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
-	CBTransactionMakeBytes(tx);
+	CBTransactionPrepareBytes(tx);
 	CBTransactionSerialise(tx, true);
 	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();
@@ -1427,7 +1431,7 @@ int main(){
 	// Sign transaction
 	CBTransactionSignPubKeyInput(tx, keyPairs[0], script, 0, CB_SIGHASH_ALL);
 	CBTransactionAddP2SHScript(tx, p2shScript, 0);
-	CBTransactionMakeBytes(tx);
+	CBTransactionPrepareBytes(tx);
 	CBTransactionSerialise(tx, true);
 	// Check execution of scripts
 	stack = CBNewEmptyScriptStack();

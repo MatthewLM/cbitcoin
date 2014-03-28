@@ -181,6 +181,7 @@ bool CBInitNodeFull(CBNodeFull * self, CBDepObject database, CBNodeFlags flags, 
  @param self The CBNodeFull object to destroy.
  */
 void CBDestroyNodeFull(void * self);
+
 /**
  @brief Frees a CBNodeFull object and also calls CBDestroyNodeFull.
  @param self The CBNodeFull object to free.
@@ -231,11 +232,13 @@ bool CBNodeFullMakeLostChainTransaction(CBNodeFull * self, CBChainTransaction * 
 void CBNodeFullOnNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason);
 bool CBNodeFullOnTimeOut(CBNetworkCommunicator * comm, CBPeer * peer, CBMessageType type);
 void CBNodeFullPeerDownloadEnd(CBNodeFull * self);
+
 /**
  @brief Frees data associated with the peer.
  @param peer The peer
  */
 void CBNodeFullPeerFree(void * peer);
+
 /**
  @brief Setups the peer.
  @param self The CBNetworkCommunicator object.
@@ -243,6 +246,7 @@ void CBNodeFullPeerFree(void * peer);
  */
 void CBNodeFullPeerSetup(CBNetworkCommunicator * self, CBPeer * peer);
 bool CBNodeFullPeerWorkingOnBranch(void * vself, uint8_t branch);
+
 /**
  @brief Processes transactions, block headers, inventory broadcasts, header requests and data requests.
  @param self The CBNetworkCommunicator object.
@@ -259,12 +263,14 @@ bool CBNodeFullRemoveLostUnconfTxs(CBNodeFull * self);
 bool CBNodeFullRemoveOrphan(CBNodeFull * self);
 bool CBNodeFullRemoveUnconfTx(CBNodeFull * self, CBUnconfTransaction * tx);
 bool CBNodeFullSendGetBlocks(CBNodeFull * self, CBPeer * peer, uint8_t * extraBlock, CBByteArray * stopAtHash);
+
 /**
  @brief Sends data requested by an inventory broadcast.
  @param self The CBNetworkCommunicator object.
  @param peer The peer
  */
 void CBNodeFullSendRequestedData(void * self, void * peer);
+
 /**
  @brief Same as CBNodeFullSendRequestedData but takes void pointers and does not return anything.
  @param self The CBNetworkCommunicator object.

@@ -190,6 +190,9 @@ void CBByteArraySetPort(CBByteArray * self, uint32_t offset, uint16_t integer){
 	self->sharedData->data[self->offset+offset + 1] = integer;
 	self->sharedData->data[self->offset+offset] = integer >> 8;
 }
+void CBByteArraySetVarInt(CBByteArray * self, uint32_t offset, CBVarInt varInt){
+	CBByteArraySetVarIntData(CBByteArrayGetData(self), offset, varInt);
+}
 uint16_t CBByteArrayReadInt16(CBByteArray * self, uint32_t offset){
 	return CBArrayToInt16(self->sharedData->data, self->offset + offset);
 }
@@ -203,6 +206,12 @@ uint16_t CBByteArrayReadPort(CBByteArray * self, uint32_t offset){
 	uint16_t result = self->sharedData->data[self->offset+offset + 1];
 	result |= (uint16_t)self->sharedData->data[self->offset+offset] << 8;
 	return result;
+}
+CBVarInt CBByteArrayReadVarInt(CBByteArray * self, uint32_t offset){
+	return CBVarIntDecodeData(CBByteArrayGetData(self), offset);
+}
+uint8_t CBByteArrayReadVarIntSize(CBByteArray * self, uint32_t offset){
+	return CBVarIntDecodeSize(CBByteArrayGetData(self), offset);
 }
 void CBByteArrayReverseBytes(CBByteArray * self){
 	for (int x = 0; x < self->length / 2; x++) {

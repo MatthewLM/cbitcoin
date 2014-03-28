@@ -51,6 +51,7 @@ struct CBInventoryItem{
  @returns A new CBInventoryItem object.
 */
 CBInventoryItem * CBNewInventoryItem(CBInventoryItemType type, CBByteArray * hash);
+
 /**
 @brief Creates a new CBInventoryItem object from serialised data.
  @param data Serialised CBInventoryItem data.
@@ -64,6 +65,7 @@ CBInventoryItem * CBNewInventoryItemFromData(CBByteArray * data);
  @returns true on success, false on failure.
 */
 void CBInitInventoryItem(CBInventoryItem * self, CBInventoryItemType type, CBByteArray * hash);
+
 /**
  @brief Initialises a CBInventoryItem object from serialised data
  @param self The CBInventoryItem object to initialise
@@ -77,6 +79,7 @@ void CBInitInventoryItemFromData(CBInventoryItem * self, CBByteArray * data);
  @param self The CBInventoryItem object to free.
  */
 void CBDestroyInventoryItem(void * self);
+
 /**
  @brief Frees a CBInventoryItem object and also calls CBDestroyInventoryItem.
  @param self The CBInventoryItem object to free.
@@ -91,6 +94,7 @@ void CBFreeInventoryItem(void * self);
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBInventoryItemDeserialise(CBInventoryItem * self);
+
 /**
  @brief Serialises a CBInventoryItem to the byte data.
  @param self The CBInventoryItem object

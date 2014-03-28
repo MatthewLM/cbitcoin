@@ -43,6 +43,7 @@ typedef struct{
  @returns A new CBGetBlocks object.
 */
 CBGetBlocks * CBNewGetBlocks(uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash);
+
 /**
 @brief Creates a new CBGetBlocks object from serialised data.
  @param data Serialised CBGetBlocks data.
@@ -56,6 +57,7 @@ CBGetBlocks * CBNewGetBlocksFromData(CBByteArray * data);
  @returns true on success, false on failure.
 */
 void CBInitGetBlocks(CBGetBlocks * self, uint32_t version, CBChainDescriptor * chainDescriptor, CBByteArray * stopAtHash);
+
 /**
  @brief Initialises a CBGetBlocks object from serialised data
  @param self The CBGetBlocks object to initialise
@@ -69,6 +71,7 @@ void CBInitGetBlocksFromData(CBGetBlocks * self, CBByteArray * data);
  @param self The CBGetBlocks object to destroy.
  */
 void CBDestroyGetBlocks(void * self);
+
 /**
  @brief Frees a CBGetBlocks object and also calls CBDestroyGetBlocks.
  @param self The CBGetBlocks object to free.
@@ -83,12 +86,16 @@ void CBFreeGetBlocks(void * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBGetBlocksCalculateLength(CBGetBlocks * self);
+
 /**
  @brief Deserialises a CBGetBlocks so that it can be used as an object.
  @param self The CBGetBlocks object
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBGetBlocksDeserialise(CBGetBlocks * self);
+
+void CBGetBlocksPrepareBytes(CBGetBlocks * self);
+
 /**
  @brief Serialises a CBGetBlocks to the byte data.
  @param self The CBGetBlocks object

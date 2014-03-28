@@ -43,6 +43,7 @@ typedef CBChecksumBytes CBAddress;
  @returns A new CBAddress object.
  */
 CBAddress * CBNewAddressFromRIPEMD160Hash(uint8_t * hash, CBBase58Prefix prefix, bool cacheString);
+
 /**
  @brief Creates a new CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
@@ -60,6 +61,7 @@ CBAddress * CBNewAddressFromString(CBByteArray * string, bool cacheString);
  @param cacheString If true, the bitcoin string for this object will be cached in memory.
  */
 void CBInitAddressFromRIPEMD160Hash(CBAddress * self, uint8_t * hash, CBBase58Prefix prefix, bool cacheString);
+
 /**
  @brief Initialises a CBAddress object from a base-58 encoded string.
  @param self The CBAddress object to initialise.
@@ -74,6 +76,7 @@ bool CBInitAddressFromString(CBAddress * self, CBByteArray * string, bool cacheS
  @param self The CBAddress object to destroy.
  */
 void CBDestroyAddress(void * self);
+
 /**
  @brief Frees a CBAddress object and also calls CBDestoryAddress
  @param self The CBAddress object to free.

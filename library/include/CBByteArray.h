@@ -24,6 +24,7 @@
 
 #include "CBObject.h"
 #include "CBDependencies.h"
+#include "CBVarInt.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -57,12 +58,14 @@ typedef struct{
  @returns A new CBByteArray object.
  */
 CBByteArray * CBNewByteArrayFromString(char * string, bool terminator);
+
 /**
  @brief Creates an empty CBByteArray object.
  @param size Size in bytes for the new array. Can be zero.
  @returns An empty CBByteArray object.
  */
 CBByteArray * CBNewByteArrayOfSize(uint32_t size);
+
 /**
  @brief Creates a CBByteArray object referencing another CBByteArrayObject
  @param ref The CBByteArray to reference.
@@ -71,6 +74,7 @@ CBByteArray * CBNewByteArrayOfSize(uint32_t size);
  @returns An empty CBByteArray object.
  */
 CBByteArray * CBNewByteArraySubReference(CBByteArray * ref, uint32_t offset, uint32_t length);
+
 /**
  @brief Creates a new CBByteArray using data.
  @param data The data. This should be dynamically allocated. The new CBByteArray object will take care of it's memory management so do not free this data once passed into this constructor.
@@ -78,6 +82,7 @@ CBByteArray * CBNewByteArraySubReference(CBByteArray * ref, uint32_t offset, uin
  @returns The new CBByteArray object.
  */
 CBByteArray * CBNewByteArrayWithData(uint8_t * data, uint32_t size);
+
 /**
  @brief Creates a new CBByteArray using data which is copied.
  @param data The data. This data is copied.
@@ -94,12 +99,14 @@ CBByteArray * CBNewByteArrayFromHex(char * hex);
  @param terminator If true, include the termination character.
  */
 void CBInitByteArrayFromString(CBByteArray * self, char * string, bool terminator);
+
 /**
  @brief Initialises an empty CBByteArray object
  @param self The CBByteArray object to initialise
  @param size Size in bytes for the new array.
  */
 void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size);
+
 /**
  @brief Initialises a reference CBByteArray to a subsection of an CBByteArray.
  @param self The CBByteArray object to initialise.
@@ -108,6 +115,7 @@ void CBInitByteArrayOfSize(CBByteArray * self, uint32_t size);
  @param length The length of the reference.
  */
 void CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t offset, uint32_t length);
+
 /**
  @brief Creates a new CBByteArray using data.
  @param self The CBByteArray object to initialise
@@ -115,6 +123,7 @@ void CBInitByteArraySubReference(CBByteArray * self, CBByteArray * ref, uint32_t
  @param size Size in bytes for the new array.
  */
 void CBInitByteArrayWithData(CBByteArray * self, uint8_t * data, uint32_t size);
+
 /**
  @brief Creates a new CBByteArray using data which is copied.
  @param self The CBByteArray object to initialise
@@ -129,6 +138,7 @@ void CBInitByteArrayFromHex(CBByteArray * self, char * hex);
  @param self The CBByteArray object to destroy.
  */
 void CBDestroyByteArray(void * self);
+
 /**
  @brief Frees a CBByteArray object and also calls CBDestroyByteArray.
  @param self The CBByteArray object to free.
@@ -150,12 +160,14 @@ void CBByteArrayReleaseSharedData(CBByteArray * self);
  @returns If the lengths are different, CB_COMPARE_MORE_THAN if "self" if longer, else CB_COMPARE_LESS_THAN. If the bytes are equal CB_COMPARE_EQUAL, else CB_COMPARE_MORE_THAN if the first different byte if higher in "self", otherwise CB_COMPARE_LESS_THAN. The return value can be treated like the return value to memcmp.
  */
 CBCompare CBByteArrayCompare(CBByteArray * self, CBByteArray * second);
+
 /**
  @brief Copies a CBByteArray
  @param self The CBByteArray object to copy
  @returns The new CBByteArray.
  */
 CBByteArray * CBByteArrayCopy(CBByteArray * self);
+
 /**
  @brief Copies another byte array to this byte array.
  @param self The CBByteArray object.
@@ -163,6 +175,7 @@ CBByteArray * CBByteArrayCopy(CBByteArray * self);
  @param source The CBByteArray to copy from.
  */
 void CBByteArrayCopyByteArray(CBByteArray * self, uint32_t writeOffset, CBByteArray * source);
+
 /**
  @brief Copies a section of another byte array to this byte array.
  @param self The CBByteArray object.
@@ -172,6 +185,7 @@ void CBByteArrayCopyByteArray(CBByteArray * self, uint32_t writeOffset, CBByteAr
  @param length The length to copy.
  */
 void CBByteArrayCopySubByteArray(CBByteArray * self, uint32_t writeOffset, CBByteArray * source, uint32_t readOffset, uint32_t length);
+
 /**
  @brief Get a byte from the CBByteArray object. A byte will be returned from self->offset+index in the underlying data.
  @param self The CBByteArray object.
@@ -179,24 +193,28 @@ void CBByteArrayCopySubByteArray(CBByteArray * self, uint32_t writeOffset, CBByt
  @returns The byte
  */
 uint8_t CBByteArrayGetByte(CBByteArray * self, uint32_t index);
+
 /**
  @brief Get a pointer to the underlying data starting at self->offset.
  @param self The CBByteArray object.
  @returns The pointer
  */
 uint8_t * CBByteArrayGetData(CBByteArray * self);
+
 /**
  @brief Get the last byte from the CBByteArray object. A byte will be returned from self->offset+self->length in the underlying data.
  @param self The CBByteArray object.
  @returns The last byte
  */
 uint8_t CBByteArrayGetLastByte(CBByteArray * self);
+
 /**
  @brief Determines if a CBByteArray is null.
  @param self The CBByteArray object.
  @returns true if all bytes are zero, else false.
  */
 bool CBByteArrayIsNull(CBByteArray * self);
+
 /**
  @brief Set a byte into the array. This will be set at self->offset+index in the underlying data.
  @param self The CBByteArray object.
@@ -204,6 +222,7 @@ bool CBByteArrayIsNull(CBByteArray * self);
  @param byte The byte to be set.
  */
 void CBByteArraySetByte(CBByteArray * self, uint32_t index, uint8_t byte);
+
 /**
  @brief Copies a length of bytes into the array. This will be set at self->offset+index in the underlying data.
  @param self The CBByteArray object.
@@ -212,6 +231,7 @@ void CBByteArraySetByte(CBByteArray * self, uint32_t index, uint8_t byte);
  @param length The number of bytes to copy.
  */
 void CBByteArraySetBytes(CBByteArray * self, uint32_t index, uint8_t * bytes, uint32_t length);
+
 /**
  @brief Writes a 16 bit integer to a CBByteArray as little-endian
  @param self The CBByteArray object
@@ -219,6 +239,7 @@ void CBByteArraySetBytes(CBByteArray * self, uint32_t index, uint8_t * bytes, ui
  @param integer The 16 bit integer to set. The argument is an unsigned integer but signed or unsigned integers are OK to pass.
  */
 void CBByteArraySetInt16(CBByteArray * self, uint32_t offset, uint16_t integer);
+
 /**
  @brief Writes a 32 bit integer to a CBByteArray as little-endian
  @param self The CBByteArray object
@@ -226,6 +247,7 @@ void CBByteArraySetInt16(CBByteArray * self, uint32_t offset, uint16_t integer);
   @param integer The 32 bit integer to set. The argument is an unsigned integer but signed or unsigned integers are OK to pass.
  */
 void CBByteArraySetInt32(CBByteArray * self, uint32_t offset, uint32_t integer);
+
 /**
  @brief Writes a 64 bit integer to a CBByteArray as little-endian
  @param self The CBByteArray object
@@ -233,6 +255,7 @@ void CBByteArraySetInt32(CBByteArray * self, uint32_t offset, uint32_t integer);
  @param integer The 64 bit integer to set. The argument is an unsigned integer but signed or unsigned integers are OK to pass.
  */
 void CBByteArraySetInt64(CBByteArray * self, uint32_t offset, uint64_t integer);
+
 /**
  @brief Writes a 16 bit integer to a CBByteArray as big-endian for port numbers.
  @param self The CBByteArray object
@@ -240,6 +263,15 @@ void CBByteArraySetInt64(CBByteArray * self, uint32_t offset, uint64_t integer);
  @param integer The 16 bit integer to set.
  */
 void CBByteArraySetPort(CBByteArray * self, uint32_t offset, uint16_t integer);
+
+/**
+ @brief Writes a variable size integer into the CBByteArray.
+ @param self The byte array to encode a variable size integer into.
+ @param offset Offset to start encoding to.
+ @param varInt Variable integer structure to write as variable integer data.
+ */
+void CBByteArraySetVarInt(CBByteArray * self, uint32_t offset, CBVarInt varInt);
+
 /**
  @brief Reads a 16 bit integer from a CBByteArray as little-endian
  @param self The CBByteArray object
@@ -247,6 +279,7 @@ void CBByteArraySetPort(CBByteArray * self, uint32_t offset, uint16_t integer);
  @returns A 16 bit integer. This can be cast to a signed integer if reading integer as a signed value.
  */
 uint16_t CBByteArrayReadInt16(CBByteArray * self, uint32_t offset);
+
 /**
  @brief Reads a 32 bit integer from a CBByteArray as little-endian
  @param self The CBByteArray object
@@ -254,6 +287,7 @@ uint16_t CBByteArrayReadInt16(CBByteArray * self, uint32_t offset);
  @returns A 32 bit integer. This can be cast to a signed integer if reading integer as a signed value
  */
 uint32_t CBByteArrayReadInt32(CBByteArray * self, uint32_t offset);
+
 /**
  @brief Reads a 64 bit integer from the CBByteArray as little-endian
  @param self The CBByteArray object
@@ -261,6 +295,7 @@ uint32_t CBByteArrayReadInt32(CBByteArray * self, uint32_t offset);
  @returns A 64 bit integer. This can be cast to a signed integer if reading integer as a signed value
  */
 uint64_t CBByteArrayReadInt64(CBByteArray * self, uint32_t offset);
+
 /**
  @brief Reads a 16 bit integer from the CBByteArray as big-endian for port numbers.
  @param self The CBByteArray object
@@ -268,11 +303,22 @@ uint64_t CBByteArrayReadInt64(CBByteArray * self, uint32_t offset);
  @returns A 16 bit integer.
  */
 uint16_t CBByteArrayReadPort(CBByteArray * self, uint32_t offset);
+
+/**
+ @brief Reads a variable size integer from a byte array into a CBVarInt structure.
+ @param bytes The self array to read a variable size integer from.
+ @param offset Offset to start reading from.
+ @returns The CBVarInt information
+ */
+CBVarInt CBByteArrayReadVarInt(CBByteArray * self, uint32_t offset);
+uint8_t CBByteArrayReadVarIntSize(CBByteArray * self, uint32_t offset);
+
 /**
  @brief Reverses the bytes.
  @param self The CBByteArray object to reverse
  */
 void CBByteArrayReverseBytes(CBByteArray * self);
+
 /**
  @brief Changes the reference of this CBByteArray object to reference the underlying data of another CBByteArray. Useful for moving byte data into single underlying data by copying the data into a larger CBByteArray and then changing the reference to this new larger CBByteArray.
  @param self The CBByteArray object to change the reference for.
@@ -281,6 +327,7 @@ void CBByteArrayReverseBytes(CBByteArray * self);
  @returns The new CBByteArray.
  */
 void CBByteArrayChangeReference(CBByteArray * self, CBByteArray * ref, uint32_t offset);
+
 /**
  @brief Copies a subsection of a CBByteArray.
  @param self The CBByteArray object to copy from.
@@ -289,6 +336,7 @@ void CBByteArrayChangeReference(CBByteArray * self, CBByteArray * ref, uint32_t 
  @returns The new CBByteArray.
  */
 CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t length);
+
 /**
  @brief References a subsection of a CBByteArray.
  @param self The CBByteArray object to reference.

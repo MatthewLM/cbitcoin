@@ -55,17 +55,20 @@ typedef struct{
  @returns A new CBBlock object.
  */
 CBBlock * CBNewBlock(void);
+
 /**
  @brief Creates a new CBBlock object.
  @param data Serialised block data.
  @returns A new CBBlock object.
  */
 CBBlock * CBNewBlockFromData(CBByteArray * data);
+
 /**
  @brief Creates a new CBBlock object with the genesis information for the bitcoin block chain. This will have serialised data as well as object data.
  @returns A new CBBlock object.
  */
 CBBlock * CBNewBlockGenesis(void);
+
 /**
  @brief Creates a new CBBlock object with the genesis information for the bitcoin block chain. This function only includes the header. This will have serialised data as well as object data.
  @returns A new CBBlock object.
@@ -77,6 +80,7 @@ CBBlock * CBNewBlockGenesisHeader(void);
  @param self The CBBlock object to initialise
  */
 void CBInitBlock(CBBlock * self);
+
 /**
  @brief Initialises a CBBlock object from serialised data
  @param self The CBBlock object to initialise
@@ -101,6 +105,7 @@ void CBInitBlockGenesisHeader(CBBlock * self);
  @param self The CBBlock object to destroy.
  */
 void CBDestroyBlock(void * self);
+
 /**
  @brief Frees a CBBlock object and also calls CBDestroyBlock.
  @param self The CBBlock object to free.
@@ -114,12 +119,14 @@ void CBFreeBlock(void * self);
  @param self The CBBlock object.
  */
 void CBBlockCalculateAndSetMerkleRoot(CBBlock * self);
+
 /**
  @brief Calculates the hash for a block.
  @param self The CBBlock object. This should be serialised.
  @param The hash for the block to be set. This should be 32 bytes long.
  */
 void CBBlockCalculateHash(CBBlock * self, uint8_t * hash);
+
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBBlock object.
@@ -127,12 +134,14 @@ void CBBlockCalculateHash(CBBlock * self, uint8_t * hash);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBBlockCalculateLength(CBBlock * self, bool transactions);
+
 /**
  @brief Calculates the merkle root from the transactions. The transactions should be serailised.
  @param self The CBBlock object.
  @returns The merkle root on success, NULL on failure. Ensure to free the returned data.
  */
 uint8_t * CBBlockCalculateMerkleRoot(CBBlock * self);
+
 /**
  @brief Deserialises a CBBlock so that it can be used as an object.
  @param self The CBBlock object
@@ -140,13 +149,18 @@ uint8_t * CBBlockCalculateMerkleRoot(CBBlock * self);
  @returns The length read on success, 0 on failure.
  */
 uint32_t CBBlockDeserialise(CBBlock * self, bool transactions);
+
 /**
  @brief Retrieves or calculates the hash for a block. Hashes taken from this fuction are cached.
  @param self The CBBlock object. This should be serialised.
  @returns The hash for the block. This is a 32 byte long, double SHA-256 hash and is a pointer to the hash field in the block.
  */
 uint8_t * CBBlockGetHash(CBBlock * self);
+
 void CBBlockHashToString(CBBlock * self, char output[CB_BLOCK_HASH_STR_SIZE]);
+
+void CBBlockPrepareBytes(CBBlock * self, bool transactions);
+
 /**
  @brief Serialises a CBBlock to the byte data.
  @param self The CBBlock object

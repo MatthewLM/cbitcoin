@@ -57,6 +57,7 @@ typedef struct{
  @returns A new CBAlert object.
 */
 CBAlert * CBNewAlert(int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved);
+
 /**
 @brief Creates a new CBAlert object from serialised data.
  @param data Serialised CBAlert data.
@@ -69,6 +70,7 @@ CBAlert * CBNewAlertFromData(CBByteArray * data);
  @param self The CBAlert object to initialise
 */
 void CBInitAlert(CBAlert * self, int32_t version, int64_t relayUntil, int64_t expiration, int32_t ID, int32_t cancel, int32_t minVer, int32_t maxVer, int32_t priority, CBByteArray * hiddenComment, CBByteArray * displayedComment, CBByteArray * reserved);
+
 /**
  @brief Initialises a CBAlert object from serialised data
  @param self The CBAlert object to initialise
@@ -81,6 +83,7 @@ void CBInitAlertFromData(CBAlert * self, CBByteArray * data);
  @param self The CBAlert object to destory.
  */
 void CBDestroyAlert(void * self);
+
 /**
  @brief Frees a CBAlert object and also calls CBDestroyAlert.
  @param self The CBAlert object to free.
@@ -95,36 +98,44 @@ void CBFreeAlert(void * self);
  @param ID The id to add.
  */
 void CBAlertAddCancelID(CBAlert * self, uint32_t ID);
+
 /**
  @brief Adds a user agent to the user agent set
  @param self The CBAlert object
  @param userAgent The user agent to add.
  */
 void CBAlertAddUserAgent(CBAlert * self, CBByteArray * userAgent);
+
 /**
  @brief Calculates the length needed to serialise the object.
  @param self The CBAlert object.
  @returns The length.
  */
 uint32_t CBAlertCalculateLength(CBAlert * self);
+
 /**
  @brief Deserialises a CBAlert so that it can be used as an object.
  @param self The CBAlert object
  @returns The length read on success, 0 on failure.
 */
 uint32_t CBAlertDeserialise(CBAlert * self);
+
 /**
  @brief Gets the payload from the data. Should be serialised beforehand.
  @param self The CBAlert object
  @returns A CBByteArray object for the payload. Can be used to check the signature. When checking the signature the payload should be hashed by SHA256 twice.
  */
 CBByteArray * CBAlertGetPayload(CBAlert * self);
+
+void CBAlertPrepareBytes(CBAlert * self);
+
 /**
  @brief Serialises the payload of a CBAlert and returns a CBByteArray to the specifc payload bytes to aid in creating a signature.
  @param self The CBAlert object
  @returns true on sucess. false on failure.
 */
 bool CBAlertSerialisePayload(CBAlert * self);
+
 /**
  @brief Serialises the signature of a CBAlert.
  @param self The CBAlert object
@@ -132,6 +143,7 @@ bool CBAlertSerialisePayload(CBAlert * self);
  @returns The total length of the serialised CBAlert on sucess, else false.
  */
 uint16_t CBAlertSerialiseSignature(CBAlert * self, uint16_t offset);
+
 /**
  @brief Takes a user agent for the user agent set. This does not retain the CBByteArray so you can pass an CBByteArray into this while releasing control from the calling function.
  @param self The CBAlert object

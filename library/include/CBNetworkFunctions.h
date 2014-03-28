@@ -46,18 +46,21 @@ static const uint8_t RFC6052Start[12] = {0, 0x64, 0xFF, 0x9B, 0, 0, 0, 0, 0, 0, 
  @returns The IP type.
  */
 CBIPType CBGetIPType(uint8_t * IP);
+
 /**
  @brief Determines if an IP address is an GarliCat I2P hidden service representation
  @param IP The IP address to check.
  @returns true if the IP address is an I2P address, false otherwise.
  */
 bool CBIsI2P(uint8_t * IP);
+
 /**
  @brief Determines if an IP address is an IPv4 address
  @param IP The IP address to check.
  @returns true if the IP address is IPv4, false otherwise.
  */
 bool CBIsIPv4(uint8_t * IP);
+
 /**
  @brief Determines if an IP address is an OnionCat Tor hidden service representation
  @param IP The IP address to check.

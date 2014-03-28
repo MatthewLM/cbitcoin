@@ -16,46 +16,44 @@
 
 #include "CBVarInt.h"
 
-CBVarInt CBVarIntDecode(CBByteArray * bytes, uint32_t offset){
-	return CBVarIntDecodeData(CBByteArrayGetData(bytes), offset);
-}
 CBVarInt CBVarIntDecodeData(uint8_t * bytes, uint32_t offset){
 	CBVarInt result;
-	if (bytes[offset] < 253) {
-		// 8 bits.
-		result.val = bytes[offset];
-		result.size = 1;
-	} else if (bytes[offset] == 253) {
-		// 16 bits.
-		result.val = CBArrayToInt16(bytes, offset + 1);
-		result.size = 3;
-	} else if (bytes[offset] == 254) {
-		// 32 bits.
-		result.val = CBArrayToInt32(bytes, offset + 1);
-		result.size = 5;
-	} else {
-		// 64 bits.
-		result.val = CBArrayToInt64(bytes, offset + 1);
-		result.size = 9;
-	}
+	result.size = CBVarIntDecodeSize(bytes, offset);
+	if (result.size == 1) result.val = bytes[offset];
+	else if (result.size == 3) result.val = CBArrayToInt16(bytes, offset + 1);
+	else if (result.size == 5) result.val = CBArrayToInt32(bytes, offset + 1);
+	else result.val = CBArrayToInt64(bytes, offset + 1);
 	return result;
 }
-void CBVarIntEncode(CBByteArray * bytes, uint32_t offset, CBVarInt varInt){
+uint8_t CBVarIntDecodeSize(uint8_t * bytes, uint32_t offset) {
+	if (bytes[offset] < 253)
+		// 8 bits.
+		return 1;
+	if (bytes[offset] == 253)
+		// 16 bits.
+		return 3;
+	if (bytes[offset] == 254)
+		// 32 bits.
+		return 5;
+	// 64 bits.
+	return 9;
+}
+void CBByteArraySetVarIntData(uint8_t * bytes, uint32_t offset, CBVarInt varInt) {
 	switch (varInt.size) {
 		case 1:
-			CBByteArraySetByte(bytes, offset, (uint8_t)varInt.val);
+			bytes[offset] = (uint8_t)varInt.val;
 			break;
 		case 3:
-			CBByteArraySetByte(bytes, offset, 253);
-			CBByteArraySetInt16(bytes, offset + 1, (uint16_t)varInt.val);
+			bytes[offset] = 253;
+			CBInt16ToArray(bytes, offset + 1, varInt.val);
 			break;
 		case 5:
-			CBByteArraySetByte(bytes, offset, 254);
-			CBByteArraySetInt32(bytes, offset + 1, (uint32_t)varInt.val);
+			bytes[offset] = 254;
+			CBInt32ToArray(bytes, offset + 1, varInt.val);
 			break;
 		case 9:
-			CBByteArraySetByte(bytes, offset, 255);
-			CBByteArraySetInt64(bytes, offset + 1, varInt.val);
+			bytes[offset] = 255;
+			CBInt64ToArray(bytes, offset + 1, varInt.val);
 			break;
 	}
 }
@@ -68,10 +66,10 @@ CBVarInt CBVarIntFromUInt64(uint64_t integer){
 uint8_t CBVarIntSizeOf(uint64_t value){
 	if (value < 253)
 		return 1;
-	else if (value < 65536)
+	else if (value <= UINT16_MAX)
 		return 3;  // 1 marker + 2 data bytes
-	else if (value < 4294967296)
+	else if (value <= UINT32_MAX)
 		return 5;  // 1 marker + 4 data bytes
 	return 9; // 1 marker + 4 data bytes
-}
+} 
 
