@@ -27,8 +27,6 @@ The features include:
 
 If you wish to contact the project leader, Matthew Mitchell, about this project please email cbitcoin@thelibertyportal.com
 
-**To help support cbitcoin financially, please send donations to: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9 Thank you**
-
 Installation
 ------------
 
@@ -55,6 +53,15 @@ You can also change CFLAGS, LFLAGS and CC before running ./configure to make cha
 The library will be built into a ./bin directory.
 
 If you are able to get it to work for other systems then please submit the changes. If you think you have found a debug, then you may wish to submit an issue on the gitbub repository page (https://github.com/MatthewLM/cbitcoin/). Otherwise you may wish to try to fix the problem yourself, in which case please submit fixes. You should check to see that the issue is not being worked upon already.
+
+Donations
+---------
+
+If you wish to support this project you can donate via the following methods:
+
+Bitcoin: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
+Charitycoin: CSU54ZAa4VuhiVwzgyAudePmn7eJigkKU5  
+Paypal: [Click here to donate](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YPB6N4BBZQD3N)
 
 Contributors
 ------------
