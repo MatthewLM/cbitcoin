@@ -22,6 +22,6 @@
 
 #include <string.h>
 
-void CBSanitiseOutput(char * str);
+void CBSanitiseOutput(char * str, size_t strLen);
 
 #endif

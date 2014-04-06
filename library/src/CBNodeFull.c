@@ -699,30 +699,47 @@ bool CBNodeFullDependantSpendsPrevOut(CBAssociativeArray * dependants, CBPrevOut
 				return true;
 	return false;
 }
-void CBNodeFullDownloadFromSomePeer(CBNodeFull * self, CBPeer * notPeer){
+
+void CBNodeFullDownloadFromSomePeer(CBNodeFull * self, CBPeer * notPeer) {
+	
 	// Loop through peers to find one we can download from
+	
 	CBMutexLock(CBGetNetworkCommunicator(self)->peersMutex);
-	// ??? Order peers by block height
-	CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers){
+	
+	// ??? Order peers by block height?
+	CBAssociativeArrayForEach(CBPeer * peer, &CBGetNetworkCommunicator(self)->addresses->peers) {
+		
 		if (!peer->upload && !peer->upToDate && peer->versionMessage && peer->versionMessage->services | CB_SERVICE_FULL_BLOCKS && peer != notPeer) {
+			
 			// Ask this peer for blocks.
+			
 			CBLogVerbose("Selected %s for block-chain download.", peer->peerStr);
-			// Send getblocks
+			
+			// Set this peer as the one we are downloading from
 			CBMutexLock(self->downloadingMutex);
 			self->downloadingPeer = peer;
 			CBMutexUnlock(self->downloadingMutex);
+			
 			// We don't know what branch the peer is going to give us yet
 			peer->branchWorkingOn = CB_NO_BRANCH;
 			peer->allowNewBranch = true;
+			
 			// Ignore errors from CBNodeFullSendGetBlocks
 			CBNodeFullSendGetBlocks(self, peer, NULL, NULL);
+			
+			// Break as we have found a peer to download from.
+			break;
+			
 		}
 	}
+	
 	CBMutexUnlock(CBGetNetworkCommunicator(self)->peersMutex);
+	
 	if (!self->downloadingPeer)
 		// No longer downloading. We are up-to-date with everyone.
 		CBGetNode(self)->callbacks.uptodate(CBGetNode(self), true);
 }
+
 CBErrBool CBNodeFullFoundTransaction(CBNodeFull * self, CBTransaction * tx, uint64_t time, uint32_t blockHeight, bool callNow, bool processDependants){
 	// Add transaction
 	CBTransactionAccountDetailList * list;
@@ -871,7 +888,7 @@ bool CBNodeFullInvalidBlock(void * vself, CBBlock * block){
 		CBNodeDisconnectPeer(peer);
 	return true;
 }
-bool CBNodeFullIsOrphan(void * vself, CBBlock * block){
+bool CBNodeFullIsOrphan(void * vself, CBBlock * block) {
 	CBNodeFull * self = vself;
 	CBPeer * peer = self->downloadingPeer;
 	// Finished with the block chain
@@ -1621,29 +1638,46 @@ CBOnMessageReceivedAction CBNodeFullProcessMessage(CBNode * node, CBPeer * peer,
 			break;
 		}
 		case CB_MESSAGE_TYPE_INV:{
-			// The peer has sent us an inventory broadcast
-			CBInventory * inv = CBGetInventory(message);
+			// The peer has sent us an inventory broadcast.
 			// Get data request for objects we want.
+			
+			CBInventory * inv = CBGetInventory(message);
 			CBInventory * getData = NULL;
 			bool gotReqBlocks = self->reqBlockNum > 0;
+			bool gaveIgnoreNotice = false;
+			
 			// Loop through items
 			for (CBInventoryItem * item; (item = CBInventoryPopInventoryItem(inv)) != NULL;) {
+				
 				uint8_t * hash = CBByteArrayGetData(item->hash);
+				
 				if (item->type == CB_INVENTORY_ITEM_BLOCK) {
+					
 					CBMutexLock(self->downloadingMutex);
+					
 					if (gotReqBlocks || (self->downloadingPeer && self->downloadingPeer != peer)) {
+						
 						// We are still obtaining the required blocks or we are still downloading from another peer, do not accept any more blocks until we are done getting the previous ones.
-						CBLogVerbose("Ignoring blocks from %s as we are still downloading from them, or we are downloading from another peer.", peer->peerStr);
+						if (! gaveIgnoreNotice) {
+							CBLogVerbose("Ignoring blocks from %s as we are still downloading from them, or we are downloading from another peer.", peer->peerStr);
+							gaveIgnoreNotice = true;
+						}
+						
 						CBMutexUnlock(self->downloadingMutex);
+						
 						continue;
+						
 					}
+					
 					if (!self->downloadingPeer){
 						// We aren't downloading from any peer, and we jsut got an unsolicited block. We can download from this peer for this block
 						self->downloadingPeer = peer;
 						peer->branchWorkingOn = CB_NO_BRANCH;
 						peer->allowNewBranch = true;
 					}
+					
 					CBMutexUnlock(self->downloadingMutex);
+					
 					// Check if we have the block
 					CBMutexLock(node->blockAndTxMutex);
 					CBErrBool exists = CBValidatorBlockExists(validator, hash);

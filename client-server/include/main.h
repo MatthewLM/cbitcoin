@@ -55,12 +55,24 @@ typedef struct{
 // Functions
 
 bool CBAddNetworkAddress(CBNetworkAddressLinkedList * nodes, char * ip, bool isPublic);
+
 bool CBCheckNumber(uint32_t num);
+
 void CBOnDoubleSpend(CBNode * node, uint8_t * txHash);
+
 void CBOnNewBlock(CBNode * node, CBBlock * block, uint32_t forkPoint);
+
 void CBOnNewTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details);
+
 void CBOnFatalNodeError(CBNode * node, CBErrorReason reason);
+
 void CBOnTransactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight);
+
 void CBOnTransactionUnconfirmed(CBNode * node, uint8_t * txHash);
+
+void CBOnUpToDate(CBNode * node, bool uptodate);
+
 CBNetworkAddress * CBReadNetworkAddress(char * ip, bool isPublic);
+
 void CBStartNode(void * comm);
+

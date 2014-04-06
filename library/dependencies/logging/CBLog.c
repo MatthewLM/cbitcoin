@@ -39,9 +39,6 @@ void CBLog(CBLogType type, char * prog, char * format, va_list argptr) {
 	vsprintf(buf, format, argptr);
 	va_end(argptr);
 	
-	// Only allow certain characters
-	CBSanitiseOutput(buf);
-	
 	// Set to begining of buffer
 	bufPtr = buf;
 	

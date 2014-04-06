@@ -25,6 +25,7 @@
 #include "CBObject.h"
 #include "CBDependencies.h"
 #include "CBVarInt.h"
+#include "CBSanitiseOutput.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -214,6 +215,8 @@ uint8_t CBByteArrayGetLastByte(CBByteArray * self);
  @returns true if all bytes are zero, else false.
  */
 bool CBByteArrayIsNull(CBByteArray * self);
+
+void CBByteArraySanitise(CBByteArray * self);
 
 /**
  @brief Set a byte into the array. This will be set at self->offset+index in the underlying data.

@@ -157,6 +157,10 @@ uint32_t CBVersionDeserialise(CBVersion * self) {
 	}
 	
 	self->userAgent = CBNewByteArraySubReference(bytes, 80 + varInt.size, (uint32_t)varInt.val);
+	
+	// Ensure user agent uses safe characters
+	CBByteArraySanitise(self->userAgent);
+	
 	self->blockHeight = CBByteArrayReadInt32(bytes, 80 + varInt.size + (uint32_t)varInt.val);
 	return 84 + varInt.size + (uint32_t)varInt.val;
 }

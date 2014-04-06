@@ -16,9 +16,9 @@
 
 #include "CBSanitiseOutput.h"
 
-void CBSanitiseOutput(char * str) {
+void CBSanitiseOutput(char * str, size_t strLen) {
 	
-	for (size_t x = 0; x < strlen(str); x++)
+	for (size_t x = 0; x < strLen; x++)
 		if (str[x] < 0x20 || str[x] > 0x7e)
 			// Not in safe range
 			str[x] = ' ';

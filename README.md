@@ -19,11 +19,12 @@ The features include:
 * Hierarchical Deterministic keys (BIP0032)
 * Doxygen documentation and well-documented source code.
 * Dependencies can easily be swapped and changed by implementing weakly linked functions.
-* Implementations included that require libevent, OpenSSL and POSIX.
+* Implementations included that require libevent/libev, OpenSSL and POSIX.
 * Very fast compilation. Much faster than the Satoshi client.
 * Client implementing bitcoin RPC protocol (Incomplete)
 * SPV validation (Planned)
 * SPV node (Planned)
+* Altcoin support (Planned)
 
 If you wish to contact the project leader, Matthew Mitchell, about this project please email cbitcoin@thelibertyportal.com
 

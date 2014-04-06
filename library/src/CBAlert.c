@@ -233,9 +233,10 @@ uint32_t CBAlertDeserialise(CBAlert * self) {
 			}
 			
 			// Enough space so set user agent
-			if (userAgentLen.val)
+			if (userAgentLen.val){
 				self->userAgents[x] = CBNewByteArraySubReference(bytes, cursor, (uint32_t)userAgentLen.val);
-			else
+				CBByteArraySanitise(self->userAgents[x]);
+			}else
 				self->userAgents[x] = NULL;
 			
 			cursor += userAgentLen.val;
