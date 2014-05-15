@@ -343,7 +343,7 @@ void CBHDKeySerialise(CBHDKey * key, uint8_t * data) {
 
 bool CBKeyPairGenerate(CBKeyPair * keyPair) {
 
-	// Generate private key from a CSPRNG.
+	// Generate private key from a CS-PRNG.
 	if (!CBGet32RandomBytes(keyPair->privkey)) {
 		CBLogError("Could not generate private key from 32 random bytes");
 		return false;
@@ -365,6 +365,17 @@ uint8_t * CBKeyPairGetHash(CBKeyPair * key) {
 	}
 
 	return key->pubkey.hash;
+
+}
+
+void CBKeyPairGetNext(CBKeyPair * key) {
+
+		// Get next key
+		for (uint8_t x = CB_PRIVKEY_SIZE - 1; ++key->privkey[x--] == 0;);
+		CBKeyIncrementPubkey(key->pubkey.key);
+
+		// Invalidate hash
+		key->pubkey.hashSet = false;
 
 }
 

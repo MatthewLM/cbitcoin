@@ -35,8 +35,8 @@ void CBAddPoints(uint8_t * point1, uint8_t * point2) {
 	EC_POINT * p1 = EC_POINT_new(group);
 	EC_POINT * p2 = EC_POINT_new(group);
 	BN_CTX * ctx = BN_CTX_new();
-	EC_POINT_oct2point(group, p1, point1, 33, ctx);
-	EC_POINT_oct2point(group, p2, point2, 33, ctx);
+	EC_POINT_oct2point(group, p1, point1, CB_PUBKEY_SIZE, ctx);
+	EC_POINT_oct2point(group, p2, point2, CB_PUBKEY_SIZE, ctx);
 	
 	// Add points together
 	EC_POINT * result = EC_POINT_new(group);
@@ -47,7 +47,7 @@ void CBAddPoints(uint8_t * point1, uint8_t * point2) {
 	EC_POINT_free(p2);
 	
 	// Write result to point1
-	EC_POINT_point2oct(group, result, POINT_CONVERSION_COMPRESSED, point1, 33, ctx);
+	EC_POINT_point2oct(group, result, POINT_CONVERSION_COMPRESSED, point1, CB_PUBKEY_SIZE, ctx);
 	
 	// Free result, group and ctx
 	EC_POINT_free(result);
@@ -56,15 +56,34 @@ void CBAddPoints(uint8_t * point1, uint8_t * point2) {
 	
 }
 
+void CBKeyIncrementPubkey(uint8_t * pubKey) {
+
+	EC_GROUP * group = EC_GROUP_new_by_curve_name(NID_secp256k1);
+	BN_CTX * ctx = BN_CTX_new();
+
+	// Get new public key, by adding the base point.
+	EC_POINT * pub = EC_POINT_new(group);
+	EC_POINT * new = EC_POINT_new(group);
+	EC_POINT_oct2point(group, pub, pubKey, CB_PUBKEY_SIZE, ctx);
+	EC_POINT_add(group, new, (EC_POINT *)EC_GROUP_get0_generator(group), pub, ctx);
+	EC_POINT_point2oct(group, new, POINT_CONVERSION_COMPRESSED, pubKey, CB_PUBKEY_SIZE, ctx);
+	EC_POINT_free(pub);
+	EC_POINT_free(new);
+
+	EC_GROUP_free(group);
+	BN_CTX_free(ctx);
+
+}
+
 void CBKeyGetPublicKey(uint8_t * privKey, uint8_t * pubKey) {
 	
-	BIGNUM * privBn = BN_bin2bn(privKey, 32, NULL);
+	BIGNUM * privBn = BN_bin2bn(privKey, CB_PRIVKEY_SIZE, NULL);
 	EC_GROUP * group = EC_GROUP_new_by_curve_name(NID_secp256k1);
 	EC_POINT * point = EC_POINT_new(group);
 	BN_CTX * ctx = BN_CTX_new();
 	
 	EC_POINT_mul(group, point, privBn, NULL, NULL, ctx);
-	EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pubKey, 33, ctx);
+	EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pubKey, CB_PUBKEY_SIZE, ctx);
 	
 	BN_CTX_free(ctx);
 	EC_POINT_free(point);
@@ -77,10 +96,10 @@ uint8_t CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature) {
 	
 	unsigned int sigSize;
 	EC_KEY * key = EC_KEY_new_by_curve_name(NID_secp256k1);
-	BIGNUM * bn = BN_bin2bn(privKey, 32, NULL);
+	BIGNUM * bn = BN_bin2bn(privKey, CB_PRIVKEY_SIZE, NULL);
 	
 	EC_KEY_set_private_key(key, bn);
-	ECDSA_sign(0, hash, 32, signature, &sigSize, key);
+	ECDSA_sign(0, hash, CB_PRIVKEY_SIZE, signature, &sigSize, key);
 	
 	// Free key and BIGNUM
 	EC_KEY_free(key);

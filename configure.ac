@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([library/dependencies/crypto/CBOpenSSLCrypto.c])
 
 # Set CONFIGFLAGS
 
-CONFIGFLAGS="-Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include"
+CONFIGFLAGS="-Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include"
 CONFIGFLAGS+=" $CFLAGS"
 CONFIGLFLAGS=" $LFLAGS"
 
@@ -83,8 +83,8 @@ CFLAGS="$save_cflags"
 LFLAGS="$save_lflags"
 
 # Search for OpenSSL and LibEvent.
-AC_SEARCH_LIBS([SHA1], [crypto], [], [echo Default dependencies cannot be installed.])
-AC_SEARCH_LIBS([event_new], [event], [], [echo Default dependencies cannot be installed.])
+AC_SEARCH_LIBS([SHA1], [crypto], [OPENSSL=1], [OPENSSL=0])
+AC_SEARCH_LIBS([event_new], [event], [LIBEVENT=1], [LIBEVENT=0])
 
 # Checks for standard header files.
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h stdbool.h], [], [AC_MSG_ERROR([Cannot configure core library])])
@@ -138,4 +138,14 @@ hasFeature "Error correction: " "$enable_ec" "yes"
 hasFeature "Debug build: " "$enable_debug" "no"
 hasFeature "Stack protection: " "$enable_stack_protector" "yes"
 hasFeature "Error on compilation warnings: " "$enable_werror" "yes"
+echo
+
+LIBRARY_NOTICE=" You will not be able to build all of the program. You can still build the \"core\" target and targets which do not use the library. Otherwise please install the library."
+
+if [[ "$OPENSSL" -eq 0 ]]; then
+	echo "OpenSSL not available.$LIBRARY_NOTICE"
+fi
+if [[ "$LIBEVENT" -eq 0 ]]; then
+	echo "Libevent not available.$LIBRARY_NOTICE"
+fi
 echo

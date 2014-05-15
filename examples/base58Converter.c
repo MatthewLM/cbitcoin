@@ -19,19 +19,23 @@
 #include "CBBase58.h"
 
 int main(int argc, char * argv[]){
+
 	bool encode = strcmp(argv[1],"-d");
+
 	// Read comma sperated inputs from the second argument
-	char * inputs[100];
+	char * inputs[100], * comma;
 	inputs[0] = argv[2];
-	char * comma;
+
 	int num = 1;
 	for (; (comma = strchr(argv[2], ',')); num++) {
 		inputs[num] = comma + 1;
 		*comma = '\0';
 		argv[2] = comma + 1;
 	}
+
 	for (int x = 0; x < num; x++) {
 		if (encode) {
+
 			// Convert hex string into bytes and then encode base58 string
 			CBByteArray * bytes = CBNewByteArrayFromHex(inputs[x]);
 			CBByteArrayReverseBytes(bytes);
@@ -40,7 +44,9 @@ int main(int argc, char * argv[]){
 			puts(output);
 			free(output);
 			CBReleaseObject(bytes);
+
 		}else{
+
 			// Decode base58 string and then produce data as a hex string.
 			CBBigInt bi;
 			CBBigIntAlloc(&bi, strlen(inputs[x]) * 100 / 136);
@@ -50,6 +56,8 @@ int main(int argc, char * argv[]){
 				printf("%02x", bi.data[x]);
 			puts("");
 			free(bi.data);
+
 		}
 	}
+
 }

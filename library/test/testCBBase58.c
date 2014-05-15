@@ -21,15 +21,18 @@ void CBLogError(char * b, ...){
 }
 
 int main(){
+
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %ui\n", s);
 	srand(s);
+
 	// Test checked decode
 	CBBigInt bi;
 	CBBigIntAlloc(&bi, 29);
 	CBDecodeBase58Checked(&bi, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9"); // Valid
 	printf("END VALID\n");
 	CBDecodeBase58Checked(&bi, "1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX"); // Invalid
+
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
 	bi.data[0] = 0xc5;
@@ -69,31 +72,32 @@ int main(){
 		return 1;
 	}
 	free(str);
+
 	unsigned char * verify = malloc(29);
 	for (int x = 0; x < 10000; x++) {
+
 		for (int y = 0; y < 29; y++) {
 			bi.data[y] = rand();
 			verify[y] = bi.data[y];
 		}
+
 		bi.length = 29;
-		printf("0x");
-		for (int y = 0; y < 29; y++)
-			printf("%.2x", verify[y]);
 		str = CBEncodeBase58(&bi);
-		printf(" -> %s -> \n", str);
 		CBDecodeBase58(&bi, str);
 		free(str);
-		printf("0x");
-		for (int y = 0; y < 29; y++) {
-			printf("%.2x", bi.data[y]);
-			if (bi.data[y] != verify[y]) {
-				printf(" = FAIL\n");
+
+		for (int y = 0; y < 29; y++) 
+			if (bi.data[y] != verify[y]) 
 				return 1;
-			}
-		}
-		printf(" = OK\n");
+
+		if (x % 1000 == 999)
+			printf("TESTED %i/10000 BASE58 ENCODE/DECODE\n", x + 1);
+
 	}
+
 	free(bi.data);
 	free(verify);
+
 	return 0;
+
 }

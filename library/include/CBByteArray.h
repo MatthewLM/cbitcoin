@@ -348,7 +348,12 @@ CBByteArray * CBByteArraySubCopy(CBByteArray * self, uint32_t offset, uint32_t l
  @returns The new CBByteArray.
  */
 CBByteArray * CBByteArraySubReference(CBByteArray * self, uint32_t offset, uint32_t length);
+
 void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output, bool backwards);
+
+void CBBytesToString(uint8_t * bytes, uint32_t offset, uint32_t length, char * output, bool backwards);
+
 bool CBStrHexToBytes(char * hex, uint8_t * output);
 
 #endif
+

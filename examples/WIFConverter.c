@@ -15,21 +15,26 @@
 #include "CBWIF.h"
 
 int main(int argc, char * argv[]){
+
 	CBWIF wif;
+
 	// Decode old data
 	CBByteArray old;
 	CBInitByteArrayFromString(&old, argv[1], false);
 	CBInitWIFFromString(&wif, &old, false);
 	CBDestroyByteArray(&old);
 	bool useCompression = CBWIFUseCompression(&wif);
+
 	// Get key
 	uint8_t key[32];
 	CBWIFGetPrivateKey(&wif, key);
 	CBDestroyWIF(&wif);
+
 	// Get the new WIF with the prefix we want
 	CBInitWIFFromPrivateKey(&wif, key, useCompression, argc == 3 ? atoi(argv[2]): 0, false);
 	CBByteArray * new = CBChecksumBytesGetString(CBGetChecksumBytes(&wif));
 	puts((char *)CBByteArrayGetData(new));
 	CBReleaseObject(new);
 	CBDestroyWIF(&wif);
+
 }

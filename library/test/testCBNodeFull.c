@@ -753,7 +753,7 @@ void * finishReceiveInitialTest(void * foo) {
 	}
 	uint8_t zeroHash[20];
 	memset(zeroHash, 0, 20);
-	uint64_t times[5];
+	uint64_t times[6];
 	for (uint8_t x = 0; x < 6; x++)
 		CBAccounterGetTransactionTime(CBGetNode(nodes[0])->accounterStorage, CBTransactionGetHash(initialTxs[(int []){4,6,7,10,12,13}[x]]), times + x);
 	checkTransactions(cursor, (CBTestTxDetails [7]){

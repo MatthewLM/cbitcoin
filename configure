@@ -2134,7 +2134,7 @@ fi
 if test "x$enable_debug" = "xyes"; then :
   CONFIGFLAGS+=" -g -DCBDEBUG"
 else
-  CONFIGFLAGS+=" -g -DNDEBUG"
+  CONFIGFLAGS+=" -O3 -DNDEBUG"
 
 fi
 
@@ -3102,9 +3102,9 @@ $as_echo "$ac_cv_search_SHA1" >&6; }
 ac_res=$ac_cv_search_SHA1
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
+  OPENSSL=1
 else
-  echo Default dependencies cannot be installed.
+  OPENSSL=0
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing event_new" >&5
@@ -3160,9 +3160,9 @@ $as_echo "$ac_cv_search_event_new" >&6; }
 ac_res=$ac_cv_search_event_new
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
+  LIBEVENT=1
 else
-  echo Default dependencies cannot be installed.
+  LIBEVENT=0
 fi
 
 
@@ -4841,4 +4841,14 @@ hasFeature "Error correction: " "$enable_ec" "yes"
 hasFeature "Debug build: " "$enable_debug" "no"
 hasFeature "Stack protection: " "$enable_stack_protector" "yes"
 hasFeature "Error on compilation warnings: " "$enable_werror" "yes"
+echo
+
+LIBRARY_NOTICE=" You will not be able to build all of the program. You can still build the \"core\" target and targets which do not use the library. Otherwise please install the library."
+
+if [ "$OPENSSL" -eq 0 ]; then
+	echo "OpenSSL not available.$LIBRARY_NOTICE"
+fi
+if [ "$LIBEVENT" -eq 0 ]; then
+	echo "Libevent not available.$LIBRARY_NOTICE"
+fi
 echo

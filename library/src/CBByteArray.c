@@ -393,11 +393,16 @@ CBByteArray * CBByteArraySubReference(CBByteArray * self, uint32_t offset, uint3
 
 void CBByteArrayToString(CBByteArray * self, uint32_t offset, uint32_t length, char * output, bool backwards) {
 	
+	CBBytesToString(CBByteArrayGetData(self), offset, length, output, backwards);	
+}
+
+void CBBytesToString(uint8_t * bytes, uint32_t offset, uint32_t length, char * output, bool backwards) {
+
 	for (uint32_t x = offset; x < offset + length; x++) {
-		sprintf(output, "%02x", CBByteArrayGetByte(self, offset + (backwards ? length - x - 1 : x)));
+		sprintf(output, "%02x", bytes[offset + (backwards ? length - x - 1 : x)]);
 		output += 2;
 	}
-	
+
 }
 
 bool CBStrHexToBytes(char * hex, uint8_t * output) {

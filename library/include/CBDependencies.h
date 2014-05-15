@@ -36,12 +36,25 @@ typedef union{
 
 // CRYPTOGRAPHIC DEPENDENCIES
 
+// Constants and macros
+
+#define CB_PUBKEY_SIZE 33
+#define CB_PRIVKEY_SIZE 32
+
+// Functions
+
 void CBAddPoints(uint8_t * point1, uint8_t * point2);
 #pragma weak CBAddPoints
+
+void CBKeyIncrementPubkey(uint8_t * pubKey);
+#pragma weak CBKeyIncrementPubkey
+
 void CBKeyGetPublicKey(uint8_t * privKey, uint8_t * pubKey);
 #pragma weak CBKeyGetPublicKey
+
 uint8_t CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature);
 #pragma weak CBKeySign
+
 /**
  @brief SHA-256 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -50,6 +63,7 @@ uint8_t CBKeySign(uint8_t * privKey, uint8_t * hash, uint8_t * signature);
  */
 void CBSha256(uint8_t * data, uint16_t length, uint8_t * output);
 #pragma weak CBSha256
+
 /**
  @brief SHA-512 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -58,6 +72,7 @@ void CBSha256(uint8_t * data, uint16_t length, uint8_t * output);
  */
 void CBSha512(uint8_t * data, uint16_t len, uint8_t * output);
 #pragma weak CBSha512
+
 /**
  @brief RIPEMD-160 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -66,6 +81,7 @@ void CBSha512(uint8_t * data, uint16_t len, uint8_t * output);
  */
 void CBRipemd160(uint8_t * data, uint16_t length, uint8_t * output);
 #pragma weak CBRipemd160
+
 /**
  @brief SHA-1 cryptographic hash function.
  @param data A pointer to the byte data to hash.
@@ -74,6 +90,7 @@ void CBRipemd160(uint8_t * data, uint16_t length, uint8_t * output);
  */
 void CBSha160(uint8_t * data, uint16_t length, uint8_t * output);
 #pragma weak CBSha160
+
 /**
  @brief Verifies an ECDSA signature. This function must stick to the cryptography requirements in OpenSSL version 1.0.0 or any other compatible version. There may be compatibility problems when using libraries or code other than OpenSSL since OpenSSL does not adhere fully to the SEC1 ECDSA standards. This could cause security problems in your code. If in doubt, stick to OpenSSL.
  @param signature BER encoded signature bytes.
@@ -116,6 +133,7 @@ typedef enum{
  */
 CBSocketReturn CBNewSocket(CBDepObject * socketID, bool IPv6);
 #pragma weak CBNewSocket
+
 /*
  @brief Binds the host machine and a port number to a new socket.
  @param socketID The socket id to set to the new socket.
@@ -125,6 +143,7 @@ CBSocketReturn CBNewSocket(CBDepObject * socketID, bool IPv6);
  */
 bool CBSocketBind(CBDepObject * socketID, bool IPv6, uint16_t port);
 #pragma weak CBSocketBind
+
 /**
  @brief Begin connecting to an external host with a socket. This should be non-blocking.
  @param socketID The socket id
@@ -135,6 +154,7 @@ bool CBSocketBind(CBDepObject * socketID, bool IPv6, uint16_t port);
  */
 bool CBSocketConnect(CBDepObject socketID, uint8_t * IP, bool IPv6, uint16_t port);
 #pragma weak CBSocketConnect
+
 /**
  @brief Begin listening for incomming connections on a bound socket. This should be non-blocking. 
  @param socketID The socket id
@@ -143,6 +163,7 @@ bool CBSocketConnect(CBDepObject socketID, uint8_t * IP, bool IPv6, uint16_t por
  */
 bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections);
 #pragma weak CBSocketListen
+
 /**
  @brief Accepts an incomming IPv4 connection on a bound socket. This should be non-blocking.
  @param socketID The socket id
@@ -152,6 +173,7 @@ bool CBSocketListen(CBDepObject socketID, uint16_t maxConnections);
  */
 bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID, void * sockAddr);
 #pragma weak CBSocketAccept
+
 /**
  @brief Starts a event loop for socket events on a seperate thread. Access to the loop id should be thread safe.
  @param loopID A CBDepObject storing an integer or pointer representation of the new event loop.
@@ -162,8 +184,10 @@ bool CBSocketAccept(CBDepObject socketID, CBDepObject * connectionSocketID, void
  */
 bool CBNewEventLoop(CBDepObject * loopID, void (*onError)(void *), void (*onDidTimeout)(void *, void *, CBTimeOutType), void * communicator);
 #pragma weak CBNewEventLoop
+
 bool CBNetworkCommunicatorLoadDNS(void * comm, char * domain);
 #pragma weak CBNetworkCommunicatorLoadDNS
+
 /**
  @brief Runs a callback on the event loop.
  @param loopID The loop ID
@@ -172,6 +196,7 @@ bool CBNetworkCommunicatorLoadDNS(void * comm, char * domain);
  */
 bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, bool block);
 #pragma weak CBRunOnEventLoop
+
 /**
  @brief Creates an event where a listening socket is available for accepting a connection. The event should be persistent and not issue timeouts.
  @param eventID The event object to set.
@@ -182,6 +207,7 @@ bool CBRunOnEventLoop(CBDepObject loopID, void (*callback)(void *), void * arg, 
  */
 bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanAccept)(void *, CBDepObject));
 #pragma weak CBSocketCanAcceptEvent
+
 /**
  @brief Sets a function pointer for the event where a socket has connected. The event only needs to fire once on the successful connection or timeout.
  @param eventID The event object to set.
@@ -193,6 +219,7 @@ bool CBSocketCanAcceptEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObje
  */
 bool CBSocketDidConnectEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onDidConnect)(void *, void *), void * peer);
 #pragma weak CBSocketDidConnectEvent
+
 /**
  @brief Sets a function pointer for the event where a socket is available for sending data. This should be persistent.
  @param eventID The event object to set.
@@ -204,6 +231,7 @@ bool CBSocketDidConnectEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObj
  */
 bool CBSocketCanSendEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanSend)(void *, void *), void * peer);
 #pragma weak CBSocketCanSendEvent
+
 /**
  @brief Sets a function pointer for the event where a socket is available for receiving data. This should be persistent.
  @param eventID The event object to set.
@@ -215,6 +243,7 @@ bool CBSocketCanSendEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject
  */
 bool CBSocketCanReceiveEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObject socketID, void (*onCanReceive)(void *, void *), void * peer);
 #pragma weak CBSocketCanReceiveEvent
+
 /**
  @brief Adds an event to be pending.
  @param eventID The event ID to add.
@@ -223,6 +252,7 @@ bool CBSocketCanReceiveEvent(CBDepObject * eventID, CBDepObject loopID, CBDepObj
  */
 bool CBSocketAddEvent(CBDepObject eventID, uint32_t timeout);
 #pragma weak CBSocketAddEvent
+
 /**
  @brief Removes an event so no more events are made.
  @param eventID The event ID to remove
@@ -230,12 +260,14 @@ bool CBSocketAddEvent(CBDepObject eventID, uint32_t timeout);
  */
 bool CBSocketRemoveEvent(CBDepObject eventID);
 #pragma weak CBSocketRemoveEvent
+
 /**
  @brief Makes an event non-pending and frees it.
  @param eventID The event to free.
  */
 void CBSocketFreeEvent(CBDepObject eventID);
 #pragma weak CBSocketFreeEvent
+
 /**
  @brief Sends data to a socket. This should be non-blocking.
  @param socketID The socket id to send to.
@@ -245,6 +277,7 @@ void CBSocketFreeEvent(CBDepObject eventID);
  */
 int32_t CBSocketSend(CBDepObject socketID, uint8_t * data, uint32_t len);
 #pragma weak CBSocketSend
+
 /**
  @brief Receives data from a socket. This should be non-blocking.
  @param socketID The socket id to receive data from.
@@ -254,6 +287,7 @@ int32_t CBSocketSend(CBDepObject socketID, uint8_t * data, uint32_t len);
  */
 int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len);
 #pragma weak CBSocketReceive
+
 /**
  @brief Calls a callback every "time" seconds, until the timer is ended.
  @param loopID The loop id.
@@ -264,18 +298,21 @@ int32_t CBSocketReceive(CBDepObject socketID, uint8_t * data, uint32_t len);
  */
 bool CBStartTimer(CBDepObject loopID, CBDepObject * timer, uint32_t time, void (*callback)(void *), void * arg);
 #pragma weak CBStartTimer
+
 /**
  @brief Ends a timer.
  @param timer The timer.
  */
 void CBEndTimer(CBDepObject timer);
 #pragma weak CBEndTimer
+
 /**
  @brief Closes a socket. The id should be freed, as well as any other data relating to this socket.
  @param socketID The socket id to be closed.
  */
 void CBCloseSocket(CBDepObject socketID);
 #pragma weak CBCloseSocket
+
 /**
  @brief Exits an event loop and frees all data relating to it.
  @param loopID The loop ID. If zero, do nothing.
@@ -292,6 +329,7 @@ void CBExitEventLoop(CBDepObject loopID);
  */
 bool CBNewSecureRandomGenerator(CBDepObject * gen);
 #pragma weak CBNewSecureRandomGenerator
+
 /**
  @brief Seeds the random number generator securely.
  @param gen The generator.
@@ -299,6 +337,7 @@ bool CBNewSecureRandomGenerator(CBDepObject * gen);
  */
 bool CBSecureRandomSeed(CBDepObject gen);
 #pragma weak CBSecureRandomSeed
+
 /**
  @brief Seeds the generator from a 64-bit integer.
  @param gen The generator.
@@ -306,6 +345,7 @@ bool CBSecureRandomSeed(CBDepObject gen);
  */
 void CBRandomSeed(CBDepObject gen, uint64_t seed);
 #pragma weak CBRandomSeed
+
 /**
  @brief Generates a 64 bit integer.
  @param gen The generator.
@@ -313,12 +353,14 @@ void CBRandomSeed(CBDepObject gen, uint64_t seed);
  */
 uint64_t CBSecureRandomInteger(CBDepObject gen);
 #pragma weak CBSecureRandomInteger
+
 /**
  @brief Frees the random number generator.
  @param gen The generator.
  */
 void CBFreeSecureRandomGenerator(CBDepObject gen);
 #pragma weak CBFreeSecureRandomGenerator
+
 bool CBGet32RandomBytes(uint8_t * bytes);
 #pragma weak CBGet32RandomBytes
 
@@ -334,6 +376,7 @@ bool CBGet32RandomBytes(uint8_t * bytes);
  */
 bool CBNewStorageDatabase(CBDepObject * database, char * dataDir, uint32_t commitGap, uint32_t cacheLimit);
 #pragma weak CBNewStorageDatabase
+
 /**
  @brief The data is staged for commit so that it is irreversible by CBBlockChainStorageRevert. Commits when the commitGap or cacheLimit is reached.
  @param database The database storage object.
@@ -341,12 +384,14 @@ bool CBNewStorageDatabase(CBDepObject * database, char * dataDir, uint32_t commi
  */
 bool CBStorageDatabaseStage(CBDepObject database);
 #pragma weak CBStorageDatabaseStage
+
 /**
  @brief Removes all of the non-staged pending operations.
  @param database The database storage object.
  */
 bool CBStorageDatabaseRevert(CBDepObject database);
 #pragma weak CBStorageDatabaseRevert
+
 /**
  @brief Frees the database storage object, and commits any staged changes.
  @param database The database storage object.
@@ -367,12 +412,14 @@ void CBFreeStorageDatabase(CBDepObject database);
  */
 bool CBNewBlockChainStorage(CBDepObject * storage, CBDepObject database);
 #pragma weak CBNewBlockChainStorage
+
 /**
  @brief Frees the block-chain storage object.
  @param iself The block-chain storage object.
  */
 void CBFreeBlockChainStorage(CBDepObject iself);
 #pragma weak CBFreeBlockChainStorage
+
 /**
  @brief Determines if the block is already in the storage.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -381,6 +428,7 @@ void CBFreeBlockChainStorage(CBDepObject iself);
  */
 CBErrBool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
 #pragma weak CBBlockChainStorageBlockExists
+
 /**
  @brief Deletes a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -390,6 +438,7 @@ CBErrBool CBBlockChainStorageBlockExists(void * validator, uint8_t * blockHash);
  */
 bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t blockIndex);
 #pragma weak CBBlockChainStorageDeleteBlock
+
 /**
  @brief Deletes an unspent output reference. The ouput should still be in the block. The number of unspent outputs for the transaction should be decremented.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -400,6 +449,7 @@ bool CBBlockChainStorageDeleteBlock(void * validator, uint8_t branch, uint32_t b
  */
 bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, bool decrement);
 #pragma weak CBBlockChainStorageDeleteUnspentOutput
+
 /**
  @brief Deletes a transaction reference once all instances have been removed. Decrement the instance count and remove if zero. The transaction should still be in the block. Reset the unspent output count to 0.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -408,6 +458,7 @@ bool CBBlockChainStorageDeleteUnspentOutput(void * validator, uint8_t * txHash, 
  */
 bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash);
 #pragma weak CBBlockChainStorageDeleteTransactionRef
+
 /**
  @brief Determines if there is previous data or if initial data needs to be created.
  @param iself The block-chain storage object.
@@ -415,6 +466,7 @@ bool CBBlockChainStorageDeleteTransactionRef(void * validator, uint8_t * txHash)
  */
 bool CBBlockChainStorageExists(CBDepObject iself);
 #pragma weak CBBlockChainStorageExists
+
 /**
  @brief Obtains the hash for a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -425,6 +477,7 @@ bool CBBlockChainStorageExists(CBDepObject iself);
  */
 bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t hash[]);
 #pragma weak CBBlockChainStorageGetBlockHash
+
 /**
  @brief Obtains the header for a block, which has not be deserialised.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -434,6 +487,7 @@ bool CBBlockChainStorageGetBlockHash(void * validator, uint8_t branch, uint32_t 
  */
 void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint32_t blockIndex);
 #pragma weak CBBlockChainStorageGetBlockHeader
+
 /**
  @brief Gets the location of a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -444,6 +498,7 @@ void * CBBlockChainStorageGetBlockHeader(void * validator, uint8_t branch, uint3
  */
 CBErrBool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockHash, uint8_t * branch, uint32_t * index);
 #pragma weak CBBlockChainStorageGetBlockLocation
+
 /**
  @brief Obtains the timestamp for a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -453,6 +508,7 @@ CBErrBool CBBlockChainStorageGetBlockLocation(void * validator, uint8_t * blockH
  */
 uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint32_t blockIndex);
 #pragma weak CBBlockChainStorageGetBlockTime
+
 /**
  @brief Obtains the target for a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -462,6 +518,7 @@ uint32_t CBBlockChainStorageGetBlockTime(void * validator, uint8_t branch, uint3
  */
 uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uint32_t blockIndex);
 #pragma weak CBBlockChainStorageGetBlockTarget
+
 /**
  @brief Determines if a transaction exists in the index, which has more than zero unspent outputs.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -470,6 +527,7 @@ uint32_t CBBlockChainStorageGetBlockTarget(void * validator, uint8_t branch, uin
  */
 CBErrBool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, uint8_t * txHash);
 #pragma weak CBBlockChainStorageIsTransactionWithUnspentOutputs
+
 /**
  @brief Loads the basic validator information, not any branches or orphans.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -477,6 +535,7 @@ CBErrBool CBBlockChainStorageIsTransactionWithUnspentOutputs(void * validator, u
  */
 bool CBBlockChainStorageLoadBasicValidator(void * validator);
 #pragma weak CBBlockChainStorageLoadBasicValidator
+
 /**
  @brief Loads a block from storage.
  @param validator The CBValidator object.
@@ -486,6 +545,7 @@ bool CBBlockChainStorageLoadBasicValidator(void * validator);
  */
 void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t branch);
 #pragma weak CBBlockChainStorageLoadBlock
+
 /**
  @brief Loads a branch
  @param validator A CBValidator object. The storage object can be found within this.
@@ -494,6 +554,7 @@ void * CBBlockChainStorageLoadBlock(void * validator, uint32_t blockID, uint32_t
  */
 bool CBBlockChainStorageLoadBranch(void * validator, uint8_t branchNum);
 #pragma weak CBBlockChainStorageLoadBranch
+
 /**
  @brief Loads a branch's work
  @param validator A CBValidator object. The storage object can be found within this.
@@ -502,6 +563,7 @@ bool CBBlockChainStorageLoadBranch(void * validator, uint8_t branchNum);
  */
 bool CBBlockChainStorageLoadBranchWork(void * validator, uint8_t branchNum);
 #pragma weak CBBlockChainStorageLoadBranchWork
+
 /**
  @brief Obtains the outputs for a transaction
  @param validator A CBValidator object. The storage object can be found within this.
@@ -513,6 +575,7 @@ bool CBBlockChainStorageLoadBranchWork(void * validator, uint8_t branchNum);
  */
 bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t ** data, uint32_t * dataAllocSize, uint32_t * position);
 #pragma weak CBBlockChainStorageLoadOutputs
+
 /**
  @brief Obtains an unspent output.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -524,6 +587,7 @@ bool CBBlockChainStorageLoadOutputs(void * validator, uint8_t * txHash, uint8_t 
  */
 void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, bool * coinbase, uint32_t * outputHeight);
 #pragma weak CBBlockChainStorageLoadUnspentOutput
+
 /**
  @brief Moves a block to a new location.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -535,12 +599,14 @@ void * CBBlockChainStorageLoadUnspentOutput(void * validator, uint8_t * txHash, 
  */
 bool CBBlockChainStorageMoveBlock(void * validator, uint8_t branch, uint32_t blockIndex, uint8_t newBranch, uint32_t newIndex);
 #pragma weak CBBlockChainStorageMoveBlock
+
 /**
  @brief Removes all of the non-staged changes in the underlying database storage object.
  @param iself The storage object.
  */
 void CBBlockChainStorageRevert(CBDepObject iself);
 #pragma weak CBBlockChainStorageRevert
+
 /**
  @brief Saves the basic validator information, not any branches or orphans.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -548,6 +614,7 @@ void CBBlockChainStorageRevert(CBDepObject iself);
  */
 bool CBBlockChainStorageSaveBasicValidator(void * validator);
 #pragma weak CBBlockChainStorageSaveBasicValidator 
+
 /**
  @brief Saves a block.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -558,6 +625,7 @@ bool CBBlockChainStorageSaveBasicValidator(void * validator);
  */
 bool CBBlockChainStorageSaveBlock(void * validator, void * block, uint8_t branch, uint32_t blockIndex);
 #pragma weak CBBlockChainStorageSaveBlock
+
 /**
  @brief Saves a block, with it's header only.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -568,6 +636,7 @@ bool CBBlockChainStorageSaveBlock(void * validator, void * block, uint8_t branch
  */
 bool CBBlockChainStorageSaveBlockHeader(void * validator, void * block, uint8_t branch, uint32_t blockIndex);
 #pragma weak CBBlockChainStorageSaveBlockHeader
+
 /**
  @brief Saves the branch information without commiting to disk.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -576,6 +645,7 @@ bool CBBlockChainStorageSaveBlockHeader(void * validator, void * block, uint8_t 
  */
 bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branch);
 #pragma weak CBBlockChainStorageSaveBranch
+
 /**
  @brief Saves the work for a branch without commiting to disk.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -584,6 +654,7 @@ bool CBBlockChainStorageSaveBranch(void * validator, uint8_t branch);
  */
 bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branch);
 #pragma weak CBBlockChainStorageSaveBranchWork
+
 /**
  @brief Saves a transaction reference. If the transaction exists in the block chain already, increment a counter. Else add a new reference.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -598,6 +669,7 @@ bool CBBlockChainStorageSaveBranchWork(void * validator, uint8_t branch);
  */
 bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, uint8_t branch, uint32_t blockIndex, uint32_t outputPos, uint32_t outputsLen, bool coinbase, uint32_t numOutputs);
 #pragma weak CBBlockChainStorageSaveTransactionRef
+
 /**
  @brief Saves an output as unspent.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -610,6 +682,7 @@ bool CBBlockChainStorageSaveTransactionRef(void * validator, uint8_t * txHash, u
  */
 bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, uint32_t outputIndex, uint32_t position, uint32_t length, bool increment);
 #pragma weak CBBlockChainStorageSaveUnspentOutput
+
 /**
  @brief Determines if a transaction exists in the block chain.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -618,6 +691,7 @@ bool CBBlockChainStorageSaveUnspentOutput(void * validator, uint8_t * txHash, ui
  */
 CBErrBool CBBlockChainStorageTransactionExists(void * validator, uint8_t * txHash);
 #pragma weak CBBlockChainStorageTransactionExists
+
 /**
  @brief Determines if an unspent output exists.
  @param validator A CBValidator object. The storage object can be found within this.
@@ -638,12 +712,14 @@ CBErrBool CBBlockChainStorageUnspentOutputExists(void * validator, uint8_t * txH
  */
 bool CBNewAddressStorage(CBDepObject * storage, CBDepObject database);
 #pragma weak CBNewAddressStorage
+
 /**
  @brief Frees the address storage object.
  @param self The address storage object.
  */
 void CBFreeAddressStorage(CBDepObject self);
 #pragma weak CBFreeAddressStorage
+
 /**
  @brief Removes an address from storage.
  @param self The address storage object.
@@ -652,6 +728,7 @@ void CBFreeAddressStorage(CBDepObject self);
  */
 bool CBAddressStorageDeleteAddress(CBDepObject self, void * address);
 #pragma weak CBAddressStorageDeleteAddress
+
 /**
  @brief Obtains the number of addresses in storage.
  @param self The address storage object.
@@ -659,6 +736,7 @@ bool CBAddressStorageDeleteAddress(CBDepObject self, void * address);
  */
 uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject self);
 #pragma weak CBAddressStorageGetNumberOfAddresses
+
 /**
  @brief Loads all of the addresses from storage into an address manager.
  @param self The address storage object.
@@ -667,6 +745,7 @@ uint64_t CBAddressStorageGetNumberOfAddresses(CBDepObject self);
  */
 bool CBAddressStorageLoadAddresses(CBDepObject self, void * addrMan);
 #pragma weak CBAddressStorageLoadAddresses
+
 /**
  @brief Saves an address to storage. If the number of addresses is at "maxAddresses" remove an address to make room.
  @param self The address storage object.
@@ -733,6 +812,7 @@ void CBFreeTransactionAccountDetailList(CBTransactionAccountDetailList * list);
  */
 bool CBNewAccounterStorage(CBDepObject * storage, CBDepObject database);
 #pragma weak CBNewAccounterStorage
+
 /**
  @brief Creates a new accounter storage transaction cursor object for iterating through transactions.
  @param cursor The object to set.
@@ -744,6 +824,7 @@ bool CBNewAccounterStorage(CBDepObject * storage, CBDepObject database);
  */
 bool CBNewAccounterStorageTransactionCursor(CBDepObject * cursor, CBDepObject accounter, uint64_t accountID, uint64_t timeMin, uint64_t timeMax);
 #pragma weak CBNewAccounterStorageTransactionCursor
+
 /**
  @brief Creates a new accounter storage unspent output cursor object for iterating through unspent outputs.
  @param cursor The object to set.
@@ -753,18 +834,21 @@ bool CBNewAccounterStorageTransactionCursor(CBDepObject * cursor, CBDepObject ac
  */
 bool CBNewAccounterStorageUnspentOutputCursor(CBDepObject * cursor, CBDepObject accounter, uint64_t accountID);
 #pragma weak CBNewAccounterStorageUnspentOutputCursor
+
 /**
  @brief Frees the accounter storage object.
  @param self The accounter storage object.
  */
 void CBFreeAccounterStorage(CBDepObject self);
 #pragma weak CBFreeAccounterStorage
+
 /**
  @brief Frees the accounter cursor object.
  @param self The accounter cursor object.
  */
 void CBFreeAccounterCursor(CBDepObject self);
 #pragma weak CBFreeAccounterCursor
+
 /**
  @brief Adds a watched output hash to an account.
  @param self The accounter object. 
@@ -774,6 +858,7 @@ void CBFreeAccounterCursor(CBDepObject self);
  */
 bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint64_t accountID);
 #pragma weak CBAccounterAddWatchedOutputToAccount
+
 /**
  @brief Modifies the height information of a transaction.
  @param self The accounter object. 
@@ -782,6 +867,7 @@ bool CBAccounterAddWatchedOutputToAccount(CBDepObject self, uint8_t * hash, uint
  */
 bool CBAccounterTransactionChangeHeight(CBDepObject self, void * tx, uint32_t oldHeight, uint32_t newHeight);
 #pragma weak CBAccounterTransactionChangeHeight
+
 /**
  @brief Processes a found transaction on a branch for all of the accounts
  @param self The accounter object.
@@ -793,6 +879,7 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * tx, uint32_t ol
  */
 CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t blockHeight, uint64_t time, CBTransactionAccountDetailList ** details);
 #pragma weak CBAccounterFoundTransaction
+
 /**
  @brief Gets the confirmed balance for an account.
  @param self The accounter object.
@@ -803,6 +890,7 @@ CBErrBool CBAccounterFoundTransaction(CBDepObject self, void * tx, uint32_t bloc
  */
 bool CBAccounterGetAccountBalance(CBDepObject self, uint64_t accountID, uint64_t * balance, int64_t * unconfBalance);
 #pragma weak CBAccounterGetAccountBalance
+
 /**
  @brief Gets the next transaction by a cursor.
  @param cursor The cursor object.
@@ -811,6 +899,7 @@ bool CBAccounterGetAccountBalance(CBDepObject self, uint64_t accountID, uint64_t
  */
 CBErrBool CBAccounterGetNextTransaction(CBDepObject cursor, CBTransactionDetails * details);
 #pragma weak CBAccounterGetNextTransaction
+
 /**
  @brief Gets the next unspent output by a cursor.
  @param cursor The cursor object.
@@ -819,10 +908,13 @@ CBErrBool CBAccounterGetNextTransaction(CBDepObject cursor, CBTransactionDetails
  */
 CBErrBool CBAccounterGetNextUnspentOutput(CBDepObject cursor, CBUnspentOutputDetails * details);
 #pragma weak CBAccounterGetNextUnspentOutput
+
 bool CBAccounterGetTransactionTime(CBDepObject self, uint8_t * txHash, uint64_t * time);
 #pragma weak CBAccounterGetTransactionTime
+
 CBErrBool CBAccounterIsOurs(CBDepObject self, uint8_t * txHash);
 #pragma weak CBAccounterIsOurs
+
 /**
  @brief Processes a transaction being lost for all of the accounts.
  @param self The accounter object.
@@ -831,6 +923,7 @@ CBErrBool CBAccounterIsOurs(CBDepObject self, uint8_t * txHash);
  */
 bool CBAccounterLostTransaction(CBDepObject self, void * tx, uint32_t height);
 #pragma weak CBAccounterLostTransaction
+
 /**
  @brief Merges a source account into destination account. The source account remains as it was before and the destination account gains all of the watched hashes, transactions and unspent outputs of the source account.
  @param self The accounter object.
@@ -840,6 +933,7 @@ bool CBAccounterLostTransaction(CBDepObject self, void * tx, uint32_t height);
  */
 bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, uint64_t accountSrc);
 #pragma weak CBAccounterMergeAccountIntoAccount
+
 /**
  @brief Gets the object for a new account.
  @param self The accounter object.
@@ -847,6 +941,7 @@ bool CBAccounterMergeAccountIntoAccount(CBDepObject self, uint64_t accountDest, 
  */
 uint64_t CBAccounterNewAccount(CBDepObject self);
 #pragma weak CBAccounterNewAccount
+
 CBErrBool CBAccounterTransactionExists(CBDepObject self, uint8_t * hash);
 #pragma weak CBAccounterTransactionExists
 
@@ -854,18 +949,25 @@ CBErrBool CBAccounterTransactionExists(CBDepObject self, uint8_t * hash);
 
 bool CBNewNodeStorage(CBDepObject * storage, CBDepObject database);
 #pragma weak CBNewNodeStorage
+
 void CBFreeNodeStorage(CBDepObject storage);
 #pragma weak CBFreeNodeStorage
+
 bool CBNodeStorageGetStartScanningTime(CBDepObject storage, uint64_t * startTime);
 #pragma weak CBNodeStorageGetStartScanningTime
+
 bool CBNodeStorageLoadUnconfTxs(void * node);
 #pragma weak CBNodeStorageLoadUnconfTxs
+
 bool CBNodeStorageRemoveOurTx(CBDepObject storage, void * tx);
 #pragma weak CBNodeStorageRemoveOurTx
+
 bool CBNodeStorageAddOurTx(CBDepObject storage, void * tx);
 #pragma weak CBNodeStorageAddOurTx
+
 bool CBNodeStorageRemoveOtherTx(CBDepObject storage, void * tx);
 #pragma weak CBNodeStorageRemoveOtherTx
+
 bool CBNodeStorageAddOtherTx(CBDepObject storage, void * tx);
 #pragma weak CBNodeStorageAddOtherTx
 
@@ -873,26 +975,37 @@ bool CBNodeStorageAddOtherTx(CBDepObject storage, void * tx);
 
 void CBNewThread(CBDepObject * thread, void (*function)(void *), void * arg);
 #pragma weak CBNewThread
+
 void CBFreeThread(CBDepObject thread);
 #pragma weak CBFreeThread
+
 void CBThreadJoin(CBDepObject thread);
 #pragma weak CBThreadJoin
+
 void CBNewMutex(CBDepObject * mutex);
 #pragma weak CBNewMutex
+
 void CBFreeMutex(CBDepObject mutex);
 #pragma weak CBFreeMutex
+
 void CBMutexLock(CBDepObject mutex);
 #pragma weak CBMutexLock
+
 void CBMutexUnlock(CBDepObject mutex);
 #pragma weak CBMutexUnlock
+
 void CBNewCondition(CBDepObject * cond);
 #pragma weak CBNewCondition
+
 void CBFreeCondition(CBDepObject cond);
 #pragma weak CBFreeCondition
+
 void CBConditionWait(CBDepObject cond, CBDepObject mutex);
 #pragma weak CBConditionWait
+
 void CBConditionSignal(CBDepObject cond);
 #pragma weak CBConditionSignal
+
 uint8_t CBGetNumberOfCores(void);
 #pragma weak CBGetNumberOfCores
 
@@ -904,10 +1017,13 @@ uint8_t CBGetNumberOfCores(void);
  */
 void CBLogError(char * error, ...);
 #pragma weak CBLogError
+
 void CBLogWarning(char * warning, ...);
 #pragma weak CBLogWarning
+
 void CBLogVerbose(char * message, ...);
 #pragma weak CBLogVerbose
+
 void CBLogFile(char * file);
 #pragma weak CBLogFile
 
