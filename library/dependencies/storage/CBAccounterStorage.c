@@ -267,12 +267,18 @@ bool CBAccounterTransactionChangeHeight(CBDepObject self, void * vtx, uint32_t o
 			CBDatabaseRangeIteratorGetKey(&it2, orderNumTxDetailsMax);
 			CBFreeDatabaseRangeIterator(&it2);
 			memcpy(timestampAndOrderNum + 8, orderNumTxDetailsMax + CB_ORDER_NUM_TX_DETAILS_ORDER_NUM, 8);
+
 			// Adjust the unconf balances.
-			if (!CBAccounterAdjustBalances(storage, timestampAndOrderNum, (uint8_t [16]){0xFF}, accountID, 0, oldHeight == CB_UNCONFIRMED ? -value : value, NULL, NULL)) {
+
+			uint8_t high[16];
+			memset(high, 0xFF, 16);
+
+			if (!CBAccounterAdjustBalances(storage, timestampAndOrderNum, high, accountID, 0, oldHeight == CB_UNCONFIRMED ? -value : value, NULL, NULL)) {
 				CBLogError("Unable to adjust unconfirmed cumulative balances.");
 				CBFreeDatabaseRangeIterator(&it);
 				return false;
 			}
+
 			// Iterate if possible
 			CBIndexFindStatus status = CBDatabaseRangeIteratorNext(&it);
 			if (status == CB_DATABASE_INDEX_ERROR) {
