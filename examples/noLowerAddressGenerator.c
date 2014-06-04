@@ -60,7 +60,7 @@ void CBAddressGenThread(void * vkey) {
 		if (match) {
 
 			CBWIF wif;
-			CBInitWIFFromPrivateKey(&wif, key->privkey, true, CB_NETWORK_PRODUCTION, false);
+			CBInitWIFFromPrivateKey(&wif, key->privkey, true, CB_PREFIX_PRODUCTION_PRIVATE_KEY, false);
 			CBByteArray * str = CBChecksumBytesGetString(&wif);
 			CBDestroyWIF(&wif);
 
