@@ -113,8 +113,9 @@ int main() {
 
 	// Get number of cores for threads
 	cpuNum = CBGetNumberOfCores();
+	printf("Number of threads = %i\n", cpuNum);
 
-	puts("Waiting for entropy... Move the cursor around...");
+	puts("Waiting for entropy... Move the cursor around...\n");
 
 	CBNewMutex(&outputMutex);
 	
