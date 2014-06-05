@@ -10,16 +10,32 @@ print "9 - 16 = ", subtract(9, 16), "\n";
 print "WIF:".createWIF(2)."\n";
 
  use Inline C => <<'END_OF_C_CODE';
-
+#include <stdio.h>
+#include <ctype.h>
+#include <openssl/ssl.h>
+#include <openssl/ripemd.h>
+#include <openssl/rand.h>
 #include <CBHDKeys.h>
 #include <CBChecksumBytes.h>
 #include <CBAddress.h>
 #include <CBWIF.h>
+#include <CBByteArray.h>
+#include <CBBase58.h>
 
+char* createWIF(int arg){
+	CBKeyPair * key = CBNewKeyPair(true);
+	CBKeyPairGenerate(key);
+	CBWIF * wif = CBNewWIFFromPrivateKey(key->privkey, true, CB_NETWORK_PRODUCTION, false);
+	CBByteArray * str = CBChecksumBytesGetString(wif);
+	CBReleaseObject(wif);
+	return (char *)CBByteArrayGetData(str);
+	CBReleaseObject(str);
+	//CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_PREFIX_PRODUCTION_ADDRESS, false);
+	//CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	//CBReleaseObject(key);
+	//CBReleaseObject(address);
 
-int createWIF(int arg){
-	CBHDKey * newKey = CBNewHDKey(false);
-	return arg;
+//	return (int) 1;
 }
 
 int add(int x, int y) {
