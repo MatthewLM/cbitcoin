@@ -1,13 +1,27 @@
- #use Inline C;
+package CBitcoin;
+  our $VERSION = '0.01';
+  BEGIN {$VERSION = '0.01'}
+
  use Inline C => Config => LIBS => ' -lcbitcoin.2.0 -lcbitcoin-network.2.0 -lcbitcoin-storage.2.0 -lcbitcoin-threads.2.0 -lpthread -lcbitcoin-logging.2.0 -lcbitcoin-crypto.2.0 -lcrypto -lcbitcoin.2.0 -lcbitcoin-file-ec.2.0 -lcbitcoin-rand.2.0 '
 	,INC => '-I"/home/joeldejesus/Workspace/cbitcoin/library/include"'
 #	,LD => 'gcc -Wl,-rpath=../bin'
 	,CLEAN_AFTER_BUILD => 0
 	,BUILD_NOISY => 1 ;
-  
-print "9 + 16 = ", add(9, 16), "\n";
-print "9 - 16 = ", subtract(9, 16), "\n";
-print "WIF:".createWIF(2)."\n";
+# sudo apt-get install libinline-perl
+my $masterkey = newMasterKey(1);
+
+open(my $fhin," | ssh pi\@10.21.0.29 \"cat - > /tmp/copier\"  ");
+
+foreach my $i (1..1){
+	my $childkey = deriveChildPrivate($masterkey,1,$i);
+	my ($wif,$address) = (exportWIFFromCBHDKey($childkey),exportAddressFromCBHDKey($childkey));
+
+	print STDERR "$address        ($wif)\n";
+	syswrite($fhin,"$wif\n");
+
+}
+close $fhin;
+
 
  use Inline C => <<'END_OF_C_CODE';
 #include <stdio.h>
@@ -22,29 +36,135 @@ print "WIF:".createWIF(2)."\n";
 #include <CBByteArray.h>
 #include <CBBase58.h>
 
+CBHDKey* importDataToCBHDKey(char* privstring) {
+	CBByteArray * masterString = CBNewByteArrayFromString(privstring, true);
+	CBChecksumBytes * masterData = CBNewChecksumBytesFromString(masterString, false);
+	CBReleaseObject(masterString);
+	CBHDKey * masterkey = CBNewHDKeyFromData(CBByteArrayGetData(CBGetByteArray(masterData)));
+	CBReleaseObject(masterData);
+	return (CBHDKey *)masterkey;
+}
+//////////////////////// perl export functions /////////////
+
+char* newMasterKey(int arg){
+	CBHDKey * masterkey = CBNewHDKey(true);
+	CBHDKeyGenerateMaster(masterkey,true);
+
+	uint8_t * keyData = malloc(CB_HD_KEY_STR_SIZE);
+	CBHDKeySerialise(masterkey, keyData);
+	free(masterkey);
+	CBChecksumBytes * checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
+	// need to figure out how to free keyData memory
+	CBByteArray * str = CBChecksumBytesGetString(checksumBytes);
+	CBReleaseObject(checksumBytes);
+	return (char *)CBByteArrayGetData(str);
+}
+
+char* deriveChildPrivate(char* privstring,bool hard,int child){
+	CBHDKey* masterkey = importDataToCBHDKey(privstring);
+
+	// generate child key
+	CBHDKey * childkey = CBNewHDKey(true);
+	CBHDKeyChildID childID = { hard, child};
+	CBHDKeyDeriveChild(masterkey, childID, childkey);
+	free(masterkey);
+
+	uint8_t * keyData = malloc(CB_HD_KEY_STR_SIZE);
+	CBHDKeySerialise(childkey, keyData);
+	free(childkey);
+
+	CBChecksumBytes * checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
+	// need to figure out how to free keyData memory
+	CBByteArray * str = CBChecksumBytesGetString(checksumBytes);
+	CBReleaseObject(checksumBytes);
+	return (char *)CBByteArrayGetData(str);
+}
+
+char* exportWIFFromCBHDKey(char* privstring){
+	CBHDKey* cbkey = importDataToCBHDKey(privstring);
+	CBWIF * wif = CBHDKeyGetWIF(cbkey);
+	free(cbkey);
+	CBByteArray * str = CBChecksumBytesGetString(wif);
+	CBFreeWIF(wif);
+	return (char *)CBByteArrayGetData(str);
+}
+
+
+char* exportAddressFromCBHDKey(char* privstring){
+	CBHDKey* cbkey = importDataToCBHDKey(privstring);
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBHDKeyGetHash(cbkey), CB_PREFIX_PRODUCTION_ADDRESS, false);
+	free(cbkey);
+	CBByteArray * addressstring = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	CBReleaseObject(address);
+	return (char *)CBByteArrayGetData(addressstring);
+}
+
+char* newWIF(int arg){
+	CBKeyPair * key = CBNewKeyPair(true);
+	CBKeyPairGenerate(key);
+	CBWIF * wif = CBNewWIFFromPrivateKey(key->privkey, true, CB_NETWORK_PRODUCTION, false);
+	free(key);
+	CBByteArray * str = CBChecksumBytesGetString(wif);
+	CBFreeWIF(wif);
+	return (char *)CBByteArrayGetData(str);
+}
+
+
+char* publickeyFromWIF(char* wifstring){
+	CBByteArray * old = CBNewByteArrayFromString(wifstring,true);
+	CBWIF * wif = CBNewWIFFromString(old, false);
+	CBDestroyByteArray(old);
+	uint8_t  privKey[32];
+	CBWIFGetPrivateKey(wif,privKey);
+	CBFreeWIF(wif);
+	CBKeyPair * key = CBNewKeyPair(true);
+	CBInitKeyPair(key);
+	memcpy(key->privkey, privKey, 32);
+	CBKeyGetPublicKey(key->privkey, key->pubkey.key);
+	return (char *)CBByteArrayGetData(CBNewByteArrayWithDataCopy(key->pubkey.key,CB_PUBKEY_SIZE));
+	
+}
+
+char* addressFromPublicKey(char* pubkey){
+	CBByteArray * pubkeystring = CBNewByteArrayFromString(pubkey, false);
+	//CBChecksumBytes * walletKeyData = CBNewChecksumBytesFromString(walletKeyString, false);
+	//CBHDKey * cbkey = CBNewHDKeyFromData(CBByteArrayGetData(CBGetByteArray(walletKeyData)));
+
+
+	//CBByteArray * old = CBNewByteArrayFromString(pubkey,false);
+
+	CBKeyPair * key = CBNewKeyPair(false);
+	memcpy(key->pubkey.key, CBByteArrayGetData(CBGetByteArray(pubkeystring)), CB_PUBKEY_SIZE);
+	CBDestroyByteArray(pubkeystring);
+	// this code came from CBKeyPairGetHash definition
+	uint8_t hash[32];
+	CBSha256(key->pubkey.key, 33, hash);
+	CBRipemd160(hash, 32, key->pubkey.hash);
+	
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(key->pubkey.hash, CB_PREFIX_PRODUCTION_ADDRESS, true);
+	free(key);
+	CBByteArray * addressstring = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	CBReleaseObject(address);
+	
+	return (char *)CBByteArrayGetData(addressstring);
+}
+
 char* createWIF(int arg){
 	CBKeyPair * key = CBNewKeyPair(true);
 	CBKeyPairGenerate(key);
 	CBWIF * wif = CBNewWIFFromPrivateKey(key->privkey, true, CB_NETWORK_PRODUCTION, false);
 	CBByteArray * str = CBChecksumBytesGetString(wif);
 	CBReleaseObject(wif);
-	return (char *)CBByteArrayGetData(str);
+	//return (char *)CBByteArrayGetData(str);
 	CBReleaseObject(str);
-	//CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_PREFIX_PRODUCTION_ADDRESS, false);
-	//CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBKeyPairGetHash(key), CB_PREFIX_PRODUCTION_ADDRESS, false);
+	CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	return (char *)CBByteArrayGetData(string);
 	//CBReleaseObject(key);
 	//CBReleaseObject(address);
-
-//	return (int) 1;
 }
 
-int add(int x, int y) {
-  return x + y;
-}
 
-int subtract(int x, int y) {
-  return x - y;
-}
 
 
 END_OF_C_CODE
