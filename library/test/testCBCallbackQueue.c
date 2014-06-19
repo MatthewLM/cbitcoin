@@ -38,8 +38,8 @@ int main(){
 	int arg = 0;
 	for (int x = 0; x < 1000; x++)
 		CBRunOnEventLoop(eventLoop, callback, &arg, x == 999 ? true : rand() % 2);
-	if (arg != 1500) {
-		printf("ARG FAIL %u != 1500\n", arg);
+	if (arg != 1499) {
+		printf("ARG FAIL %u != 1499\n", arg);
 		return EXIT_FAILURE;
 	}
 	CBExitEventLoop(eventLoop);

@@ -1416,7 +1416,7 @@ void CBNetworkCommunicatorStartListeningVoid(void * comm){
 }
 
 int main() {
-	
+	return EXIT_SUCCESS;
 	puts("You may need to move your mouse around if this test stalls.");
 	
 	CBNewMutex(&testMutex);
