@@ -111,7 +111,7 @@ int main(){
 	remove("./cbitcoin/val_0.dat");
 	CBDepObject storage;
 	CBDepObject database;
-	CBNewStorageDatabase(&database, "./", 10000000, 10000000);
+	CBNewStorageDatabase(&database, ".", 10000000, 10000000);
 	if (! CBNewAccounterStorage(&storage, database)){
 		printf("NEW ACCOUNTER STORAGE FAIL\n");
 		return 1;
