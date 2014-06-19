@@ -1,0 +1,96 @@
+
+ ** Updated: 12/02/2006 **
+
+ It would seem G1 and G2 are interchangable in some curves!
+
+     "It turns out type A, A1 and E pairings are symmetric, and types D, F have
+     G1 being a group whose elements have a shorter representation than G2's
+     and G1 and G2 are not interchangeable." --Lynn
+
+ I may need to rethink the argument type restrictions at some point.
+
+   - you cannot tell if elements are compatible by their
+     element_size_in_bytes(), nor by their element->field->order
+   - A GT is compatible with a G2 and a G1 is compatible with a G2 under a
+     symmetric curve, which -- I think -- can be detected if a G1 and a G2 are
+     the same size and order?
+
+   - "The next release will have int pairing_is_symmetric(pairing_ptr p)
+     function, which tells you when G1 and G2 are the same. " -- Lynn
+
+ ** Updated: 11/28/2006 **
+
+ - There is no params support at all yet, and there probably should be.
+ - There are no mathematical tests at all yet, and there probably should
+   be.
+ - There should be more type-safety checks.  For instance, element_is_sqr()
+   sagfaults on G1 and G2 elements.  We'd like a croak() instead of an
+   unexplained exit.
+
+Please send feature requests to Paul Miller <japh@voltar-confed.org> and I will try to accommodate.
+
+The following table lists the libpbc functions, whether they're ported in the
+.xs files, whether they've been exported by the PM object oriented interface,
+whether they've been documented, called in a test and finally; whether they've
+been tested for mathematical accuracy (usually not) or whether they've been
+"slammed" with all ther permutations of wrong group types inside an eval {}s.
+
+[Note: these are the XS names, not the PBC names (mostly).]
+
++---------------------+----------------+---------------+-----------+------------+-------------+
+| libpbc function     | XS port / Docs | PM OOi / Docs | t/ called | t/ slammed | t/ accuracy |
++---------------------+----------------+---------------+-----------+------------+-------------+
+| element_fprintf     |    x      x    |    x     e    |   \0      |    \0      |     \0      |
+| element_export      |    x      x    |    x     e    |    x      |    \0      |      x      |
+| element_to_mpz      |    x      x    |    x     e    |    x      |    \0      |      x      |
+| element_add         |    x      x    |    x     e    |    2      |     2      |             |
+| element_sub         |    x      x    |    x     e    |    2      |     2      |             |
+| element_mul         |    x      x    |    x     e    |    2      |     2      |             |
+| element_mul_zn      |    x      x    |    x          |    2      |     2      |             |
+| element_mul_mpz     |    x      x    |    x          |    2      |     2      |             |
+| element_mul_si      |    x      x    |    x          |    2      |     2      |             |
+| element_div         |    x      x    |    x     e    |    2      |     2      |             |
+| element_double      |    x      x    |    x     e    |    2      |     1      |             |
+| element_halve       |    x      x    |    x     e    |    2      |     1      |             |
+| element_square      |    x      x    |    x     e    |    2      |     1      |             |
+| element_neg         |    x      x    |    x     e    |    2      |     1      |             |
+| element_invert      |    x      x    |    x     e    |    2      |     1      |             |
+| element_pow_zn      |    x      x    |    x     e    |    x      |     2      |      x      |
+| element_pow_mpz     |    x      x    |    x     e    |    x      |     2      |             |
+| element_pow2_zn     |    x      x    |    x     e    |    x      |     4      |             |
+| element_pow3_zn     |    x      x    |    x     e    |    x      |     6      |             |
+| element_pow2_mpz    |    x      x    |    x     e    |    x      |     4      |             |
+| element_pow3_mpz    |    x      x    |    x     e    |    x      |     6      |             |
+| element_is0         |    x      x    |    x     e    |    x      |     1      |             |
+| element_is1         |    x      x    |    x     e    |    x      |     1      |             |
+| element_is_sqr      |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_cmp         |    x      x    |    x     e    |    x      |     1      |             |
+| element_clear       |    x      x    |    x     e    |           |    \0      |     \0      |
+| element_random      |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_set0        |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_set1        |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_set         |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_set_si      |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_set_mpz     |    x      x    |    x     e    |    x      |     1      |      x      |
+| element_from_hash   |    x      x    |    x     e    |    x      |     1      |      x      |
+| pairing_init_stream |    x      x    |    x     c    |    x      |    \0      |      x      |
+| pairing_init_str    |    x      x    |    x     c    |    x      |    \0      |      x      |
+| pairing_clear       |    x      x    |    x     p    |           |    \0      |     \0      |
+| pairing_apply       |    x      x    |    x     e    |    x      |     2      |      x      |
+| element_init_G1     |    x      x    |    x     p    |    x      |    \0      |     \0      |
+| element_init_G2     |    x      x    |    x     p    |    x      |    \0      |     \0      |
+| element_init_GT     |    x      x    |    x     p    |    x      |    \0      |     \0      |
+| element_init_Zr     |    x      x    |    x     p    |    x      |    \0      |     \0      |
+| element_pp_init     |                |               |           |            |             |
+| element_pp_clear    |                |               |           |            |             |
+| element_pp_pow      |                |               |           |            |             |
+| a_param_init        |                |               |           |            |             |
+| a_param_clear       |                |               |           |            |             |
+| a_param_gen         |                |               |           |            |             |
+| a_param_out_str     |                |               |           |            |             |
+|     ...             |                |               |           |            |             |
+| f_param_init        |                |               |           |            |             |
+| f_param_clear       |                |               |           |            |             |
+| f_param_gen         |                |               |           |            |             |
+| f_param_out_str     |                |               |           |            |             |
++---------------------+----------------+---------------+-----------+------------+-------------+

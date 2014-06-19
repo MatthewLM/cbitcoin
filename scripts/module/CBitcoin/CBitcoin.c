@@ -10,11 +10,23 @@
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
+#include <stdio.h>
+#include <ctype.h>
+#include <openssl/ssl.h>
+#include <openssl/ripemd.h>
+#include <openssl/rand.h>
+#include <CBHDKeys.h>
+#include <CBChecksumBytes.h>
+#include <CBAddress.h>
+#include <CBWIF.h>
+#include <CBByteArray.h>
+#include <CBBase58.h>
+
 
 #include "ppport.h"
 
 
-#line 18 "CBitcoin.c"
+#line 30 "CBitcoin.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -66,7 +78,7 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
-#line 70 "CBitcoin.c"
+#line 82 "CBitcoin.c"
 
 XS(XS_CBitcoin_hello); /* prototype to pass -Wmissing-prototypes */
 XS(XS_CBitcoin_hello)
@@ -79,9 +91,9 @@ XS(XS_CBitcoin_hello)
     if (items != 0)
        croak_xs_usage(cv,  "");
     {
-#line 13 "CBitcoin.xs"
+#line 25 "CBitcoin.xs"
     printf("Hello, world!\n");
-#line 85 "CBitcoin.c"
+#line 97 "CBitcoin.c"
     }
     XSRETURN_EMPTY;
 }
@@ -101,9 +113,42 @@ XS(XS_CBitcoin_is_even)
 	int	input = (int)SvIV(ST(0));
 	int	RETVAL;
 	dXSTARG;
-#line 20 "CBitcoin.xs"
+#line 31 "CBitcoin.xs"
     RETVAL = (input % 2 == 0);
-#line 107 "CBitcoin.c"
+#line 119 "CBitcoin.c"
+	XSprePUSH; PUSHi((IV)RETVAL);
+    }
+    XSRETURN(1);
+}
+
+
+XS(XS_CBitcoin_newMasterKey); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin_newMasterKey)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 1)
+       croak_xs_usage(cv,  "arg");
+    {
+	int	arg = (int)SvIV(ST(0));
+	int	RETVAL;
+	dXSTARG;
+#line 39 "CBitcoin.xs"
+    CBHDKey * masterkey = CBNewHDKey(true);
+    CBHDKeyGenerateMaster(masterkey,true);
+
+    uint8_t * keyData = malloc(CB_HD_KEY_STR_SIZE);
+    CBHDKeySerialise(masterkey, keyData);
+    free(masterkey);
+    CBChecksumBytes * checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
+    // need to figure out how to free keyData memory
+    CBByteArray * str = CBChecksumBytesGetString(checksumBytes);
+    CBReleaseObject(checksumBytes);
+    RETVAL = 1;
+#line 152 "CBitcoin.c"
 	XSprePUSH; PUSHi((IV)RETVAL);
     }
     XSRETURN(1);
@@ -135,6 +180,7 @@ XS(boot_CBitcoin)
 
         newXS("CBitcoin::hello", XS_CBitcoin_hello, file);
         newXS("CBitcoin::is_even", XS_CBitcoin_is_even, file);
+        newXS("CBitcoin::newMasterKey", XS_CBitcoin_newMasterKey, file);
 #if (PERL_REVISION == 5 && PERL_VERSION >= 9)
   if (PL_unitcheckav)
        call_list(PL_scopestack_ix, PL_unitcheckav);

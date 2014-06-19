@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+# load this test version, not the installed version:
+BEGIN { system('perl Makefile.PL') unless -f 'Makefile'; system("make"); unshift @INC, 'blib/arch', 'blib/lib' }
+
+use strict;
+use Crypt::PBC;
+use Math::BigInt (try => 'GMP');
+
+my $curve = new Crypt::PBC("params_d159.txt");
+my $x     = $curve->init_Zr->random;
+my $y     = $curve->init_Zr->random;
+my $xy    = $curve->init_Zr->set( $x )->mul( $y );
+my $GT1   = $curve->init_GT->random;
+my $GT2   = $curve->init_GT->set( $GT1 );
+
+$GT1->pow_zn( $xy );
+$GT2->pow_zn( $x )->pow_zn( $y );
+
+$| = 1;
+print "gt_to_xy     = ", $GT1->as_base64, "\n";
+print "gt_to_x_to_y = ", $GT2->as_base64, "\n"; 

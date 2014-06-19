@@ -1,0 +1,41 @@
+TYPEMAP
+pairing_t * PAIRINGT
+element_t * ELEMENTT
+mpz_t     *	MPZ
+
+INPUT
+PAIRINGT
+        if (sv_derived_from($arg, \"Crypt::PBC::Pairing\")) {
+            IV tmp = SvIV((SV*)SvRV($arg));
+            $var = ($type) tmp;
+        }
+        else
+            croak(\"$var is not of type Crypt::PBC::Pairing\")
+
+ELEMENTT
+        if (sv_derived_from($arg, \"Crypt::PBC::Element\")) {
+            IV tmp = SvIV((SV*)SvRV($arg));
+            $var = ($type) tmp;
+        }
+        else
+            croak(\"$var is not of type Crypt::PBC::Element\")
+
+MPZ
+        /* this was cut and pasted directly from Math::BigInt::GMP -- the rest are obvious copies */
+        if (sv_derived_from($arg, \"Math::BigInt::GMP\")) {
+            IV tmp = SvIV((SV*)SvRV($arg));
+            $var = ($type) tmp;
+        }
+        else
+            croak(\"$var is not of type Math::BigInt::GMP\")
+
+OUTPUT
+PAIRINGT
+	sv_setref_pv($arg, \"Crypt::PBC::Pairing\", (void*)$var);
+
+ELEMENTT
+	sv_setref_pv($arg, \"Crypt::PBC::Element\", (void*)$var);
+
+MPZ
+    /* this was cut and pasted directly from Math::BigInt::GMP -- the rest are obvious copies */
+	sv_setref_pv($arg, \"Math::BigInt::GMP\", (void*)$var);

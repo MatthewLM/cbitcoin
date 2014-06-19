@@ -1,0 +1,235 @@
+=head1 NAME
+
+Crypt::PBC::Element - OO interface for the Stanford PBC library
+
+=head1 SYNOPSIS
+
+    use Crypt::PBC;
+
+    my $pairing = new Crypt::PBC("params_d.txt");
+    my $G1      = $pairing->init_G1->random;
+    my $G2      = $pairing->init_G2->random->double->square;
+    my $GT      = $pairing->init_GT->pairing_apply( $G1, $G2 );
+
+=head1 Overview
+
+Throughout the entire OO interface I have attempted to be consistant that the
+Element return itself where it isn't immediately obvious that some other thing
+should be returned instead.
+
+  my $x = $pairing->init_G1;  # $x is an element
+     $x->random;              # randomize the element.
+     $x->set0;                # set element to 0
+     $x->set_to_hash("lol!"); # set element to lol ...
+
+  # All the above can instead be written as:
+  my $x = $pairing->init_G1->random->set0->set_to_hash("lol!");
+
+However, functions that return something else ... dont' return elements.
+C<$string> (below) is a MIME encoded string, not an element.
+
+  my $string = $x->as_base64;
+
+For more help seting up a new Pairing, see the L<Crypt::PBC> manpage (under new).
+
+Best of all, you do not need to keep track of which elements need to be cleared
+when using the OO interface.  L<Crypt::PBC::Pairing> and L<Crypt::PBC::Element>
+keep track of which elements and pairings need to be cleared in the C<DESTROY>
+method.  If you overload C<DESTROY>, be sure to call C<SUPER::DESTROY()>!
+
+=head1 Assignment Functions
+
+    my $x = $pairing->init_G1;
+
+       $x->set0; # sets the element to 0
+       $x->set1; # sets the element to 1
+
+    my $y = $pairing->init_Zr->set_to_int( 19 ); # set a new element to 19
+
+    my $i = new Math::Bigint( 25 );
+    my $z = $pairing->init_Zr->set_to_bigint( $i ):
+     # $z is now the bigint 25 ah, magic.
+
+    $z->random; # ruin the bigint and replace with boring random bytes
+
+    $y->set_to_hash("Poru Mira"); 
+      # Set $element based on the bytes "Poru Mira".
+      
+You must use some kind of hashing algorithm (e.g., L<Digest::SHA1>) to map data to
+an element.  "In general you cannot feed it plaintext. You should only give it
+short strings of bytes (e.g. 160 bits if G1 has order around 2^160, which is
+the case for most of the bundled pairing parameters)." -- Lynn
+
+    my $a = $pairing->init_G1->random;
+    my $b = $pairing->init_G1->set( $a );
+
+The above makes a new G1 element ($a), sets it to random, then makes another G1
+($b) and sets it to the random value of element $a.  The following is probably
+more clear and is identical to the functions above.  There's more on clone
+later in this document.
+
+    my $c = $a->clone;
+    print "You see this I bet!\n" if $c->is_eq( $a ) and $c->is_eq( $b );
+
+This will come in handing when transfering keys between nodes.
+
+    my $d_i_a = $pairing->init_G1->random;
+    my $bytes = $d_i->as_bytes;
+    my $d_i_b = $pairing->init_G1->set_to_bytes( $bytes );
+
+=head1 Comparison Functions
+
+    my $z = $pairing->init_G1->random;
+    my $y = $pairing->init_G1->random;
+
+    print "I say yes here!\n"  if $z->set0->is0;
+    print "I say yes here!\n"  if $z->set1->is1;
+    print "I say nothing...\n" if $z->set1->is0;
+
+    print "This is pretty much always true... unless we're in GT\n" 
+        $z->is_eq( $z );
+
+    print "This is usually not going to print anything...\n"
+        $z->random->is_eq( $y->random );
+
+    my $m = $pairing->init_Zr;
+    print "I say yes here.\n"  if $m->set_to_int(25)->is_sqr;
+    print "I say nothing...\n" if $m->set_to_int(19)->is_sqr;
+
+=head1 Arithmetic Functions
+
+These no-argument functions are rather self explainatory.  The only thing
+that's not immediately clear is that $Zr is B<set> to the value of the
+operation.  These all return $Zr, of course.  Also, these operations work on
+elements in G1, G2, and GT -- although that's not pictured.
+
+    my $Zr = $pairing->init_Zr;
+
+    $Zr->square; # $Zr = $Zr * $Zr;
+    $Zr->double; # $Zr = $Zr + $Zr
+    $Zr->invert; # $Zr = 1/$Zr
+    $Zr->halve;  # $Zr = $Zr/2
+    $Zr->neg;    # $Zr = -$Zr
+
+All the the functions above will work with arguments instead.  The following
+examples are logically equivelent, but the shorter form is probably also a great
+deal faster.
+
+    $Zr->set( $a )->halve;
+    $Zr->halve( $a );
+
+    $Zr->square( $a );
+    $Zr->set( $a )->square;
+
+The following one-argument functions are probably just as clear as the ones
+above.  The B<set>ing of Zr is implicit as it is above and, as above, the
+operations work in G1, G2, and GT.  Watch out though, for these, the element
+types on the LHS must match the RHS.  L<Crypt::PBC::Element> will C<croak()> an
+error if the types don't match.
+
+    my $Zr2 = $pairing->init_Zr->random;
+
+    $Zr->add( $Zr2 ); # Zr = Zr + Zr2
+    $Zr->Sub( $Zr2 ); # Zr = Zr - Zr2 -- note the capital S
+    $Zr->div( $Zr2 ); # Zr = Zr / Zr2
+    $Zr->mul( $Zr2 ); # Zr = Zr * Zr2
+
+All the the functions above will work with another argument instead.  The
+following example is logically equivelent, but the shorter form is probably
+also a great deal faster.
+
+    $Zr->div( $a, $Zr2 );        # Zr = $a/$Zr2
+    $Zr->set( $a )->div( $Zr2 ); # Zr = $Zr/$Zr2
+
+There are two more multiplication functions to choose from.  They take perl
+integers and L<Math::BigInt> objects.
+   
+    my $a = $Zr->set_to_int(7)->mul_int( 5 )->clone;
+    my $b = $Zr->set_to_int(7)->mul_bigint( new Math::BigInt( 5 ) )->clone;
+
+    # here, $a and $b will test equal with $a->is_eq( $b )
+
+Assume all the following variables are elements in the indicated groups.  Beware
+that the RHS-a elements must all be the same type as the LHS element.  The RHS-n
+arguments must all be of elements in Zr.  L<Crypt::PBC::Element> will C<croak()>
+an error if the arguments are of the wrong types.
+
+    $G1_l->pow_zn( $Zr_n ); # G1_l = G1_l^Zr_n
+    $G1_l->pow_zn( $G1_a, $Zr_n ); # G1_l = G1_a^Zr_n
+
+    $G1_l->pow2_zn( $G1_a1, $Zr_n1, $G1_a2, $Zr_n2 ); # l = a1^n1 * a2^n2
+    $G1_l->pow3_zn( $G1_a1, $Zr_n1, $G1_a2, $Zr_n2, $G1_a3, $Zr_n3 );
+      # l = a1^n1 * a2^n2 * a3^n3
+
+These functions are all pretty much the same, but they take bigints for the
+RHS-n arguments.  They will all C<croak()> if the LHS doesn't match the RHS-a or
+if the RHS-n arguments aren't L<Math::BigInt> objects.
+
+    $G1_l->pow_bigint( $G1_a, $BI_n );
+    $G1_l->pow2_bigint( $G1_a1, $BI_n1, $G1_a2, $BI_n2 );
+    $G1_l->pow3_bigint( $G1_a1, $BI_n1, $G1_a2, $BI_n2, $G1_a3, $BI_n3 );
+
+Arguably the most important arithmetic function of all is saved for last.  The
+C<pairing_apply> function is special, in that it has more restrictions on the
+LHS, RHS1 and RHS2 than most other functions.  The LHS must be in GT, RHS1 must
+be in G1 and RHS2 must be in G2.
+
+    my $GT = $pairing->init_GT;
+    my $G1 = $pairing->init_G1;
+    my $G2 = $pairing->init_G2;
+
+    $GT->pairing_apply( $G1, $G2 ); 
+    $GT->apply_pairing( $G1, $G2 ); # synonym for pairing_apply
+    $GT->ehat(  $G1, $G2 );         # synonym for pairing_apply
+    $GT->e_hat( $G1, $G2 );         # synonym for pairing_apply
+
+=head1 I/O, Export, and Conversion Functions
+
+libpbc offers a va_args (printf) style output that's probably of limited use
+except for debugging.  L<Crypt::PBC> ports the C<fprintf()> version directly
+and you can use it as incdicated in L<Crypt::PBC>.  The L<Crypt::PBC::Element>
+module only uses C<fprintf()> in the stddump and C<stddump()> and C<errdump()>
+and even then only in a limited capacity.
+ 
+    my $element = $pairing->init_G1;
+    print "Hey, these don't look like I thought they would:\n";
+
+    $element->stddump; # dumps the element on STDOUT
+
+    # You may be surprised to see that a G1 Element is in fact two MPZs.
+
+    $element->errdump; # dumps the element on STDERR instead of STDOUT
+
+The following will be of major importance to anyone looking to use Crypt::PBC
+for real-life applications.  C<as_bytes()> almost certainly has to be used in
+conjunction with some other algorithm, but that is indeed what it is for.
+
+    my $secret_key_bin = $element->as_bytes;
+
+    my $example_cipher = new Crypt::CBC({
+        header => "randomiv", 
+        cipher => 'Blowfish'
+        key    => $secret_key_bin,
+    });
+
+    my $secret = $example_cipher->encrypt("you can't read this!!");
+
+There are, of course, other ways to export the bytes.  The bigint exporter
+probably only works on Zr elements, but it probalby has uses.
+
+    my $key_hex = $element->as_hex;    # as_str is a synonym for as_hex
+    my $key_b64 = $element->as_base64; # MIME base64 as per RFC 2045
+    my $bigint  = $element->as_bigint; # Math::BigInt
+
+=head1 Miscellaneous Functions
+
+    my $z = $pairing->init_Zr->random;
+    my $c = $z->clone;# creates a copy of $z in $c.
+    my $d = $z->copy; # copy is an alias for clone
+    # ($c is a new Element in new memory with the same value as $z)
+
+=head1 AUTHOR AND LICENSING
+
+GPL-ish licensing with the author: Paul Miller <jettero@cpan.org>.
+
+Please see L<Crypt::PBC> for further information.

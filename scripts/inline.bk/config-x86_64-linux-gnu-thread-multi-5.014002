@@ -1,0 +1,14 @@
+version : 0.5
+languages : %
+    C : C
+    Foo : Foo
+    foo : Foo
+types : %
+    C : compiled
+    Foo : interpreted
+modules : %
+    C : Inline::C
+    Foo : Inline::Foo
+suffixes : %
+    C : so
+    Foo : foo

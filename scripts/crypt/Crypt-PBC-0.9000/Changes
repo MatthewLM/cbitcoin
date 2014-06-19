@@ -1,0 +1,167 @@
+0.9000: Wed Jul 29 2009
+   - updates were needed for the 0.5.1 release, which means that
+     version, or newer, is now required to build this.
+
+0.855: Fri Mar 27 18:42:50 EDT 2009
+   - added chrony's meta.yml stuff for the github repo
+
+0.854: Thu Aug 21 06:21:28 EDT 2008
+   - Used EU::MM's prompt() instead of rolling my own.  BingOS++.
+     Woops.
+
+0.853: Thu Aug 14 12:05:26 EDT 2008
+   - Fixed a build problem for bsd 
+   - Fixed an eval { use Something } problem in a test.
+     It now reads eval q{ use something };  ... grrz.
+
+0.852: Wed Aug 13 16:29:37 EDT 2008
+   - A cpan tester informed me that his libgmp was in /usr/local
+     ... that's kindof a no brainer.  I added some rudimentary
+     libpaths to the Makefile.PL; I should probably make it use
+     some system paths.  Later.
+
+0.851: Tue Aug 12 07:09:26 EDT 2008
+   - Wow, newbie error.  I can't use <> in the Makefile.PL
+     because it tries to slurp each INSTALLDIR=site type argument
+     as an input file...  Doh
+
+0.85: Mon Aug 11 12:05:47 EDT 2008
+   - introduced a bug in the Makefile.PL while fixing something
+     else.
+
+0.81: Mon Aug 11 07:17:47 EDT 2008
+   - minor doc fixes were necessary
+
+0.8: Sun Aug 10 07:03:58 EDT 2008
+   - there were bugs in the manifest, so some of the tests
+     weren't shipping.
+   - I taught the distribution to pull libpbc, build, and link
+     against it.  I expect it won't work reliably on other
+     systems, but it works fine on mine.
+
+0.8: Sat Aug  9 07:55:29 EDT 2008
+   - I have given up on version.pm and Module::Build.  They both
+     cause more problems than they solve.
+   - I added the expected libpbc version to the README
+
+0.7.21.3.4.18: Thu Jul 31 14:33:42 EDT 2008
+   - removed the Makefile.PL, causes problems
+
+0.7.21.2.4.18: Mon Jul 28 16:39:23 EDT 2008
+   - I added libchecks to the other .PL
+
+0.7.21.1.4.18: Thu Jul 24 06:54:02 EDT 2008
+   - brought M::B into the mix.  EU::MM will cause version.pm
+     problems eventually.
+
+0.7.21.0.4.18: Sat Jul  5 08:03:51 EDT 2008
+   - I brought us up to 0.4.18!!  At some point Lynn fixed the
+     bug I was waiting on!!  Hurray!
+   - I'm now using version.pm
+   - I'm now using Devel::CheckLib (so the cpan testers FAIL
+     reports will stop when they don't have libpbc)
+
+0.7.20.0-0.4.7:  Mon Feb 01 15:00 EST 2007
+   - jettero changed the version number in the pm file and ran
+     the usual battery of tests
+
+0.7.20.0-0.4.6:  Mon Feb 01 15:00 EST 2007
+   - jettero changed the version number in the pm file and ran
+     the usual battery of tests
+   - interestingly, 0.7.20-0.4.5 was never released due to bugs
+     in some esoteric math problem in Ben's cache.
+
+0.7.20.0-0.4.5:  Mon Feb 01 15:00 EST 2007
+   - jettero changed the version number in the pm file and ran
+     the usual battery of tests
+   - several tests failed... investigating...
+
+0.7.20.0-0.4.4:  Mon Jan 30??? EST 2007
+   - jettero changed the version number in the pm file and made
+     sure all the tests complete
+
+0.7.20.0-0.4.3:  Mon Jan 15 11:00:57 EST 2007
+   - jettero told PBC.pm and pairing.xs about the new
+     pairing_is_symmetric() function
+
+0.7.18.3-0.4.2:  Sun Dec 10 10:27:32 EST 2006
+   - jettero added element_from_bytes and set_to_bytes
+
+0.7.18.3-0.4.2:  Sat Dec  9 12:14:56 EST 2006
+   - jettero made pow_zn capable of taking a single argument,
+     which should be pretty clear
+   - jettero added a tests for that
+
+0.7.18.1-0.4.2:  Sat Dec  2 09:54 EST 2006
+   - I created a slow but reasonably accurate way of detecting
+     whether the pairing is symmetric, for purposes of deciding
+     whether G1 and G2 are algebraically similar.  This is for my
+     own testing purposes until Ben adds pairing_is_symmetric()
+     to libpbc.
+
+0.4.2-0.7.17.1:  Sat Dec  2 09:36:55 EST 2006
+   - this is a bugfix for the version released 15 minutes ago.
+
+0.4.2-0.7.17:  Sat Dec  2 09:21:55 EST 2006
+   - This is a documentation fix only.
+   - There will be a new version very soon though.  I need to
+     make serious changes to the argument type restrictions as
+     they should apparently not be the same on different types of
+     curves (symmetric vs asymmetric curves).
+
+0.4.2-0.7.16:  Fri Dec  1 09:20:30 EST 2006
+   - jettero made more synonyms for pairing_apply because of
+     frequent typos
+   - jettero fixed several documenation typos
+
+0.4.2-0.7.15:  Tue Nov 28 10:16:07 EST 2006
+   - jettero reversioned the package in preparation for launch.
+
+0.4.1-0.5.04:  Tue Nov 28 10:13:55 EST 2006
+   - jettero added the slamtest, which slams functions with all
+     the wrong arguments, literally, in the permutation sense.
+     It ran all night.  The test in the shipped-package is _much_
+     shorter, but can be extended with 'MAX_PERM_TIME=1000 make
+     test'
+
+0.4.1-0.5.03:  Sun Nov 26 22:26:33 EST 2006
+   - jettero added a memory (leak) test
+
+0.4.1-0.5.02:  Sun Nov 26 21:52:00 EST 2006
+   - jettero added a couple more tests and boatloads of docs
+
+0.3.17-0.5.01:  Mon Nov 20 08:38:04 EST 2006
+   - jettero completed a few more t/ tests (this time for the
+     earith.xs).
+
+0.3.17-0.5.00:  Thu Nov 16 20:03:34 EST 2006
+   - jettero reversioned the package to represent the version of
+     libpbc it is intended to work with in addition to the
+     version of the perl API.  0.3.17-0.5.00 means PBC.pm version
+     0.5.00 intended to work with libpbc 0.3.17.
+
+0.10:  Tue Nov 14 07:12:55 EST 2006
+   - jettero added a bit of type-saftey to PBC.pm. It seems
+     libpbc segfaults when the LHS and BASE of pow_zn() aren't in
+     the same group, or when pairing_apply() is applied on
+     arguments that aren't GT=e_hat(G1, G2); and that took some
+     figurin'.
+
+0.09:  Sun Nov 12 15:13:33 EST 2006
+   - jettero started using element2bytes instead of element2mpz
+     to print elements. Many of the elements are atually
+     quadratics, and poly coeffs and the PBC crew do not make it
+     simple to get to the mpzs.
+
+0.08:  Sun Nov 12 11:23:48 EST 2006
+   - jettero noticed possible bugs in either the init or as_str
+     of elements...
+
+0.07:  Sun Nov 12 09:03:27 EST 2006
+   - jettero fixed my changelog app
+
+0.01  Fri Nov 10 23:07:15 2006
+    - I got this package all skeled up ...  I need a small part
+      of it for a school project so I'm going to focus on that
+      part first.
+

@@ -1,0 +1,39 @@
+=head1 NAME
+
+Crypt::PBC::Pairing - OO interface for the Stanford PBC library
+
+=head1 SYNOPSIS
+
+    use Crypt::PBC;
+
+    my $pairing = new Crypt::PBC("params_d.txt");
+    my $G1      = $pairing->init_G1->random;
+    my $G2      = $pairing->init_G2->random->double->square;
+    my $GT      = $pairing->init_GT->pairing_apply( $G1, $G2 );
+
+=head1 Initializer Functions
+
+The only thing of use this package does is initialize elements in the pairing.
+It does many other things behind the scenes though.
+
+    my $G1_element = $pairing->init_G1;  # returns Crypt::PBC::Element
+    my $G2_element = $pairing->init_G2;  # objects
+    my $GT_element = $pairing->init_GT;
+    my $Zr_element = $pairing->init_Zr;
+
+The most important thing the Pairing package does is handle memory for you.
+The package is a scalar ref of the C-pointer.  C<$$pairing> is the "address" as
+an integer!
+
+It's important when clearing the PBC memory that pairings get cleared after
+elements and the Element and Pairing objects handle that on their own.  You may
+safely ignore clearing elements and pairings if you use the OO interface.
+
+Although, be sure that if you overload C<DESTROY> that you call
+C<SUPER::DESTROY()>!
+
+=head1 AUTHOR AND LICENSING
+
+GPL-ish licensing with the author: Paul Miller <jettero@cpan.org>.
+
+Please see L<Crypt::PBC> for further information.

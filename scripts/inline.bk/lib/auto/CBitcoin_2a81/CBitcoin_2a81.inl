@@ -1,10 +1,10 @@
 md5 : 2a81306732376d1bc2ce778db69819a9
-name : coin_pl_2a81
+name : CBitcoin_2a81
 version : ""
 language : C
 language_id : C
 installed : 0
-date_compiled : Thu Jun 19 13:07:03 2014
+date_compiled : Mon Jun 16 16:06:28 2014
 inline_version : 0.5
 ILSM : %
     module : Inline::C

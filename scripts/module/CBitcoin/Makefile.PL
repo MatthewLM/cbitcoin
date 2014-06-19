@@ -9,7 +9,7 @@ WriteMakefile(
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/CBitcoin.pm', # retrieve abstract from module
        AUTHOR         => 'Joel DeJesus <joeldejesus@>') : ()),
-    LIBS              => [''], # e.g., '-lm'
+    LIBS              => ['-lcbitcoin.2.0','-lcbitcoin-network.2.0','-lcbitcoin-storage.2.0','-lcbitcoin-threads.2.0','-lpthread','-lcbitcoin-logging.2.0','-lcbitcoin-crypto.2.0','-lcrypto','-lcbitcoin.2.0','-lcbitcoin-file-ec.2.0','-lcbitcoin-rand.2.0'], # e.g., '-lm'
     DEFINE            => '', # e.g., '-DHAVE_SOMETHING'
     INC               => '-I.', # e.g., '-I. -I/usr/include/other'
 	# Un-comment this if you add C files to link with later:
