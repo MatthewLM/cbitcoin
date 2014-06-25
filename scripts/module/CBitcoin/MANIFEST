@@ -1,8 +1,0 @@
-CBitcoin.xs
-Changes
-Makefile.PL
-MANIFEST
-ppport.h
-README
-t/CBitcoin.t
-lib/CBitcoin.pm

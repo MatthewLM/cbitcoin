@@ -74,6 +74,7 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(input);
+
 	// Test serialisation
 	CBScript * scriptObj = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1 );
 	CBByteArray * outPointerHash = CBNewByteArrayWithDataCopy(hash, 32);
