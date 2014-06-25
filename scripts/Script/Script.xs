@@ -62,8 +62,25 @@ char* pubkeyToScript (char* pubKeystring){
 	return scriptToString(script);
 }
 
+//http://stackoverflow.com/questions/1503763/how-can-i-pass-an-array-to-a-c-function-in-perl-xs#1505355
+//CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n);
+//char* multisigToScript (char** multisigConcatenated,)
+char* multisigToScript(AV* array,uint8_t m, uint8_t n) {
+	int i;
+	uint8_t** multisig = (uint8_t**)malloc((int)n * sizeof(uint8_t*));
 
-
+	for (i=0; i<=av_len(array); i++) {
+		SV** singlePubKey = av_fetch(array, i, 0);
+		if (singlePubKey != NULL){
+			CBByteArray * masterString = CBNewByteArrayFromString(SvNV(*singlePubKey), false);
+			// this line should just assign a uint8_t * pointer
+			multisig[i] = CBByteArrayGetData(masterString);
+			CBReleaseObject(masterString);
+		}
+	}
+	CBScript* finalscript =  CBNewScriptMultisigOutput(multisig,m,n);
+	return scriptToString(finalscript);
+}
 
 MODULE = CBitcoin::Script	PACKAGE = CBitcoin::Script	
 

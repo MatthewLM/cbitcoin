@@ -61,18 +61,27 @@ char* pubkeyToScript (char* pubKeystring){
 //http://stackoverflow.com/questions/1503763/how-can-i-pass-an-array-to-a-c-function-in-perl-xs#1505355
 //CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n);
 //char* multisigToScript (char** multisigConcatenated,)
-char* multisigToScript(AV* array,uint8_t m, uint8_t n) {
-	int i;
-	char** multisig = (char**)malloc((int)n * sizeof(char*));
+char* multisigToScript(SV* pubKeyArray,uint8_t m, uint8_t n) {
+	int i, n, length;
+	uint8_t** multisig = (uint8_t**)malloc((int)n * sizeof(uint8_t*));
+	int length;
+	if ((! SvROK(pubKeyArray))
+	    || (SvTYPE(SvRV(pubKeyArray)) != SVt_PVAV)
+	    || ((length = av_len((AV *)SvRV(pubKeyArray))) < 0))
+	{
+		XSRETURN_UNDEF;
+	}
+	for (n=0; n<=length; i++) {
+		HV * rh;
+		STRLEN l;
 
-	for (i=0; i<=av_len(array); i++) {
-		SV** singlePubKey = av_fetch(array, i, 0);
-		if (singlePubKey != NULL){
-			CBByteArray * masterString = CBNewByteArrayFromString((char* )SvNV(*singlePubKey), false);
-			// this line should just assign a uint8_t * pointer
-			multisig[i] = CBByteArrayGetData(masterString);
-			CBReleaseObject(masterString);
-		}
+		char * fn = SvPV (*av_fetch ((AV *) SvRV (pubKeyArray), n, 0), l);
+
+		CBByteArray * masterString = CBNewByteArrayFromString(fn, true);
+		// this line should just assign a uint8_t * pointer
+		multisig[i] = CBByteArrayGetData(masterString);
+		CBReleaseObject(masterString);
+
 	}
 	CBScript* finalscript =  CBNewScriptMultisigOutput(multisig,m,n);
 	return scriptToString(finalscript);
