@@ -18,19 +18,14 @@
 
 //////////////////////// perl export functions /////////////
 int addressToScript(char* addressString){
-	CBAddress * address = CBNewAddressFromString(CBNewByteArrayFromString(addressString, true), false);
-	// extract script from address, get uint8_t * 20 byte ripemd 160 bit hash (equal to address without checksum bytes)
-	uint8_t* addrraw = CBByteArrayGetData(CBGetByteArray(address));
-	CBFreeAddress(address);
+    CBByteArray * addrStr = CBNewByteArrayFromString(addressString, false);
+    CBAddress * addr = CBNewAddressFromString(addrStr, false);
 
+    CBScript * script = CBNewScriptPubKeyHashOutput(CBByteArrayGetData(CBGetByteArray(addr)) + 1);
 
-	CBScript * self;
-	CBInitScriptPubKeyHashOutput(self,addrraw);
-	return 1;
-/*
-	char* output;
-	CBScriptToString(self,output);
-	return output;*/
+    char scriptStr[CBScriptStringMaxSize(script)];
+    CBScriptToString(script, scriptStr);
+    return scriptStr;
 }
 
 

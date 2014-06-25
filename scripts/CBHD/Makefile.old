@@ -165,7 +165,7 @@ C_FILES  =
 O_FILES  = 
 H_FILES  = 
 MAN1PODS = 
-MAN3PODS = 
+MAN3PODS = CBHD.pm
 
 # Where is the Config information that we are using/depend on
 CONFIGDEP = $(PERL_ARCHLIB)$(DFSEP)Config.pm $(PERL_INC)$(DFSEP)config.h
@@ -485,8 +485,10 @@ POD2MAN_EXE = $(PERLRUN) "-MExtUtils::Command::MM" -e pod2man "--"
 POD2MAN = $(POD2MAN_EXE)
 
 
-manifypods : pure_all 
-	$(NOECHO) $(NOOP)
+manifypods : pure_all  \
+	CBHD.pm
+	$(NOECHO) $(POD2MAN) --section=3 --perm_rw=$(PERM_RW) \
+	  CBHD.pm $(INST_MAN3DIR)/CBitcoin::CBHD.$(MAN3EXT) 
 
 
 

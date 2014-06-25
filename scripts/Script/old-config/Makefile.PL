@@ -3,7 +3,7 @@ my %options = %{
 {
   'TYPEMAPS' => [],
   'NAME' => 'CBitcoin::Script',
-  'INC' => '/home/joeldejesus/Workspace/cbitcoin/library/include',
+  'INC' => '../../library/include',
   'LIBS' => ['-lcbitcoin.2.0',
 '-lcbitcoin-network.2.0',
 '-lcbitcoin-storage.2.0',

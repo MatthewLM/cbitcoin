@@ -21,7 +21,6 @@ int addressToScript(char* addressString){
 
     char scriptStr[CBScriptStringMaxSize(script)];
     CBScriptToString(script, scriptStr);
-
     return scriptStr;
 }
 
