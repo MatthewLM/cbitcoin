@@ -35,7 +35,7 @@ CBScript* stringToScript(char* scriptstring){
 
 
 char* addressToScript(char* addressString){
-    CBByteArray * addrStr = CBNewByteArrayFromString(addressString, false);
+    CBByteArray * addrStr = CBNewByteArrayFromString(addressString, true);
     CBAddress * addr = CBNewAddressFromString(addrStr, false);
 
     CBScript * script = CBNewScriptPubKeyHashOutput(CBByteArrayGetData(CBGetByteArray(addr)) + 1);
@@ -61,10 +61,21 @@ char* pubkeyToScript (char* pubKeystring){
 //http://stackoverflow.com/questions/1503763/how-can-i-pass-an-array-to-a-c-function-in-perl-xs#1505355
 //CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n);
 //char* multisigToScript (char** multisigConcatenated,)
-char* multisigToScript(SV* pubKeyArray,uint8_t mKeys, uint8_t nKeys) {
-	int i, n, length;
-	uint8_t** multisig = (uint8_t**)malloc((int)nKeys * sizeof(uint8_t*));
-	length = (int)av_len((AV *)SvRV(pubKeyArray));
+char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
+	uint8_t mKeys, nKeys;
+	mKeys = (uint8_t)(((int)'0')+mKeysInt);
+	nKeys = (uint8_t)(((int)'0')+nKeysInt);
+	int i, n;
+	I32 length = 0;
+    if ((! SvROK(pubKeyArray))
+    || (SvTYPE(SvRV(pubKeyArray)) != SVt_PVAV)
+    || ((length = av_len((AV *)SvRV(pubKeyArray))) < 0))
+    {
+        XSRETURN_UNDEF;
+    }
+    /* Create the array which holds the return values. */
+	uint8_t** multisig = (uint8_t**)malloc(nKeysInt * sizeof(uint8_t*));
+
 	for (n=0; n<=length; i++) {
 		STRLEN l;
 
