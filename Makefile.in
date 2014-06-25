@@ -221,7 +221,7 @@ test-build : clean-tests $(TEST_BINARIES)
 # REMEMBER to add dependencies after the objects or libraries that depend on them.
 
 $(TEST_BINARIES): bin/%: build/%.o
-	$(CC) $< -L$(BINDIR) -Wl,-rpath=$(BINDIR) $(LINK_CORE) $(LINK_NETWORK) $(LINK_STORAGE) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) -lcbitcoin-file-$(if $(subst bin/testCBFile,,$(subst bin/testCBHamming72,,$@)),@NOEC@,)ec.$(LIBRARY_VERSION) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o $@
+	$(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_NETWORK) $(LINK_STORAGE) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) -lcbitcoin-file-$(if $(subst bin/testCBFile,,$(subst bin/testCBHamming72,,$@)),@NOEC@,)ec.$(LIBRARY_VERSION) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o $@
 	$@
 
 $(TEST_OBJS): build/%.o: library/test/%.c library
@@ -244,7 +244,7 @@ $(CLIENT_OBJS): build/%.o: client-server/src/%.c | build
 	@rm build/$*.P
 
 client : $(CLIENT_OBJS) | bin
-	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -Wl,-rpath=$(BINDIR) $(LINK_CORE) $(LINK_NETWORK) $(LINK_STORAGE) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) $(LINK_FILE) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o bin/cbitcoin
+	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_NETWORK) $(LINK_STORAGE) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) $(LINK_FILE) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o bin/cbitcoin
 
 # Examples
 
@@ -256,21 +256,21 @@ example-build : $(EXAMPLE_BINARIES)
 
 # For examples using the crypto dependencies only.
 
-EXAMPLE_CRYPTO_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=$(BINDIR) $(LINK_CORE) $(LINK_CRYPTO) -L/opt/local/lib -o $@
+EXAMPLE_CRYPTO_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_CRYPTO) -L/opt/local/lib -o $@
 
 bin/base58ChecksumEncode bin/base58Converter bin/WIFConverter: bin/%: build/%.o
 	$(EXAMPLE_CRYPTO_LINK)
 
 # For examples using the crypto and random dependencies
 
-EXAMPLE_CRYPTO_RAND_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=$(BINDIR) $(LINK_CORE) $(LINK_CRYPTO) $(LINK_RAND) -L/opt/local/lib -o $@
+EXAMPLE_CRYPTO_RAND_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_CRYPTO) $(LINK_RAND) -L/opt/local/lib -o $@
 
 bin/addressGenerator:  bin/%: build/%.o
 	$(EXAMPLE_CRYPTO_RAND_LINK)
 
 # For examples using the crypto, random and threading dependencies
 
-EXAMPLE_CRYPTO_RAND_THREAD_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=$(BINDIR) $(LINK_CORE) $(LINK_CRYPTO) $(LINK_RAND) $(LINK_THREADS) -L/opt/local/lib -o $@
+EXAMPLE_CRYPTO_RAND_THREAD_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_CRYPTO) $(LINK_RAND) $(LINK_THREADS) -L/opt/local/lib -o $@
 
 bin/noLowerAddressGenerator: bin/%: build/%.o
 	$(EXAMPLE_CRYPTO_RAND_THREAD_LINK)
