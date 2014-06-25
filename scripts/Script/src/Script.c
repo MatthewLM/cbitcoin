@@ -63,30 +63,34 @@ char* pubkeyToScript (char* pubKeystring){
 //char* multisigToScript (char** multisigConcatenated,)
 char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
 	uint8_t mKeys, nKeys;
-	mKeys = (uint8_t)(((int)'0')+mKeysInt);
-	nKeys = (uint8_t)(((int)'0')+nKeysInt);
-	int i, n;
+	mKeys = (uint8_t)mKeysInt;
+	nKeys = (uint8_t)nKeysInt;
+
+	int n;
 	I32 length = 0;
     if ((! SvROK(pubKeyArray))
     || (SvTYPE(SvRV(pubKeyArray)) != SVt_PVAV)
     || ((length = av_len((AV *)SvRV(pubKeyArray))) < 0))
     {
-        XSRETURN_UNDEF;
+        return 0;
     }
     /* Create the array which holds the return values. */
 	uint8_t** multisig = (uint8_t**)malloc(nKeysInt * sizeof(uint8_t*));
 
-	for (n=0; n<=length; i++) {
+	for (n=0; n<=length; n++) {
 		STRLEN l;
 
 		char * fn = SvPV (*av_fetch ((AV *) SvRV (pubKeyArray), n, 0), l);
 
 		CBByteArray * masterString = CBNewByteArrayFromString(fn, true);
+
 		// this line should just assign a uint8_t * pointer
 		multisig[n] = CBByteArrayGetData(masterString);
+
 		CBReleaseObject(masterString);
 
 	}
 	CBScript* finalscript =  CBNewScriptMultisigOutput(multisig,mKeys,nKeys);
+
 	return scriptToString(finalscript);
 }
