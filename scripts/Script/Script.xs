@@ -36,6 +36,7 @@ CBScript* stringToScript(char* scriptstring){
 
 //////////////////////// perl export functions /////////////
 /* Return 1 if this script is multisig, 0 for else*/
+// this function does not work
 char* whatTypeOfScript(char* scriptstring){
 	CBScript * script = CBNewScriptFromString(scriptstring);
 	if(script == NULL){

@@ -1,4 +1,4 @@
-# This Makefile is for the CBitcoin::Script extension to perl.
+# This Makefile is for the CBitcoin::TransactionInput extension to perl.
 #
 # It was generated automatically by MakeMaker version
 # 6.9 (Revision: 69000) from the contents of
@@ -15,12 +15,12 @@
 #     CONFIGURE_REQUIRES => {  }
 #     INC => q[../../library/include]
 #     LIBS => [q[-lcbitcoin.2.0], q[-lcbitcoin-network.2.0], q[-lcbitcoin-storage.2.0], q[-lcbitcoin-threads.2.0], q[-lpthread], q[-lcbitcoin-logging.2.0], q[-lcbitcoin-crypto.2.0], q[-lcrypto], q[-lcbitcoin.2.0], q[-lcbitcoin-file-ec.2.0], q[-lcbitcoin-rand.2.0]]
-#     MYEXTLIB => q[/usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so  /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so ]
-#     NAME => q[CBitcoin::Script]
+#     MYEXTLIB => q[/usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so /usr/local/lib/perl/5.14.2/auto/File/Map/Map.so /usr/local/lib/perl/5.14.2/auto/Crypt/PBC/PBC.so  /usr/local/lib/perl/5.14.2/auto/Math/BigInt/GMP/GMP.so /usr/local/lib/perl/5.14.2/auto/BerkeleyDB/BerkeleyDB.so /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so ]
+#     NAME => q[CBitcoin::TransactionInput]
 #     PREREQ_PM => {  }
 #     TEST_REQUIRES => {  }
 #     TYPEMAPS => []
-#     VERSION => q[0.01]
+#     VERSION => q[0.02]
 
 # --- MakeMaker post_initialize section:
 
@@ -57,21 +57,21 @@ VENDORLIBEXP = /usr/share/perl5
 AR_STATIC_ARGS = cr
 DIRFILESEP = /
 DFSEP = $(DIRFILESEP)
-NAME = CBitcoin::Script
-NAME_SYM = CBitcoin_Script
-VERSION = 0.01
+NAME = CBitcoin::TransactionInput
+NAME_SYM = CBitcoin_TransactionInput
+VERSION = 0.02
 VERSION_MACRO = VERSION
-VERSION_SYM = 0_01
+VERSION_SYM = 0_02
 DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
-XS_VERSION = 0.01
+XS_VERSION = 0.02
 XS_VERSION_MACRO = XS_VERSION
 XS_DEFINE_VERSION = -D$(XS_VERSION_MACRO)=\"$(XS_VERSION)\"
-INST_ARCHLIB = ../blib/arch
-INST_SCRIPT = ../blib/script
-INST_BIN = ../blib/bin
-INST_LIB = ../blib/lib
-INST_MAN1DIR = ../blib/man1
-INST_MAN3DIR = ../blib/man3
+INST_ARCHLIB = blib/arch
+INST_SCRIPT = blib/script
+INST_BIN = blib/bin
+INST_LIB = blib/lib
+INST_MAN1DIR = blib/man1
+INST_MAN3DIR = blib/man3
 MAN1EXT = 1p
 MAN3EXT = 3pm
 INSTALLDIRS = site
@@ -119,7 +119,7 @@ DESTINSTALLVENDORMAN3DIR = $(DESTDIR)$(INSTALLVENDORMAN3DIR)
 PERL_LIB = /usr/share/perl/5.14
 PERL_ARCHLIB = /usr/lib/perl/5.14
 LIBPERL_A = libperl.a
-MYEXTLIB = /usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so  /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so 
+MYEXTLIB = /usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so /usr/local/lib/perl/5.14.2/auto/File/Map/Map.so /usr/local/lib/perl/5.14.2/auto/Crypt/PBC/PBC.so  /usr/local/lib/perl/5.14.2/auto/Math/BigInt/GMP/GMP.so /usr/local/lib/perl/5.14.2/auto/BerkeleyDB/BerkeleyDB.so /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so 
 FIRST_MAKEFILE = Makefile
 MAKEFILE_OLD = Makefile.old
 MAKE_APERL_FILE = Makefile.aperl
@@ -148,21 +148,21 @@ MM_REVISION = 69000
 # PARENT_NAME = NAME without BASEEXT and no trailing :: (eg Foo::Bar)
 # DLBASE  = Basename part of dynamic library. May be just equal BASEEXT.
 MAKE = make
-FULLEXT = CBitcoin/Script
-BASEEXT = Script
+FULLEXT = CBitcoin/TransactionInput
+BASEEXT = TransactionInput
 PARENT_NAME = CBitcoin
 DLBASE = $(BASEEXT)
 VERSION_FROM = 
 INC = ../../library/include
-OBJECT = 
+OBJECT = $(BASEEXT)$(OBJ_EXT)
 LDFROM = $(OBJECT)
 LINKTYPE = dynamic
 BOOTDEP = 
 
 # Handy lists of source code files:
-XS_FILES = 
-C_FILES  = 
-O_FILES  = 
+XS_FILES = TransactionInput.xs
+C_FILES  = TransactionInput.c
+O_FILES  = TransactionInput.o
 H_FILES  = 
 MAN1PODS = 
 MAN3PODS = 
@@ -187,10 +187,13 @@ PERL_ARCHIVE       =
 PERL_ARCHIVE_AFTER = 
 
 
-TO_INST_PM = Script.pm
+TO_INST_PM = TransactionInput.pm \
+	coinx2.pl
 
-PM_TO_BLIB = Script.pm \
-	$(INST_LIB)/CBitcoin/Script.pm
+PM_TO_BLIB = TransactionInput.pm \
+	$(INST_LIB)/CBitcoin/TransactionInput.pm \
+	coinx2.pl \
+	$(INST_LIB)/CBitcoin/coinx2.pl
 
 
 # --- MakeMaker platform_constants section:
@@ -206,7 +209,7 @@ AUTOSPLITFILE = $(ABSPERLRUN)  -e 'use AutoSplit;  autosplit($$$$ARGV[0], $$$$AR
 
 # --- MakeMaker tool_xsubpp section:
 
-XSUBPPDIR = /usr/share/perl/5.14.2/ExtUtils
+XSUBPPDIR = /usr/share/perl/5.14/ExtUtils
 XSUBPP = $(XSUBPPDIR)$(DFSEP)xsubpp
 XSUBPPRUN = $(PERLRUN) $(XSUBPP)
 XSPROTOARG = 
@@ -252,7 +255,24 @@ makemakerdflt : all
 	$(NOECHO) $(NOOP)
 
 
-# --- MakeMaker dist section skipped.
+# --- MakeMaker dist section:
+TAR = tar
+TARFLAGS = cvf
+ZIP = zip
+ZIPFLAGS = -r
+COMPRESS = gzip --best
+SUFFIX = .gz
+SHAR = shar
+PREOP = $(NOECHO) $(NOOP)
+POSTOP = $(NOECHO) $(NOOP)
+TO_UNIX = $(NOECHO) $(NOOP)
+CI = ci -u
+RCS_LABEL = rcs -Nv$(VERSION_SYM): -q
+DIST_CP = best
+DIST_DEFAULT = tardist
+DISTNAME = CBitcoin-TransactionInput
+DISTVNAME = CBitcoin-TransactionInput-0.02
+
 
 # --- MakeMaker macro section:
 
@@ -270,7 +290,7 @@ MPOLLUTE =
 
 # --- MakeMaker const_loadlibs section:
 
-# CBitcoin::Script might depend on some other libraries:
+# CBitcoin::TransactionInput might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
 EXTRALIBS = -lcbitcoin.2.0
@@ -499,11 +519,17 @@ manifypods : pure_all
 
 # --- MakeMaker subdirs section:
 
-# none
+# The default clean, realclean and test targets in this Makefile
+# have automatically been given entries for each subdir.
+
+
+subdirs ::
+	$(NOECHO) cd old-config && $(MAKE) $(USEMAKEFILE) $(FIRST_MAKEFILE) all $(PASTHRU)
+
 
 # --- MakeMaker clean_subdirs section:
 clean_subdirs :
-	$(NOECHO) $(NOOP)
+	$(ABSPERLRUN)  -e 'exit 0 unless chdir '\''old-config'\'';  system '\''$(MAKE) clean'\'' if -f '\''$(FIRST_MAKEFILE)'\'';' --
 
 
 # --- MakeMaker clean section:
@@ -519,16 +545,16 @@ clean :: clean_subdirs
 	  $(INST_ARCHAUTODIR)/extralibs.ld $(MAKE_APERL_FILE) \
 	  *$(LIB_EXT) *$(OBJ_EXT) \
 	  *perl.core MYMETA.json \
-	  MYMETA.yml blibdirs.ts \
-	  core core.*perl.*.? \
-	  core.[0-9] core.[0-9][0-9] \
-	  core.[0-9][0-9][0-9] core.[0-9][0-9][0-9][0-9] \
-	  core.[0-9][0-9][0-9][0-9][0-9] lib$(BASEEXT).def \
-	  mon.out perl \
-	  perl$(EXE_EXT) perl.exe \
-	  perlmain.c pm_to_blib \
-	  pm_to_blib.ts so_locations \
-	  tmon.out 
+	  MYMETA.yml TransactionInput.c \
+	  blibdirs.ts core \
+	  core.*perl.*.? core.[0-9] \
+	  core.[0-9][0-9] core.[0-9][0-9][0-9] \
+	  core.[0-9][0-9][0-9][0-9] core.[0-9][0-9][0-9][0-9][0-9] \
+	  lib$(BASEEXT).def mon.out \
+	  perl perl$(EXE_EXT) \
+	  perl.exe perlmain.c \
+	  pm_to_blib pm_to_blib.ts \
+	  so_locations tmon.out 
 	- $(RM_RF) \
 	  blib 
 	  $(NOECHO) $(RM_F) $(MAKEFILE_OLD)
@@ -537,7 +563,8 @@ clean :: clean_subdirs
 
 # --- MakeMaker realclean_subdirs section:
 realclean_subdirs :
-	$(NOECHO) $(NOOP)
+	- $(ABSPERLRUN)  -e 'chdir '\''old-config'\'';  system '\''$(MAKE) $(USEMAKEFILE) $(MAKEFILE_OLD) realclean'\'' if -f '\''$(MAKEFILE_OLD)'\'';' --
+	- $(ABSPERLRUN)  -e 'chdir '\''old-config'\'';  system '\''$(MAKE) $(USEMAKEFILE) $(FIRST_MAKEFILE) realclean'\'' if -f '\''$(FIRST_MAKEFILE)'\'';' --
 
 
 # --- MakeMaker realclean section:
@@ -567,13 +594,13 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) 'meta-spec:' >> META_new.yml
 	$(NOECHO) $(ECHO) '  url: http://module-build.sourceforge.net/META-spec-v1.4.html' >> META_new.yml
 	$(NOECHO) $(ECHO) '  version: 1.4' >> META_new.yml
-	$(NOECHO) $(ECHO) 'name: CBitcoin-Script' >> META_new.yml
+	$(NOECHO) $(ECHO) 'name: CBitcoin-TransactionInput' >> META_new.yml
 	$(NOECHO) $(ECHO) 'no_index:' >> META_new.yml
 	$(NOECHO) $(ECHO) '  directory:' >> META_new.yml
 	$(NOECHO) $(ECHO) '    - t' >> META_new.yml
 	$(NOECHO) $(ECHO) '    - inc' >> META_new.yml
 	$(NOECHO) $(ECHO) 'requires: {}' >> META_new.yml
-	$(NOECHO) $(ECHO) 'version: 0.01' >> META_new.yml
+	$(NOECHO) $(ECHO) 'version: 0.02' >> META_new.yml
 	-$(NOECHO) $(MV) META_new.yml $(DISTVNAME)/META.yml
 	$(NOECHO) $(ECHO) Generating META.json
 	$(NOECHO) $(ECHO) '{' > META_new.json
@@ -590,7 +617,7 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) '      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",' >> META_new.json
 	$(NOECHO) $(ECHO) '      "version" : "2"' >> META_new.json
 	$(NOECHO) $(ECHO) '   },' >> META_new.json
-	$(NOECHO) $(ECHO) '   "name" : "CBitcoin-Script",' >> META_new.json
+	$(NOECHO) $(ECHO) '   "name" : "CBitcoin-TransactionInput",' >> META_new.json
 	$(NOECHO) $(ECHO) '   "no_index" : {' >> META_new.json
 	$(NOECHO) $(ECHO) '      "directory" : [' >> META_new.json
 	$(NOECHO) $(ECHO) '         "t",' >> META_new.json
@@ -613,7 +640,7 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) '      }' >> META_new.json
 	$(NOECHO) $(ECHO) '   },' >> META_new.json
 	$(NOECHO) $(ECHO) '   "release_status" : "stable",' >> META_new.json
-	$(NOECHO) $(ECHO) '   "version" : "0.01"' >> META_new.json
+	$(NOECHO) $(ECHO) '   "version" : "0.02"' >> META_new.json
 	$(NOECHO) $(ECHO) '}' >> META_new.json
 	-$(NOECHO) $(MV) META_new.json $(DISTVNAME)/META.json
 
@@ -623,15 +650,91 @@ signature :
 	cpansign -s
 
 
-# --- MakeMaker dist_basics section skipped.
+# --- MakeMaker dist_basics section:
+distclean :: realclean distcheck
+	$(NOECHO) $(NOOP)
 
-# --- MakeMaker dist_core section skipped.
+distcheck :
+	$(PERLRUN) "-MExtUtils::Manifest=fullcheck" -e fullcheck
 
-# --- MakeMaker distdir section skipped.
+skipcheck :
+	$(PERLRUN) "-MExtUtils::Manifest=skipcheck" -e skipcheck
 
-# --- MakeMaker dist_test section skipped.
+manifest :
+	$(PERLRUN) "-MExtUtils::Manifest=mkmanifest" -e mkmanifest
 
-# --- MakeMaker dist_ci section skipped.
+veryclean : realclean
+	$(RM_F) *~ */*~ *.orig */*.orig *.bak */*.bak *.old */*.old
+
+
+
+# --- MakeMaker dist_core section:
+
+dist : $(DIST_DEFAULT) $(FIRST_MAKEFILE)
+	$(NOECHO) $(ABSPERLRUN) -l -e 'print '\''Warning: Makefile possibly out of date with $(VERSION_FROM)'\''' \
+	  -e '    if -e '\''$(VERSION_FROM)'\'' and -M '\''$(VERSION_FROM)'\'' < -M '\''$(FIRST_MAKEFILE)'\'';' --
+
+tardist : $(DISTVNAME).tar$(SUFFIX)
+	$(NOECHO) $(NOOP)
+
+uutardist : $(DISTVNAME).tar$(SUFFIX)
+	uuencode $(DISTVNAME).tar$(SUFFIX) $(DISTVNAME).tar$(SUFFIX) > $(DISTVNAME).tar$(SUFFIX)_uu
+	$(NOECHO) $(ECHO) 'Created $(DISTVNAME).tar$(SUFFIX)_uu'
+
+$(DISTVNAME).tar$(SUFFIX) : distdir
+	$(PREOP)
+	$(TO_UNIX)
+	$(TAR) $(TARFLAGS) $(DISTVNAME).tar $(DISTVNAME)
+	$(RM_RF) $(DISTVNAME)
+	$(COMPRESS) $(DISTVNAME).tar
+	$(NOECHO) $(ECHO) 'Created $(DISTVNAME).tar$(SUFFIX)'
+	$(POSTOP)
+
+zipdist : $(DISTVNAME).zip
+	$(NOECHO) $(NOOP)
+
+$(DISTVNAME).zip : distdir
+	$(PREOP)
+	$(ZIP) $(ZIPFLAGS) $(DISTVNAME).zip $(DISTVNAME)
+	$(RM_RF) $(DISTVNAME)
+	$(NOECHO) $(ECHO) 'Created $(DISTVNAME).zip'
+	$(POSTOP)
+
+shdist : distdir
+	$(PREOP)
+	$(SHAR) $(DISTVNAME) > $(DISTVNAME).shar
+	$(RM_RF) $(DISTVNAME)
+	$(NOECHO) $(ECHO) 'Created $(DISTVNAME).shar'
+	$(POSTOP)
+
+
+# --- MakeMaker distdir section:
+create_distdir :
+	$(RM_RF) $(DISTVNAME)
+	$(PERLRUN) "-MExtUtils::Manifest=manicopy,maniread" \
+		-e "manicopy(maniread(),'$(DISTVNAME)', '$(DIST_CP)');"
+
+distdir : create_distdir distmeta 
+	$(NOECHO) $(NOOP)
+
+
+
+# --- MakeMaker dist_test section:
+disttest : distdir
+	cd $(DISTVNAME) && $(ABSPERLRUN) Makefile.PL 
+	cd $(DISTVNAME) && $(MAKE) $(PASTHRU)
+	cd $(DISTVNAME) && $(MAKE) test $(PASTHRU)
+
+
+
+# --- MakeMaker dist_ci section:
+
+ci :
+	$(PERLRUN) "-MExtUtils::Manifest=maniread" \
+	  -e "@all = keys %{ maniread() };" \
+	  -e "print(qq{Executing $(CI) @all\n}); system(qq{$(CI) @all});" \
+	  -e "print(qq{Executing $(RCS_LABEL) ...\n}); system(qq{$(RCS_LABEL) @all});"
+
 
 # --- MakeMaker distmeta section:
 distmeta : create_distdir metafile
@@ -653,7 +756,117 @@ distsignature : create_distdir
 
 
 
-# --- MakeMaker install section skipped.
+# --- MakeMaker install section:
+
+install :: pure_install doc_install
+	$(NOECHO) $(NOOP)
+
+install_perl :: pure_perl_install doc_perl_install
+	$(NOECHO) $(NOOP)
+
+install_site :: pure_site_install doc_site_install
+	$(NOECHO) $(NOOP)
+
+install_vendor :: pure_vendor_install doc_vendor_install
+	$(NOECHO) $(NOOP)
+
+pure_install :: pure_$(INSTALLDIRS)_install
+	$(NOECHO) $(NOOP)
+
+doc_install :: doc_$(INSTALLDIRS)_install
+	$(NOECHO) $(NOOP)
+
+pure__install : pure_site_install
+	$(NOECHO) $(ECHO) INSTALLDIRS not defined, defaulting to INSTALLDIRS=site
+
+doc__install : doc_site_install
+	$(NOECHO) $(ECHO) INSTALLDIRS not defined, defaulting to INSTALLDIRS=site
+
+pure_perl_install :: all
+	$(NOECHO) $(MOD_INSTALL) \
+		read $(PERL_ARCHLIB)/auto/$(FULLEXT)/.packlist \
+		write $(DESTINSTALLARCHLIB)/auto/$(FULLEXT)/.packlist \
+		$(INST_LIB) $(DESTINSTALLPRIVLIB) \
+		$(INST_ARCHLIB) $(DESTINSTALLARCHLIB) \
+		$(INST_BIN) $(DESTINSTALLBIN) \
+		$(INST_SCRIPT) $(DESTINSTALLSCRIPT) \
+		$(INST_MAN1DIR) $(DESTINSTALLMAN1DIR) \
+		$(INST_MAN3DIR) $(DESTINSTALLMAN3DIR)
+	$(NOECHO) $(WARN_IF_OLD_PACKLIST) \
+		$(SITEARCHEXP)/auto/$(FULLEXT)
+
+
+pure_site_install :: all
+	$(NOECHO) $(MOD_INSTALL) \
+		read $(SITEARCHEXP)/auto/$(FULLEXT)/.packlist \
+		write $(DESTINSTALLSITEARCH)/auto/$(FULLEXT)/.packlist \
+		$(INST_LIB) $(DESTINSTALLSITELIB) \
+		$(INST_ARCHLIB) $(DESTINSTALLSITEARCH) \
+		$(INST_BIN) $(DESTINSTALLSITEBIN) \
+		$(INST_SCRIPT) $(DESTINSTALLSITESCRIPT) \
+		$(INST_MAN1DIR) $(DESTINSTALLSITEMAN1DIR) \
+		$(INST_MAN3DIR) $(DESTINSTALLSITEMAN3DIR)
+	$(NOECHO) $(WARN_IF_OLD_PACKLIST) \
+		$(PERL_ARCHLIB)/auto/$(FULLEXT)
+
+pure_vendor_install :: all
+	$(NOECHO) $(MOD_INSTALL) \
+		read $(VENDORARCHEXP)/auto/$(FULLEXT)/.packlist \
+		write $(DESTINSTALLVENDORARCH)/auto/$(FULLEXT)/.packlist \
+		$(INST_LIB) $(DESTINSTALLVENDORLIB) \
+		$(INST_ARCHLIB) $(DESTINSTALLVENDORARCH) \
+		$(INST_BIN) $(DESTINSTALLVENDORBIN) \
+		$(INST_SCRIPT) $(DESTINSTALLVENDORSCRIPT) \
+		$(INST_MAN1DIR) $(DESTINSTALLVENDORMAN1DIR) \
+		$(INST_MAN3DIR) $(DESTINSTALLVENDORMAN3DIR)
+
+
+doc_perl_install :: all
+	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
+	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
+	-$(NOECHO) $(DOC_INSTALL) \
+		"Module" "$(NAME)" \
+		"installed into" "$(INSTALLPRIVLIB)" \
+		LINKTYPE "$(LINKTYPE)" \
+		VERSION "$(VERSION)" \
+		EXE_FILES "$(EXE_FILES)" \
+		>> $(DESTINSTALLARCHLIB)/perllocal.pod
+
+doc_site_install :: all
+	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
+	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
+	-$(NOECHO) $(DOC_INSTALL) \
+		"Module" "$(NAME)" \
+		"installed into" "$(INSTALLSITELIB)" \
+		LINKTYPE "$(LINKTYPE)" \
+		VERSION "$(VERSION)" \
+		EXE_FILES "$(EXE_FILES)" \
+		>> $(DESTINSTALLARCHLIB)/perllocal.pod
+
+doc_vendor_install :: all
+	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
+	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
+	-$(NOECHO) $(DOC_INSTALL) \
+		"Module" "$(NAME)" \
+		"installed into" "$(INSTALLVENDORLIB)" \
+		LINKTYPE "$(LINKTYPE)" \
+		VERSION "$(VERSION)" \
+		EXE_FILES "$(EXE_FILES)" \
+		>> $(DESTINSTALLARCHLIB)/perllocal.pod
+
+
+uninstall :: uninstall_from_$(INSTALLDIRS)dirs
+	$(NOECHO) $(NOOP)
+
+uninstall_from_perldirs ::
+	$(NOECHO) $(UNINSTALL) $(PERL_ARCHLIB)/auto/$(FULLEXT)/.packlist
+
+uninstall_from_sitedirs ::
+	$(NOECHO) $(UNINSTALL) $(SITEARCHEXP)/auto/$(FULLEXT)/.packlist
+
+uninstall_from_vendordirs ::
+	$(NOECHO) $(UNINSTALL) $(VENDORARCHEXP)/auto/$(FULLEXT)/.packlist
+
 
 # --- MakeMaker force section:
 # Phony target to force checking subdirectories.
@@ -662,6 +875,75 @@ FORCE :
 
 
 # --- MakeMaker perldepend section:
+PERL_HDRS = \
+        $(PERL_INC)/EXTERN.h            \
+        $(PERL_INC)/INTERN.h            \
+        $(PERL_INC)/XSUB.h            \
+        $(PERL_INC)/av.h            \
+        $(PERL_INC)/bitcount.h            \
+        $(PERL_INC)/config.h            \
+        $(PERL_INC)/cop.h            \
+        $(PERL_INC)/cv.h            \
+        $(PERL_INC)/dosish.h            \
+        $(PERL_INC)/embed.h            \
+        $(PERL_INC)/embedvar.h            \
+        $(PERL_INC)/fakesdio.h            \
+        $(PERL_INC)/fakethr.h            \
+        $(PERL_INC)/form.h            \
+        $(PERL_INC)/git_version.h            \
+        $(PERL_INC)/gv.h            \
+        $(PERL_INC)/handy.h            \
+        $(PERL_INC)/hv.h            \
+        $(PERL_INC)/intrpvar.h            \
+        $(PERL_INC)/iperlsys.h            \
+        $(PERL_INC)/keywords.h            \
+        $(PERL_INC)/l1_char_class_tab.h            \
+        $(PERL_INC)/malloc_ctl.h            \
+        $(PERL_INC)/metaconfig.h            \
+        $(PERL_INC)/mg.h            \
+        $(PERL_INC)/mydtrace.h            \
+        $(PERL_INC)/nostdio.h            \
+        $(PERL_INC)/op.h            \
+        $(PERL_INC)/op_reg_common.h            \
+        $(PERL_INC)/opcode.h            \
+        $(PERL_INC)/opnames.h            \
+        $(PERL_INC)/overload.h            \
+        $(PERL_INC)/pad.h            \
+        $(PERL_INC)/parser.h            \
+        $(PERL_INC)/patchlevel-debian.h            \
+        $(PERL_INC)/patchlevel.h            \
+        $(PERL_INC)/perl.h            \
+        $(PERL_INC)/perlapi.h            \
+        $(PERL_INC)/perlio.h            \
+        $(PERL_INC)/perliol.h            \
+        $(PERL_INC)/perlsdio.h            \
+        $(PERL_INC)/perlsfio.h            \
+        $(PERL_INC)/perlvars.h            \
+        $(PERL_INC)/perly.h            \
+        $(PERL_INC)/pp.h            \
+        $(PERL_INC)/pp_proto.h            \
+        $(PERL_INC)/proto.h            \
+        $(PERL_INC)/reentr.h            \
+        $(PERL_INC)/regcharclass.h            \
+        $(PERL_INC)/regcomp.h            \
+        $(PERL_INC)/regexp.h            \
+        $(PERL_INC)/regnodes.h            \
+        $(PERL_INC)/scope.h            \
+        $(PERL_INC)/sv.h            \
+        $(PERL_INC)/thread.h            \
+        $(PERL_INC)/time64.h            \
+        $(PERL_INC)/time64_config.h            \
+        $(PERL_INC)/uconfig.h            \
+        $(PERL_INC)/unixish.h            \
+        $(PERL_INC)/utf8.h            \
+        $(PERL_INC)/utfebcdic.h            \
+        $(PERL_INC)/util.h            \
+        $(PERL_INC)/uudmap.h            \
+        $(PERL_INC)/warnings.h            
+
+$(OBJECT) : $(PERL_HDRS)
+
+TransactionInput.c : $(XSUBPPDEPS)
 
 
 # --- MakeMaker makefile section:
@@ -670,8 +952,18 @@ FORCE :
 # --- MakeMaker staticmake section:
 
 # --- MakeMaker makeaperl section ---
-MAP_TARGET    = ../perl
+MAP_TARGET    = perl
 FULLPERL      = /usr/bin/perl
+
+$(MAP_TARGET) :: static $(MAKE_APERL_FILE)
+	$(MAKE) $(USEMAKEFILE) $(MAKE_APERL_FILE) $@
+
+$(MAKE_APERL_FILE) : $(FIRST_MAKEFILE) pm_to_blib
+	$(NOECHO) $(ECHO) Writing \"$(MAKE_APERL_FILE)\" for this $(MAP_TARGET)
+	$(NOECHO) $(PERLRUNINST) \
+		Makefile.PL DIR=old-config \
+		MAKEFILE=$(MAKE_APERL_FILE) LINKTYPE=static \
+		MAKEAPERL=1 NORECURS=1 CCCDLFLAGS=
 
 
 # --- MakeMaker test section:
@@ -689,7 +981,9 @@ test :: $(TEST_TYPE) subdirs-test
 subdirs-test ::
 	$(NOECHO) $(NOOP)
 
-	$(NOECHO) $(ECHO) 'No tests defined for $(NAME) extension.'
+subdirs-test ::
+	$(NOECHO) cd old-config && $(MAKE) test $(PASTHRU)
+
 
 test_dynamic :: pure_all
 
@@ -722,7 +1016,8 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  Script.pm $(INST_LIB)/CBitcoin/Script.pm 
+	  TransactionInput.pm $(INST_LIB)/CBitcoin/TransactionInput.pm \
+	  coinx2.pl $(INST_LIB)/CBitcoin/coinx2.pl 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 

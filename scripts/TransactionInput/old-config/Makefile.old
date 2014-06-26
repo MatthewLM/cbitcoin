@@ -1,4 +1,4 @@
-# This Makefile is for the CBitcoin::Script extension to perl.
+# This Makefile is for the CBitcoin::TransactionInput extension to perl.
 #
 # It was generated automatically by MakeMaker version
 # 6.9 (Revision: 69000) from the contents of
@@ -15,12 +15,12 @@
 #     CONFIGURE_REQUIRES => {  }
 #     INC => q[../../library/include]
 #     LIBS => [q[-lcbitcoin.2.0], q[-lcbitcoin-network.2.0], q[-lcbitcoin-storage.2.0], q[-lcbitcoin-threads.2.0], q[-lpthread], q[-lcbitcoin-logging.2.0], q[-lcbitcoin-crypto.2.0], q[-lcrypto], q[-lcbitcoin.2.0], q[-lcbitcoin-file-ec.2.0], q[-lcbitcoin-rand.2.0]]
-#     MYEXTLIB => q[/usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so  /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so ]
-#     NAME => q[CBitcoin::Script]
+#     MYEXTLIB => q[/usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so /usr/local/lib/perl/5.14.2/auto/File/Map/Map.so /usr/local/lib/perl/5.14.2/auto/Crypt/PBC/PBC.so  /usr/local/lib/perl/5.14.2/auto/Math/BigInt/GMP/GMP.so /usr/local/lib/perl/5.14.2/auto/BerkeleyDB/BerkeleyDB.so /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so ]
+#     NAME => q[CBitcoin::TransactionInput]
 #     PREREQ_PM => {  }
 #     TEST_REQUIRES => {  }
 #     TYPEMAPS => []
-#     VERSION => q[0.01]
+#     VERSION => q[0.02]
 
 # --- MakeMaker post_initialize section:
 
@@ -57,13 +57,13 @@ VENDORLIBEXP = /usr/share/perl5
 AR_STATIC_ARGS = cr
 DIRFILESEP = /
 DFSEP = $(DIRFILESEP)
-NAME = CBitcoin::Script
-NAME_SYM = CBitcoin_Script
-VERSION = 0.01
+NAME = CBitcoin::TransactionInput
+NAME_SYM = CBitcoin_TransactionInput
+VERSION = 0.02
 VERSION_MACRO = VERSION
-VERSION_SYM = 0_01
+VERSION_SYM = 0_02
 DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
-XS_VERSION = 0.01
+XS_VERSION = 0.02
 XS_VERSION_MACRO = XS_VERSION
 XS_DEFINE_VERSION = -D$(XS_VERSION_MACRO)=\"$(XS_VERSION)\"
 INST_ARCHLIB = ../blib/arch
@@ -119,7 +119,7 @@ DESTINSTALLVENDORMAN3DIR = $(DESTDIR)$(INSTALLVENDORMAN3DIR)
 PERL_LIB = /usr/share/perl/5.14
 PERL_ARCHLIB = /usr/lib/perl/5.14
 LIBPERL_A = libperl.a
-MYEXTLIB = /usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so  /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so 
+MYEXTLIB = /usr/local/lib/libcbitcoin.2.0.so /usr/local/lib/libcbitcoin-file-no-ec.2.0.so /usr/local/lib/libcbitcoin-rand.2.0.so /usr/local/lib/perl/5.14.2/auto/File/Map/Map.so /usr/local/lib/perl/5.14.2/auto/Crypt/PBC/PBC.so  /usr/local/lib/perl/5.14.2/auto/Math/BigInt/GMP/GMP.so /usr/local/lib/perl/5.14.2/auto/BerkeleyDB/BerkeleyDB.so /usr/local/lib/perl/5.14.2/auto/PerlIO/Layers/Layers.so /usr/local/lib/libcbitcoin-threads.2.0.so /usr/local/lib/libcbitcoin-network.2.0.so /usr/local/lib/libcbitcoin-file-ec.2.0.so /usr/local/lib/libcbitcoin-storage.2.0.so /usr/local/lib/libcbitcoin-crypto.2.0.so /usr/local/lib/libcbitcoin-logging.2.0.so 
 FIRST_MAKEFILE = Makefile
 MAKEFILE_OLD = Makefile.old
 MAKE_APERL_FILE = Makefile.aperl
@@ -148,8 +148,8 @@ MM_REVISION = 69000
 # PARENT_NAME = NAME without BASEEXT and no trailing :: (eg Foo::Bar)
 # DLBASE  = Basename part of dynamic library. May be just equal BASEEXT.
 MAKE = make
-FULLEXT = CBitcoin/Script
-BASEEXT = Script
+FULLEXT = CBitcoin/TransactionInput
+BASEEXT = TransactionInput
 PARENT_NAME = CBitcoin
 DLBASE = $(BASEEXT)
 VERSION_FROM = 
@@ -187,10 +187,10 @@ PERL_ARCHIVE       =
 PERL_ARCHIVE_AFTER = 
 
 
-TO_INST_PM = Script.pm
+TO_INST_PM = TransactionInput.pm
 
-PM_TO_BLIB = Script.pm \
-	$(INST_LIB)/CBitcoin/Script.pm
+PM_TO_BLIB = TransactionInput.pm \
+	$(INST_LIB)/CBitcoin/TransactionInput.pm
 
 
 # --- MakeMaker platform_constants section:
@@ -270,7 +270,7 @@ MPOLLUTE =
 
 # --- MakeMaker const_loadlibs section:
 
-# CBitcoin::Script might depend on some other libraries:
+# CBitcoin::TransactionInput might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
 EXTRALIBS = -lcbitcoin.2.0
@@ -567,13 +567,13 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) 'meta-spec:' >> META_new.yml
 	$(NOECHO) $(ECHO) '  url: http://module-build.sourceforge.net/META-spec-v1.4.html' >> META_new.yml
 	$(NOECHO) $(ECHO) '  version: 1.4' >> META_new.yml
-	$(NOECHO) $(ECHO) 'name: CBitcoin-Script' >> META_new.yml
+	$(NOECHO) $(ECHO) 'name: CBitcoin-TransactionInput' >> META_new.yml
 	$(NOECHO) $(ECHO) 'no_index:' >> META_new.yml
 	$(NOECHO) $(ECHO) '  directory:' >> META_new.yml
 	$(NOECHO) $(ECHO) '    - t' >> META_new.yml
 	$(NOECHO) $(ECHO) '    - inc' >> META_new.yml
 	$(NOECHO) $(ECHO) 'requires: {}' >> META_new.yml
-	$(NOECHO) $(ECHO) 'version: 0.01' >> META_new.yml
+	$(NOECHO) $(ECHO) 'version: 0.02' >> META_new.yml
 	-$(NOECHO) $(MV) META_new.yml $(DISTVNAME)/META.yml
 	$(NOECHO) $(ECHO) Generating META.json
 	$(NOECHO) $(ECHO) '{' > META_new.json
@@ -590,7 +590,7 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) '      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",' >> META_new.json
 	$(NOECHO) $(ECHO) '      "version" : "2"' >> META_new.json
 	$(NOECHO) $(ECHO) '   },' >> META_new.json
-	$(NOECHO) $(ECHO) '   "name" : "CBitcoin-Script",' >> META_new.json
+	$(NOECHO) $(ECHO) '   "name" : "CBitcoin-TransactionInput",' >> META_new.json
 	$(NOECHO) $(ECHO) '   "no_index" : {' >> META_new.json
 	$(NOECHO) $(ECHO) '      "directory" : [' >> META_new.json
 	$(NOECHO) $(ECHO) '         "t",' >> META_new.json
@@ -613,7 +613,7 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) '      }' >> META_new.json
 	$(NOECHO) $(ECHO) '   },' >> META_new.json
 	$(NOECHO) $(ECHO) '   "release_status" : "stable",' >> META_new.json
-	$(NOECHO) $(ECHO) '   "version" : "0.01"' >> META_new.json
+	$(NOECHO) $(ECHO) '   "version" : "0.02"' >> META_new.json
 	$(NOECHO) $(ECHO) '}' >> META_new.json
 	-$(NOECHO) $(MV) META_new.json $(DISTVNAME)/META.json
 
@@ -722,7 +722,7 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  Script.pm $(INST_LIB)/CBitcoin/Script.pm 
+	  TransactionInput.pm $(INST_LIB)/CBitcoin/TransactionInput.pm 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 
