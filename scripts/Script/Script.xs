@@ -70,7 +70,6 @@ char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
 	mKeys = (uint8_t)mKeysInt;
 	nKeys = (uint8_t)nKeysInt;
 
-	printf( "1 - m %d\n", mKeysInt );
 	int n;
 	I32 length = 0;
     if ((! SvROK(pubKeyArray))
@@ -79,26 +78,24 @@ char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
     {
         return 0;
     }
-    printf( "2 - n %d\n", nKeysInt );
     /* Create the array which holds the return values. */
 	uint8_t** multisig = (uint8_t**)malloc(nKeysInt * sizeof(uint8_t*));
-	printf( "3 - length %d\n", length );
+
 	for (n=0; n<=length; n++) {
 		STRLEN l;
-		printf( "Inside Spot Up %d\n", n );
+
 		char * fn = SvPV (*av_fetch ((AV *) SvRV (pubKeyArray), n, 0), l);
-		printf("String Inside: %s", fn);
-		printf( "Inside Spot Middle 1 %d\n", n );
+
 		CBByteArray * masterString = CBNewByteArrayFromString(fn, true);
-		printf( "Inside Spot Middle 2 %d\n", n );
+
 		// this line should just assign a uint8_t * pointer
 		multisig[n] = CBByteArrayGetData(masterString);
-		printf( "Inside Spot Middle 3 %d\n", n );
+
 		CBReleaseObject(masterString);
 
 	}
 	CBScript* finalscript =  CBNewScriptMultisigOutput(multisig,mKeys,nKeys);
-	printf( "Spot %d\n", 10000000 );
+
 	return scriptToString(finalscript);
 }
 
