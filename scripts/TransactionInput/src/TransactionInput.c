@@ -38,20 +38,34 @@ CBTransactionInput* stringToTransactionInput(char* scriptstring, int sequenceInt
 	return txinput;
 }
 
-char* serializeByteData(CBTransactionInput * txinput){
+char* obj_to_serializeddata(CBTransactionInput * txinput){
 	CBTransactionInputPrepareBytes(txinput);
 	CBTransactionInputSerialise(txinput);
 	CBByteArray* serializeddata = CBGetMessage(txinput)->bytes;
 	return (char *)CBByteArrayGetData(serializeddata);
+}
+CBTransactionInput* serializeddata_to_obj(char* datastring){
+	CBByteArray* data = CBNewByteArrayFromString(datastring,true);
+	CBTransactionInput* txinput = CBNewTransactionInputFromData(data);
+	CBDestroyByteArray(data);
+	return txinput;
 }
 
 //////////////////////// perl export functions /////////////
 //CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex)
 char* create_txinput_obj(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
 	CBTransactionInput* txinput = stringToTransactionInput(scriptstring,sequenceInt,prevOutHashString,prevOutIndexInt);
-	char* answer = serializeByteData(txinput);
+	char* answer = obj_to_serializeddata(txinput);
 	CBFreeTransactionInput(txinput);
 	return answer;
 }
+
+char* get_script_from_obj(char* serializedDataString){
+	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
+	char* scriptstring = scriptToString(txinput->scriptObject);
+	CBFreeTransactionInput(txinput);
+	return scriptstring;
+}
+
 
 

@@ -51,7 +51,7 @@ char* serializeByteData(CBTransactionInput * txinput){
 
 //////////////////////// perl export functions /////////////
 //CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex)
-char* test1(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
+char* create_txinput_obj(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
 	CBTransactionInput* txinput = stringToTransactionInput(scriptstring,sequenceInt,prevOutHashString,prevOutIndexInt);
 	char* answer = serializeByteData(txinput);
 	CBFreeTransactionInput(txinput);
@@ -66,7 +66,7 @@ PROTOTYPES: DISABLE
 
 
 char *
-test1 (scriptstring, sequenceInt, prevOutHashString, prevOutIndexInt)
+create_txinput_obj (scriptstring, sequenceInt, prevOutHashString, prevOutIndexInt)
 	char *	scriptstring
 	int	sequenceInt
 	char *	prevOutHashString
