@@ -19,23 +19,4 @@ sub address_to_script {
 	return addressToScript($address);
 }
 
-sub pubkey_to_script {
-	my $pubkey = shift;
-	return pubkeyToScript($pubkey);
-}
-
-sub multisig_to_script {
-	my $publickey = shift;
-	my ($m,$n) = (shift,shift);
-	# make sure that m,n are valid numbers
-	unless($n =~ m/\d+/ && $n =~ m/\d+/){
-		die "m,n are not properly set.\n";
-	}
-	if($m >= 2**8 || $n >= 2**8 || $m <= 0 || $n <= 0 || $m > $n){
-		die "m,n are not properly set.\n";
-	}
-	return CBitcoin::Script::multisigToScript(\@arraypubkeys,$m,$n);
-	
-}
-
 1;

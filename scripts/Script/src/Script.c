@@ -25,51 +25,35 @@ CBScript* stringToScript(char* scriptstring){
 		return self;
 	}
 	else{
-		return false;
+		return NULL;
 	}
 }
 
 
 //////////////////////// perl export functions /////////////
 /* Return 1 if this script is multisig, 0 for else*/
-int whatTypeOfScript(char* typearg,char* scriptstring){
-	CBScript * script;
-	if(!CBInitScriptFromString(script,scriptstring)){
-		return 0;
+// this function does not work
+char* whatTypeOfScript(char* scriptstring){
+	CBScript * script = CBNewScriptFromString(scriptstring);
+	if(script == NULL){
+		return "NULL";
 	}
-	if(strcmp(typearg,"multisig") == 0){
-		if(CBScriptIsMultisig(script)){
-			return 1;
-		}
-		else{
-			return 0;
-		}
+	if(CBScriptIsMultisig(script)){
+		return "multisig";
 	}
-	else if(strcmp(typearg,"p2sh") == 0){
-		if(CBScriptIsP2SH(script)){
-			return 1;
-		}
-		else{
-			return 0;
-		}
+	else if(CBScriptIsP2SH(script)){
+		return "p2sh";
 	}
-	else if(strcmp(typearg,"pubkey") == 0){
-		if(CBScriptIsPubkey(script)){
-			return 1;
-		}
-		else{
-			return 0;
-		}
+	else if(CBScriptIsPubkey(script)){
+		return "pubkey";
 	}
-	else if(strcmp(typearg,"keyhash") == 0){
-		if(CBScriptIsKeyHash(script)){
-			return 1;
-		}
-		else{
-			return 0;
-		}
+	else if(CBScriptIsKeyHash(script)){
+		return "keyhash";
 	}
-	return 0;
+	else{
+		return "FAILED";
+	}
+
 }
 
 

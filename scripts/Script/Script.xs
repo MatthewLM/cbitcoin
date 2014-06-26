@@ -29,12 +29,35 @@ CBScript* stringToScript(char* scriptstring){
 		return self;
 	}
 	else{
-		return false;
+		return NULL;
 	}
 }
 
 
 //////////////////////// perl export functions /////////////
+/* Return 1 if this script is multisig, 0 for else*/
+char* whatTypeOfScript(char* scriptstring){
+	CBScript * script = CBNewScriptFromString(scriptstring);
+	if(script == NULL){
+		return "NULL";
+	}
+	if(CBScriptIsMultisig(script)){
+		return "multisig";
+	}
+	else if(CBScriptIsP2SH(script)){
+		return "p2sh";
+	}
+	else if(CBScriptIsPubkey(script)){
+		return "pubkey";
+	}
+	else if(CBScriptIsKeyHash(script)){
+		return "keyhash";
+	}
+	else{
+		return "FAILED";
+	}
+
+}
 
 
 
@@ -103,6 +126,10 @@ MODULE = CBitcoin::Script	PACKAGE = CBitcoin::Script
 
 PROTOTYPES: DISABLE
 
+
+char *
+whatTypeOfScript (scriptstring)
+	char *	scriptstring
 
 char *
 addressToScript (addressString)

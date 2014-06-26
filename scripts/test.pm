@@ -25,6 +25,11 @@ foreach my $i (1..3){
 print "Starting multisig operation\n";
 $script = CBitcoin::Script::multisigToScript(\@arraypubkeys,2,3);
 print "Multisig Script:$script\n";
+my $scripttype = CBitcoin::Script::whatTypeOfScript($script);
+
+print "Script Type:$scripttype\n";
+
+
 __END__
 
 =pod
