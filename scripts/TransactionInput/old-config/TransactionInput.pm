@@ -53,6 +53,41 @@ sub prevOutIndex {
 	}	
 }
 
+sub script {
+	my $this = shift;
+	die "not correct TransactionInput type" unless ref($this) eq 'CBitcoin::TransactionInput';
+	my $x = shift;
+	if($x){
+		# TODO
+		$this->{script} = $x;
+		return $x;
+	}
+	else{
+		return $this->{script};
+	}	
+}
+
+
+sub sequence {
+	my $this = shift;
+	die "not correct TransactionInput type" unless ref($this) eq 'CBitcoin::TransactionInput';
+	my $x = shift;
+	if($x){
+		# TODO
+		$this->{sequence} = $x;
+		return $x;
+	}
+	else{
+		return $this->{sequence};
+	}	
+}
+
+sub validate {
+	my $this = shift;
+	die "not correct TransactionInput type" unless ref($this) eq 'CBitcoin::TransactionInput';
+	
+	return test1($this->script(), $this->sequence(), $this->prevOutHash(),$this->prevOutIndex());
+}
 
 
 1;

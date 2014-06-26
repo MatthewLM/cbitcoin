@@ -24,18 +24,34 @@ char* scriptToString(CBScript* script){
 CBTransactionInput* stringToTransactionInput(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
 	// prevOutHash is stored as a hex
 	CBByteArray* prevOutHash =  CBNewByteArrayFromHex(prevOutHashString);
+	CBScript* script = CBNewScriptFromString(scriptstring);
 
-	return (CBTransactionInput*)CBNewTransactionInput(
-			CBNewScriptFromString(scriptstring),
-			(uint32_t)sequenceInt,
-			prevOutHash,
-			(uint32_t)prevOutIndexInt
-		);
+
+	CBTransactionInput* txinput = CBNewTransactionInput(
+				script,
+				(uint32_t)sequenceInt,
+				prevOutHash,
+				(uint32_t)prevOutIndexInt
+			);
+	CBFreeScript(script);
+	CBDestroyByteArray(prevOutHash);
+	return txinput;
 }
 
+char* serializeByteData(CBTransactionInput * txinput){
+	CBTransactionInputPrepareBytes(txinput);
+	CBTransactionInputSerialise(txinput);
+	CBByteArray* serializeddata = CBGetMessage(txinput)->bytes;
+	return (char *)CBByteArrayGetData(serializeddata);
+}
 
 //////////////////////// perl export functions /////////////
 //CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex)
-
+char* create_txinput_obj(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
+	CBTransactionInput* txinput = stringToTransactionInput(scriptstring,sequenceInt,prevOutHashString,prevOutIndexInt);
+	char* answer = serializeByteData(txinput);
+	CBFreeTransactionInput(txinput);
+	return answer;
+}
 
 
