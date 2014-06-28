@@ -1,3 +1,7 @@
+#include "EXTERN.h"
+#include "perl.h"
+#include "XSUB.h"
+
 #include <stdio.h>
 #include <ctype.h>
 #include <openssl/ssl.h>
@@ -92,4 +96,23 @@ int get_value_from_obj(char* serializedDataString){
 
 
 
+
+
+MODULE = CBitcoin::TransactionOutput	PACKAGE = CBitcoin::TransactionOutput	
+
+PROTOTYPES: DISABLE
+
+
+char *
+create_txoutput_obj (scriptstring, valueInt)
+	char *	scriptstring
+	int	valueInt
+
+char *
+get_script_from_obj (serializedDataString)
+	char *	serializedDataString
+
+int
+get_value_from_obj (serializedDataString)
+	char *	serializedDataString
 

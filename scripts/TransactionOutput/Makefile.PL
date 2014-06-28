@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 my %options = %{
 {
   'TYPEMAPS' => [],
-  'NAME' => 'CBitcoin::TransactionInput',
+  'NAME' => 'CBitcoin::TransactionOutput',
   'INC' => '../../library/include',
   'LIBS' => ['-lcbitcoin.2.0',
 '-lcbitcoin-network.2.0',
