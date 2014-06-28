@@ -12,6 +12,7 @@
 #   MakeMaker Parameters:
 
 #     BUILD_REQUIRES => {  }
+#     CC => q[c99]
 #     CONFIGURE_REQUIRES => {  }
 #     INC => q[../../library/include]
 #     LIBS => [q[-lcbitcoin.2.0], q[-lcbitcoin-network.2.0], q[-lcbitcoin-storage.2.0], q[-lcbitcoin-threads.2.0], q[-lpthread], q[-lcbitcoin-logging.2.0], q[-lcbitcoin-crypto.2.0], q[-lcrypto], q[-lcbitcoin.2.0], q[-lcbitcoin-file-ec.2.0], q[-lcbitcoin-rand.2.0]]
@@ -30,7 +31,7 @@
 # These definitions are from config.sh (via /usr/lib/perl/5.14/Config.pm).
 # They may have been overridden via Makefile.PL or on the command line.
 AR = ar
-CC = cc
+CC = c99
 CCCDLFLAGS = -fPIC
 CCDLFLAGS = -Wl,-E
 DLEXT = so
@@ -165,7 +166,7 @@ C_FILES  = TransactionInput.c
 O_FILES  = TransactionInput.o
 H_FILES  = 
 MAN1PODS = 
-MAN3PODS = 
+MAN3PODS = TransactionInput.pm
 
 # Where is the Config information that we are using/depend on
 CONFIGDEP = $(PERL_ARCHLIB)$(DFSEP)Config.pm $(PERL_INC)$(DFSEP)config.h
@@ -505,8 +506,10 @@ POD2MAN_EXE = $(PERLRUN) "-MExtUtils::Command::MM" -e pod2man "--"
 POD2MAN = $(POD2MAN_EXE)
 
 
-manifypods : pure_all 
-	$(NOECHO) $(NOOP)
+manifypods : pure_all  \
+	TransactionInput.pm
+	$(NOECHO) $(POD2MAN) --section=3 --perm_rw=$(PERM_RW) \
+	  TransactionInput.pm $(INST_MAN3DIR)/CBitcoin::TransactionInput.$(MAN3EXT) 
 
 
 

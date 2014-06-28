@@ -148,7 +148,7 @@ sub importSerializedData {
 	my $x = shift;
 	
 	if( $this->script(CBitcoin::TransactionInput::get_script_from_obj($x))
-		&& $this->prevOutHash(CBitcoin::TransactionInput::get_prevOutHash_from_obj($x))
+		&& $this->prevOutHash(pack('H*',CBitcoin::TransactionInput::get_prevOutHash_from_obj($x)    )   )
 		&& $this->prevOutIndex(CBitcoin::TransactionInput::get_prevOutIndex_from_obj($x))
 		&& $this->sequence(CBitcoin::TransactionInput::get_sequence_from_obj($x))
 		){
@@ -159,7 +159,5 @@ sub importSerializedData {
 		return undef;
 	}
 }
-
-
 
 1;

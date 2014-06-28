@@ -33,8 +33,27 @@ CBTransactionInput* stringToTransactionInput(char* scriptstring, int sequenceInt
 				prevOutHash,
 				(uint32_t)prevOutIndexInt
 			);
-	CBFreeScript(script);
-	CBDestroyByteArray(prevOutHash);
+
+	//CBFreeScript(script);
+	//CBDestroyByteArray(prevOutHash);
+	return txinput;
+}
+
+CBTransactionInput* serializeddata_to_obj(char* datastring){
+	uint32_t length = (uint32_t)sizeof(datastring);
+
+	/*CBByteArray* data = CBNewByteArrayOfSize(length);
+	for(uint32_t i=0;i<length;i++){
+		CBByteArraySetByte(data,i,(uint8_t)datastring[i]);
+	}*/
+	//CBByteArray* data = CBNewByteArrayWithData(datastring,length);
+	CBByteArray* data = CBNewByteArrayFromHex(datastring);
+
+	CBTransactionInput* txinput = CBNewTransactionInputFromData(data);
+	int dlen = (int)CBTransactionInputDeserialise(txinput);
+	printf( "Part 2(length=%d;%d): Sequence:%d and prevOutIndex:%d\n",length, dlen,txinput->sequence, txinput->prevOut.index );
+	//CBTransactionInputDeserialise(txinput);
+	//CBDestroyByteArray(data);
 	return txinput;
 }
 
@@ -42,29 +61,59 @@ char* obj_to_serializeddata(CBTransactionInput * txinput){
 	CBTransactionInputPrepareBytes(txinput);
 	CBTransactionInputSerialise(txinput);
 	CBByteArray* serializeddata = CBGetMessage(txinput)->bytes;
-	return (char *)CBByteArrayGetData(serializeddata);
+
+	// style 1
+	CBTransactionInput* newtxinput = CBNewTransactionInputFromData(serializeddata);
+	int dlen = (int)CBTransactionInputDeserialise(newtxinput);
+	// style 3
+
+
+	//CBTransactionInput* newtxinphut = serializeddata_to_obj((char *)CBByteArrayGetData(serializeddata));
+	//uint8_t* answer = CBByteArrayGetData(serializeddata);
+
+	char* answer = malloc(dlen*sizeof(char*));
+	CBByteArrayToString(serializeddata, 0, dlen, answer, 0);
+
+
+	printf( "Part 1 (length=%s;%d) Sequence:%d and prevOutIndex:%d\n", answer,dlen,newtxinput->sequence, newtxinput->prevOut.index );
+	return answer;
 }
-CBTransactionInput* serializeddata_to_obj(char* datastring){
-	CBByteArray* data = CBNewByteArrayFromString(datastring,true);
-	CBTransactionInput* txinput = CBNewTransactionInputFromData(data);
-	CBDestroyByteArray(data);
-	return txinput;
-}
+
 
 //////////////////////// perl export functions /////////////
 //CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex)
 char* create_txinput_obj(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
 	CBTransactionInput* txinput = stringToTransactionInput(scriptstring,sequenceInt,prevOutHashString,prevOutIndexInt);
 	char* answer = obj_to_serializeddata(txinput);
-	CBFreeTransactionInput(txinput);
+	//CBFreeTransactionInput(txinput);
 	return answer;
 }
 
 char* get_script_from_obj(char* serializedDataString){
 	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
 	char* scriptstring = scriptToString(txinput->scriptObject);
-	CBFreeTransactionInput(txinput);
+	//CBFreeTransactionInput(txinput);
 	return scriptstring;
+}
+char* get_prevOutHash_from_obj(char* serializedDataString){
+	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
+	CBByteArray* data = txinput->prevOut.hash;
+	char * answer = (char*)CBByteArrayGetData(data);
+	//CBFreeTransactionInput(txinput);
+	//CBDestroyByteArray(data);
+	return answer;
+}
+int get_prevOutIndex_from_obj(char* serializedDataString){
+	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
+	uint32_t index = txinput->prevOut.index;
+	CBFreeTransactionInput(txinput);
+	return (int)index;
+}
+int get_sequence_from_obj(char* serializedDataString){
+	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
+	uint32_t sequence = txinput->sequence;
+	CBFreeTransactionInput(txinput);
+	return (int)sequence;
 }
 
 
