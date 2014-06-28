@@ -12,6 +12,18 @@
 #include <CBScript.h>
 #include <CBTransactionInput.h>
 
+
+// print CBByteArray to hex string
+char* bytearray_to_hexstring(CBByteArray * serializeddata,uint32_t dlen){
+	char* answer = malloc(dlen*sizeof(char*));
+	CBByteArrayToString(serializeddata, 0, dlen, answer, 0);
+	return answer;
+}
+CBByteArray* hexstring_to_bytearray(char* hexstring){
+	CBByteArray* answer = CBNewByteArrayFromHex(hexstring);
+	return answer;
+}
+
 //bool CBInitScriptFromString(CBScript * self, char * string)
 char* scriptToString(CBScript* script){
 	char* answer = (char *)malloc(CBScriptStringMaxSize(script)*sizeof(char));
@@ -40,18 +52,12 @@ CBTransactionInput* stringToTransactionInput(char* scriptstring, int sequenceInt
 }
 
 CBTransactionInput* serializeddata_to_obj(char* datastring){
-	uint32_t length = (uint32_t)sizeof(datastring);
 
-	/*CBByteArray* data = CBNewByteArrayOfSize(length);
-	for(uint32_t i=0;i<length;i++){
-		CBByteArraySetByte(data,i,(uint8_t)datastring[i]);
-	}*/
-	//CBByteArray* data = CBNewByteArrayWithData(datastring,length);
-	CBByteArray* data = CBNewByteArrayFromHex(datastring);
+	CBByteArray* data = hexstring_to_bytearray(datastring);
 
 	CBTransactionInput* txinput = CBNewTransactionInputFromData(data);
 	int dlen = (int)CBTransactionInputDeserialise(txinput);
-	printf( "Part 2(length=%d;%d): Sequence:%d and prevOutIndex:%d\n",length, dlen,txinput->sequence, txinput->prevOut.index );
+
 	//CBTransactionInputDeserialise(txinput);
 	//CBDestroyByteArray(data);
 	return txinput;
@@ -59,25 +65,14 @@ CBTransactionInput* serializeddata_to_obj(char* datastring){
 
 char* obj_to_serializeddata(CBTransactionInput * txinput){
 	CBTransactionInputPrepareBytes(txinput);
-	CBTransactionInputSerialise(txinput);
+	int dlen = CBTransactionInputSerialise(txinput);
 	CBByteArray* serializeddata = CBGetMessage(txinput)->bytes;
 
-	// style 1
-	CBTransactionInput* newtxinput = CBNewTransactionInputFromData(serializeddata);
-	int dlen = (int)CBTransactionInputDeserialise(newtxinput);
-	// style 3
+	char* answer = bytearray_to_hexstring(serializeddata,dlen);
 
-
-	//CBTransactionInput* newtxinphut = serializeddata_to_obj((char *)CBByteArrayGetData(serializeddata));
-	//uint8_t* answer = CBByteArrayGetData(serializeddata);
-
-	char* answer = malloc(dlen*sizeof(char*));
-	CBByteArrayToString(serializeddata, 0, dlen, answer, 0);
-
-
-	printf( "Part 1 (length=%s;%d) Sequence:%d and prevOutIndex:%d\n", answer,dlen,newtxinput->sequence, newtxinput->prevOut.index );
 	return answer;
 }
+
 
 
 //////////////////////// perl export functions /////////////
@@ -98,9 +93,7 @@ char* get_script_from_obj(char* serializedDataString){
 char* get_prevOutHash_from_obj(char* serializedDataString){
 	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
 	CBByteArray* data = txinput->prevOut.hash;
-	char * answer = (char*)CBByteArrayGetData(data);
-	//CBFreeTransactionInput(txinput);
-	//CBDestroyByteArray(data);
+	char * answer = bytearray_to_hexstring(data,data->length);
 	return answer;
 }
 int get_prevOutIndex_from_obj(char* serializedDataString){
