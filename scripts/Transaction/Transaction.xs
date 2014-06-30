@@ -260,10 +260,10 @@ char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubSc
 	// add the public key
 	CBByteArraySetByte(tx->inputs[input]->scriptObject, sigLen, CB_PUBKEY_SIZE);
 	memcpy(CBByteArrayGetData(tx->inputs[input]->scriptObject) + sigLen + 1, keypair->keyPair->pubkey.key, CB_PUBKEY_SIZE);
-	return txString;
-		/*
+	//return txString;
+
 	return obj_to_serializeddata(tx);
-	*/
+
 }
 
 
