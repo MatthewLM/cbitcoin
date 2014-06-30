@@ -529,7 +529,7 @@ void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, 
 	CBByteArraySetByte(self, cursor, CB_SCRIPT_OP_1 + n - 1);
 
 	cursor+=1;
-	CBByteArraySetByte(self, cursor, CB_SCRIPT_OP_CHECKMULTISIGVERIFY);
+	CBByteArraySetByte(self, cursor, CB_SCRIPT_OP_CHECKMULTISIG);
 
 }
 
