@@ -35,7 +35,7 @@ char* scriptToString(CBScript* script){
 }
 
 
-CBTransactionOutput* serializeddata_to_obj(char* datastring){
+CBTransaction* serializeddata_to_obj(char* datastring){
 
 	CBByteArray* data = hexstring_to_bytearray(datastring);
 
@@ -105,6 +105,46 @@ char* txinput_obj_to_serializeddata(CBTransactionInput * txinput){
 	return answer;
 }
 
+// CBHDKeys
+
+CBHDKey* cbhdkey_serializeddata_to_obj(char* privstring){
+	CBByteArray * masterString = CBNewByteArrayFromString(privstring, true);
+	CBChecksumBytes * masterData = CBNewChecksumBytesFromString(masterString, false);
+	CBReleaseObject(masterString);
+	CBHDKey * masterkey = CBNewHDKeyFromData(CBByteArrayGetData(CBGetByteArray(masterData)));
+	CBReleaseObject(masterData);
+	return (CBHDKey *)masterkey;
+}
+
+char* cbhdkey_obj_to_serializeddata(CBHDKey * keypair){
+	uint8_t * keyData = malloc(CB_HD_KEY_STR_SIZE);
+	CBHDKeySerialise(keypair, keyData);
+
+	CBChecksumBytes * checksumBytes = CBNewChecksumBytesFromBytes(keyData, 82, false);
+	// need to figure out how to free keyData memory
+	CBByteArray * str = CBChecksumBytesGetString(checksumBytes);
+	CBReleaseObject(checksumBytes);
+	return (char *)CBByteArrayGetData(str);
+}
+/*
+ *  CBScript
+ */
+char* script_obj_to_serializeddata(CBScript* script){
+	char* answer = (char *)malloc(CBScriptStringMaxSize(script)*sizeof(char));
+	CBScriptToString(script, answer);
+	return answer;
+
+}
+CBScript* script_serializeddata_to_obj(char* scriptstring){
+	CBScript* self;
+	if(CBInitScriptFromString(self,scriptstring)){
+		return self;
+	}
+	else{
+		return NULL;
+	}
+}
+
 //////////////////////// perl export functions /////////////
 //CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex)
 
@@ -166,5 +206,38 @@ int get_version_from_obj(char* serializedDataString){
 	CBFreeTransaction(tx);
 	return (int)version;
 }
+// CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType
+char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubScriptString, int input, char* signTypeString){
+	CBTransaction * tx = serializeddata_to_obj(txString);
+	CBHDKey * keypair = cbhdkey_serializeddata_to_obj(keypairString);
+	CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutScriptString);
 
+
+	// figure out the signature type
+	CBSignType signtype;
+	if (strcmp(signTypeString, "CB_SIGHASH_ALL") == 0) {
+		signtype = CB_SIGHASH_ALL;
+	}
+	else if(strcmp(signTypeString, "CB_SIGHASH_NONE") == 0){
+		signtype = CB_SIGHASH_NONE;
+	}
+	else if(strcmp(signTypeString, "CB_SIGHASH_SINGLE") == 0){
+		signtype = CB_SIGHASH_SINGLE;
+	}
+	else if(strcmp(signTypeString, "CB_SIGHASH_ANYONECANPAY") == 0){
+		signtype = CB_SIGHASH_ANYONECANPAY;
+	}
+	else{
+		// we have to fail here
+		return "NULL";
+	}
+	CBTransactionSignPubKeyHashInput(
+		tx
+		,keypair->keyPair
+		, (CBByteArray *) prevOutSubScript
+		, (uint32_t)input
+		, signtype
+	);
+	return obj_to_serializeddata(tx);
+}
 

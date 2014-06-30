@@ -161,20 +161,12 @@ LINKTYPE = dynamic
 BOOTDEP = 
 
 # Handy lists of source code files:
-XS_FILES = Transaction.xs \
-	TransactionInput.xs \
-	TransactionOutput.xs
-C_FILES  = Transaction.c \
-	TransactionInput.c \
-	TransactionOutput.c
-O_FILES  = Transaction.o \
-	TransactionInput.o \
-	TransactionOutput.o
+XS_FILES = Transaction.xs
+C_FILES  = Transaction.c
+O_FILES  = Transaction.o
 H_FILES  = 
 MAN1PODS = 
-MAN3PODS = Transaction.pm \
-	TransactionInput.pm \
-	TransactionOutput.pm
+MAN3PODS = Transaction.pm
 
 # Where is the Config information that we are using/depend on
 CONFIGDEP = $(PERL_ARCHLIB)$(DFSEP)Config.pm $(PERL_INC)$(DFSEP)config.h
@@ -197,16 +189,10 @@ PERL_ARCHIVE_AFTER =
 
 
 TO_INST_PM = Transaction.pm \
-	TransactionInput.pm \
-	TransactionOutput.pm \
 	coinx2.pl
 
 PM_TO_BLIB = Transaction.pm \
 	$(INST_LIB)/CBitcoin/Transaction.pm \
-	TransactionInput.pm \
-	$(INST_LIB)/CBitcoin/TransactionInput.pm \
-	TransactionOutput.pm \
-	$(INST_LIB)/CBitcoin/TransactionOutput.pm \
 	coinx2.pl \
 	$(INST_LIB)/CBitcoin/coinx2.pl
 
@@ -521,13 +507,9 @@ POD2MAN = $(POD2MAN_EXE)
 
 
 manifypods : pure_all  \
-	Transaction.pm \
-	TransactionInput.pm \
-	TransactionOutput.pm
+	Transaction.pm
 	$(NOECHO) $(POD2MAN) --section=3 --perm_rw=$(PERM_RW) \
-	  Transaction.pm $(INST_MAN3DIR)/CBitcoin::Transaction.$(MAN3EXT) \
-	  TransactionInput.pm $(INST_MAN3DIR)/CBitcoin::TransactionInput.$(MAN3EXT) \
-	  TransactionOutput.pm $(INST_MAN3DIR)/CBitcoin::TransactionOutput.$(MAN3EXT) 
+	  Transaction.pm $(INST_MAN3DIR)/CBitcoin::Transaction.$(MAN3EXT) 
 
 
 
@@ -567,7 +549,6 @@ clean :: clean_subdirs
 	  *$(LIB_EXT) *$(OBJ_EXT) \
 	  *perl.core MYMETA.json \
 	  MYMETA.yml Transaction.c \
-	  TransactionInput.c TransactionOutput.c \
 	  blibdirs.ts core \
 	  core.*perl.*.? core.[0-9] \
 	  core.[0-9][0-9] core.[0-9][0-9][0-9] \
@@ -965,7 +946,7 @@ PERL_HDRS = \
 
 $(OBJECT) : $(PERL_HDRS)
 
-TransactionOutput.c Transaction.c TransactionInput.c : $(XSUBPPDEPS)
+Transaction.c : $(XSUBPPDEPS)
 
 
 # --- MakeMaker makefile section:
@@ -1039,8 +1020,6 @@ ppd :
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
 	  Transaction.pm $(INST_LIB)/CBitcoin/Transaction.pm \
-	  TransactionInput.pm $(INST_LIB)/CBitcoin/TransactionInput.pm \
-	  TransactionOutput.pm $(INST_LIB)/CBitcoin/TransactionOutput.pm \
 	  coinx2.pl $(INST_LIB)/CBitcoin/coinx2.pl 
 	$(NOECHO) $(TOUCH) pm_to_blib
 

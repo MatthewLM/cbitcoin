@@ -88,11 +88,46 @@ sub serializeddata {
 		return $x;
 	}
 	else{
+		unless($this->{serializeddata}){
+			eval{
+				
+			};
+			if($@){
+				warn "We cannot serialize the data yet.\n";
+			}
+		}
 		return $this->{serializeddata};
 	}	
 }
-
-
+# this serializes the data we have
+sub serializeData {
+	my $this = shift;
+	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
+	
+	# check to see that we have inputs and outputs
+	unless($this->numOfInputs() > 0 && $this->numOfOutputs() >  0){
+		die "not enough inputs or outputs to serialize this transaction\n";
+	}
+	my @inputs;
+	foreach my $inx (@{$this->{inputs}}){
+		push(@inputs,$inx->serializeddata());	
+	}
+	my @outputs;
+	foreach my $outx (@{$this->{outputs}}){
+		push(@outputs,$outx->serializeddata());	
+	}	
+	# create_tx_obj(int lockTime, int version, SV* inputs, SV* outputs, int numOfInputs, int numOfOutputs)
+	my $data = CBitcoin::Transaction::create_tx_obj(
+		$this->lockTime()
+		,$this->version()
+		,\@inputs
+		,\@outputs
+		,$this->numOfInputs
+		,$this->numOfOutputs
+	);
+	return $this->serializeddata($data);
+	
+}
 sub deserializeData {
 	my $this = shift;
 	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
