@@ -35,7 +35,7 @@ sub new {
 	}
 	else{
 		# we have the data, let's get the serialized data
-		$x->{'lockTime'} ||= time(); # the time is not really relevant
+		$x->{'lockTime'} ||= 0;
 		$x->{'version'} ||= 1;
 		$this->lockTime($x->{'lockTime'});
 		$this->version($x->{'version'});
@@ -128,6 +128,7 @@ sub serializeData {
 	return $this->serializeddata($data);
 	
 }
+# TODO: change the name of this function!!! it does the opposite of its name
 sub deserializeData {
 	my $this = shift;
 	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
@@ -145,6 +146,51 @@ sub deserializeData {
 		return 0;
 	}
 }
+
+# signatures....
+=head3
+---+++ sign($index,$cbhdkey)
+Sign the ith ($index) output with the private key corresponding to the inputs.  The index starts from 0!!!!!
+=cut
+sub sign_single_input{
+	my $this = shift;
+	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
+	my ($index,$keypair) = (shift,shift);
+	unless($index =~ m/\d+/){
+		die "index is not a positive integer.\n";
+	}
+	unless(ref($keypair) eq 'CBitcoin::CBHD'){
+		die "keypair is not a CBitcoin::CBHD object.\n";
+	}
+
+	unless($this->serializeddata()){
+		die "serialize the tx data first, before trying to sign prevOuts.\n";
+	}
+
+	require Data::Dumper;
+	my @alpha = (
+		$this->serializeddata()
+		,$keypair->serializedkeypair()
+		,'prevOutSubScriptString'
+		,$index
+		,'CB_SIGHASH_ALL');
+	my $xo = Data::Dumper::Dumper(\@alpha);
+	print STDERR $xo;
+	# CB_SIGHASH_ALL means each signature signs all transaction outputs
+
+	my $data = CBitcoin::Transaction::sign_tx_pubkeyhash(
+		$this->serializeddata()
+		,$keypair->serializedkeypair()
+		,'prevOutSubScriptString'
+		,$index
+		,'CB_SIGHASH_ALL'
+	);
+	
+	return $this->serializeddata($data) if $data;
+
+	return $this->serializeddata();	
+}
+
 
 =head2
 ---++ methods

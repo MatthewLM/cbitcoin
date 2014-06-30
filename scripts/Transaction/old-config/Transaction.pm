@@ -150,9 +150,9 @@ sub deserializeData {
 # signatures....
 =head3
 ---+++ sign($index,$cbhdkey)
-Sign the ith ($index) output with the private key corresponding to the inputs.
+Sign the ith ($index) output with the private key corresponding to the inputs.  The index starts from 0!!!!!
 =cut
-sub sign{
+sub sign_single_input{
 	my $this = shift;
 	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
 	my ($index,$keypair) = (shift,shift);
@@ -162,11 +162,22 @@ sub sign{
 	unless(ref($keypair) eq 'CBitcoin::CBHD'){
 		die "keypair is not a CBitcoin::CBHD object.\n";
 	}
-	unless($this->{serializeddata}){
+
+	unless($this->serializeddata()){
 		die "serialize the tx data first, before trying to sign prevOuts.\n";
 	}
 
+	require Data::Dumper;
+	my @alpha = (
+		$this->serializeddata()
+		,$keypair->serializedkeypair()
+		,'prevOutSubScriptString'
+		,$index
+		,'CB_SIGHASH_ALL');
+	my $xo = Data::Dumper::Dumper(\@alpha);
+	print STDERR $xo;
 	# CB_SIGHASH_ALL means each signature signs all transaction outputs
+
 	my $data = CBitcoin::Transaction::sign_tx_pubkeyhash(
 		$this->serializeddata()
 		,$keypair->serializedkeypair()
@@ -174,8 +185,10 @@ sub sign{
 		,$index
 		,'CB_SIGHASH_ALL'
 	);
-	return $this->serializeddata($data);
 	
+	return $this->serializeddata($data) if $data;
+
+	return $this->serializeddata();	
 }
 
 
