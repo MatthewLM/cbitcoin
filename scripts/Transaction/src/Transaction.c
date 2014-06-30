@@ -11,6 +11,8 @@
 #include <CBBase58.h>
 #include <CBScript.h>
 #include <CBTransaction.h>
+#include <CBTransactionInput.h>
+#include <CBTransactionOutput.h>
 
 
 // print CBByteArray to hex string
@@ -54,13 +56,91 @@ char* obj_to_serializeddata(CBTransaction * tx){
 	return answer;
 }
 
+/*
+ * TransactionOutput related functions
+ */
+char* txoutput_obj_to_serializeddata(CBTransactionOutput * txoutput){
+	CBTransactionOutputPrepareBytes(txoutput);
+	int dlen = CBTransactionOutputSerialise(txoutput);
+	CBByteArray* serializeddata = CBGetMessage(txoutput)->bytes;
 
+	char* answer = bytearray_to_hexstring(serializeddata,dlen);
+
+	return answer;
+}
+CBTransactionOutput* txoutput_serializeddata_to_obj(char* datastring){
+
+	CBByteArray* data = hexstring_to_bytearray(datastring);
+
+	CBTransactionOutput* txoutput = CBNewTransactionOutputFromData(data);
+	int dlen = (int)CBTransactionOutputDeserialise(txoutput);
+
+	//CBTransactionInputDeserialise(txinput);
+	//CBDestroyByteArray(data);
+	return txoutput;
+}
+/*
+ * TransactionInput related functions
+ */
+
+CBTransactionInput* txinput_serializeddata_to_obj(char* datastring){
+
+	CBByteArray* data = hexstring_to_bytearray(datastring);
+
+	CBTransactionInput* txinput = CBNewTransactionInputFromData(data);
+	int dlen = (int)CBTransactionInputDeserialise(txinput);
+
+	//CBTransactionInputDeserialise(txinput);
+	//CBDestroyByteArray(data);
+	return txinput;
+}
+
+char* txinput_obj_to_serializeddata(CBTransactionInput * txinput){
+	CBTransactionInputPrepareBytes(txinput);
+	int dlen = CBTransactionInputSerialise(txinput);
+	CBByteArray* serializeddata = CBGetMessage(txinput)->bytes;
+
+	char* answer = bytearray_to_hexstring(serializeddata,dlen);
+
+	return answer;
+}
 
 //////////////////////// perl export functions /////////////
 //CBTransactionInput * CBNewTransactionInput(CBScript * script, uint32_t sequence, CBByteArray * prevOutHash, uint32_t prevOutIndex)
 
-char* create_tx_obj(int lockTime, int version){
+char* create_tx_obj(int lockTime, int version, SV* inputs, SV* outputs, int numOfInputs, int numOfOutputs){
 	CBTransaction* tx = CBNewTransaction((uint32_t) lockTime, (uint32_t) version);
+
+	int n;
+	int in_length, out_length;
+    if ((! SvROK(inputs))
+    || (SvTYPE(SvRV(inputs)) != SVt_PVAV)
+    || ((in_length = av_len((AV *)SvRV(inputs))) < 0))
+    {
+        return 0;
+    }
+    if ((! SvROK(outputs))
+    || (SvTYPE(SvRV(outputs)) != SVt_PVAV)
+    || ((out_length = av_len((AV *)SvRV(outputs))) < 0))
+    {
+        return 0;
+    }
+
+    // load TransactionInput
+	for (n=0; n<=in_length; n++) {
+		STRLEN l;
+
+		char * fn = SvPV (*av_fetch ((AV *) SvRV (inputs), n, 0), l);
+		CBTransactionInput * inx = txinput_serializeddata_to_obj(fn);
+		CBTransactionAddInput(tx,inx);
+	}
+	for (n=0; n<=out_length; n++) {
+		STRLEN l;
+
+		char * fn = SvPV (*av_fetch ((AV *) SvRV (outputs), n, 0), l);
+		CBTransactionOutput * outx = txoutput_serializeddata_to_obj(fn);
+		CBTransactionAddOutput(tx,outx);
+	}
 	char* answer = obj_to_serializeddata(tx);
 	//CBFreeTransaction(tx);
 	return answer;
