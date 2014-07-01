@@ -518,7 +518,6 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 }
 
 void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, uint8_t n){
-	//CBInitByteArrayOfSize(self, 2 + n*(1 + CB_PUBKEY_SIZE));
 	CBInitByteArrayOfSize(self, 3 + n*(1 + CB_PUBKEY_SIZE));
 	CBByteArraySetByte(self, 0, CB_SCRIPT_OP_1 + m - 1);
 	uint16_t cursor = 1;
