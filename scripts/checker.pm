@@ -17,11 +17,17 @@ print "Address:".$parentkey->address()."\n";
 my $script = CBitcoin::Script::address_to_script("1Fjf3xLuuQpuyw6EyxkXuLHzJUw7yUwPTi");
 print "Script:$script\n";
 
+my @in = ('KKWG2APFnnKg7S6uQdjtYUJ8eGMSHx6LA','PiMJNPBMzwQLucHp91aMVxpM8NA2o4Qm3');
+foreach my $i1 (@in){
+	print "Script:".CBitcoin::Script::address_to_script('1'.$i1)."\n";
+}
+
+__END__
 #my $txinput = new CBitcoin::TransactionInput;
 my $input = CBitcoin::TransactionInput::->new(
 {
 	'prevOutHash' => '06e595b5fe42b820f7c9762e8dd8fce26bcd83d7a48b184c0017bf49b6f0b5ad'
-	,'prevOutIndex' => '1'
+	,'prevOutIndex' => 1
 	,'script' => CBitcoin::Script::address_to_script($parentkey->address())
 }
 );

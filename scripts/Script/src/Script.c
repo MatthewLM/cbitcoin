@@ -11,6 +11,18 @@
 #include <CBBase58.h>
 #include <CBScript.h>
 
+// print CBByteArray to hex string
+char* bytearray_to_hexstring(CBByteArray * serializeddata,uint32_t dlen){
+	char* answer = malloc(dlen*sizeof(char*));
+	CBByteArrayToString(serializeddata, 0, dlen, answer, 0);
+	return answer;
+}
+CBByteArray* hexstring_to_bytearray(char* hexstring){
+	CBByteArray* answer = CBNewByteArrayFromHex(hexstring);
+	return answer;
+}
+
+
 //bool CBInitScriptFromString(CBScript * self, char * string)
 char* scriptToString(CBScript* script){
 	char* answer = (char *)malloc(CBScriptStringMaxSize(script)*sizeof(char));
@@ -31,6 +43,18 @@ CBScript* stringToScript(char* scriptstring){
 
 
 //////////////////////// perl export functions /////////////
+// 20 byte hex string (Hash160) to address
+char* newAddressFromRIPEMD160Hash(char* hexstring){
+	CBByteArray* array = hexstring_to_bytearray(hexstring);
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBByteArrayGetData(array),CB_PREFIX_PRODUCTION_ADDRESS, true);
+	CBByteArray * addressstring = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	CBReleaseObject(address);
+	return (char *)CBByteArrayGetData(addressstring);
+}
+
+
+
+
 /* Return 1 if this script is multisig, 0 for else*/
 // this function does not work
 char* whatTypeOfScript(char* scriptstring){
@@ -118,3 +142,6 @@ char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
 
 	return scriptToString(finalscript);
 }
+
+
+

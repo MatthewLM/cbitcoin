@@ -21,14 +21,14 @@ CBByteArray* hexstring_to_bytearray(char* hexstring){
 	CBByteArray* answer = CBNewByteArrayFromHex(hexstring);
 	return answer;
 }
-
+/*
 //bool CBInitScriptFromString(CBScript * self, char * string)
 char* scriptToString(CBScript* script){
 	char* answer = (char *)malloc(CBScriptStringMaxSize(script)*sizeof(char));
 	CBScriptToString(script, answer);
 	return answer;
 
-}
+}*/
 
 CBHDKey* importDataToCBHDKey(char* privstring) {
 	CBByteArray * masterString = CBNewByteArrayFromString(privstring, true);
@@ -83,6 +83,18 @@ char* exportWIFFromCBHDKey(char* privstring){
 	return (char *)CBByteArrayGetData(str);
 }
 
+int exportChildIDFromCBHDKey(char* privstring){
+	CBHDKey* cbkey = importDataToCBHDKey(privstring);
+	int childnumber = (int)cbkey->childID.childNumber;
+	free(cbkey);
+	return childnumber;
+}
+int exportPrivChildIDFromCBHDKey(char* privstring){
+	CBHDKey* cbkey = importDataToCBHDKey(privstring);
+	int priv = (int)cbkey->childID.priv;
+	free(cbkey);
+	return priv;
+}
 
 char* exportAddressFromCBHDKey(char* privstring){
 	CBHDKey* cbkey = importDataToCBHDKey(privstring);

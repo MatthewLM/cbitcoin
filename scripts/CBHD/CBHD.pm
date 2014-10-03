@@ -118,4 +118,21 @@ sub publickey {
 	return $x;
 }
 
+# this function returns an array
+sub childid {
+	my $this = shift;
+	my $childid = ''; #only ranges 31 bits, not 32 bits
+	my $priv = ''; #determines whether key is less than 2^31 (soft) or greater than 2^31 (hard)
+	eval{
+		die "no private key" unless $this->serializedkeypair();
+		$childid = CBitcoin::CBHD::exportChildIDFromCBHDKey($this->serializedkeypair());
+		$priv = CBitcoin::CBHD::exportPrivChildIDFromCBHDKey($this->serializedkeypair());
+	};
+	if($@){
+		return undef;
+	}
+	return ($priv,$childid);
+}
+
+
 1;
