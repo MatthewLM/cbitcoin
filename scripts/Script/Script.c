@@ -24,6 +24,18 @@
 #include <CBBase58.h>
 #include <CBScript.h>
 
+// print CBByteArray to hex string
+char* bytearray_to_hexstring(CBByteArray * serializeddata,uint32_t dlen){
+	char* answer = malloc(dlen*sizeof(char*));
+	CBByteArrayToString(serializeddata, 0, dlen, answer, 0);
+	return answer;
+}
+CBByteArray* hexstring_to_bytearray(char* hexstring){
+	CBByteArray* answer = CBNewByteArrayFromHex(hexstring);
+	return answer;
+}
+
+
 //bool CBInitScriptFromString(CBScript * self, char * string)
 char* scriptToString(CBScript* script){
 	char* answer = (char *)malloc(CBScriptStringMaxSize(script)*sizeof(char));
@@ -44,6 +56,20 @@ CBScript* stringToScript(char* scriptstring){
 
 
 //////////////////////// perl export functions /////////////
+
+
+// 20 byte hex string (Hash160) to address
+char* newAddressFromRIPEMD160Hash(char* hexstring){
+	CBByteArray* array = hexstring_to_bytearray(hexstring);
+	CBAddress * address = CBNewAddressFromRIPEMD160Hash(CBByteArrayGetData(array),CB_PREFIX_PRODUCTION_ADDRESS, true);
+	CBByteArray * addressstring = CBChecksumBytesGetString(CBGetChecksumBytes(address));
+	CBReleaseObject(address);
+	return (char *)CBByteArrayGetData(addressstring);
+}
+
+
+
+
 /* Return 1 if this script is multisig, 0 for else*/
 // this function does not work
 char* whatTypeOfScript(char* scriptstring){
@@ -132,7 +158,10 @@ char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
 	return scriptToString(finalscript);
 }
 
-#line 136 "Script.c"
+
+
+
+#line 165 "Script.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -184,7 +213,29 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
-#line 188 "Script.c"
+#line 217 "Script.c"
+
+XS(XS_CBitcoin__Script_newAddressFromRIPEMD160Hash); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin__Script_newAddressFromRIPEMD160Hash)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 1)
+       croak_xs_usage(cv,  "hexstring");
+    {
+	char *	hexstring = (char *)SvPV_nolen(ST(0));
+	char *	RETVAL;
+	dXSTARG;
+
+	RETVAL = newAddressFromRIPEMD160Hash(hexstring);
+	sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
+    }
+    XSRETURN(1);
+}
+
 
 XS(XS_CBitcoin__Script_whatTypeOfScript); /* prototype to pass -Wmissing-prototypes */
 XS(XS_CBitcoin__Script_whatTypeOfScript)
@@ -299,6 +350,7 @@ XS(boot_CBitcoin__Script)
 #endif
     XS_VERSION_BOOTCHECK ;
 
+        newXS("CBitcoin::Script::newAddressFromRIPEMD160Hash", XS_CBitcoin__Script_newAddressFromRIPEMD160Hash, file);
         newXS("CBitcoin::Script::whatTypeOfScript", XS_CBitcoin__Script_whatTypeOfScript, file);
         newXS("CBitcoin::Script::addressToScript", XS_CBitcoin__Script_addressToScript, file);
         newXS("CBitcoin::Script::pubkeyToScript", XS_CBitcoin__Script_pubkeyToScript, file);

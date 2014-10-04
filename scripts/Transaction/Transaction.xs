@@ -217,9 +217,6 @@ char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubSc
 	CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
 
 
-
-	printf("%d:We are here.\n",4);
-
 	// figure out the signature type
 	CBSignType signtype;
 	if (strcmp(signTypeString, "CB_SIGHASH_ALL") == 0) {
@@ -277,8 +274,6 @@ char* sign_tx_multisig(char* txString, char* keypairString, char* prevOutSubScri
 	CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
 
 
-
-	printf("%d:We are here.\n",4);
 
 	// figure out the signature type
 	CBSignType signtype;

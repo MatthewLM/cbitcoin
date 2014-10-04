@@ -226,9 +226,6 @@ char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubSc
 	CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
 
 
-
-	printf("%d:We are here.\n",4);
-
 	// figure out the signature type
 	CBSignType signtype;
 	if (strcmp(signTypeString, "CB_SIGHASH_ALL") == 0) {
@@ -287,8 +284,6 @@ char* sign_tx_multisig(char* txString, char* keypairString, char* prevOutSubScri
 
 
 
-	printf("%d:We are here.\n",4);
-
 	// figure out the signature type
 	CBSignType signtype;
 	if (strcmp(signTypeString, "CB_SIGHASH_ALL") == 0) {
@@ -323,7 +318,7 @@ char* sign_tx_multisig(char* txString, char* keypairString, char* prevOutSubScri
 }
 
 
-#line 327 "Transaction.c"
+#line 322 "Transaction.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -375,7 +370,7 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
-#line 379 "Transaction.c"
+#line 374 "Transaction.c"
 
 XS(XS_CBitcoin__Transaction_create_tx_obj); /* prototype to pass -Wmissing-prototypes */
 XS(XS_CBitcoin__Transaction_create_tx_obj)

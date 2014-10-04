@@ -43,6 +43,8 @@ CBScript* stringToScript(char* scriptstring){
 
 
 //////////////////////// perl export functions /////////////
+
+
 // 20 byte hex string (Hash160) to address
 char* newAddressFromRIPEMD160Hash(char* hexstring){
 	CBByteArray* array = hexstring_to_bytearray(hexstring);

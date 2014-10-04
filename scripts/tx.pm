@@ -51,7 +51,7 @@ my $txdata = $tx->sign_single_input(0,$parentkey);
 print "Final:$txdata\n";
 #$data = $tx->serializeddata();
 #print "Signed Transaction Data:$data\n";
-
+__END__
 my ($m, $n) = (2,3);
 print "Let's do a multisig transaction of ($m, $n)\n";
 
@@ -78,7 +78,7 @@ $tx->addOutput($output);
 $data = $tx->serializeData();
 $data = $tx->serializeddata();
 print "Unsigned Transaction Data:$data\n";
-__END__
+
 # sign with enough keys to validate the transaction
 foreach my $i (0..($m-1)){
 	my $childkey = $parentkey->deriveChild(1,$i+1);
