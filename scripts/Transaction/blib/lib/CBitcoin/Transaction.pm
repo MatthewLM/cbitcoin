@@ -31,8 +31,8 @@ sub new {
 	use bigint;
 	my $package = shift;
 	my $this = bless({}, $package);
-	$this->{inputs} = [];
-	$this->{outputs} = [];
+	$this->{'inputs'} = [];
+	$this->{'outputs'} = [];
 	my $x = shift;
 	unless(ref($x) eq 'HASH'){
 		return $this;
@@ -87,7 +87,18 @@ sub new {
 
 sub serialized_data {
 	my $this = shift;
-	return $this->{'data'};
+	my $newdata = shift;
+	if(defined $newdata && $newdata =~ m/^([0-9a-zA-Z]+)$/){
+		$this->{'data'} = $newdata;
+		return $this->{'data'};
+	}
+	elsif(!(defined $newdata)){
+		return $this->{'data'};
+	}
+	else{
+		die "malformed serialized data";
+	}
+
 }
 
 sub lockTime {
@@ -120,38 +131,36 @@ Sign the ith ($index) output with the private key corresponding to the inputs.  
 
 sub sign_single_input {
 
-	use bigint;
-
+	#use bigint;
+	
 	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
+	my $OldData = $this->serialized_data();
+	#die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
 	my ($index,$keypair) = (shift,shift);
-	unless($index =~ m/\d+/){
-		die "index is not a positive integer($index).\n";
+	unless($index =~ m/\d+/ && 0 <= $index && $index < $this->numOfInputs){
+		die "index is not in the proper range ($index).\n";
 	}
-	unless(ref($keypair) eq 'CBitcoin::CBHD'){
+	unless($keypair->address =~ m/^[0-9a-zA-Z]+$/){
 		die "keypair is not a CBitcoin::CBHD object.\n";
 	}
 
-	unless($this->serializeddata()){
+	unless($this->serialized_data()){
 		die "serialize the tx data first, before trying to sign prevOuts.\n";
 	}
 	
 	# get the input
 	my $prevOutInput = $this->input($index);
-	unless(ref($prevOutInput) eq 'CBitcoin::TransactionInput'){
-		return undef;
-	}
-	
 	
 	# find out what type of script we are dealing with
 	# 	p2sh, pubkey, keyhash, multisig
 	my $scripttype = CBitcoin::Script::whatTypeOfScript($prevOutInput->script() );
 	#warn "My script:".$prevOutInput->script()."\n";
 	my $data;
+
 	if($scripttype eq 'keyhash'){
 		$data = CBitcoin::Transaction::sign_tx_pubkeyhash(
-			$this->serializeddata()
-			,$keypair->serializedkeypair()
+			$this->serialized_data()
+			,$keypair->serialized_data()
 			,$prevOutInput->script()
 			,$index
 			,'CB_SIGHASH_ALL'
@@ -160,16 +169,20 @@ sub sign_single_input {
 	elsif($scripttype eq 'multisig'){
 		# do multisig 
 		$data = CBitcoin::Transaction::sign_tx_multisig(
-			$this->serializeddata()
-			,$keypair->serializedkeypair()
+			$this->serialized_data()
+			,$keypair->serialized_data()
 			,$prevOutInput->script()
 			,$index
 			,'CB_SIGHASH_ALL'
 		);
 	}
-	return $this->serializeddata($data) if $data;
-
-	return $this->serializeddata();
+	else{
+		die "unsupported script($scripttype)";
+	}
+	# make sure that the new data contains something different
+	die "signature failed" if $data eq $OldData;
+	#warn "New Signature ($data)\n";
+	return $this->serialized_data($data);	
 }
 
 =pod
@@ -189,7 +202,7 @@ sub input {
 	unless($index =~ m/\d+/ && $index >= 0 && $index < $this->numOfInputs() ){
 		die "index is not an integer or in the proper range\n";
 	}
-	# char* get_Input(char* serializedDataString,int InputIndex)
+	# char* get_Input(char* serialized_dataString,int InputIndex)
 	return CBitcoin::TransactionInput->new({'data' => get_Input($this->{'data'},$index) });
 }
 
@@ -204,7 +217,7 @@ sub output {
 	unless($index =~ m/\d+/ && $index >= 0 && $index < $this->numOfOutputs() ){
 		die "index is not an integer or in the proper range\n";
 	}
-	# char* get_Input(char* serializedDataString,int InputIndex)
+	# char* get_Input(char* serialized_dataString,int InputIndex)
 	return CBitcoin::TransactionOutput->new({'data' => get_Output($this->{'data'},$index) });
 }
 

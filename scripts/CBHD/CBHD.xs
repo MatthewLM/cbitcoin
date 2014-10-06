@@ -110,9 +110,12 @@ char* exportAddressFromCBHDKey(char* privstring){
 }
 char* exportPublicKeyFromCBHDKey(char* privstring){
 	CBHDKey* cbkey = importDataToCBHDKey(privstring);
-	uint8_t* pubkey = CBHDKeyGetPublicKey(cbkey);
+	//uint8_t* pubkey = CBHDKeyGetPublicKey(cbkey);
+	CBByteArray* ans2 = CBNewByteArrayWithData(CBHDKeyGetPublicKey(cbkey),CB_PUBKEY_SIZE);
+	char* answer = bytearray_to_hexstring(ans2,CB_PUBKEY_SIZE);
 	free(cbkey);
-	return (char*) pubkey;
+	return answer;
+	//return (char*) pubkey;
 }
 
 

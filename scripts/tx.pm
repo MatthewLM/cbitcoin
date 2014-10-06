@@ -10,7 +10,7 @@
 print "hello\n";
 
 my $parentkey = new CBitcoin::CBHD;
-$parentkey->serializedkeypair('xprv9s21ZrQH143K4Rz5APz2LhW4ms2mVTVa5YVMZzGAYgNRoXkxri6ELZVbzqc8VFtHseksaBnahJbbgkxue3nXsMjuF5pg1cknX4ueyQwUATY');
+$parentkey->serialized_data('xprv9s21ZrQH143K4Rz5APz2LhW4ms2mVTVa5YVMZzGAYgNRoXkxri6ELZVbzqc8VFtHseksaBnahJbbgkxue3nXsMjuF5pg1cknX4ueyQwUATY');
 print "WIF:".$parentkey->WIF()."\n";
 print "Address:".$parentkey->address()."\n";
 
@@ -37,21 +37,18 @@ my $output = CBitcoin::TransactionOutput::->new($x1);
 
 
 
-my $tx = CBitcoin::Transaction::->new({});
+my $tx = CBitcoin::Transaction::->new({'inputs' => [$input],'outputs' => [$output]});
 
-$tx->addInput($input);
-$tx->addOutput($output);
 
-my $data = $tx->serializeData();
-$data = $tx->serializeddata();
+my $data = $tx->serialized_data();
 print "Unsigned Transaction Data:$data\n";
 
 # sign an input
 my $txdata = $tx->sign_single_input(0,$parentkey);
 print "Final:$txdata\n";
-#$data = $tx->serializeddata();
-#print "Signed Transaction Data:$data\n";
-__END__
+$data = $tx->serialized_data();
+print "Signed Transaction Data:$data\n";
+
 my ($m, $n) = (2,3);
 print "Let's do a multisig transaction of ($m, $n)\n";
 
@@ -59,24 +56,26 @@ my @arraypubkeys;
 foreach my $i (1..$n){
 	my $childkey = $parentkey->deriveChild(1,$i);
 	print "Address $i:".$childkey->address()."\n";
-	push(@arraypubkeys,$childkey->publickey());
+	push(@arraypubkeys,$childkey);
 }
 print "Starting multisig operation\n";
 
-$tx = CBitcoin::Transaction::->new();
-$tx->addInput(CBitcoin::TransactionInput::->new(
-{
-	'prevOutHash' => '06e595b5fe42b820f7c9762e8dd8fce26bcd83d7a48b184c0017bf49b6f0b5ad'
-	,'prevOutIndex' => 1
-	,'script' => CBitcoin::Script::multisigToScript(\@arraypubkeys,$m,$n)
-}
-) );
+print "Here is the script:".CBitcoin::Script::pubkeys_to_multisig_script(\@arraypubkeys,$m)."VERIFY\n";
 
-# use the same output as before
-$tx->addOutput($output);
+$tx = CBitcoin::Transaction::->new({
+	'inputs' => [
+		CBitcoin::TransactionInput::->new({
+			'prevOutHash' => '06e595b5fe42b820f7c9762e8dd8fce26bcd83d7a48b184c0017bf49b6f0b5ad'
+			,'prevOutIndex' => 1
+			,'script' => CBitcoin::Script::pubkeys_to_multisig_script(\@arraypubkeys,$m).'VERIFY'
+		})
+	]
+	,'outputs' => [
+		$output
+	]
+});
 
-$data = $tx->serializeData();
-$data = $tx->serializeddata();
+$data = $tx->serialized_data();
 print "Unsigned Transaction Data:$data\n";
 
 # sign with enough keys to validate the transaction

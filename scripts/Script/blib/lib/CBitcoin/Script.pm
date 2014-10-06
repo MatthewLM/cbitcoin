@@ -48,11 +48,39 @@ sub script_to_address {
 		return newAddressFromRIPEMD160Hash($1);
 	}
 	else{
-		die "We cannot make an address";
+		die "This is not a script($x).";
 	}
 }
 
+=pod
 
+---++ pubkeys_to_multisig_script(\@cbhdkeys,$m) 
+
+Rule 1:<verbatim>$m < $n = scalar(@cbhdkeys)</verbatim>
+=cut
+
+sub pubkeys_to_multisig_script {
+	my $KeyArrayRef = shift;
+	my ($m,$n) = (shift,-1);
+
+	unless(
+		( defined $KeyArrayRef && defined $m )
+		&& ( ref($KeyArrayRef) eq 'ARRAY' && $m =~ m/^\d+$/ )
+		&& scalar(@{$KeyArrayRef}) >= $m && $m > 0
+	){
+		die "insufficient arguments to create script";
+	}
+	$n = scalar(@{$KeyArrayRef});
+	
+
+	#char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt)
+	my @pubkeyarray;
+	foreach my $key (@{$KeyArrayRef}){
+		warn "Address:".$key->address()."  Public Key:".$key->publickey()."\n";
+		push(@pubkeyarray,$key->publickey());
+	}
+	return multisigToScript(\@pubkeyarray,$m, $n);
+}
 
 1;
 __END__

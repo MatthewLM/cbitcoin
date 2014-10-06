@@ -246,11 +246,15 @@ int get_version_from_obj(char* serializedDataString){
 }
 // CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType
 char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubScriptString, int input, char* signTypeString){
+        //CBLogError("sign 0.");
+	//fprintf(stderr, "sign 0.");
 	CBTransaction * tx = serializeddata_to_obj(txString);
+        //fprintf(stderr, "sign 0.1");
 	CBHDKey * keypair = cbhdkey_serializeddata_to_obj(keypairString);
-	CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
-
-
+        //fprintf(stderr, "sign 0.2");
+	//CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
+	CBScript * prevOutSubScript = tx->inputs[input]->scriptObject;
+	//CBLogError("sign 1.");
 	// figure out the signature type
 	CBSignType signtype;
 	if (strcmp(signTypeString, "CB_SIGHASH_ALL") == 0) {
@@ -269,6 +273,7 @@ char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubSc
 		// we have to fail here
 		return "NULL";
 	}
+        //CBLogError("sign 2.(%d)",input);
 /*
 	CBTransactionSignPubKeyHashInput(
 		tx
@@ -278,7 +283,7 @@ char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubSc
 		, CB_SIGHASH_ALL
 	);*/
 	CBScript * oldprevOutSubScript = tx->inputs[input]->scriptObject;
-	;
+        //CBLogError("sign 3.");
 	if (!CBTransactionSignPubKeyHashInput(tx, keypair->keyPair,
 			oldprevOutSubScript, input, signtype)){
 		CBLogError("Unable to add a signature to a pubkey hash transaction input.");
@@ -301,12 +306,28 @@ char* sign_tx_pubkeyhash(char* txString, char* keypairString, char* prevOutSubSc
 	return obj_to_serializeddata(tx);
 
 }
+bool CBTransactionSignMultisigInputV2(CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType) {
+	CBScript * inScript;
+	uint16_t offset;
+	if (self->inputs[input]->scriptObject) {
+		offset = self->inputs[input]->scriptObject->length;
+		inScript = CBNewByteArrayOfSize(offset + CB_MAX_DER_SIG_SIZE + 2);
+		CBByteArrayCopyByteArray(inScript, 0, self->inputs[input]->scriptObject);
+		CBReleaseObject(self->inputs[input]->scriptObject);
+		self->inputs[input]->scriptObject = inScript;
+	}else{
+		inScript = self->inputs[input]->scriptObject = CBNewScriptOfSize(CB_MAX_DER_SIG_SIZE + 3);
+		CBByteArraySetByte(inScript, 0, CB_SCRIPT_OP_0);
+		offset = 1;
+	}
+	return CBTransactionAddSignature(self, inScript, offset, key, prevOutSubScript, input, signType);
+}
 
 char* sign_tx_multisig(char* txString, char* keypairString, char* prevOutSubScriptString, int input, char* signTypeString){
 	CBTransaction * tx = serializeddata_to_obj(txString);
 	CBHDKey * keypair = cbhdkey_serializeddata_to_obj(keypairString);
-	CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
-
+	//CBScript * prevOutSubScript = script_serializeddata_to_obj(prevOutSubScriptString);
+	CBScript * prevOutSubScript = CBByteArrayCopy((CBByteArray*) tx->inputs[input]->scriptObject);
 
 
 	// figure out the signature type
@@ -328,13 +349,13 @@ char* sign_tx_multisig(char* txString, char* keypairString, char* prevOutSubScri
 		return "NULL";
 	}
 
-	CBScript * oldprevOutSubScript = tx->inputs[input]->scriptObject;
+	//CBScript * oldprevOutSubScript = tx->inputs[input]->scriptObject;
 	/*
 	 * CBTransactionSignMultisigInput(
 			CBTransaction * self, CBKeyPair * key, CBByteArray * prevOutSubScript, uint32_t input, CBSignType signType
 		)
 	 */
-	if (!CBTransactionSignMultisigInput(tx, keypair->keyPair, oldprevOutSubScript, input, signtype)){
+	if (!CBTransactionSignMultisigInputV2(tx, keypair->keyPair, prevOutSubScript, input, signtype)){
 		CBLogError("Unable to add a signature to a pubkey hash transaction input.");
 		return "NULL";
 	}

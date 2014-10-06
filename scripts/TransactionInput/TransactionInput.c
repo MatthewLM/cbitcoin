@@ -48,9 +48,14 @@ char* scriptToString(CBScript* script){
 
 CBTransactionInput* stringToTransactionInput(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
 	// prevOutHash is stored as a hex
-	CBByteArray* prevOutHash =  CBNewByteArrayFromHex(prevOutHashString);
+	CBByteArray* prevOutHashInReverse =  CBNewByteArrayFromHex(prevOutHashString);
 	CBScript* script = CBNewScriptFromString(scriptstring);
 
+
+	// need to reverse the prevOutHashString...
+	CBByteArray* prevOutHash = CBByteArrayCopy(prevOutHashInReverse);
+        CBByteArrayReverseBytes(prevOutHash);
+	CBFreeByteArray(prevOutHashInReverse);
 
 	CBTransactionInput* txinput = CBNewTransactionInput(
 				script,
@@ -105,7 +110,9 @@ char* get_script_from_obj(char* serializedDataString){
 }
 char* get_prevOutHash_from_obj(char* serializedDataString){
 	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
-	CBByteArray* data = txinput->prevOut.hash;
+	CBByteArray* dataInReverse = txinput->prevOut.hash;
+	CBByteArray* data = CBByteArrayCopy(dataInReverse);
+	CBByteArrayReverseBytes(data);
 	char * answer = bytearray_to_hexstring(data,data->length);
 	return answer;
 }
@@ -125,7 +132,7 @@ int get_sequence_from_obj(char* serializedDataString){
 
 
 
-#line 129 "TransactionInput.c"
+#line 136 "TransactionInput.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -177,7 +184,7 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
-#line 181 "TransactionInput.c"
+#line 188 "TransactionInput.c"
 
 XS(XS_CBitcoin__TransactionInput_create_txinput_obj); /* prototype to pass -Wmissing-prototypes */
 XS(XS_CBitcoin__TransactionInput_create_txinput_obj)

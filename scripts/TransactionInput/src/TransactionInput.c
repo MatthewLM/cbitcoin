@@ -35,9 +35,14 @@ char* scriptToString(CBScript* script){
 
 CBTransactionInput* stringToTransactionInput(char* scriptstring, int sequenceInt, char* prevOutHashString, int prevOutIndexInt){
 	// prevOutHash is stored as a hex
-	CBByteArray* prevOutHash =  CBNewByteArrayFromHex(prevOutHashString);
+	CBByteArray* prevOutHashInReverse =  CBNewByteArrayFromHex(prevOutHashString);
 	CBScript* script = CBNewScriptFromString(scriptstring);
 
+
+	// need to reverse the prevOutHashString...
+	CBByteArray* prevOutHash = CBByteArrayCopy(prevOutHashInReverse);
+        CBByteArrayReverseBytes(prevOutHash);
+	CBFreeByteArray(prevOutHashInReverse);
 
 	CBTransactionInput* txinput = CBNewTransactionInput(
 				script,
@@ -92,7 +97,9 @@ char* get_script_from_obj(char* serializedDataString){
 }
 char* get_prevOutHash_from_obj(char* serializedDataString){
 	CBTransactionInput* txinput = serializeddata_to_obj(serializedDataString);
-	CBByteArray* data = txinput->prevOut.hash;
+	CBByteArray* dataInReverse = txinput->prevOut.hash;
+	CBByteArray* data = CBByteArrayCopy(dataInReverse);
+	CBByteArrayReverseBytes(data);
 	char * answer = bytearray_to_hexstring(data,data->length);
 	return answer;
 }

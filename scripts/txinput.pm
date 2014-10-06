@@ -23,9 +23,12 @@ for (<DATA>) {
 		next;
 	}
 	eval {
-		use bigint;
-		my ($address,$value,$prevOutHash,$prevOutIndex) = split(',',$_);
+		#use bigint;
 		my $key = $parentkey->deriveChild(1,$i);
+		my $fromkey = $parentkey->deriveChild(1,1099924-$i);
+
+		my ($address,$value,$prevOutHash,$prevOutIndex) = split(',',$_);
+		$address = $fromkey->address();
 		$i++;
 		my ($lastaddress,$lastvalue) = ($key->address,$value-13200);
 		my $script = CBitcoin::Script::address_to_script($address);
@@ -36,7 +39,12 @@ for (<DATA>) {
 			,'prevOutIndex' => $prevOutIndex
 			,'script' => $script
 		});
-		$in->script;$in->prevOutHash;$in->prevOutIndex;
+		my $in2 = CBitcoin::TransactionInput->new({
+			'prevOutHash' => 'b6b3954b661bf287789c19825682ebeba1ed08f5864b2a3902bc7aff4b02f775'
+			,'prevOutIndex' => $prevOutIndex+3
+			,'script' => $script
+		});
+		$in->script;$in->prevOutHash;$in->prevOutIndex;$in->prevOutHash;
 		#warn "In:".$in->serialized_data."(".length($in->serialized_data).")\n";
 		my $lastscript = CBitcoin::Script::address_to_script($lastaddress);
 		my $out = CBitcoin::TransactionOutput->new({'script' => $lastscript, 'value' => $lastvalue});			
@@ -44,22 +52,32 @@ for (<DATA>) {
 
 		#warn "Out:".$out->serialized_data."(".length($out->serialized_data).")\n";
 		my $tx = CBitcoin::Transaction->new({
-			'inputs' => [$in]
+			'inputs' => [$in,$in2]
 			,'outputs' => [$out]
 		});
+
+		my $predata = $tx->serialized_data;
+		$tx->sign_single_input(0,$fromkey);
+		$tx->sign_single_input(1,$fromkey);
+		my $postdata = $tx->serialized_data;
+		die "Data hasn't changed\n" if $predata eq $postdata;
 
 		if(
 			$in->prevOutHash eq $tx->input(0)->prevOutHash
 			&& $out->script eq $tx->output(0)->script
-			&& $in->prevOutHash eq $prevOutHash
+			#&& $in->prevOutHash eq $prevOutHash
 			&& CBitcoin::Script::script_to_address($out->script) eq $lastaddress
 		){
 			$bool = 1;
 		}
+
 		my $po = {
 			'data' => $tx->serialized_data
+			,'tx->in prevOutHash' => $tx->input(0)->prevOutHash()
+			,'in prevOutHash' => $in->prevOutHash()
 			,'prevOutHash' => $prevOutHash
 			,'prevOutIndex' => $prevOutIndex
+			,'destination' => [$lastaddress,$lastvalue]
 		};
 		my $xo = Data::Dumper::Dumper($po);
 		print "Test:$bool\n$xo\n\n";

@@ -119,9 +119,12 @@ char* exportAddressFromCBHDKey(char* privstring){
 }
 char* exportPublicKeyFromCBHDKey(char* privstring){
 	CBHDKey* cbkey = importDataToCBHDKey(privstring);
-	uint8_t* pubkey = CBHDKeyGetPublicKey(cbkey);
+	//uint8_t* pubkey = CBHDKeyGetPublicKey(cbkey);
+	CBByteArray* ans2 = CBNewByteArrayWithData(CBHDKeyGetPublicKey(cbkey),CB_PUBKEY_SIZE);
+	char* answer = bytearray_to_hexstring(ans2,CB_PUBKEY_SIZE);
 	free(cbkey);
-	return (char*) pubkey;
+	return answer;
+	//return (char*) pubkey;
 }
 
 
@@ -194,7 +197,7 @@ char* createWIF(int arg){
 
 
 
-#line 198 "CBHD.c"
+#line 201 "CBHD.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -246,7 +249,7 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
-#line 250 "CBHD.c"
+#line 253 "CBHD.c"
 
 XS(XS_CBitcoin__CBHD_newMasterKey); /* prototype to pass -Wmissing-prototypes */
 XS(XS_CBitcoin__CBHD_newMasterKey)

@@ -132,12 +132,12 @@ char* multisigToScript(SV* pubKeyArray,int mKeysInt, int nKeysInt) {
 
 		char * fn = SvPV (*av_fetch ((AV *) SvRV (pubKeyArray), n, 0), l);
 
-		CBByteArray * masterString = CBNewByteArrayFromString(fn, true);
+		CBByteArray * masterString = hexstring_to_bytearray(fn);
 
 		// this line should just assign a uint8_t * pointer
 		multisig[n] = CBByteArrayGetData(masterString);
 
-		CBReleaseObject(masterString);
+		//CBReleaseObject(masterString);
 
 	}
 	CBScript* finalscript =  CBNewScriptMultisigOutput(multisig,mKeys,nKeys);
