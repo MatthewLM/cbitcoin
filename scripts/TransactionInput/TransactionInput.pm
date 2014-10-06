@@ -16,7 +16,6 @@ DynaLoader::bootstrap CBitcoin::TransactionInput $CBitcoin::TransactionInput::VE
 
 sub dl_load_flags {0} # Prevent DynaLoader from complaining and croaking
 
-
 sub new {
 	use bigint;
 	my $package = shift;
@@ -26,9 +25,9 @@ sub new {
 	unless(ref($x) eq 'HASH'){
 		return $this;
 	}
-	if(defined $x->{'data'}){
+	if(defined $x->{'data'} && $x->{'data'} =~ m/^([0-9a-zA-Z]+)$/){
 		# we have a tx input which is serialized
-		$this->importSerializedData($x->{'data'});
+		$this->{'data'} = $x->{'data'};
 	
 	}
 	elsif(
@@ -49,14 +48,27 @@ sub new {
 		$this->prevOutHash;
 		$this->prevOutIndex;
 	}
+	else{
+		die "no arguments to create Transaction::Input";
+	}
 
 	return $this;
+}
+
+sub serialized_data {
+	my $this = shift;
+	return $this->{'data'};
 }
 
 sub script {
 	my $this = shift;
 	# this is a C function
 	return get_script_from_obj($this->{'data'});
+}
+
+sub type_of_script {
+	my $this = shift;
+	return CBitcoin::Script::whatTypeOfScript( $this->script );
 }
 
 sub prevOutHash {
@@ -76,5 +88,7 @@ sub sequence {
 	my $this = shift;
 	return get_sequence_from_obj($this->{'data'});
 }
+
+
 
 1;

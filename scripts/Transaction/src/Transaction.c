@@ -193,6 +193,40 @@ char* get_script_from_obj(char* serializedDataString){
 	return scriptstring;
 }
 */
+int get_numOfInputs(char* serializedDataString){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	uint32_t numOfInputs = tx->inputNum;
+	CBFreeTransaction(tx);
+	return (int)numOfInputs;	
+}
+int get_numOfOutputs(char* serializedDataString){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	uint32_t numOfOutputs = tx->outputNum;
+	CBFreeTransaction(tx);
+	return (int)numOfOutputs;
+}
+char* get_Input(char* serializedDataString,int InputIndex){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	CBTransactionInput** inputs = tx->inputs;
+	char* answer = txinput_obj_to_serializeddata(inputs[InputIndex]);
+	CBFreeTransaction(tx);
+	return answer;
+}
+char* get_Output(char* serializedDataString,int OutputIndex){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	CBTransactionOutput** outputs = tx->outputs;
+	char* answer = txoutput_obj_to_serializeddata(outputs[OutputIndex]);
+	CBFreeTransaction(tx);
+	return answer;
+}
+
+char* hash_of_tx(char* serializedDataString){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	CBByteArray * data = CBNewByteArrayWithData(CBTransactionGetHash(tx), (uint32_t)32);
+	CBFreeTransaction(tx);
+	return bytearray_to_hexstring(data,32);
+}
+
 int get_lockTime_from_obj(char* serializedDataString){
 	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
 	uint32_t lockTime = tx->lockTime;

@@ -2,43 +2,71 @@
  use warnings;
  use DBI;
  use Digest::SHA qw(sha256);
+ use CBitcoin::CBHD;
  use CBitcoin::Script;
+ use CBitcoin::Transaction;
  use CBitcoin::TransactionInput;
  use CBitcoin::TransactionOutput;
+ use Data::Dumper;
 print "hello\n";
 
+my @last;
+my $parentkey = CBitcoin::CBHD->new();
+#$parentkey->generate();
+print "Seed:".$parentkey->serialized_data('xprv9s21ZrQH143K31cxYHUBPB5qkjbhJ7X4HpqeM5czartEsaCZ9Vmp46tpq9XnVhHTzmYgLhHF3uDmXaLq9Qsz82PB3Rp3fAqrFHAWXWu9mvE')."\n";
+my $i = 1;
 for (<DATA>) {
 	next if /^#/;
 	chomp;
+	unless(scalar(@last) > 0){
+		@last = split(',',$_);
+		next;
+	}
 	eval {
 		use bigint;
 		my ($address,$value,$prevOutHash,$prevOutIndex) = split(',',$_);
-
+		my $key = $parentkey->deriveChild(1,$i);
+		$i++;
+		my ($lastaddress,$lastvalue) = ($key->address,$value-13200);
 		my $script = CBitcoin::Script::address_to_script($address);
 		#my $newaddress = CBitcoin::Script::script_to_address($script);
-		#my $out = CBitcoin::TransactionOutput->new({'script' => $script, 'value' => $value});
+
 		my $in = CBitcoin::TransactionInput->new({
 			'prevOutHash' => $prevOutHash
 			,'prevOutIndex' => $prevOutIndex
 			,'script' => $script
 		});
-					
-
+		$in->script;$in->prevOutHash;$in->prevOutIndex;
+		#warn "In:".$in->serialized_data."(".length($in->serialized_data).")\n";
+		my $lastscript = CBitcoin::Script::address_to_script($lastaddress);
+		my $out = CBitcoin::TransactionOutput->new({'script' => $lastscript, 'value' => $lastvalue});			
 		my $bool = 0;
+
+		#warn "Out:".$out->serialized_data."(".length($out->serialized_data).")\n";
+		my $tx = CBitcoin::Transaction->new({
+			'inputs' => [$in]
+			,'outputs' => [$out]
+		});
+
 		if(
-			$prevOutHash eq $in->prevOutHash()
-			&& $prevOutIndex eq $in->prevOutIndex()
-			&& $script eq $in->script()
+			$in->prevOutHash eq $tx->input(0)->prevOutHash
+			&& $out->script eq $tx->output(0)->script
+			&& $in->prevOutHash eq $prevOutHash
+			&& CBitcoin::Script::script_to_address($out->script) eq $lastaddress
 		){
 			$bool = 1;
 		}
-
-
-#		$bool = 1 if $script eq $out->script() && $value eq $out->value() && $address eq CBitcoin::Script::script_to_address($out->script());
-		
-		print "Test:($script|$bool)\n";
+		my $po = {
+			'data' => $tx->serialized_data
+			,'prevOutHash' => $prevOutHash
+			,'prevOutIndex' => $prevOutIndex
+		};
+		my $xo = Data::Dumper::Dumper($po);
+		print "Test:$bool\n$xo\n\n";
+		@last = ($address,$value,$prevOutHash,$prevOutIndex);
 	};
 	if($@){ warn "Error:$@";}
+	last;
 }
 
 

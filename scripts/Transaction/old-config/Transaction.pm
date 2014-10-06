@@ -28,6 +28,7 @@ sub dl_load_flags {0} # Prevent DynaLoader from complaining and croaking
 =cut
 
 sub new {
+	use bigint;
 	my $package = shift;
 	my $this = bless({}, $package);
 	$this->{inputs} = [];
@@ -36,17 +37,43 @@ sub new {
 	unless(ref($x) eq 'HASH'){
 		return $this;
 	}
-	if(defined $x->{'data'}){
+	if(defined $x->{'data'} && $x->{'data'} =~ m/^([0-9a-zA-Z]+)$/){
 		# we have a tx input which is serialized
-		$this->importSerializedData($x->{'data'});
-		
+		$this->{'data'} = $x->{'data'};
+		# test to see if the data is valid
 	}
-	else{
+	elsif(
+		defined $x->{'inputs'} && ref($x->{'inputs'}) eq 'ARRAY'
+		&& defined $x->{'outputs'} && ref($x->{'outputs'}) eq 'ARRAY'
+	){
 		# we have the data, let's get the serialized data
 		$x->{'lockTime'} ||= 0;
 		$x->{'version'} ||= 1;
-		$this->lockTime($x->{'lockTime'});
-		$this->version($x->{'version'});
+		my @inputs;
+		foreach my $i1 (@{$x->{'inputs'}}){
+			#warn "Input:".$i1->serialized_data."\n";
+			push(@inputs,$i1->serialized_data);
+		}
+		my @outputs;
+		foreach my $i1 (@{$x->{'outputs'}}){
+			#warn "Output:".$i1->serialized_data."\n";
+			push(@outputs,$i1->serialized_data);
+		}
+		# char* create_tx_obj(int lockTime, int version, SV* inputs, SV* outputs, int numOfInputs, int numOfOutputs){
+		$this->{'data'} = create_tx_obj(
+			$x->{'lockTime'}
+			,$x->{'version'}
+			,\@inputs
+			,\@outputs
+			,scalar(@inputs)
+			,scalar(@outputs)
+		);
+		# make sure the data is properly formatted
+		$this->lockTime();
+		$this->version();
+	}
+	else{
+		die "no arguments to create transaction";
 	}
 	
 	
@@ -58,109 +85,29 @@ sub new {
 
 =cut
 
+sub serialized_data {
+	my $this = shift;
+	return $this->{'data'};
+}
+
 sub lockTime {
 	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	my $x = shift;
-	if($x){
-		# TODO: validation of some sort
-		$this->{lockTime} = $x;
-		return $x;
-	}
-	else{
-		return $this->{lockTime};
-	}	
+	# this is a C function
+	return get_lockTime_from_obj($this->{'data'});
 }
 
 
 sub version {
 	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	my $x = shift;
-	if($x){
-		$this->{version} = $x;
-		return $x;			
-		
-
-	}
-	else{
-		return $this->{version};
-	}	
+	# this is a C function
+	return get_version_from_obj($this->{'data'});
 }
 
-sub serializeddata {
+sub hash {
 	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	my $x = shift;
-	if($x){
-		# TODO
-		$this->{serializeddata} = $x;
-		return $x;
-	}
-	else{
-		unless($this->{serializeddata}){
-			eval{
-				
-			};
-			if($@){
-				warn "We cannot serialize the data yet.\n";
-			}
-		}
-		return $this->{serializeddata};
-	}	
+	return hash_of_tx($this->{'data'});	
 }
-# this serializes the data we have
-sub serializeData {
 
-
-	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	
-	# check to see that we have inputs and outputs
-	unless($this->numOfInputs() > 0 && $this->numOfOutputs() >  0){
-		die "not enough inputs or outputs to serialize this transaction\n";
-	}
-	my @inputs;
-	foreach my $inx (@{$this->{inputs}}){
-		push(@inputs,$inx->serializeddata());	
-	}
-	my @outputs;
-	foreach my $outx (@{$this->{outputs}}){
-		push(@outputs,$outx->serializeddata());	
-	}	
-	# create_tx_obj(int lockTime, int version, SV* inputs, SV* outputs, int numOfInputs, int numOfOutputs)
-	my $data = CBitcoin::Transaction::create_tx_obj(
-		$this->lockTime()
-		,$this->version()
-		,\@inputs
-		,\@outputs
-		,$this->numOfInputs
-		,$this->numOfOutputs
-	);
-	return $this->serializeddata($data);
-	
-}
-# TODO: change the name of this function!!! it does the opposite of its name
-sub deserializeData {
-
-	use bigint;
-
-	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-
-	$this->serializeddata( 
-		CBitcoin::Transaction::create_tx_obj( 
-			$this->lockTime(), 
-			$this->version()
-		)
-	);
-	if(defined $this->serializeddata()){
-		return 1;
-	}
-	else{
-		return 0;
-	}
-}
 
 # signatures....
 =pod
@@ -199,7 +146,7 @@ sub sign_single_input {
 	# find out what type of script we are dealing with
 	# 	p2sh, pubkey, keyhash, multisig
 	my $scripttype = CBitcoin::Script::whatTypeOfScript($prevOutInput->script() );
-	warn "My script:".$prevOutInput->script()."\n";
+	#warn "My script:".$prevOutInput->script()."\n";
 	my $data;
 	if($scripttype eq 'keyhash'){
 		$data = CBitcoin::Transaction::sign_tx_pubkeyhash(
@@ -225,116 +172,40 @@ sub sign_single_input {
 	return $this->serializeddata();
 }
 
-=head2
+=pod
+
 ---++ methods
+
 =cut
-sub addInput {
-	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	my $x = shift;
-	my $y;
-	if(ref($x) eq 'HASH'){
-		# we need script, prevOutHash, prevOutIndex
-		if(
-			$x->{'prevOutHash'}
-			&& $x->{'prevOutIndex'}
-			&& $x->{'script'}
-		){
-			$y = new CBitcoin::TransactionInput($x);	
-		}
-		else{
-			die "hash has insufficient information for use in addTxInput\n";
-		}
-	}
-	elsif(ref($x) eq 'CBitcoin::TransactionInput'){
-		$y = $x;	
-	}
-	else{
-		die "insufficient variables to use addTxInput function\n";
-	}
-	push(@{$this->{inputs}},$y);
-	return scalar(@{$this->{inputs}});	
-}
 
 sub numOfInputs {
 	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	return scalar(@{$this->{inputs}});	
+	return get_numOfInputs($this->{'data'});	
 }
 
 sub input {
 	my $this = shift;
 	my $index = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
 	unless($index =~ m/\d+/ && $index >= 0 && $index < $this->numOfInputs() ){
-		die "index is not an integer\n";
+		die "index is not an integer or in the proper range\n";
 	}
-	return $this->{inputs}->[$index];
-}
-
-sub addOutput {
-	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	my $x = shift;
-	my $y;
-	if(ref($x) eq 'HASH'){
-		# we need script, prevOutHash, prevOutIndex
-		if(
-			$x->{'value'}
-			&& $x->{'script'}
-		){
-			$y = new CBitcoin::TransactionInput($x);	
-		}
-		else{
-			die "hash has insufficient information for use in addOutput\n";
-		}
-	}
-	elsif(ref($x) eq 'CBitcoin::TransactionOutput'){
-		$y = $x;	
-	}
-	else{
-		die "insufficient variables to use addOutput function\n";
-	}
-	push(@{$this->{outputs}},$y);
-	return scalar(@{$this->{outputs}});	
+	# char* get_Input(char* serializedDataString,int InputIndex)
+	return CBitcoin::TransactionInput->new({'data' => get_Input($this->{'data'},$index) });
 }
 
 sub numOfOutputs {
 	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	return scalar(@{$this->{outputs}});	
+	return get_numOfOutputs($this->{'data'});
 }
 
 sub output {
 	my $this = shift;
 	my $index = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
 	unless($index =~ m/\d+/ && $index >= 0 && $index < $this->numOfOutputs() ){
-		die "index is not an integer\n";
+		die "index is not an integer or in the proper range\n";
 	}
-	return $this->{outputs}->[$index];
-}
-
-=head3
----+++ importSerializedData
-Call this when you want the serialized data to be split up, parsed and assigned to other private variables.
-=cut
-sub importSerializedData {
-	my $this = shift;
-	die "not correct Transaction type" unless ref($this) eq 'CBitcoin::Transaction';
-	
-	my $x = shift;
-	
-	if(
-			$this->lockTime(CBitcoin::Transaction::get_lockTime_from_obj($x)	)
-			&& $this->version(CBitcoin::Transaction::get_version_from_obj($x)  )
-		){
-		$this->{serializeddata} = $x;
-		return 1;		
-	}
-	else{
-		return undef;
-	}
+	# char* get_Input(char* serializedDataString,int InputIndex)
+	return CBitcoin::TransactionOutput->new({'data' => get_Output($this->{'data'},$index) });
 }
 
 1;

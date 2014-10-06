@@ -28,26 +28,39 @@ sub new {
 	}
 	if(defined $x->{'data'} && $x->{'data'} =~ m/^([0-9a-zA-Z]+)$/){
 		# we have a tx input which is serialized
-		$this->data($x->{'data'});
+		$this->{'data'} = $x->{'data'};
 		# check if we can set up script and value to make sure that the data is valid
 		$this->script;
 		$this->value;
 	}
 	elsif(
 		defined $x->{'value'} && $x->{'value'} =~ m/^[0-9]+$/
-		&& defined $x->{'script'} && $x->{'script'} =~ m/^$/
+		&& defined $x->{'script'} 
 	){
 		# call this function to validate the data, and get serialized data back
 		# this is a C function
 		$this->{'data'} = create_txoutput_obj($x->{'script'},$x->{'value'});
 	}
+	else{
+		die "no arguments to create Transaction::Output";
+	}
 		
 	return $this;
+}
+
+sub serialized_data {
+	my $this = shift;
+	return $this->{'data'};
 }
 
 sub script {
 	my $this = shift;
 	return get_script_from_obj($this->{'data'});
+}
+
+sub type_of_script {
+	my $this = shift;
+	return CBitcoin::Script::whatTypeOfScript( $this->script );
 }
 
 sub value {

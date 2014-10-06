@@ -206,6 +206,40 @@ char* get_script_from_obj(char* serializedDataString){
 	return scriptstring;
 }
 */
+int get_numOfInputs(char* serializedDataString){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	uint32_t numOfInputs = tx->inputNum;
+	CBFreeTransaction(tx);
+	return (int)numOfInputs;	
+}
+int get_numOfOutputs(char* serializedDataString){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	uint32_t numOfOutputs = tx->outputNum;
+	CBFreeTransaction(tx);
+	return (int)numOfOutputs;
+}
+char* get_Input(char* serializedDataString,int InputIndex){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	CBTransactionInput** inputs = tx->inputs;
+	char* answer = txinput_obj_to_serializeddata(inputs[InputIndex]);
+	CBFreeTransaction(tx);
+	return answer;
+}
+char* get_Output(char* serializedDataString,int OutputIndex){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	CBTransactionOutput** outputs = tx->outputs;
+	char* answer = txoutput_obj_to_serializeddata(outputs[OutputIndex]);
+	CBFreeTransaction(tx);
+	return answer;
+}
+
+char* hash_of_tx(char* serializedDataString){
+	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
+	CBByteArray * data = CBNewByteArrayWithData(CBTransactionGetHash(tx), (uint32_t)32);
+	CBFreeTransaction(tx);
+	return bytearray_to_hexstring(data,32);
+}
+
 int get_lockTime_from_obj(char* serializedDataString){
 	CBTransaction* tx = serializeddata_to_obj(serializedDataString);
 	uint32_t lockTime = tx->lockTime;
@@ -318,7 +352,7 @@ char* sign_tx_multisig(char* txString, char* keypairString, char* prevOutSubScri
 }
 
 
-#line 322 "Transaction.c"
+#line 356 "Transaction.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -370,7 +404,7 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
-#line 374 "Transaction.c"
+#line 408 "Transaction.c"
 
 XS(XS_CBitcoin__Transaction_create_tx_obj); /* prototype to pass -Wmissing-prototypes */
 XS(XS_CBitcoin__Transaction_create_tx_obj)
@@ -393,6 +427,118 @@ XS(XS_CBitcoin__Transaction_create_tx_obj)
 	dXSTARG;
 
 	RETVAL = create_tx_obj(lockTime, version, inputs, outputs, numOfInputs, numOfOutputs);
+	sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
+    }
+    XSRETURN(1);
+}
+
+
+XS(XS_CBitcoin__Transaction_get_numOfInputs); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin__Transaction_get_numOfInputs)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 1)
+       croak_xs_usage(cv,  "serializedDataString");
+    {
+	char *	serializedDataString = (char *)SvPV_nolen(ST(0));
+	int	RETVAL;
+	dXSTARG;
+
+	RETVAL = get_numOfInputs(serializedDataString);
+	XSprePUSH; PUSHi((IV)RETVAL);
+    }
+    XSRETURN(1);
+}
+
+
+XS(XS_CBitcoin__Transaction_get_numOfOutputs); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin__Transaction_get_numOfOutputs)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 1)
+       croak_xs_usage(cv,  "serializedDataString");
+    {
+	char *	serializedDataString = (char *)SvPV_nolen(ST(0));
+	int	RETVAL;
+	dXSTARG;
+
+	RETVAL = get_numOfOutputs(serializedDataString);
+	XSprePUSH; PUSHi((IV)RETVAL);
+    }
+    XSRETURN(1);
+}
+
+
+XS(XS_CBitcoin__Transaction_get_Input); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin__Transaction_get_Input)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 2)
+       croak_xs_usage(cv,  "serializedDataString, InputIndex");
+    {
+	char *	serializedDataString = (char *)SvPV_nolen(ST(0));
+	int	InputIndex = (int)SvIV(ST(1));
+	char *	RETVAL;
+	dXSTARG;
+
+	RETVAL = get_Input(serializedDataString, InputIndex);
+	sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
+    }
+    XSRETURN(1);
+}
+
+
+XS(XS_CBitcoin__Transaction_get_Output); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin__Transaction_get_Output)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 2)
+       croak_xs_usage(cv,  "serializedDataString, OutputIndex");
+    {
+	char *	serializedDataString = (char *)SvPV_nolen(ST(0));
+	int	OutputIndex = (int)SvIV(ST(1));
+	char *	RETVAL;
+	dXSTARG;
+
+	RETVAL = get_Output(serializedDataString, OutputIndex);
+	sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
+    }
+    XSRETURN(1);
+}
+
+
+XS(XS_CBitcoin__Transaction_hash_of_tx); /* prototype to pass -Wmissing-prototypes */
+XS(XS_CBitcoin__Transaction_hash_of_tx)
+{
+#ifdef dVAR
+    dVAR; dXSARGS;
+#else
+    dXSARGS;
+#endif
+    if (items != 1)
+       croak_xs_usage(cv,  "serializedDataString");
+    {
+	char *	serializedDataString = (char *)SvPV_nolen(ST(0));
+	char *	RETVAL;
+	dXSTARG;
+
+	RETVAL = hash_of_tx(serializedDataString);
 	sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
     }
     XSRETURN(1);
@@ -519,6 +665,11 @@ XS(boot_CBitcoin__Transaction)
     XS_VERSION_BOOTCHECK ;
 
         newXS("CBitcoin::Transaction::create_tx_obj", XS_CBitcoin__Transaction_create_tx_obj, file);
+        newXS("CBitcoin::Transaction::get_numOfInputs", XS_CBitcoin__Transaction_get_numOfInputs, file);
+        newXS("CBitcoin::Transaction::get_numOfOutputs", XS_CBitcoin__Transaction_get_numOfOutputs, file);
+        newXS("CBitcoin::Transaction::get_Input", XS_CBitcoin__Transaction_get_Input, file);
+        newXS("CBitcoin::Transaction::get_Output", XS_CBitcoin__Transaction_get_Output, file);
+        newXS("CBitcoin::Transaction::hash_of_tx", XS_CBitcoin__Transaction_hash_of_tx, file);
         newXS("CBitcoin::Transaction::get_lockTime_from_obj", XS_CBitcoin__Transaction_get_lockTime_from_obj, file);
         newXS("CBitcoin::Transaction::get_version_from_obj", XS_CBitcoin__Transaction_get_version_from_obj, file);
         newXS("CBitcoin::Transaction::sign_tx_pubkeyhash", XS_CBitcoin__Transaction_sign_tx_pubkeyhash, file);
