@@ -67,8 +67,13 @@ $tx = CBitcoin::Transaction::->new({
 		CBitcoin::TransactionInput::->new({
 			'prevOutHash' => '06e595b5fe42b820f7c9762e8dd8fce26bcd83d7a48b184c0017bf49b6f0b5ad'
 			,'prevOutIndex' => 1
-			,'script' => CBitcoin::Script::pubkeys_to_multisig_script(\@arraypubkeys,$m).'VERIFY'
+			,'script' => CBitcoin::Script::pubkeys_to_multisig_script(\@arraypubkeys,$m)
 		})
+		,CBitcoin::TransactionInput::->new({
+                        'prevOutHash' => '06e595b5fe42b820f7c9762e8dd8fce26bcd83d7a48b184c0017bf49b6f0b5ad'
+                        ,'prevOutIndex' => 1
+                        ,'script' => CBitcoin::Script::pubkeys_to_multisig_script(\@arraypubkeys,$m)
+                })
 	]
 	,'outputs' => [
 		$output
@@ -79,13 +84,15 @@ $data = $tx->serialized_data();
 print "Unsigned Transaction Data:$data\n";
 
 # sign with enough keys to validate the transaction
-foreach my $i (0..($m-1)){
-	my $childkey = $parentkey->deriveChild(1,$i+1);
+my $index = 0;
+foreach my $i (@arraypubkeys){
+	my $childkey = $i;#$parentkey->deriveChild(1,$i+1);
 	print "Ref:".ref($childkey)."\n";
-	print "Address $i:".$childkey->address()."\n";
-	$txdata = $tx->sign_single_input(0,$childkey);
+	print "Address $index:".$childkey->address()."\n";
+	$txdata = $tx->sign_single_input($index,$childkey);
 	die "no tx data\n" unless $txdata;
 	print "Latest:$txdata\n";
+	$index++;
 }
 
 __END__

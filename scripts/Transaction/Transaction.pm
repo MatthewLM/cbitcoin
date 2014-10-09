@@ -153,11 +153,12 @@ sub sign_single_input {
 	
 	# find out what type of script we are dealing with
 	# 	p2sh, pubkey, keyhash, multisig
-	my $scripttype = CBitcoin::Script::whatTypeOfScript($prevOutInput->script() );
+	#my $scripttype = CBitcoin::Script::whatTypeOfScript($prevOutInput->script() );
+	my $script = $prevOutInput->script();
 	#warn "My script:".$prevOutInput->script()."\n";
 	my $data;
 
-	if($scripttype eq 'keyhash'){
+	if($script =~ m/OP_HASH160/){
 		$data = CBitcoin::Transaction::sign_tx_pubkeyhash(
 			$this->serialized_data()
 			,$keypair->serialized_data()
@@ -166,7 +167,7 @@ sub sign_single_input {
 			,'CB_SIGHASH_ALL'
 		);
 	}
-	elsif($scripttype eq 'multisig'){
+	elsif($script =~ m/OP_CHECKMULTISIG/ || $script =~ m/OP_CHECKMULTISIGVERIFY/ ){
 		# do multisig 
 		$data = CBitcoin::Transaction::sign_tx_multisig(
 			$this->serialized_data()
