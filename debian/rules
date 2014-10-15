@@ -18,7 +18,7 @@ build:
 
 clean:
 #	$(checkdir)
-	rm -rf build bin debian/cbitcoin/* debian/cbitcoin-lib/* debian/cbitcoin-dev/*
+	rm -rf build bin debian/cbitcoin/*
 #	-$(MAKE) -i distclean
 #	rm -rf *~ debian/tmp debian/*~ debian/files* debian/substvars
 
@@ -31,11 +31,11 @@ binary-indep:	checkroot build
 binary-arch:	checkroot build
 #	$(checkdir)
 	[ -d debian/cbitcoin/usr/bin ] || mkdir -p debian/cbitcoin/usr/bin
-	[ -d debian/cbitcoin-lib/usr/lib ] || mkdir -p debian/cbitcoin-lib/usr/lib
-	[ -d debian/cbitcoin-dev/usr/include ] || mkdir -p debian/cbitcoin-dev/usr/include
+	[ -d debian/cbitcoin/usr/lib ] || mkdir -p debian/cbitcoin/usr/lib
+	[ -d debian/cbitcoin/usr/include ] || mkdir -p debian/cbitcoin/usr/include
 	cp bin/cbitcoin debian/cbitcoin/usr/bin/cbitcoin
-	cp bin/lib*so debian/cbitcoin-lib/usr/lib/
-	cp library/include/*.h debian/cbitcoin-dev/usr/include
+	cp bin/lib*so debian/cbitcoin/usr/lib/
+	cp library/include/*.h debian/cbitcoin/usr/include
 #	rm -rf debian/tmp
 #	install -d debian/tmp/DEBIAN\
 #		-d debian/tmp/usr/share/doc/$(package)\
