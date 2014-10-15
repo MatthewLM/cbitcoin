@@ -1,5 +1,5 @@
-cbitcoin (0.01-1) unstable; urgency=low
+cbitoin (0.01-1) unstable; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * This is the initial commit.
 
- -- Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>  Wed, 15 Oct 2014 14:41:36 +0900
+ -- Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp> Tue, 15 Feb 2011 02:24:40 -0700

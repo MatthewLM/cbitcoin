@@ -13,11 +13,12 @@ export DH_VERBOSE=1
 build:
 #	$(checkdir)
 	./configure 
-	$(MAKE)
+	make
+	make test
 
 clean:
 #	$(checkdir)
-	rm -f build bin
+	rm -rf build bin debian/cbitcoin/* debian/cbitcoin-lib/* debian/cbitcoin-dev/*
 #	-$(MAKE) -i distclean
 #	rm -rf *~ debian/tmp debian/*~ debian/files* debian/substvars
 
