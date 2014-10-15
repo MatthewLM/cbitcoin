@@ -1,0 +1,23 @@
+Source: cbitcoin
+Priority: extra
+Maintainer: Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.3
+Section: libs
+Homepage: https://github.com/MatthewLM/cbitcoin/
+Vcs-Git: git://github.com/MatthewLM/cbitcoin/
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/cbitcoin.git;a=summary
+
+Package: cbitcoin-dev
+Section: libdevel
+Architecture: any
+Depends: cbitcoin-lib (= ${binary:Version})
+Description: Header files to compile stuff.
+ Install this in order to properly install perl modules.
+
+Package: cbitcoin-lib
+Section: libs
+Architecture: any
+Depends: debhelper (>= 8.0.0)
+Description: Contains libraries
+ This package is needed to run cbitcoin.
