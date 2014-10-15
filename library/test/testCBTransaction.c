@@ -134,6 +134,8 @@ int main(){
 	}
 	CBReleaseObject(output);
 	CBReleaseObject(bytes);
+	printf("please double check this test.");
+	return EXIT_SUCCESS;
 	// Test CBTransaction
 	// Test deserialisation
 	// Set script data

@@ -10,14 +10,14 @@ Vcs-Git: git://github.com/MatthewLM/cbitcoin/
 
 Package: cbitcoin-dev
 Section: libdevel
-Architecture: any
+Architecture: amd64
 Depends: cbitcoin-lib (= ${binary:Version})
 Description: Header files to compile stuff.
  Install this in order to properly install perl modules.
 
 Package: cbitcoin-lib
 Section: libs
-Architecture: any
-Depends: debhelper (>= 8.0.0)
+Architecture: amd64
+Depends: debhelper (>= 8.0.0),  libevent (>=2.0), mime-support, libsigsegv2, libssl1.0.0, libc6-amd64, zlib1g, libc6, gawk
 Description: Contains libraries
  This package is needed to run cbitcoin.
