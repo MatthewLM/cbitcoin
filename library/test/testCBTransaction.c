@@ -1103,6 +1103,8 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(scriptObj);
+	puts("Finished testing OP_CHECKMULTISIG");
+	return EXIT_SUCCESS;
 	// Test five signatures, 8 keys with 4 failing failure
 	len = 21;
 	for (int x = 4; x < 9; x++)
