@@ -23,7 +23,7 @@ ifndef OSTYPE
   #export OSTYPE
 endif
 
-LIBRARY_VERSION = 2.0
+LIBRARY_VERSION = 2.00
 
 ifeq ($(OSTYPE), darwin)
 	LFLAGS += -flat_namespace -dynamiclib -undefined dynamic_lookup
@@ -280,3 +280,7 @@ bin/noLowerAddressGenerator: bin/%: build/%.o
 $(EXAMPLE_OBJS): build/%.o: examples/%.c library
 	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
 	
+install: all
+	cp $(CURDIR)/bin/cbitcoin /usr/bin/cbitcoin
+	cp $(CURDIR)/bin/lib*so /usr/lib/
+	cp $(CURDIR)/library/include/*.h /usr/include/
