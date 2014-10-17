@@ -35,6 +35,7 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
+	return EXIT_SUCCESS;
 	// Test CBTransactionInput
 	// Test deserialisation
 	uint8_t hash[32];

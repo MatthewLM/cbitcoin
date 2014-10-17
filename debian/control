@@ -1,0 +1,15 @@
+Source: cbitcoin
+Section: libdevel
+Priority: extra
+Maintainer: Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, libevent-2.0-5, mime-support, libsigsegv2, libssl1.0.0, zlib1g, libc6, gawk
+Standards-Version: 3.9.3
+Homepage: https://github.com/MatthewLM/cbitcoin
+#Vcs-Git: git://git.debian.org/collab-maint/cbitcoin.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/cbitcoin.git;a=summary
+
+Package: cbitcoin
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Do bitcoin crypto with this
+ Do bitcoin crypto with this, longer description needed.

@@ -1,0 +1,3 @@
+dh_autotools-dev_updateconfig
+dh_auto_configure
+dh_auto_build
