@@ -13,3 +13,4 @@ socketdebug/
 databaseprofile/
 *.sw*
 *tags
+.project

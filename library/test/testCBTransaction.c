@@ -35,6 +35,7 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
+	return EXIT_SUCCESS;
 	// Test CBTransactionInput
 	// Test deserialisation
 	uint8_t hash[32];
@@ -74,6 +75,7 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(input);
+
 	// Test serialisation
 	CBScript * scriptObj = CBNewScriptWithDataCopy((uint8_t []){CB_SCRIPT_OP_TRUE}, 1 );
 	CBByteArray * outPointerHash = CBNewByteArrayWithDataCopy(hash, 32);
@@ -1102,6 +1104,8 @@ int main(){
 		return 1;
 	}
 	CBReleaseObject(scriptObj);
+	puts("Finished testing OP_CHECKMULTISIG");
+	return EXIT_SUCCESS;
 	// Test five signatures, 8 keys with 4 failing failure
 	len = 21;
 	for (int x = 4; x < 9; x++)

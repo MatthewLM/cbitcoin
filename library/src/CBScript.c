@@ -518,7 +518,7 @@ bool CBInitScriptFromString(CBScript * self, char * string){
 }
 
 void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, uint8_t n){
-	CBInitByteArrayOfSize(self, 2 + n*(1 + CB_PUBKEY_SIZE));
+	CBInitByteArrayOfSize(self, 3 + n*(1 + CB_PUBKEY_SIZE));
 	CBByteArraySetByte(self, 0, CB_SCRIPT_OP_1 + m - 1);
 	uint16_t cursor = 1;
 	for (uint8_t x = 0; x < n; x++, cursor += CB_PUBKEY_SIZE + 1) {
@@ -526,6 +526,10 @@ void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, 
 		CBByteArraySetBytes(self, cursor + 1, pubKeys[x], CB_PUBKEY_SIZE);
 	}
 	CBByteArraySetByte(self, cursor, CB_SCRIPT_OP_1 + n - 1);
+
+	cursor+=1;
+	CBByteArraySetByte(self, cursor, CB_SCRIPT_OP_CHECKMULTISIG);
+
 }
 
 void CBInitScriptP2SHOutput(CBScript * self, CBScript * script){

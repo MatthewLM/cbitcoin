@@ -11,6 +11,7 @@
 
 # Setup
 
+prefix=$(CURDIR)/debian/cbitcoin/usr
 INCDIR = $(CURDIR)/library/include
 BINDIR = $(CURDIR)/bin
 INCCLIENT = -I/$(CURDIR)/client-server/include
@@ -23,7 +24,7 @@ ifndef OSTYPE
   #export OSTYPE
 endif
 
-LIBRARY_VERSION = 2.0
+LIBRARY_VERSION = 2.00
 
 ifeq ($(OSTYPE), darwin)
 	LFLAGS += -flat_namespace -dynamiclib -undefined dynamic_lookup
@@ -280,3 +281,10 @@ bin/noLowerAddressGenerator: bin/%: build/%.o
 $(EXAMPLE_OBJS): build/%.o: examples/%.c library
 	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
 	
+install:
+	install -m 0755 $(BINDIR)/cbitcoin $(prefix)/bin
+	install -m 0644 $(BINDIR)/lib*so $(prefix)/lib
+	install -m 0644 $(INCDIR)/*.h $(prefix)/include
+#	cp $(CURDIR)/bin/cbitcoin /usr/bin/cbitcoin
+#	cp $(CURDIR)/bin/lib*so /usr/lib/
+#	cp $(CURDIR)/library/include/*.h /usr/include/
