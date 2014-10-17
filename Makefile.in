@@ -280,7 +280,7 @@ bin/noLowerAddressGenerator: bin/%: build/%.o
 $(EXAMPLE_OBJS): build/%.o: examples/%.c library
 	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
 	
-install: all
+install:
 	cp $(CURDIR)/bin/cbitcoin /usr/bin/cbitcoin
 	cp $(CURDIR)/bin/lib*so /usr/lib/
 	cp $(CURDIR)/library/include/*.h /usr/include/
