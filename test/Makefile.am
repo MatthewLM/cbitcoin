@@ -1,4 +1,4 @@
-INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include -I.
+INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include -DTEST_SRCDIR=\"$(top_srcdir)/test\"
 
 EXTRA_DIST = scriptCases.txt
 
