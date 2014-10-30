@@ -1,5 +1,5 @@
-cbitcoin (0.01-1) unstable; urgency=low
+cbitcoin (2.0-1) unstable; urgency=low
 
-  * This is the initial commit.
+  * Initial release (Closes: #1)
 
- -- Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>  Wed, 15 Oct 2014 12:24:40 +0900
+ -- Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>  Sat, 25 Oct 2014 02:30:55 +0900

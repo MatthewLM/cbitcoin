@@ -1,17 +1,77 @@
 Source: cbitcoin
-Priority: unstable
+Priority: extra
 Maintainer: Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev,  libevent-2.0-5, mime-support, libsigsegv2, libssl1.0.0, libc6-amd64:i386, zlib1g, libc6, gawk
-Standards-Version: 0.01
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.3
 Section: libs
-Homepage: https://github.com/MatthewLM/cbitcoin/
-Vcs-Git: git://github.com/MatthewLM/cbitcoin/
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/cbitcoin.git;a=summary
+Homepage: https://e-flamingo.jp
 
-Package: cbitcoin
+Package: libcbitcoin-dev
 Section: libdevel
-Architecture: amd64
-Depends: gawk
-Description: Header files to compile stuff.
- Install this in order to properly install perl modules.
+Architecture: any
+Depends: libcbitcoin2 (= ${binary:Version})
+Description: Headers for cbitcoin based programs.
+ This program only contains headers.
 
+Package: libcbitcoin2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-file-ec2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-storage2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-threads2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-network2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-crypto2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-logging2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-file-no-ec2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.
+
+Package: libcbitcoin-rand2
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Use cbitcoin functions
+ Compile against cbitcoin libraries.

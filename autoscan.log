@@ -1,0 +1,20 @@
+autoscan: warning: missing AC_CHECK_FUNCS([gettimeofday]) wanted by: 
+	client-server/src/main.c:56
+	test/testCBNetworkCommunicator.c:47
+	test/testCBAddressManager.c:33
+	test/testCBDatabase.c:23
+	test/testCBHeadersOnlyValidator.c:65
+	test/testCBAccounter.c:32
+	test/testCBNodeFull.c:75
+	test/testCBFullValidator.c:73
+autoscan: warning: missing AC_PROG_CXX wanted by: 
+	ltmain.sh:960
+	ltmain.sh:1380
+	ltmain.sh:1383
+	ltmain.sh:1388
+	ltmain.sh:1388
+	ltmain.sh:1398
+	ltmain.sh:1402
+	ltmain.sh:1405
+	ltmain.sh:1405
+	ltmain.sh:2442

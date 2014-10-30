@@ -13,3 +13,7 @@ socketdebug/
 databaseprofile/
 *.sw*
 *tags
+.project
+.settings
+.dep
+.libs
