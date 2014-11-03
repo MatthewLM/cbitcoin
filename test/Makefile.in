@@ -15,6 +15,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 am__make_dryrun = \
   { \
@@ -51,8 +52,32 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = testCBAccounter$(EXEEXT)
-TESTS = testCBAccounter$(EXEEXT)
+noinst_PROGRAMS = testCBByteArray$(EXEEXT) testCBBase58$(EXEEXT) \
+	testCBNetworkCommunicator$(EXEEXT) testCBGetBlocks$(EXEEXT) \
+	testCBAddressBroadcast$(EXEEXT) testValidation$(EXEEXT) \
+	testCBVersion$(EXEEXT) testCBAddress$(EXEEXT) \
+	testCBAddressManager$(EXEEXT) testCBDatabase$(EXEEXT) \
+	testCBTransaction$(EXEEXT) testCBInventory$(EXEEXT) \
+	testCBBlockHeaders$(EXEEXT) testCBScript$(EXEEXT) \
+	testCBHeadersOnlyValidator$(EXEEXT) \
+	testCBCallbackQueue$(EXEEXT) testCBAccounter$(EXEEXT) \
+	testCBNodeFull$(EXEEXT) testCBHDKeys$(EXEEXT) \
+	testCBBigInt$(EXEEXT) testCBAlert$(EXEEXT) testCBFile$(EXEEXT) \
+	testCBBlock$(EXEEXT) testCBFullValidator$(EXEEXT) \
+	testCBAssociativeArray$(EXEEXT) testCBHamming72$(EXEEXT)
+TESTS = testCBByteArray$(EXEEXT) testCBBase58$(EXEEXT) \
+	testCBNetworkCommunicator$(EXEEXT) testCBGetBlocks$(EXEEXT) \
+	testCBAddressBroadcast$(EXEEXT) testValidation$(EXEEXT) \
+	testCBVersion$(EXEEXT) testCBAddress$(EXEEXT) \
+	testCBAddressManager$(EXEEXT) testCBDatabase$(EXEEXT) \
+	testCBTransaction$(EXEEXT) testCBInventory$(EXEEXT) \
+	testCBBlockHeaders$(EXEEXT) testCBScript$(EXEEXT) \
+	testCBHeadersOnlyValidator$(EXEEXT) \
+	testCBCallbackQueue$(EXEEXT) testCBAccounter$(EXEEXT) \
+	testCBNodeFull$(EXEEXT) testCBHDKeys$(EXEEXT) \
+	testCBBigInt$(EXEEXT) testCBAlert$(EXEEXT) testCBFile$(EXEEXT) \
+	testCBBlock$(EXEEXT) testCBFullValidator$(EXEEXT) \
+	testCBAssociativeArray$(EXEEXT) testCBHamming72$(EXEEXT)
 subdir = test
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -62,10 +87,106 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+libtest_a_AR = $(AR) $(ARFLAGS)
+libtest_a_LIBADD =
+am_libtest_a_OBJECTS = testCBByteArray.$(OBJEXT) \
+	testCBBase58.$(OBJEXT) testCBNetworkCommunicator.$(OBJEXT) \
+	testCBGetBlocks.$(OBJEXT) testCBAddressBroadcast.$(OBJEXT) \
+	testValidation.$(OBJEXT) testCBVersion.$(OBJEXT) \
+	testCBAddress.$(OBJEXT) testCBAddressManager.$(OBJEXT) \
+	testCBDatabase.$(OBJEXT) testCBTransaction.$(OBJEXT) \
+	testCBInventory.$(OBJEXT) testCBBlockHeaders.$(OBJEXT) \
+	testCBScript.$(OBJEXT) testCBHeadersOnlyValidator.$(OBJEXT) \
+	testCBCallbackQueue.$(OBJEXT) testCBAccounter.$(OBJEXT) \
+	testCBNodeFull.$(OBJEXT) testCBHDKeys.$(OBJEXT) \
+	testCBBigInt.$(OBJEXT) testCBAlert.$(OBJEXT) \
+	testCBFile.$(OBJEXT) testCBBlock.$(OBJEXT) \
+	testCBFullValidator.$(OBJEXT) testCBAssociativeArray.$(OBJEXT) \
+	testCBHamming72.$(OBJEXT)
+libtest_a_OBJECTS = $(am_libtest_a_OBJECTS)
 PROGRAMS = $(noinst_PROGRAMS)
-am_testCBAccounter_OBJECTS = testCBAccounter.$(OBJEXT)
-testCBAccounter_OBJECTS = $(am_testCBAccounter_OBJECTS)
-testCBAccounter_DEPENDENCIES =
+testCBAccounter_SOURCES = testCBAccounter.c
+testCBAccounter_OBJECTS = testCBAccounter.$(OBJEXT)
+testCBAccounter_DEPENDENCIES = $(COMMON_LDADD)
+testCBAddress_SOURCES = testCBAddress.c
+testCBAddress_OBJECTS = testCBAddress.$(OBJEXT)
+testCBAddress_DEPENDENCIES = $(COMMON_LDADD)
+testCBAddressBroadcast_SOURCES = testCBAddressBroadcast.c
+testCBAddressBroadcast_OBJECTS = testCBAddressBroadcast.$(OBJEXT)
+testCBAddressBroadcast_DEPENDENCIES = $(COMMON_LDADD)
+testCBAddressManager_SOURCES = testCBAddressManager.c
+testCBAddressManager_OBJECTS = testCBAddressManager.$(OBJEXT)
+testCBAddressManager_DEPENDENCIES = $(COMMON_LDADD)
+testCBAlert_SOURCES = testCBAlert.c
+testCBAlert_OBJECTS = testCBAlert.$(OBJEXT)
+testCBAlert_DEPENDENCIES = $(COMMON_LDADD)
+testCBAssociativeArray_SOURCES = testCBAssociativeArray.c
+testCBAssociativeArray_OBJECTS = testCBAssociativeArray.$(OBJEXT)
+testCBAssociativeArray_DEPENDENCIES = $(COMMON_LDADD)
+testCBBase58_SOURCES = testCBBase58.c
+testCBBase58_OBJECTS = testCBBase58.$(OBJEXT)
+testCBBase58_DEPENDENCIES = $(COMMON_LDADD)
+testCBBigInt_SOURCES = testCBBigInt.c
+testCBBigInt_OBJECTS = testCBBigInt.$(OBJEXT)
+testCBBigInt_DEPENDENCIES = $(COMMON_LDADD)
+testCBBlock_SOURCES = testCBBlock.c
+testCBBlock_OBJECTS = testCBBlock.$(OBJEXT)
+testCBBlock_DEPENDENCIES = $(COMMON_LDADD)
+testCBBlockHeaders_SOURCES = testCBBlockHeaders.c
+testCBBlockHeaders_OBJECTS = testCBBlockHeaders.$(OBJEXT)
+testCBBlockHeaders_DEPENDENCIES = $(COMMON_LDADD)
+testCBByteArray_SOURCES = testCBByteArray.c
+testCBByteArray_OBJECTS = testCBByteArray.$(OBJEXT)
+testCBByteArray_DEPENDENCIES = $(COMMON_LDADD)
+testCBCallbackQueue_SOURCES = testCBCallbackQueue.c
+testCBCallbackQueue_OBJECTS = testCBCallbackQueue.$(OBJEXT)
+testCBCallbackQueue_DEPENDENCIES = $(COMMON_LDADD)
+testCBDatabase_SOURCES = testCBDatabase.c
+testCBDatabase_OBJECTS = testCBDatabase.$(OBJEXT)
+testCBDatabase_DEPENDENCIES = $(COMMON_LDADD)
+testCBFile_SOURCES = testCBFile.c
+testCBFile_OBJECTS = testCBFile.$(OBJEXT)
+testCBFile_DEPENDENCIES = $(COMMON_LDADD)
+testCBFullValidator_SOURCES = testCBFullValidator.c
+testCBFullValidator_OBJECTS = testCBFullValidator.$(OBJEXT)
+testCBFullValidator_DEPENDENCIES = $(COMMON_LDADD)
+testCBGetBlocks_SOURCES = testCBGetBlocks.c
+testCBGetBlocks_OBJECTS = testCBGetBlocks.$(OBJEXT)
+testCBGetBlocks_DEPENDENCIES = $(COMMON_LDADD)
+testCBHDKeys_SOURCES = testCBHDKeys.c
+testCBHDKeys_OBJECTS = testCBHDKeys.$(OBJEXT)
+testCBHDKeys_DEPENDENCIES = $(COMMON_LDADD)
+testCBHamming72_SOURCES = testCBHamming72.c
+testCBHamming72_OBJECTS = testCBHamming72.$(OBJEXT)
+testCBHamming72_DEPENDENCIES = $(COMMON_LDADD)
+testCBHeadersOnlyValidator_SOURCES = testCBHeadersOnlyValidator.c
+testCBHeadersOnlyValidator_OBJECTS =  \
+	testCBHeadersOnlyValidator.$(OBJEXT)
+testCBHeadersOnlyValidator_DEPENDENCIES = $(COMMON_LDADD)
+testCBInventory_SOURCES = testCBInventory.c
+testCBInventory_OBJECTS = testCBInventory.$(OBJEXT)
+testCBInventory_DEPENDENCIES = $(COMMON_LDADD)
+testCBNetworkCommunicator_SOURCES = testCBNetworkCommunicator.c
+testCBNetworkCommunicator_OBJECTS =  \
+	testCBNetworkCommunicator.$(OBJEXT)
+testCBNetworkCommunicator_DEPENDENCIES = $(COMMON_LDADD)
+testCBNodeFull_SOURCES = testCBNodeFull.c
+testCBNodeFull_OBJECTS = testCBNodeFull.$(OBJEXT)
+testCBNodeFull_DEPENDENCIES = $(COMMON_LDADD)
+testCBScript_SOURCES = testCBScript.c
+testCBScript_OBJECTS = testCBScript.$(OBJEXT)
+testCBScript_DEPENDENCIES = $(COMMON_LDADD)
+testCBTransaction_SOURCES = testCBTransaction.c
+testCBTransaction_OBJECTS = testCBTransaction.$(OBJEXT)
+testCBTransaction_DEPENDENCIES = $(COMMON_LDADD)
+testCBVersion_SOURCES = testCBVersion.c
+testCBVersion_OBJECTS = testCBVersion.$(OBJEXT)
+testCBVersion_DEPENDENCIES = $(COMMON_LDADD)
+testValidation_SOURCES = testValidation.c
+testValidation_OBJECTS = testValidation.$(OBJEXT)
+testValidation_DEPENDENCIES = $(COMMON_LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -79,8 +200,26 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(testCBAccounter_SOURCES)
-DIST_SOURCES = $(testCBAccounter_SOURCES)
+SOURCES = $(libtest_a_SOURCES) testCBAccounter.c testCBAddress.c \
+	testCBAddressBroadcast.c testCBAddressManager.c testCBAlert.c \
+	testCBAssociativeArray.c testCBBase58.c testCBBigInt.c \
+	testCBBlock.c testCBBlockHeaders.c testCBByteArray.c \
+	testCBCallbackQueue.c testCBDatabase.c testCBFile.c \
+	testCBFullValidator.c testCBGetBlocks.c testCBHDKeys.c \
+	testCBHamming72.c testCBHeadersOnlyValidator.c \
+	testCBInventory.c testCBNetworkCommunicator.c testCBNodeFull.c \
+	testCBScript.c testCBTransaction.c testCBVersion.c \
+	testValidation.c
+DIST_SOURCES = $(libtest_a_SOURCES) testCBAccounter.c testCBAddress.c \
+	testCBAddressBroadcast.c testCBAddressManager.c testCBAlert.c \
+	testCBAssociativeArray.c testCBBase58.c testCBBigInt.c \
+	testCBBlock.c testCBBlockHeaders.c testCBByteArray.c \
+	testCBCallbackQueue.c testCBDatabase.c testCBFile.c \
+	testCBFullValidator.c testCBGetBlocks.c testCBHDKeys.c \
+	testCBHamming72.c testCBHeadersOnlyValidator.c \
+	testCBInventory.c testCBNetworkCommunicator.c testCBNodeFull.c \
+	testCBScript.c testCBTransaction.c testCBVersion.c \
+	testValidation.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -210,9 +349,70 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-testCBAccounter_SOURCES = $(libcbitcoin_la_SOURCES) testCBAccounter.c
-#testCBAccounter_CFLAGS = $(libcbitcoin_la_SOURCES)
-testCBAccounter_LDADD = $(libcbitcoin_la_LDADD)
+INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/test\" -I$(top_srcdir)/include
+EXTRA_DIST = scriptCases.txt 
+noinst_LIBRARIES = libtest.a
+libtest_a_SOURCES = testCBByteArray.c \
+	testCBBase58.c \
+	testCBNetworkCommunicator.c \
+	testCBGetBlocks.c \
+	testCBAddressBroadcast.c \
+	testValidation.c \
+	testCBVersion.c \
+	testCBAddress.c \
+	testCBAddressManager.c \
+	testCBDatabase.c \
+	testCBTransaction.c \
+	testCBInventory.c \
+	testCBBlockHeaders.c \
+	testCBScript.c \
+	testCBHeadersOnlyValidator.c \
+	testCBCallbackQueue.c \
+	testCBAccounter.c \
+	testCBNodeFull.c \
+	testCBHDKeys.c \
+	testCBBigInt.c \
+	testCBAlert.c \
+	testCBFile.c \
+	testCBBlock.c \
+	testCBFullValidator.c \
+	testCBAssociativeArray.c \
+	testCBHamming72.c 
+
+COMMON_LDADD = ../src/libcbitcoin.a \
+	../dependencies/crypto/libcbitcoin-crypto.a \
+	../dependencies/logging/libcbitcoin-logging.a \
+	../dependencies/random/libcbitcoin-random.a \
+	../dependencies/sockets/libcbitcoin-sockets.a \
+	../dependencies/storage/libcbitcoin-storage.a \
+	../dependencies/threads/libcbitcoin-threads.a 
+
+testCBByteArray_LDADD = $(COMMON_LDADD) 
+testCBBase58_LDADD = $(COMMON_LDADD) 
+testCBNetworkCommunicator_LDADD = $(COMMON_LDADD) 
+testCBGetBlocks_LDADD = $(COMMON_LDADD) 
+testCBAddressBroadcast_LDADD = $(COMMON_LDADD) 
+testValidation_LDADD = $(COMMON_LDADD) 
+testCBVersion_LDADD = $(COMMON_LDADD) 
+testCBAddress_LDADD = $(COMMON_LDADD) 
+testCBAddressManager_LDADD = $(COMMON_LDADD) 
+testCBDatabase_LDADD = $(COMMON_LDADD) 
+testCBTransaction_LDADD = $(COMMON_LDADD) 
+testCBInventory_LDADD = $(COMMON_LDADD) 
+testCBBlockHeaders_LDADD = $(COMMON_LDADD) 
+testCBScript_LDADD = $(COMMON_LDADD) 
+testCBHeadersOnlyValidator_LDADD = $(COMMON_LDADD) 
+testCBCallbackQueue_LDADD = $(COMMON_LDADD) 
+testCBAccounter_LDADD = $(COMMON_LDADD) 
+testCBNodeFull_LDADD = $(COMMON_LDADD) 
+testCBHDKeys_LDADD = $(COMMON_LDADD) 
+testCBBigInt_LDADD = $(COMMON_LDADD) 
+testCBAlert_LDADD = $(COMMON_LDADD) 
+testCBFile_LDADD = $(COMMON_LDADD) 
+testCBBlock_LDADD = $(COMMON_LDADD) 
+testCBFullValidator_LDADD = $(COMMON_LDADD) 
+testCBAssociativeArray_LDADD = $(COMMON_LDADD) 
+testCBHamming72_LDADD = $(COMMON_LDADD) 
 all: all-am
 
 .SUFFIXES:
@@ -248,6 +448,13 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+libtest.a: $(libtest_a_OBJECTS) $(libtest_a_DEPENDENCIES) $(EXTRA_libtest_a_DEPENDENCIES) 
+	-rm -f libtest.a
+	$(libtest_a_AR) libtest.a $(libtest_a_OBJECTS) $(libtest_a_LIBADD)
+	$(RANLIB) libtest.a
+
 clean-noinstPROGRAMS:
 	@list='$(noinst_PROGRAMS)'; test -n "$$list" || exit 0; \
 	echo " rm -f" $$list; \
@@ -259,6 +466,81 @@ clean-noinstPROGRAMS:
 testCBAccounter$(EXEEXT): $(testCBAccounter_OBJECTS) $(testCBAccounter_DEPENDENCIES) $(EXTRA_testCBAccounter_DEPENDENCIES) 
 	@rm -f testCBAccounter$(EXEEXT)
 	$(LINK) $(testCBAccounter_OBJECTS) $(testCBAccounter_LDADD) $(LIBS)
+testCBAddress$(EXEEXT): $(testCBAddress_OBJECTS) $(testCBAddress_DEPENDENCIES) $(EXTRA_testCBAddress_DEPENDENCIES) 
+	@rm -f testCBAddress$(EXEEXT)
+	$(LINK) $(testCBAddress_OBJECTS) $(testCBAddress_LDADD) $(LIBS)
+testCBAddressBroadcast$(EXEEXT): $(testCBAddressBroadcast_OBJECTS) $(testCBAddressBroadcast_DEPENDENCIES) $(EXTRA_testCBAddressBroadcast_DEPENDENCIES) 
+	@rm -f testCBAddressBroadcast$(EXEEXT)
+	$(LINK) $(testCBAddressBroadcast_OBJECTS) $(testCBAddressBroadcast_LDADD) $(LIBS)
+testCBAddressManager$(EXEEXT): $(testCBAddressManager_OBJECTS) $(testCBAddressManager_DEPENDENCIES) $(EXTRA_testCBAddressManager_DEPENDENCIES) 
+	@rm -f testCBAddressManager$(EXEEXT)
+	$(LINK) $(testCBAddressManager_OBJECTS) $(testCBAddressManager_LDADD) $(LIBS)
+testCBAlert$(EXEEXT): $(testCBAlert_OBJECTS) $(testCBAlert_DEPENDENCIES) $(EXTRA_testCBAlert_DEPENDENCIES) 
+	@rm -f testCBAlert$(EXEEXT)
+	$(LINK) $(testCBAlert_OBJECTS) $(testCBAlert_LDADD) $(LIBS)
+testCBAssociativeArray$(EXEEXT): $(testCBAssociativeArray_OBJECTS) $(testCBAssociativeArray_DEPENDENCIES) $(EXTRA_testCBAssociativeArray_DEPENDENCIES) 
+	@rm -f testCBAssociativeArray$(EXEEXT)
+	$(LINK) $(testCBAssociativeArray_OBJECTS) $(testCBAssociativeArray_LDADD) $(LIBS)
+testCBBase58$(EXEEXT): $(testCBBase58_OBJECTS) $(testCBBase58_DEPENDENCIES) $(EXTRA_testCBBase58_DEPENDENCIES) 
+	@rm -f testCBBase58$(EXEEXT)
+	$(LINK) $(testCBBase58_OBJECTS) $(testCBBase58_LDADD) $(LIBS)
+testCBBigInt$(EXEEXT): $(testCBBigInt_OBJECTS) $(testCBBigInt_DEPENDENCIES) $(EXTRA_testCBBigInt_DEPENDENCIES) 
+	@rm -f testCBBigInt$(EXEEXT)
+	$(LINK) $(testCBBigInt_OBJECTS) $(testCBBigInt_LDADD) $(LIBS)
+testCBBlock$(EXEEXT): $(testCBBlock_OBJECTS) $(testCBBlock_DEPENDENCIES) $(EXTRA_testCBBlock_DEPENDENCIES) 
+	@rm -f testCBBlock$(EXEEXT)
+	$(LINK) $(testCBBlock_OBJECTS) $(testCBBlock_LDADD) $(LIBS)
+testCBBlockHeaders$(EXEEXT): $(testCBBlockHeaders_OBJECTS) $(testCBBlockHeaders_DEPENDENCIES) $(EXTRA_testCBBlockHeaders_DEPENDENCIES) 
+	@rm -f testCBBlockHeaders$(EXEEXT)
+	$(LINK) $(testCBBlockHeaders_OBJECTS) $(testCBBlockHeaders_LDADD) $(LIBS)
+testCBByteArray$(EXEEXT): $(testCBByteArray_OBJECTS) $(testCBByteArray_DEPENDENCIES) $(EXTRA_testCBByteArray_DEPENDENCIES) 
+	@rm -f testCBByteArray$(EXEEXT)
+	$(LINK) $(testCBByteArray_OBJECTS) $(testCBByteArray_LDADD) $(LIBS)
+testCBCallbackQueue$(EXEEXT): $(testCBCallbackQueue_OBJECTS) $(testCBCallbackQueue_DEPENDENCIES) $(EXTRA_testCBCallbackQueue_DEPENDENCIES) 
+	@rm -f testCBCallbackQueue$(EXEEXT)
+	$(LINK) $(testCBCallbackQueue_OBJECTS) $(testCBCallbackQueue_LDADD) $(LIBS)
+testCBDatabase$(EXEEXT): $(testCBDatabase_OBJECTS) $(testCBDatabase_DEPENDENCIES) $(EXTRA_testCBDatabase_DEPENDENCIES) 
+	@rm -f testCBDatabase$(EXEEXT)
+	$(LINK) $(testCBDatabase_OBJECTS) $(testCBDatabase_LDADD) $(LIBS)
+testCBFile$(EXEEXT): $(testCBFile_OBJECTS) $(testCBFile_DEPENDENCIES) $(EXTRA_testCBFile_DEPENDENCIES) 
+	@rm -f testCBFile$(EXEEXT)
+	$(LINK) $(testCBFile_OBJECTS) $(testCBFile_LDADD) $(LIBS)
+testCBFullValidator$(EXEEXT): $(testCBFullValidator_OBJECTS) $(testCBFullValidator_DEPENDENCIES) $(EXTRA_testCBFullValidator_DEPENDENCIES) 
+	@rm -f testCBFullValidator$(EXEEXT)
+	$(LINK) $(testCBFullValidator_OBJECTS) $(testCBFullValidator_LDADD) $(LIBS)
+testCBGetBlocks$(EXEEXT): $(testCBGetBlocks_OBJECTS) $(testCBGetBlocks_DEPENDENCIES) $(EXTRA_testCBGetBlocks_DEPENDENCIES) 
+	@rm -f testCBGetBlocks$(EXEEXT)
+	$(LINK) $(testCBGetBlocks_OBJECTS) $(testCBGetBlocks_LDADD) $(LIBS)
+testCBHDKeys$(EXEEXT): $(testCBHDKeys_OBJECTS) $(testCBHDKeys_DEPENDENCIES) $(EXTRA_testCBHDKeys_DEPENDENCIES) 
+	@rm -f testCBHDKeys$(EXEEXT)
+	$(LINK) $(testCBHDKeys_OBJECTS) $(testCBHDKeys_LDADD) $(LIBS)
+testCBHamming72$(EXEEXT): $(testCBHamming72_OBJECTS) $(testCBHamming72_DEPENDENCIES) $(EXTRA_testCBHamming72_DEPENDENCIES) 
+	@rm -f testCBHamming72$(EXEEXT)
+	$(LINK) $(testCBHamming72_OBJECTS) $(testCBHamming72_LDADD) $(LIBS)
+testCBHeadersOnlyValidator$(EXEEXT): $(testCBHeadersOnlyValidator_OBJECTS) $(testCBHeadersOnlyValidator_DEPENDENCIES) $(EXTRA_testCBHeadersOnlyValidator_DEPENDENCIES) 
+	@rm -f testCBHeadersOnlyValidator$(EXEEXT)
+	$(LINK) $(testCBHeadersOnlyValidator_OBJECTS) $(testCBHeadersOnlyValidator_LDADD) $(LIBS)
+testCBInventory$(EXEEXT): $(testCBInventory_OBJECTS) $(testCBInventory_DEPENDENCIES) $(EXTRA_testCBInventory_DEPENDENCIES) 
+	@rm -f testCBInventory$(EXEEXT)
+	$(LINK) $(testCBInventory_OBJECTS) $(testCBInventory_LDADD) $(LIBS)
+testCBNetworkCommunicator$(EXEEXT): $(testCBNetworkCommunicator_OBJECTS) $(testCBNetworkCommunicator_DEPENDENCIES) $(EXTRA_testCBNetworkCommunicator_DEPENDENCIES) 
+	@rm -f testCBNetworkCommunicator$(EXEEXT)
+	$(LINK) $(testCBNetworkCommunicator_OBJECTS) $(testCBNetworkCommunicator_LDADD) $(LIBS)
+testCBNodeFull$(EXEEXT): $(testCBNodeFull_OBJECTS) $(testCBNodeFull_DEPENDENCIES) $(EXTRA_testCBNodeFull_DEPENDENCIES) 
+	@rm -f testCBNodeFull$(EXEEXT)
+	$(LINK) $(testCBNodeFull_OBJECTS) $(testCBNodeFull_LDADD) $(LIBS)
+testCBScript$(EXEEXT): $(testCBScript_OBJECTS) $(testCBScript_DEPENDENCIES) $(EXTRA_testCBScript_DEPENDENCIES) 
+	@rm -f testCBScript$(EXEEXT)
+	$(LINK) $(testCBScript_OBJECTS) $(testCBScript_LDADD) $(LIBS)
+testCBTransaction$(EXEEXT): $(testCBTransaction_OBJECTS) $(testCBTransaction_DEPENDENCIES) $(EXTRA_testCBTransaction_DEPENDENCIES) 
+	@rm -f testCBTransaction$(EXEEXT)
+	$(LINK) $(testCBTransaction_OBJECTS) $(testCBTransaction_LDADD) $(LIBS)
+testCBVersion$(EXEEXT): $(testCBVersion_OBJECTS) $(testCBVersion_DEPENDENCIES) $(EXTRA_testCBVersion_DEPENDENCIES) 
+	@rm -f testCBVersion$(EXEEXT)
+	$(LINK) $(testCBVersion_OBJECTS) $(testCBVersion_LDADD) $(LIBS)
+testValidation$(EXEEXT): $(testValidation_OBJECTS) $(testValidation_DEPENDENCIES) $(EXTRA_testValidation_DEPENDENCIES) 
+	@rm -f testValidation$(EXEEXT)
+	$(LINK) $(testValidation_OBJECTS) $(testValidation_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -267,6 +549,31 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBAccounter.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBAddress.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBAddressBroadcast.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBAddressManager.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBAlert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBAssociativeArray.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBBase58.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBBigInt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBBlock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBBlockHeaders.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBByteArray.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBCallbackQueue.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBDatabase.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBFile.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBFullValidator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBGetBlocks.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBHDKeys.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBHamming72.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBHeadersOnlyValidator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBInventory.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBNetworkCommunicator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBNodeFull.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBScript.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBTransaction.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testCBVersion.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testValidation.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -473,7 +780,7 @@ distdir: $(DISTFILES)
 check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(LIBRARIES) $(PROGRAMS)
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -507,8 +814,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-noinstPROGRAMS \
-	mostlyclean-am
+clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
+	clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -579,15 +886,15 @@ uninstall-am:
 .MAKE: check-am install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-TESTS check-am clean \
-	clean-generic clean-libtool clean-noinstPROGRAMS ctags \
-	distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	clean-generic clean-libtool clean-noinstLIBRARIES \
+	clean-noinstPROGRAMS ctags distclean distclean-compile \
+	distclean-generic distclean-libtool distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am
