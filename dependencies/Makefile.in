@@ -226,7 +226,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = crypto  logging  random  sockets  storage  threads
+SUBDIRS = threads crypto  logging  random  sockets  storage 
 all: all-recursive
 
 .SUFFIXES:

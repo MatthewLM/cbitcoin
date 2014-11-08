@@ -89,14 +89,14 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_crypto_la_DEPENDENCIES = $(top_srcdir)/src/libcbitcoin.a
+libcbitcoin_crypto_la_DEPENDENCIES = $(top_srcdir)/src/libcbitcoin.la
 am_libcbitcoin_crypto_la_OBJECTS =  \
 	libcbitcoin_crypto_la-CBOpenSSLCrypto.lo
 libcbitcoin_crypto_la_OBJECTS = $(am_libcbitcoin_crypto_la_OBJECTS)
 libcbitcoin_crypto_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_crypto_la_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+	$(libcbitcoin_crypto_la_CFLAGS) $(CFLAGS) \
+	$(libcbitcoin_crypto_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -239,10 +239,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 lib_LTLIBRARIES = libcbitcoin-crypto.la
 libcbitcoin_crypto_la_SOURCES = CBOpenSSLCrypto.c
-libcbitcoin_crypto_la_LIBADD = $(top_srcdir)/src/libcbitcoin.a
+libcbitcoin_crypto_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la
 libcbitcoin_crypto_la_CFLAGS = -I$(top_srcdir)/include 
+libcbitcoin_crypto_la_LDFLAGS = -module -shared 
 all: all-am
 
 .SUFFIXES:

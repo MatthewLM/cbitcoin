@@ -89,14 +89,15 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_logging_la_DEPENDENCIES = $(top_srcdir)/src/libcbitcoin.a
-am_libcbitcoin_logging_la_OBJECTS =  \
-	libcbitcoin_logging_la-CBOpenSSLlogging.lo
+libcbitcoin_logging_la_DEPENDENCIES =  \
+	$(top_srcdir)/src/libcbitcoin.la \
+	$(top_srcdir)/dependencies/threads/libcbitcoin-threads.la
+am_libcbitcoin_logging_la_OBJECTS = libcbitcoin_logging_la-CBLog.lo
 libcbitcoin_logging_la_OBJECTS = $(am_libcbitcoin_logging_la_OBJECTS)
 libcbitcoin_logging_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_logging_la_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+	$(libcbitcoin_logging_la_CFLAGS) $(CFLAGS) \
+	$(libcbitcoin_logging_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -239,10 +240,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 lib_LTLIBRARIES = libcbitcoin-logging.la
-libcbitcoin_logging_la_SOURCES = CBOpenSSLlogging.c
-libcbitcoin_logging_la_LIBADD = $(top_srcdir)/src/libcbitcoin.a
-libcbitcoin_logging_la_CFLAGS = -I$(top_srcdir)/include
+libcbitcoin_logging_la_SOURCES = CBLog.c  CBLog.h
+libcbitcoin_logging_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la $(top_srcdir)/dependencies/threads/libcbitcoin-threads.la
+libcbitcoin_logging_la_CFLAGS = -I$(top_srcdir)/include  -I$(top_srcdir)/dependencies/threads
+libcbitcoin_logging_la_LDFLAGS = -module -shared 
 all: all-am
 
 .SUFFIXES:
@@ -318,7 +321,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_logging_la-CBOpenSSLlogging.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_logging_la-CBLog.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -341,12 +344,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libcbitcoin_logging_la-CBOpenSSLlogging.lo: CBOpenSSLlogging.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_logging_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_logging_la-CBOpenSSLlogging.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_logging_la-CBOpenSSLlogging.Tpo -c -o libcbitcoin_logging_la-CBOpenSSLlogging.lo `test -f 'CBOpenSSLlogging.c' || echo '$(srcdir)/'`CBOpenSSLlogging.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_logging_la-CBOpenSSLlogging.Tpo $(DEPDIR)/libcbitcoin_logging_la-CBOpenSSLlogging.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBOpenSSLlogging.c' object='libcbitcoin_logging_la-CBOpenSSLlogging.lo' libtool=yes @AMDEPBACKSLASH@
+libcbitcoin_logging_la-CBLog.lo: CBLog.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_logging_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_logging_la-CBLog.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_logging_la-CBLog.Tpo -c -o libcbitcoin_logging_la-CBLog.lo `test -f 'CBLog.c' || echo '$(srcdir)/'`CBLog.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_logging_la-CBLog.Tpo $(DEPDIR)/libcbitcoin_logging_la-CBLog.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBLog.c' object='libcbitcoin_logging_la-CBLog.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_logging_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_logging_la-CBOpenSSLlogging.lo `test -f 'CBOpenSSLlogging.c' || echo '$(srcdir)/'`CBOpenSSLlogging.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_logging_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_logging_la-CBLog.lo `test -f 'CBLog.c' || echo '$(srcdir)/'`CBLog.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

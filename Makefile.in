@@ -134,7 +134,7 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = "-Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE"
+CFLAGS = " -Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE "
 CONFIGFLAGS = @CONFIGFLAGS@
 CONFIGLFLAGS = @CONFIGLFLAGS@
 CPP = @CPP@
@@ -246,7 +246,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = ' -I m4 '
-SUBDIRS = src test dependencies include examples client-server
+SUBDIRS = src dependencies test include examples client-server
 all: all-recursive
 
 .SUFFIXES:
@@ -651,8 +651,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-clean: clean-recursive
-
 clean-am: clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-recursive
@@ -740,6 +738,9 @@ uninstall-am:
 	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
 	ps ps-am tags tags-recursive uninstall uninstall-am
 
+
+clean:
+	find . -name '*.la' -exec rm {} \; && find . -name '*.o' -exec rm {} \; && find . -name '*.lo' -exec rm {} \; && find . -name '.deps' -exec rm -r {} \;
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

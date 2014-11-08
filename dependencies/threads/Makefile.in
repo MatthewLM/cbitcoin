@@ -89,14 +89,15 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_threads_la_DEPENDENCIES = $(top_srcdir)/src/libcbitcoin.a
+libcbitcoin_threads_la_DEPENDENCIES =  \
+	$(top_srcdir)/src/libcbitcoin.la
 am_libcbitcoin_threads_la_OBJECTS =  \
-	libcbitcoin_threads_la-CBOpenSSLthreads.lo
+	libcbitcoin_threads_la-CBThreads.lo
 libcbitcoin_threads_la_OBJECTS = $(am_libcbitcoin_threads_la_OBJECTS)
 libcbitcoin_threads_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_threads_la_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+	$(libcbitcoin_threads_la_CFLAGS) $(CFLAGS) \
+	$(libcbitcoin_threads_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -239,10 +240,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 lib_LTLIBRARIES = libcbitcoin-threads.la
-libcbitcoin_threads_la_SOURCES = CBOpenSSLthreads.c
-libcbitcoin_threads_la_LIBADD = $(top_srcdir)/src/libcbitcoin.a
-libcbitcoin_threads_la_CFLAGS = -I$(top_srcdir)/include
+libcbitcoin_threads_la_SOURCES = CBThreads.c  CBThreads.h 
+libcbitcoin_threads_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la
+libcbitcoin_threads_la_CFLAGS = @CRYPTO_LIBS@ -I$(top_srcdir)/include 
+libcbitcoin_threads_la_LDFLAGS = -module -shared 
 all: all-am
 
 .SUFFIXES:
@@ -318,7 +321,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_threads_la-CBOpenSSLthreads.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_threads_la-CBThreads.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -341,12 +344,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libcbitcoin_threads_la-CBOpenSSLthreads.lo: CBOpenSSLthreads.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_threads_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_threads_la-CBOpenSSLthreads.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_threads_la-CBOpenSSLthreads.Tpo -c -o libcbitcoin_threads_la-CBOpenSSLthreads.lo `test -f 'CBOpenSSLthreads.c' || echo '$(srcdir)/'`CBOpenSSLthreads.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_threads_la-CBOpenSSLthreads.Tpo $(DEPDIR)/libcbitcoin_threads_la-CBOpenSSLthreads.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBOpenSSLthreads.c' object='libcbitcoin_threads_la-CBOpenSSLthreads.lo' libtool=yes @AMDEPBACKSLASH@
+libcbitcoin_threads_la-CBThreads.lo: CBThreads.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_threads_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_threads_la-CBThreads.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_threads_la-CBThreads.Tpo -c -o libcbitcoin_threads_la-CBThreads.lo `test -f 'CBThreads.c' || echo '$(srcdir)/'`CBThreads.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_threads_la-CBThreads.Tpo $(DEPDIR)/libcbitcoin_threads_la-CBThreads.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBThreads.c' object='libcbitcoin_threads_la-CBThreads.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_threads_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_threads_la-CBOpenSSLthreads.lo `test -f 'CBOpenSSLthreads.c' || echo '$(srcdir)/'`CBOpenSSLthreads.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_threads_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_threads_la-CBThreads.lo `test -f 'CBThreads.c' || echo '$(srcdir)/'`CBThreads.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

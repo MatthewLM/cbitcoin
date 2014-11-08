@@ -89,14 +89,13 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_random_la_DEPENDENCIES = $(top_srcdir)/src/libcbitcoin.a
-am_libcbitcoin_random_la_OBJECTS =  \
-	libcbitcoin_random_la-CBOpenSSLrandom.lo
+libcbitcoin_random_la_DEPENDENCIES = $(top_srcdir)/src/libcbitcoin.la
+am_libcbitcoin_random_la_OBJECTS = libcbitcoin_random_la-CBRand.lo
 libcbitcoin_random_la_OBJECTS = $(am_libcbitcoin_random_la_OBJECTS)
 libcbitcoin_random_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_random_la_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+	$(libcbitcoin_random_la_CFLAGS) $(CFLAGS) \
+	$(libcbitcoin_random_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -239,10 +238,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 lib_LTLIBRARIES = libcbitcoin-random.la
-libcbitcoin_random_la_SOURCES = CBOpenSSLrandom.c
-libcbitcoin_random_la_LIBADD = $(top_srcdir)/src/libcbitcoin.a
-libcbitcoin_random_la_CFLAGS = -I$(top_srcdir)/include
+libcbitcoin_random_la_SOURCES = CBRand.c
+libcbitcoin_random_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la
+libcbitcoin_random_la_CFLAGS = -I$(top_srcdir)/include 
+libcbitcoin_random_la_LDFLAGS = -module -shared 
 all: all-am
 
 .SUFFIXES:
@@ -318,7 +319,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_random_la-CBOpenSSLrandom.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_random_la-CBRand.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -341,12 +342,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libcbitcoin_random_la-CBOpenSSLrandom.lo: CBOpenSSLrandom.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_random_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_random_la-CBOpenSSLrandom.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_random_la-CBOpenSSLrandom.Tpo -c -o libcbitcoin_random_la-CBOpenSSLrandom.lo `test -f 'CBOpenSSLrandom.c' || echo '$(srcdir)/'`CBOpenSSLrandom.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_random_la-CBOpenSSLrandom.Tpo $(DEPDIR)/libcbitcoin_random_la-CBOpenSSLrandom.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBOpenSSLrandom.c' object='libcbitcoin_random_la-CBOpenSSLrandom.lo' libtool=yes @AMDEPBACKSLASH@
+libcbitcoin_random_la-CBRand.lo: CBRand.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_random_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_random_la-CBRand.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_random_la-CBRand.Tpo -c -o libcbitcoin_random_la-CBRand.lo `test -f 'CBRand.c' || echo '$(srcdir)/'`CBRand.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_random_la-CBRand.Tpo $(DEPDIR)/libcbitcoin_random_la-CBRand.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBRand.c' object='libcbitcoin_random_la-CBRand.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_random_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_random_la-CBOpenSSLrandom.lo `test -f 'CBOpenSSLrandom.c' || echo '$(srcdir)/'`CBOpenSSLrandom.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_random_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_random_la-CBRand.lo `test -f 'CBRand.c' || echo '$(srcdir)/'`CBRand.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

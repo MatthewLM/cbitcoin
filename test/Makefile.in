@@ -349,7 +349,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/test\" -I$(top_srcdir)/include
+INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/test\" -I$(top_srcdir)/include \
+	-I$(top_srcdir)/dependencies/storage  -I$(top_srcdir)/dependencies/logging \
+	-I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets
+
 EXTRA_DIST = scriptCases.txt 
 noinst_LIBRARIES = libtest.a
 libtest_a_SOURCES = testCBByteArray.c \
@@ -379,13 +382,13 @@ libtest_a_SOURCES = testCBByteArray.c \
 	testCBAssociativeArray.c \
 	testCBHamming72.c 
 
-COMMON_LDADD = ../src/libcbitcoin.a \
-	../dependencies/crypto/libcbitcoin-crypto.a \
-	../dependencies/logging/libcbitcoin-logging.a \
-	../dependencies/random/libcbitcoin-random.a \
-	../dependencies/sockets/libcbitcoin-sockets.a \
-	../dependencies/storage/libcbitcoin-storage.a \
-	../dependencies/threads/libcbitcoin-threads.a 
+COMMON_LDADD = ../src/libcbitcoin.la \
+	../dependencies/crypto/libcbitcoin-crypto.la \
+	../dependencies/logging/libcbitcoin-logging.la \
+	../dependencies/random/libcbitcoin-random.la \
+	../dependencies/sockets/libcbitcoin-sockets.la \
+	../dependencies/storage/libcbitcoin-storage.la \
+	../dependencies/threads/libcbitcoin-threads.la 
 
 testCBByteArray_LDADD = $(COMMON_LDADD) 
 testCBBase58_LDADD = $(COMMON_LDADD) 

@@ -8,4 +8,4 @@ SUBDIRS = src dependencies test include examples client-server
 
 
 clean:
-	 git reset --hard && git clean -fxd
+	find . -name '*.la' -exec rm {} \; && find . -name '*.o' -exec rm {} \; && find . -name '*.lo' -exec rm {} \; && ( find . -name '.deps' | while read line; do rm -r $line; done )
