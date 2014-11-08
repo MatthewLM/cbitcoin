@@ -87,39 +87,39 @@ TESTS = testCBByteArray \
 	testCBAssociativeArray \
 	testCBHamming72 
 
-COMMON_LDADD = ../src/libcbitcoin.la \
-	../dependencies/crypto/libcbitcoin-crypto.la \
-	../dependencies/logging/libcbitcoin-logging.la \
-	../dependencies/random/libcbitcoin-random.la \
-	../dependencies/sockets/libcbitcoin-sockets.la \
-	../dependencies/storage/libcbitcoin-storage.la \
-	../dependencies/threads/libcbitcoin-threads.la 
+#COMMON_LDADD = ../src/libcbitcoin.la \
+#	../dependencies/crypto/libcbitcoin-crypto.la \
+#	../dependencies/logging/libcbitcoin-logging.la \
+##	../dependencies/random/libcbitcoin-random.la \
+#	../dependencies/sockets/libcbitcoin-sockets.la \
+##	../dependencies/storage/libcbitcoin-storage.la \
+#	../dependencies/threads/libcbitcoin-threads.la 
 
-testCBByteArray_LDADD 		= $(COMMON_LDADD) 
-testCBBase58_LDADD 		= $(COMMON_LDADD) 
-testCBNetworkCommunicator_LDADD	= $(COMMON_LDADD) 
-testCBGetBlocks_LDADD 		= $(COMMON_LDADD) 
-testCBAddressBroadcast_LDADD 	= $(COMMON_LDADD) 
-testValidation_LDADD 		= $(COMMON_LDADD) 
-testCBVersion_LDADD 		= $(COMMON_LDADD) 
-testCBAddress_LDADD 		= $(COMMON_LDADD) 
-testCBAddressManager_LDADD 	= $(COMMON_LDADD) 
-testCBDatabase_LDADD 		= $(COMMON_LDADD) 
-testCBTransaction_LDADD 	= $(COMMON_LDADD) 
-testCBInventory_LDADD 		= $(COMMON_LDADD) 
-testCBBlockHeaders_LDADD 	= $(COMMON_LDADD) 
-testCBScript_LDADD 		= $(COMMON_LDADD) 
-testCBHeadersOnlyValidator_LDADD= $(COMMON_LDADD) 
-testCBCallbackQueue_LDADD 	= $(COMMON_LDADD) 
-testCBAccounter_LDADD 		= $(COMMON_LDADD) 
-testCBNodeFull_LDADD 		= $(COMMON_LDADD) 
-testCBHDKeys_LDADD 		= $(COMMON_LDADD) 
-testCBBigInt_LDADD		= $(COMMON_LDADD) 
-testCBAlert_LDADD		= $(COMMON_LDADD) 
-testCBFile_LDADD		= $(COMMON_LDADD) 
-testCBBlock_LDADD		= $(COMMON_LDADD) 
-testCBFullValidator_LDADD	= $(COMMON_LDADD) 
-testCBAssociativeArray_LDADD	= $(COMMON_LDADD) 
-testCBHamming72_LDADD		= $(COMMON_LDADD) 
+#testCBByteArray_LDADD 		= $(COMMON_LDADD) 
+#testCBBase58_LDADD 		= $(COMMON_LDADD) 
+#testCBNetworkCommunicator_LDADD	= $(COMMON_LDADD) 
+#testCBGetBlocks_LDADD 		= $(COMMON_LDADD) 
+#testCBAddressBroadcast_LDADD 	= $(COMMON_LDADD) 
+#testValidation_LDADD 		= $(COMMON_LDADD) 
+#testCBVersion_LDADD 		= $(COMMON_LDADD) 
+#testCBAddress_LDADD 		= $(COMMON_LDADD) 
+#testCBAddressManager_LDADD 	= $(COMMON_LDADD) 
+#testCBDatabase_LDADD 		= $(COMMON_LDADD) 
+#testCBTransaction_LDADD 	= $(COMMON_LDADD) 
+#testCBInventory_LDADD 		= $(COMMON_LDADD) 
+#testCBBlockHeaders_LDADD 	= $(COMMON_LDADD) 
+#testCBScript_LDADD 		= $(COMMON_LDADD) 
+#testCBHeadersOnlyValidator_LDADD= $(COMMON_LDADD) 
+#testCBCallbackQueue_LDADD 	= $(COMMON_LDADD) 
+#testCBAccounter_LDADD 		= $(COMMON_LDADD) 
+#testCBNodeFull_LDADD 		= $(COMMON_LDADD) 
+#testCBHDKeys_LDADD 		= $(COMMON_LDADD) 
+#testCBBigInt_LDADD		= $(COMMON_LDADD) 
+#testCBAlert_LDADD		= $(COMMON_LDADD) 
+#testCBFile_LDADD		= $(COMMON_LDADD) 
+#testCBBlock_LDADD		= $(COMMON_LDADD) 
+#testCBFullValidator_LDADD	= $(COMMON_LDADD) 
+#testCBAssociativeArray_LDADD	= $(COMMON_LDADD) 
+#testCBHamming72_LDADD		= $(COMMON_LDADD) 
 
 
