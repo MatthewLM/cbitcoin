@@ -15,6 +15,8 @@
 
 @SET_MAKE@
 
+#INCLUDES = @CRYPTO_LIBS@ #-I$(top_srcdir)/include
+
 VPATH = @srcdir@
 am__make_dryrun = \
   { \
@@ -90,8 +92,7 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libcbitcoin_sockets_la_DEPENDENCIES =  \
-	$(top_srcdir)/src/libcbitcoin.la \
-	$(top_srcdir)/dependencies/threads/libcbitcoin-threads.la
+	$(top_srcdir)/src/libcbitcoin.la
 am_libcbitcoin_sockets_la_OBJECTS =  \
 	libcbitcoin_sockets_la-CBCallbackQueue.lo \
 	libcbitcoin_sockets_la-CBLibEventSockets.lo \
@@ -243,12 +244,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 lib_LTLIBRARIES = libcbitcoin-sockets.la
-libcbitcoin_sockets_la_SOURCES = CBCallbackQueue.c  CBCallbackQueue.h  CBLibEventSockets.c  CBLibEventSockets.h  CBLibevSockets.c  CBLibevSockets.h
-libcbitcoin_sockets_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la  $(top_srcdir)/dependencies/threads/libcbitcoin-threads.la
-libcbitcoin_sockets_la_CFLAGS = -I$(top_srcdir)/include  
-# -I$(top_srcdir)/dependencies/threads
+libcbitcoin_sockets_la_SOURCES = CBCallbackQueue.c  CBLibEventSockets.c  CBLibevSockets.c
+libcbitcoin_sockets_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la
+libcbitcoin_sockets_la_CFLAGS = -I$(top_srcdir)/include  -I$(top_srcdir)/dependencies/threads
 libcbitcoin_sockets_la_LDFLAGS = -module -shared 
 all: all-am
 
@@ -583,6 +582,7 @@ uninstall-am: uninstall-libLTLIBRARIES
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-libLTLIBRARIES
 
+  #$(top_srcdir)/dependencies/threads/libcbitcoin-threads.la
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

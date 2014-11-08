@@ -246,7 +246,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = ' -I m4 '
-SUBDIRS = src dependencies test include examples client-server
+SUBDIRS = src dependencies test examples client-server 
 all: all-recursive
 
 .SUFFIXES:
@@ -740,7 +740,7 @@ uninstall-am:
 
 
 clean:
-	find . -name '*.la' -exec rm {} \; && find . -name '*.o' -exec rm {} \; && find . -name '*.lo' -exec rm {} \; && find . -name '.deps' -exec rm -r {} \;
+	find . -name '*.la' -exec rm {} \; && find . -name '*.o' -exec rm {} \; && find . -name '*.lo' -exec rm {} \; &&  ( find . -name '.deps'  -exec rm -r {} \; || echo "do nothing" )
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
