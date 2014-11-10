@@ -58,7 +58,7 @@ TESTS = testCBByteArray \
 	testCBAssociativeArray \
 	testCBHamming72 
 
-COMMON_LDADD = libtest.a ../src/libcbitcoin.la 
+COMMON_LDADD = ../src/libcbitcoin.la \
 	../dependencies/crypto/libcbitcoin-crypto.la \
 	../dependencies/logging/libcbitcoin-logging.la \
 	../dependencies/random/libcbitcoin-random.la \

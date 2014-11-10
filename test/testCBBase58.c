@@ -25,14 +25,15 @@ int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %ui\n", s);
 	srand(s);
-
+	printf("Session 2= %ui\n", s);
 	// Test checked decode
 	CBBigInt bi;
 	CBBigIntAlloc(&bi, 29);
+	printf("Session 3= %ui\n", s);
 	CBDecodeBase58Checked(&bi, "1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9"); // Valid
 	printf("END VALID\n");
 	CBDecodeBase58Checked(&bi, "1qBd3Y9D8HhzA4bYSKgkPw8LsX4wCcbqBX"); // Invalid
-
+	printf("Session 4= %ui\n", s);
 	// ??? Test for:
 	// c5f88541634fb7bade5f94ff671d1febdcbda116d2da779038ed767989
 	bi.data[0] = 0xc5;
