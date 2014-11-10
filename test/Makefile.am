@@ -4,37 +4,6 @@ INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/test\" -I$(top_srcdir)/include \
 
 EXTRA_DIST = scriptCases.txt 
 
-
-
-noinst_LIBRARIES= libtest.a
-
-libtest_a_SOURCES= testCBByteArray.c \
-	testCBBase58.c \
-	testCBNetworkCommunicator.c \
-	testCBGetBlocks.c \
-	testCBAddressBroadcast.c \
-	testValidation.c \
-	testCBVersion.c \
-	testCBAddress.c \
-	testCBAddressManager.c \
-	testCBDatabase.c \
-	testCBTransaction.c \
-	testCBInventory.c \
-	testCBBlockHeaders.c \
-	testCBScript.c \
-	testCBHeadersOnlyValidator.c \
-	testCBCallbackQueue.c \
-	testCBAccounter.c \
-	testCBNodeFull.c \
-	testCBHDKeys.c \
-	testCBBigInt.c \
-	testCBAlert.c \
-	testCBFile.c \
-	testCBBlock.c \
-	testCBFullValidator.c \
-	testCBAssociativeArray.c \
-	testCBHamming72.c 
-
 noinst_PROGRAMS =  testCBByteArray \
 	testCBBase58 \
 	testCBNetworkCommunicator \
@@ -89,7 +58,7 @@ TESTS = testCBByteArray \
 	testCBAssociativeArray \
 	testCBHamming72 
 
-COMMON_LDADD = ../src/libcbitcoin.la 
+COMMON_LDADD = libtest.a ../src/libcbitcoin.la 
 	../dependencies/crypto/libcbitcoin-crypto.la \
 	../dependencies/logging/libcbitcoin-logging.la \
 	../dependencies/random/libcbitcoin-random.la \

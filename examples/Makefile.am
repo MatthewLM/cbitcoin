@@ -1,6 +1,6 @@
 INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 
-noinst_PROGRAMS = \
+bin_PROGRAMS = \
 	WIFConverter  \ 
 	base58Converter  \ 
 	base58ChecksumEncode  \ 
