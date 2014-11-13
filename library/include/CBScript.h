@@ -23,6 +23,7 @@
 //  Includes
 
 #include "CBByteArray.h"
+#include "CBAddress.h"
 #include "CBDependencies.h"
 #include "CBHDKeys.h"
 #include <stdbool.h>
@@ -232,6 +233,7 @@ CBScript * CBNewScriptOfSize(uint32_t size);
 CBScript * CBNewScriptFromString(char * string);
 CBScript * CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n);
 CBScript * CBNewScriptP2SHOutput(CBScript * script);
+CBScript * CBNewScriptPubKeyHashOutputFromString(CBAddress * address);
 CBScript * CBNewScriptPubKeyHashOutput(uint8_t * pubKeyHash);
 CBScript * CBNewScriptPubKeyOutput(uint8_t * pubKey);
 
@@ -261,6 +263,7 @@ CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size);
 bool CBInitScriptFromString(CBScript * self, char * string);
 void CBInitScriptMultisigOutput(CBScript * self, uint8_t ** pubKeys, uint8_t m, uint8_t n);
 void CBInitScriptP2SHOutput(CBScript * self, CBScript *  script);
+void CBInitScriptPubKeyHashOutputFromAddress(CBScript * self, CBAddress * address);
 void CBInitScriptPubKeyHashOutput(CBScript * self, uint8_t * pubKeyHash);
 void CBInitScriptPubKeyOutput(CBScript * self, uint8_t * pubKey);
 

@@ -67,6 +67,7 @@ typedef enum{
 #define CB_COINBASE_MATURITY 100 // Number of confirming blocks before a block reward can be spent.
 #define CB_MAX_SIG_OPS 20000 // Maximum signature operations in a block.
 #define CB_BLOCK_ALLOWED_TIME_DRIFT 7200 // 2 Hours from network time
+#define CB_MEDIAN_TIME_SPAN 11
 
 /**
  @brief Describes a point on a chain.

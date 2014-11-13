@@ -21,9 +21,11 @@
 CBScript * CBNewScriptFromReference(CBByteArray * program, uint32_t offset, uint32_t len){
 	return CBNewByteArraySubReference(program, offset, len);
 }
+
 CBScript * CBNewScriptOfSize(uint32_t size){
 	return CBNewByteArrayOfSize(size);
 }
+
 CBScript * CBNewScriptFromString(char * string){
 	CBScript * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
@@ -32,33 +34,46 @@ CBScript * CBNewScriptFromString(char * string){
 	free(self);
 	return NULL;
 }
+
 CBScript * CBNewScriptMultisigOutput(uint8_t ** pubKeys, uint8_t m, uint8_t n){
 	CBScript * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
 	CBInitScriptMultisigOutput(self, pubKeys, m, n);
 	return self;
 }
+
 CBScript * CBNewScriptP2SHOutput(CBScript * script){
 	CBScript * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
 	CBInitScriptP2SHOutput(self, script);
 	return self;
 }
+
+CBScript * CBNewScriptPubKeyHashOutputFromAddress(CBAddress * address){
+	CBScript * self = malloc(sizeof(*self));
+	CBGetObject(self)->free = CBFreeByteArray;
+	CBInitScriptPubKeyHashOutputFromAddress(self, address);
+	return self;
+}
+
 CBScript * CBNewScriptPubKeyHashOutput(uint8_t * pubKeyHash){
 	CBScript * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
 	CBInitScriptPubKeyHashOutput(self, pubKeyHash);
 	return self;
 }
+
 CBScript * CBNewScriptPubKeyOutput(uint8_t * pubKey){
 	CBScript * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeByteArray;
 	CBInitScriptPubKeyOutput(self, pubKey);
 	return self;
 }
+
 CBScript * CBNewScriptWithData(uint8_t * data, uint32_t size){
 	return CBNewByteArrayWithData(data, size);
 }
+
 CBScript * CBNewScriptWithDataCopy(uint8_t * data, uint32_t size){
 	return CBNewByteArrayWithDataCopy(data, size);
 }
@@ -537,6 +552,13 @@ void CBInitScriptP2SHOutput(CBScript * self, CBScript * script){
 	CBRipemd160(hash, 32, CBByteArrayGetData(self) + 2);
 	CBByteArraySetByte(self, 22, CB_SCRIPT_OP_EQUAL);
 }
+
+void CBInitScriptPubKeyHashOutputFromAddress(CBScript * self, CBAddress * address){
+
+	CBInitScriptPubKeyHashOutput(self, CBByteArrayGetData(CBGetByteArray(address)) + 1);
+
+}
+
 
 void CBInitScriptPubKeyHashOutput(CBScript * self, uint8_t * pubKeyHash){
 	CBInitByteArrayOfSize(self, 25);

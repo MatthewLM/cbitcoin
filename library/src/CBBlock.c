@@ -265,6 +265,8 @@ uint32_t CBBlockDeserialise(CBBlock * self, bool transactions) {
 	
 	// This value is undefined in the protocol. Should best be zero when getting the headers since there is not supposed to be any transactions. Would have probably been better if the var int was dropped completely for headers only.
 	self->transactionNum = (uint32_t)CBByteArrayReadVarInt(bytes, 80).val;
+
+	self->transactions = NULL;
 	
 	// Ensure null byte is null. This null byte is a bit of a nuissance but it exists in the protocol when there are no transactions.
 	if (CBByteArrayGetByte(bytes, 80 + txNumVI.size) != 0) {

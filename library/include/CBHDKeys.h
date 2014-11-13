@@ -75,47 +75,30 @@ typedef struct{
 // Constructors
 
 CBHDKey * CBNewHDKey(bool priv);
-
 CBHDKey * CBNewHDKeyFromData(uint8_t * data);
-
 CBKeyPair * CBNewKeyPair(bool priv);
 
 // Initialisers
 
 void CBInitHDKey(CBHDKey * key);
-
 bool CBInitHDKeyFromData(CBHDKey * key,uint8_t * data, CBHDKeyVersion versionBytes, CBHDKeyType type);
-
 void CBInitKeyPair(CBKeyPair * key);
 
 //  Functions
 
 bool CBHDKeyDeriveChild(CBHDKey * parentKey, CBHDKeyChildID childID, CBHDKey * childKey);
-
 bool CBHDKeyGenerateMaster(CBHDKey * key, bool production);
-
 uint32_t CBHDKeyGetChildNumber(CBHDKeyChildID childID);
-
 uint8_t * CBHDKeyGetHash(CBHDKey * key);
-
 CBNetwork CBHDKeyGetNetwork(CBHDKeyVersion versionBytes);
-
 uint8_t * CBHDKeyGetPrivateKey(CBHDKey * key);
-
 uint8_t * CBHDKeyGetPublicKey(CBHDKey * key);
-
 CBHDKeyType CBHDKeyGetType(CBHDKeyVersion versionBytes);
-
 CBWIF * CBHDKeyGetWIF(CBHDKey * key);
-
 void CBHDKeyHmacSha512(uint8_t * inputData, uint8_t * chainCode, uint8_t * output);
-
 void CBHDKeySerialise(CBHDKey * key, uint8_t * data);
-
 bool CBKeyPairGenerate(CBKeyPair * keyPair);
-
 uint8_t * CBKeyPairGetHash(CBKeyPair * key);
-
 void CBKeyPairGetNext(CBKeyPair * key);
 
 #endif

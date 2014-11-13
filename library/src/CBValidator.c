@@ -504,21 +504,38 @@ CBChainPath CBValidatorGetChainPath(CBValidator * self, uint8_t branch, uint32_t
 CBChainPath CBValidatorGetMainChainPath(CBValidator * self){
 	return CBValidatorGetChainPath(self, self->mainBranch, self->branches[self->mainBranch].numBlocks - 1);
 }
+
 uint32_t CBValidatorGetMedianTime(CBValidator * self, uint8_t branch, uint32_t prevIndex){
+
+	// Go back as far as we can to median span amount
 	uint32_t height = self->branches[branch].startHeight + prevIndex;
-	// Go back median amount
-	uint8_t x = (height > 12)? 12 : height;
-	x /= 2;
-	for (;;) {
-		if (prevIndex >= x) {
-			prevIndex -= x;
-			return CBBlockChainStorageGetBlockTime(self, branch, prevIndex);
-		}
-		x -= prevIndex + 1;
-		prevIndex = self->branches[branch].parentBlockIndex;
-		branch = self->branches[branch].parentBranch;
+	uint8_t a = height + 1 > CB_MEDIAN_TIME_SPAN ? CB_MEDIAN_TIME_SPAN : height + 1;
+
+	uint32_t times[a];
+	memset(times, 0xff, sizeof(uint32_t) * a);
+
+	for (uint8_t x = 0; x < a; x++) {
+		
+		uint32_t toInsert = CBBlockChainStorageGetBlockTime(self, branch, prevIndex);
+
+		for (uint8_t y = 0; y <= x; y++) 
+			if (times[y] > toInsert) {
+				memmove(times + y + 1, times + y, sizeof(uint32_t) * (x-y));
+				times[y] = toInsert;
+			}
+
+		if (prevIndex == 0) {
+			prevIndex = self->branches[branch].parentBlockIndex;
+			branch = self->branches[branch].parentBranch;
+		} else
+			prevIndex--;	
+
 	}
+
+	return times[a/2];
+
 }
+
 CBBlockValidationResult CBValidatorInputValidation(CBValidator * self, uint8_t branch, CBBlock * block, uint32_t blockHeight, uint32_t transactionIndex, uint32_t inputIndex, uint64_t * value, uint32_t * sigOps){
 	// Create variable for the previous output reference.
 	CBPrevOut prevOutRef = block->transactions[transactionIndex]->inputs[inputIndex]->prevOut;

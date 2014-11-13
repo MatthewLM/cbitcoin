@@ -258,7 +258,7 @@ example-build : $(EXAMPLE_BINARIES)
 
 EXAMPLE_CRYPTO_LINK = $(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_CRYPTO) -L/opt/local/lib -o $@
 
-bin/base58ChecksumEncode bin/base58Converter bin/WIFConverter: bin/%: build/%.o
+bin/base58ChecksumEncode bin/base58Converter bin/WIFConverter bin/WIF2DER: bin/%: build/%.o
 	$(EXAMPLE_CRYPTO_LINK)
 
 # For examples using the crypto and random dependencies
