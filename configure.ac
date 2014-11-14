@@ -140,9 +140,6 @@ AC_SUBST([CONFIGLFLAGS])
 AC_SUBST([CC])
 AC_SUBST([NOEC])
 
-#AC_CONFIG_FILES([Makefile])
-
-
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
@@ -165,11 +162,9 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([gettimeofday memmove memset mkdir rmdir socket strchr strerror strstr strtol strtoul])
 
-#AC_CONFIG_FILES([Debug/makefile])
 AC_CONFIG_MACRO_DIR([m4])
 
-
-AC_CONFIG_FILES([ Makefile src/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile  dependencies/sockets/Makefile   dependencies/storage/Makefile dependencies/threads/Makefile test/Makefile ])
+AC_CONFIG_FILES([ Makefile include/Makefile src/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile  dependencies/sockets/Makefile   dependencies/storage/Makefile dependencies/threads/Makefile test/Makefile ])
 
 AC_PROG_CC
 AC_PROG_CC_STDC

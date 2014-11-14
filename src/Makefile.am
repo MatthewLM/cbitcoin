@@ -41,7 +41,7 @@ libcbitcoin_la_SOURCES= \
 	CBVarInt.c  \
 	CBNodeFull.c  \
 	CBBlockHeaders.c  \
-	CBPingPong.c  
+	CBPingPong.c
 
 
 libcbitcoin_la_CFLAGS = -I$(top_srcdir)/include 
