@@ -1,0 +1,94 @@
+//
+//  CBValidationFunctions.c
+//  cbitcoin
+//
+//  Created by Matthew Mitchell on 26/08/2012.
+//  Copyright (c) 2012 Matthew Mitchell
+//
+//  This file is part of cbitcoin. It is subject to the license terms
+//  in the LICENSE file found in the top-level directory of this
+//  distribution and at http://www.cbitcoin.com/license.html. No part of
+//  cbitcoin, including this file, may be copied, modified, propagated,
+//  or distributed except according to the terms contained in the
+//  LICENSE file.
+
+/**
+ @file
+ @brief Here are functions for doing parts of bitcoin validation. cbitcoin is designed to make a broad variety of bitcoin development easier and is not designed to implement a client node. Therefore, cbitcoin does not provide provide functions for validating block chains as there are different methods for doing so. So wether you want to use SPV, block-chain pruning, full validation or whatever, you can use these functions to help. Also see CBScript.h and CBMerkleNode.h for validation. CBNetworkCommunicator.h has message size checks and message deserialisation functions check messages for syntax and sizes.
+ */
+
+#ifndef CBVALIDATIONFUNCTIONSH
+#define CBVALIDATIONFUNCTIONSH
+
+#include "CBConstants.h"
+#include "CBBlock.h"
+
+// Constants and Macros
+
+#define CB_LOCKTIME_THRESHOLD 500000000 // Below this value it is a blok number, else it is a time.
+#define CB_TARGET_INTERVAL 1209600 // Two week interval
+#define CB_MAX_TARGET 0x1D00FFFF
+#define CB_MAX_MONEY 21000000LL * CB_ONE_BITCOIN // 21 million Bitcoins.
+
+/**
+ @brief Calculates the block reward at a particular block height
+ @param blockHeight The height
+ @returns The reward for generating the block, not including transaction fees.
+ */
+long long int CBCalculateBlockReward(long long int blockHeight);
+
+/**
+ @brief Calculates the block work which is 256^31 divided by the target
+ @param work The block work to be created as a CBBigInt.
+ @param target The target to calculate the work for.
+ */
+void CBCalculateBlockWork(CBBigInt * work, int target);
+
+/**
+ @brief Calculates the merkle root from a list of hashes.
+ @param hashes The hashes stored as continuous byte data with each 32 byte hash after each other. The data pointed to by "hashes" will be modified and will result in the merkle root as the first 32 bytes.
+ @param hashNum The number of hashes in the memory block
+ */
+void CBCalculateMerkleRoot(unsigned char * hashes, int hashNum);
+
+/**
+ @brief Recalcultes the target for every 2016 blocks.
+ @param oldTarget The old target in compact form.
+ @param time The time between the newer block and older block for recalulating the target.
+ @returns the new target in compact form.
+ */
+int CBCalculateTarget(int oldTarget, int time);
+
+/**
+ @brief Returns the number of sigops from a transaction but does not include P2SH scripts. P2SH sigop counting requires that the previous output is known to be a P2SH output.
+ @param tx The transaction.
+ @returns the number of sigops for validation.
+ */
+int CBTransactionGetSigOps(CBTransaction * tx);
+
+/**
+ @brief Validates a transaction has outputs and inputs, is below the maximum block size, has outputs that do not overflow and that there are no duplicate spent transaction outputs. This function also checks coinbase transactions have input scripts between 2 and 100 bytes and non-coinbase transactions do not have a NULL previous output. Further validation can be done by checking the transaction against input transactions. With simplified payment verification instead the validation is done through trusting miners but the basic validation can still be done with these basic checks.
+ @param tx The transaction to validate. This should be deserialised.
+ @param coinbase true to validate for a coinbase transaction, false to validate for a non-coinbase transaction.
+ @param outputValue Pointer to the integer to hold the output value calculated by this function.
+ @returns true if transaction passes basic validation or false.
+ */
+bool CBTransactionValidateBasic(CBTransaction * tx, bool coinbase, long long int * outputValue);
+
+/**
+ @brief Determines if a transaction is final and therefore can exist in a block. A transaction is final if the lockTime has been reached or if all inputs are final.
+ @param tx The transaction.
+ @param time The time for determining if the transaction is final.
+ @param height The block height for determining if the transaction is final.
+ @returns true if final and false if not final.
+ */
+bool CBTransactionIsFinal(CBTransaction * tx, long long int time, long long int height);
+
+/**
+ @brief Validates proof of work.
+ @brief hash Block hash.
+ @returns true if the validation passed, false otherwise.
+ */
+bool CBValidateProofOfWork(unsigned char * hash, int target);
+
+#endif

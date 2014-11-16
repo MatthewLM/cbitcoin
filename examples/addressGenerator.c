@@ -45,9 +45,9 @@ int main(){
 		CBByteArray * string = CBChecksumBytesGetString(CBGetChecksumBytes(address));
 		CBReleaseObject(address);
 		bool match = true;
-		uint8_t offset = 1;
+		int offset = 1;
 		size_t matchSize = strlen(stringMatch);
-		for (uint8_t y = 0; y < matchSize;) {
+		for (int y = 0; y < matchSize;) {
 			char other = islower(stringMatch[y]) ? toupper(stringMatch[y]) : (isupper(stringMatch[y])? tolower(stringMatch[y]) : '\0');
 			if (CBByteArrayGetByte(string, y+offset) != stringMatch[y] && CBByteArrayGetByte(string, y+offset) != other) {
 				offset++;
@@ -75,7 +75,7 @@ int main(){
 		}
 		CBReleaseObject(string);
 		// Get next key
-		for (uint8_t x = CB_PRIVKEY_SIZE - 1; ++key->privkey[x--] == 0;);
+		for (int x = CB_PRIVKEY_SIZE - 1; ++key->privkey[x--] == 0;);
 		// Get new public key, by adding the base point.
 		EC_POINT * pub = EC_POINT_new(group);
 		EC_POINT * new = EC_POINT_new(group);

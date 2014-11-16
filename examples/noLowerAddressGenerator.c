@@ -26,7 +26,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 int cpuNum = 0;
-uint8_t prefix;
+int prefix;
 int highest = 0;
 
 CBDepObject outputMutex;
@@ -43,9 +43,9 @@ void CBAddressGenThread(void * vkey) {
 		CBDestroyAddress(&address);
 
 		bool match = true;
-		uint8_t amount = 0;
+		int amount = 0;
 
-		for (uint8_t y = 0; y < string->length - 1; y++) {
+		for (int y = 0; y < string->length - 1; y++) {
 			if (islower(CBByteArrayGetByte(string, y))) {
 				if (y <= highest)
 					match = false;

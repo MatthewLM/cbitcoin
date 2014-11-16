@@ -30,7 +30,7 @@ int main(int argc, char * argv[]) {
 	CBDestroyByteArray(&str);
 
 	// Get key
-	uint8_t key[32];
+	unsigned char key[32];
 	CBWIFGetPrivateKey(&wif, key);
 	CBDestroyWIF(&wif);
 

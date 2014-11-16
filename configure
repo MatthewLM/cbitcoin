@@ -585,7 +585,7 @@ PACKAGE_STRING='cbitcoin 2.0 (pre-alpha)'
 PACKAGE_BUGREPORT='cbitcoin@thelibertyportal.com'
 PACKAGE_URL=''
 
-ac_unique_file="library/dependencies/crypto/CBOpenSSLCrypto.c"
+ac_unique_file="dependencies/crypto/CBOpenSSLCrypto.c"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -624,7 +624,6 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-NOEC
 CONFIGLFLAGS
 CONFIGFLAGS
 EGREP
@@ -678,7 +677,6 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-enable_ec
 enable_debug
 enable_stack_protector
 enable_werror
@@ -1301,7 +1299,6 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --disable-ec            Disable Error Correction
   --enable-debug          Enable debug symbols
   --disable-stack-protector
                           Disable the use of -fstack-protector-strong
@@ -2104,24 +2101,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 # Set CONFIGFLAGS
 
-CONFIGFLAGS="-Wall -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include"
+CONFIGFLAGS="-Wall -Wextra -Wno-missing-field-initializers -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include"
 CONFIGFLAGS+=" $CFLAGS"
 CONFIGLFLAGS=" $LFLAGS"
-
-# Determine if no error correction wanted.
-
-# Check whether --enable-ec was given.
-if test "${enable_ec+set}" = set; then :
-  enableval=$enable_ec;
-fi
-
-
-if test "x$enable_ec" = "xno"; then :
-  NOEC="no-"
-else
-  NOEC=""
-
-fi
 
 # Determine if debug build is enabled
 
@@ -3626,14 +3608,6 @@ fi
 done
 
 
-# Check for asprintf
-
-ac_fn_c_check_func "$LINENO" "asprintf" "ac_cv_func_asprintf"
-if test "x$ac_cv_func_asprintf" = xyes; then :
-  CONFIGFLAGS+=" -DCB_HAVE_ASPRINTF"
-fi
-
-
 # Determine additional compile options for libraries
 
 CFLAGS="-fPIC"
@@ -3660,7 +3634,6 @@ $as_echo "no" >&6; }
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-
 
 
 
@@ -4837,7 +4810,6 @@ hasFeature(){
 echo Configure compile flags: $CONFIGFLAGS
 echo Configure link flags: $CONFIGLFLAGS
 echo Compiler: $CC
-hasFeature "Error correction: " "$enable_ec" "yes"
 hasFeature "Debug build: " "$enable_debug" "no"
 hasFeature "Stack protection: " "$enable_stack_protector" "yes"
 hasFeature "Error on compilation warnings: " "$enable_werror" "yes"

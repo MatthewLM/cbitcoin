@@ -1,22 +1,12 @@
 AC_PREREQ([2.64])
 AC_INIT([cbitcoin], [2.0 (pre-alpha)], [cbitcoin@thelibertyportal.com])
-AC_CONFIG_SRCDIR([library/dependencies/crypto/CBOpenSSLCrypto.c])
+AC_CONFIG_SRCDIR([dependencies/crypto/CBOpenSSLCrypto.c])
 
 # Set CONFIGFLAGS
 
-CONFIGFLAGS="-Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include"
+CONFIGFLAGS="-Wall -Wextra -Wno-missing-field-initializers -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE -I/opt/local/ssl/include -I/opt/local/include -I/usr/local/ssl/include"
 CONFIGFLAGS+=" $CFLAGS"
 CONFIGLFLAGS=" $LFLAGS"
-
-# Determine if no error correction wanted.
-
-AC_ARG_ENABLE([ec],
-    AS_HELP_STRING([--disable-ec], [Disable Error Correction]))
-	
-AS_IF([test "x$enable_ec" = "xno"], 
-	[NOEC="no-"],
-	[NOEC=""]
-)
 
 # Determine if debug build is enabled
 
@@ -96,13 +86,6 @@ AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h sys/socket.h], [], [echo Default 
 AC_CHECK_FUNCS([malloc realloc memmove memset strchr strtol strtoul], [], [AC_MSG_ERROR([Cannot configure core library])])
 AC_CHECK_FUNCS([socket], [], [echo Default dependencies cannot be installed.])
 
-# Check for asprintf
-
-AC_CHECK_FUNC([asprintf],
-	[CONFIGFLAGS+=" -DCB_HAVE_ASPRINTF"],
-	[]
-)
-
 # Determine additional compile options for libraries
 
 CFLAGS="-fPIC"
@@ -116,7 +99,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
 AC_SUBST([CONFIGFLAGS])
 AC_SUBST([CONFIGLFLAGS])
 AC_SUBST([CC])
-AC_SUBST([NOEC])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
@@ -134,7 +116,6 @@ hasFeature(){
 echo Configure compile flags: $CONFIGFLAGS
 echo Configure link flags: $CONFIGLFLAGS
 echo Compiler: $CC
-hasFeature "Error correction: " "$enable_ec" "yes"
 hasFeature "Debug build: " "$enable_debug" "no"
 hasFeature "Stack protection: " "$enable_stack_protector" "yes"
 hasFeature "Error on compilation warnings: " "$enable_werror" "yes"

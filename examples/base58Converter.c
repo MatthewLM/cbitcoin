@@ -52,7 +52,7 @@ int main(int argc, char * argv[]){
 			CBBigIntAlloc(&bi, strlen(inputs[x]) * 100 / 136);
 			CBDecodeBase58(&bi, inputs[x]);
 			printf("0x");
-			for (uint8_t x = bi.length; x--;)
+			for (int x = bi.length; x--;)
 				printf("%02x", bi.data[x]);
 			puts("");
 			free(bi.data);

@@ -11,11 +11,11 @@
 
 # Setup
 
-INCDIR = $(CURDIR)/library/include
+INCDIR = $(CURDIR)/include
 BINDIR = $(CURDIR)/bin
 INCCLIENT = -I/$(CURDIR)/client-server/include
 LFLAGS += -L/opt/local/lib -L/usr/local/ssl/lib @CONFIGLFLAGS@
-CFLAGS += -I$(INCDIR) -I$(CURDIR)/library/dependencies/threads @CONFIGFLAGS@
+CFLAGS += -I$(INCDIR) -I$(CURDIR)/dependencies/threads @CONFIGFLAGS@
 CC = @CC@
 
 ifndef OSTYPE
@@ -52,13 +52,13 @@ examples: example-build
 
 # Build all
 
-all-build: library client
-library: core crypto random threads logging network storage file-ec file-no-ec
+all-build: library 
+library: core crypto random threads logging network 
 
 # Get files for the core library
 
-CORE_FILES = $(wildcard library/src/*.c)
-CORE_OBJS = $(patsubst library/src/%.c, build/%.o, $(CORE_FILES))
+CORE_FILES = $(wildcard src/*.c)
+CORE_OBJS = $(patsubst src/%.c, build/%.o, $(CORE_FILES))
 
 # Core library target linking
 
@@ -81,7 +81,7 @@ bin:
 
 # Core Compilation
 
-$(CORE_OBJS): build/%.o: library/src/%.c | build
+$(CORE_OBJS): build/%.o: src/%.c | build
 	$(CC) -c $(CFLAGS) $< -o $@
 	$(CC) -I$(INCDIR) -MM $< > build/$*.d
 	@cp build/$*.d build/$*.P
@@ -91,7 +91,7 @@ $(CORE_OBJS): build/%.o: library/src/%.c | build
 
 # Dependencies require include/CBDependencies.h as a prerequisite
 
-build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o CBLibEventSockets.o: library/include/CBDependencies.h
+build/CBOpenSSLCrypto.o build/CBRand.o CBBlockChainStorage.o CBLibEventSockets.o: include/CBDependencies.h
 
 # Crypto library target linking
 
@@ -100,7 +100,7 @@ crypto : build/CBOpenSSLCrypto.o | bin
 
 # Crypto library compile
 
-build/CBOpenSSLCrypto.o: library/dependencies/crypto/CBOpenSSLCrypto.c
+build/CBOpenSSLCrypto.o: dependencies/crypto/CBOpenSSLCrypto.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
 # Random library target linking
@@ -110,7 +110,7 @@ random : build/CBRand.o | bin
 
 # Random library compile
 
-build/CBRand.o: library/dependencies/random/CBRand.c
+build/CBRand.o: dependencies/random/CBRand.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
 # Network library target linking
@@ -120,10 +120,10 @@ network : build/CBLibEventSockets.o build/CBCallbackQueue.o | bin
 
 # Network library compile
 
-build/CBCallbackQueue.o: library/dependencies/sockets/CBCallbackQueue.c library/dependencies/sockets/CBCallbackQueue.h
+build/CBCallbackQueue.o: dependencies/sockets/CBCallbackQueue.c dependencies/sockets/CBCallbackQueue.h
 	$(CC) -c $(CFLAGS) $< -o $@
 
-build/CBLibEventSockets.o: library/dependencies/sockets/CBLibEventSockets.c library/dependencies/sockets/CBLibEventSockets.h
+build/CBLibEventSockets.o: dependencies/sockets/CBLibEventSockets.c dependencies/sockets/CBLibEventSockets.h
 	$(CC) -c $(CFLAGS) $< -o $@
 	
 # Threads library target linking
@@ -133,7 +133,7 @@ threads : build/CBThreads.o | bin
 
 # Threads library compile
 
-build/CBThreads.o: library/dependencies/threads/CBThreads.c library/dependencies/threads/CBThreads.h
+build/CBThreads.o: dependencies/threads/CBThreads.c dependencies/threads/CBThreads.h
 	$(CC) -c $(CFLAGS) $< -o $@
 
 # Logging library target linking
@@ -143,53 +143,7 @@ logging : build/CBLog.o | bin
 
 # Logging library compile
 
-build/CBLog.o: library/dependencies/logging/CBLog.c library/dependencies/logging/CBLog.h 
-	$(CC) -c $(CFLAGS) $< -o $@
-
-# File IO library target linking
-
-file-ec : build/CBFileEC.o build/CBHamming72.o | bin
-	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-file-ec$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-file-ec$(LIBRARY_EXTENSION) build/CBFileEC.o build/CBHamming72.o
-
-file-no-ec : build/CBFileNoEC.o | bin
-	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-file-no-ec$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-file-no-ec$(LIBRARY_EXTENSION) build/CBFileNoEC.o
-
-# File IO library compile
-
-build/CBHamming72.o: library/dependencies/storage/CBHamming72.c library/dependencies/storage/CBHamming72.h
-	$(CC) -c $(CFLAGS) $< -o $@
-
-build/CBFileEC.o: library/dependencies/storage/CBFileEC.c library/dependencies/storage/CBFileEC.h library/dependencies/storage/CBHamming72.h
-	$(CC) -c $(CFLAGS) $< -o $@
-
-build/CBFileNoEC.o: library/dependencies/storage/CBFileNoEC.c library/dependencies/storage/CBFileNoEC.h
-	$(CC) -c $(CFLAGS) $< -o $@
-
-# Storage library files
-
-STORAGE_FILES = $(wildcard library/dependencies/storage/*.c)
-STORAGE_OBJS = $(patsubst library/dependencies/storage/%.c, build/%.o, $(STORAGE_FILES))
-
-# Storage library target linking
-
-storage : build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o build/CBAccounterStorage.o build/CBNodeStorage.o | bin 
-	$(CC) $(LFLAGS) $(if $(subst darwin,,$(OSTYPE)),,-install_name @executable_path/libcbitcoin-storage$(LIBRARY_EXTENSION)) -o bin/libcbitcoin-storage$(LIBRARY_EXTENSION) build/CBBlockChainStorage.o build/CBAddressStorage.o build/CBDatabase.o build/CBAccounterStorage.o build/CBNodeStorage.o
-
-# Storage library compile
-
-build/CBAccounterStorage.o: library/dependencies/storage/CBAccounterStorage.c library/dependencies/storage/CBAccounterStorage.h library/dependencies/storage/CBDatabase.h 
-	$(CC) -c $(CFLAGS) $< -o $@
-
-build/CBAddressStorage.o: library/dependencies/storage/CBAddressStorage.c library/dependencies/storage/CBAddressStorage.h library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $< -o $@
-
-build/CBBlockChainStorage.o: library/dependencies/storage/CBBlockChainStorage.c library/dependencies/storage/CBBlockChainStorage.h library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $< -o $@
-
-build/CBNodeStorage.o: library/dependencies/storage/CBNodeStorage.c library/dependencies/storage/CBNodeStorage.h library/dependencies/storage/CBDatabase.h
-	$(CC) -c $(CFLAGS) $< -o $@
-
-build/CBDatabase.o: library/dependencies/storage/CBDatabase.c library/dependencies/storage/CBDatabase.h
+build/CBLog.o: dependencies/logging/CBLog.c dependencies/logging/CBLog.h 
 	$(CC) -c $(CFLAGS) $< -o $@
 
 # Clean
@@ -201,18 +155,16 @@ clean:
 
 LINK_CORE = -lcbitcoin.$(LIBRARY_VERSION)
 LINK_NETWORK = -lcbitcoin-network.$(LIBRARY_VERSION)
-LINK_STORAGE = -lcbitcoin-storage.$(LIBRARY_VERSION)
 LINK_THREADS = -lcbitcoin-threads.$(LIBRARY_VERSION) -lpthread
 LINK_LOGGING = -lcbitcoin-logging.$(LIBRARY_VERSION)
 LINK_CRYPTO = -lcbitcoin-crypto.$(LIBRARY_VERSION) -lcrypto
-LINK_FILE = -lcbitcoin-file-@NOEC@ec.$(LIBRARY_VERSION)
 LINK_RAND = -lcbitcoin-rand.$(LIBRARY_VERSION)
 
 # Tests
 
-TEST_FILES = $(wildcard library/test/*.c)
-TEST_BINARIES = $(patsubst library/test/%.c, bin/%, $(TEST_FILES))
-TEST_OBJS = $(patsubst library/test/%.c, build/%.o, $(TEST_FILES))
+TEST_FILES = $(wildcard test/*.c)
+TEST_BINARIES = $(patsubst test/%.c, bin/%, $(TEST_FILES))
+TEST_OBJS = $(patsubst test/%.c, build/%.o, $(TEST_FILES))
 
 test-build : clean-tests $(TEST_BINARIES)
 	rm -f -r cbitcoin 0 1 2 test.dat testDb test.log
@@ -221,31 +173,15 @@ test-build : clean-tests $(TEST_BINARIES)
 # REMEMBER to add dependencies after the objects or libraries that depend on them.
 
 $(TEST_BINARIES): bin/%: build/%.o
-	$(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_NETWORK) $(LINK_STORAGE) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) -lcbitcoin-file-$(if $(subst bin/testCBFile,,$(subst bin/testCBHamming72,,$@)),@NOEC@,)ec.$(LIBRARY_VERSION) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o $@
+	$(CC) $< -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_NETWORK) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o $@
 	$@
 
-$(TEST_OBJS): build/%.o: library/test/%.c library
-	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
+$(TEST_OBJS): build/%.o: test/%.c library
+	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ $< -o $@
 	
 clean-tests:
 	rm -f $(TEST_BINARIES)
 	
-# Client Server
-
-CLIENT_FILES = $(wildcard client-server/src/*.c)
-CLIENT_OBJS = $(patsubst client-server/src/%.c, build/%.o, $(CLIENT_FILES))
-
-$(CLIENT_OBJS): build/%.o: client-server/src/%.c | build
-	$(CC) -c $(CFLAGS) $(INCCLIENT) $< -o $@
-	$(CC) -I$(INCDIR) $(INCCLIENT) -MM $< > build/$*.d
-	@cp build/$*.d build/$*.P
-	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-            -e '/^$$/ d' -e 's/$$/ :/' < build/$*.P >> build/$*.d;
-	@rm build/$*.P
-
-client : $(CLIENT_OBJS) | bin
-	$(CC) $(CLIENT_OBJS) -L$(BINDIR) -Wl,-rpath=\$$ORIGIN $(LINK_CORE) $(LINK_NETWORK) $(LINK_STORAGE) $(LINK_THREADS) $(LINK_LOGGING) $(LINK_CRYPTO) $(LINK_CORE) $(LINK_FILE) $(LINK_RAND) -L/opt/local/lib -levent_core -levent_pthreads -o bin/cbitcoin
-
 # Examples
 
 EXAMPLE_FILES = $(wildcard examples/*.c)
@@ -278,5 +214,5 @@ bin/noLowerAddressGenerator: bin/%: build/%.o
 # Compilation of example sources
 
 $(EXAMPLE_OBJS): build/%.o: examples/%.c library
-	$(CC) -c $(CFLAGS) -I$(CURDIR)/library/dependencies/sockets/ -I$(CURDIR)/library/dependencies/storage $< -o $@
+	$(CC) -c $(CFLAGS) -I$(CURDIR)/dependencies/sockets/ $< -o $@
 	
