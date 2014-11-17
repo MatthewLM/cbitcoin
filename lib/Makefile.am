@@ -43,7 +43,7 @@ libcbitcoin_la_SOURCES= \
 	CBBlockHeaders.c  \
 	CBPingPong.c
 
-
+libcbitcoin_la_LIBADD = ../dependencies/crypto/libcrypto.la
 libcbitcoin_la_CFLAGS = -I$(top_srcdir)/include 
 libcbitcoin_la_LDFLAGS = -module -shared -version-info 2:0:1
 # -I$(top_srcdir)/common

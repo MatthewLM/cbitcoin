@@ -11710,7 +11710,7 @@ done
 
 
 
-ac_config_files="$ac_config_files Makefile include/Makefile lib/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile dependencies/sockets/Makefile dependencies/storage/Makefile dependencies/threads/Makefile test/Makefile"
+ac_config_files="$ac_config_files Makefile include/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile dependencies/sockets/Makefile dependencies/storage/Makefile dependencies/threads/Makefile lib/Makefile test/Makefile"
 
 
 ac_ext=c
@@ -14188,7 +14188,6 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
-    "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
     "dependencies/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/Makefile" ;;
     "dependencies/crypto/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/crypto/Makefile" ;;
     "dependencies/logging/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/logging/Makefile" ;;
@@ -14196,6 +14195,7 @@ do
     "dependencies/sockets/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/sockets/Makefile" ;;
     "dependencies/storage/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/storage/Makefile" ;;
     "dependencies/threads/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/threads/Makefile" ;;
+    "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
 

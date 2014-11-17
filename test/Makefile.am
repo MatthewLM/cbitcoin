@@ -59,7 +59,7 @@ TESTS = testCBByteArray \
 	testCBHamming72 
 
 COMMON_LDADD = ../lib/libcbitcoin.la \
-	../dependencies/crypto/libcbitcoin-crypto.la \
+	../dependencies/crypto/libcrypto.la \
 	../dependencies/logging/libcbitcoin-logging.la \
 	../dependencies/random/libcbitcoin-random.la \
 	../dependencies/sockets/libcbitcoin-sockets.la \
