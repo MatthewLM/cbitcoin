@@ -72,7 +72,7 @@ testValidation_LDADD 		= $(COMMON_LDADD)
 testCBVersion_LDADD 		= $(COMMON_LDADD) 
 testCBAddress_LDADD 		= $(COMMON_LDADD) 
 testCBAddressManager_LDADD 	= $(COMMON_LDADD) 
-testCBDatabase_LDADD 		= $(COMMON_LDADD) 	../dependencies/storage/libcbitcoin-file-ec.la ../dependencies/storage/libcbitcoin-storage.la
+testCBDatabase_LDADD 		= $(COMMON_LDADD) 	../dependencies/storage/libfileec.la ../dependencies/storage/libstorage.la
 testCBTransaction_LDADD 	= $(COMMON_LDADD) 
 testCBInventory_LDADD 		= $(COMMON_LDADD) 
 testCBBlockHeaders_LDADD 	= $(COMMON_LDADD) 
@@ -84,10 +84,10 @@ testCBNodeFull_LDADD 		= $(COMMON_LDADD)
 testCBHDKeys_LDADD 		= $(COMMON_LDADD) 
 testCBBigInt_LDADD		= $(COMMON_LDADD) 
 testCBAlert_LDADD		= $(COMMON_LDADD) 
-testCBFile_LDADD		= $(COMMON_LDADD) ../dependencies/storage/libcbitcoin-file-ec.la
+testCBFile_LDADD		= $(COMMON_LDADD) ../dependencies/storage/libfileec.la
 testCBBlock_LDADD		= $(COMMON_LDADD) 
 testCBFullValidator_LDADD	= $(COMMON_LDADD) 
 testCBAssociativeArray_LDADD	= $(COMMON_LDADD) 
-testCBHamming72_LDADD		= $(COMMON_LDADD) ../dependencies/storage/libcbitcoin-file-ec.la
+testCBHamming72_LDADD		= $(COMMON_LDADD) ../dependencies/storage/libfileec.la
 
 
