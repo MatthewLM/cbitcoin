@@ -11335,9 +11335,6 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 
-#AC_CONFIG_FILES([Makefile])
-
-
 
 # Checks for header files.
 for ac_header in arpa/inet.h fcntl.h inttypes.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/socket.h sys/time.h unistd.h
@@ -11711,11 +11708,9 @@ fi
 done
 
 
-#AC_CONFIG_FILES([Debug/makefile])
 
 
-
-ac_config_files="$ac_config_files Makefile src/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile dependencies/sockets/Makefile dependencies/storage/Makefile dependencies/threads/Makefile test/Makefile"
+ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile dependencies/sockets/Makefile dependencies/storage/Makefile dependencies/threads/Makefile test/Makefile"
 
 
 ac_ext=c
@@ -14192,6 +14187,7 @@ do
   case $ac_config_target in
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "dependencies/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/Makefile" ;;
     "dependencies/crypto/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/crypto/Makefile" ;;

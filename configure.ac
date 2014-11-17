@@ -164,7 +164,7 @@ AC_CHECK_FUNCS([gettimeofday memmove memset mkdir rmdir socket strchr strerror s
 
 AC_CONFIG_MACRO_DIR([m4])
 
-AC_CONFIG_FILES([ Makefile include/Makefile src/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile  dependencies/sockets/Makefile   dependencies/storage/Makefile dependencies/threads/Makefile test/Makefile ])
+AC_CONFIG_FILES([ Makefile include/Makefile src/Makefile test/Makefile ])
 
 AC_PROG_CC
 AC_PROG_CC_STDC

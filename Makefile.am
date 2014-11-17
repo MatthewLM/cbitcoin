@@ -4,7 +4,7 @@ CFLAGS = " -Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -
 
 ACLOCAL_AMFLAGS = ' -I m4 '
 
-SUBDIRS = src dependencies test 
+SUBDIRS = include src test 
 
 
 clean:
