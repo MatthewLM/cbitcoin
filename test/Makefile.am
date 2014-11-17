@@ -1,4 +1,4 @@
-INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/test\" -I$(top_srcdir)/include \
+INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
 	-I$(top_srcdir)/dependencies/storage  -I$(top_srcdir)/dependencies/logging \
 	-I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets
 
@@ -58,7 +58,7 @@ TESTS = testCBByteArray \
 	testCBAssociativeArray \
 	testCBHamming72 
 
-COMMON_LDADD = ../src/libcbitcoin.la \
+COMMON_LDADD = ../lib/libcbitcoin.la \
 	../dependencies/crypto/libcbitcoin-crypto.la \
 	../dependencies/logging/libcbitcoin-logging.la \
 	../dependencies/random/libcbitcoin-random.la \
