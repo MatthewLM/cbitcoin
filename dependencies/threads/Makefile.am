@@ -2,7 +2,7 @@
 
 lib_LTLIBRARIES = libcbitcoin-threads.la
 libcbitcoin_threads_la_SOURCES = CBThreads.c  
-#libcbitcoin_threads_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la
+libcbitcoin_threads_la_LIBADD = $(EVENT_LIBS)
 libcbitcoin_threads_la_CFLAGS =  -I$(top_srcdir)/include 
 libcbitcoin_threads_la_LDFLAGS = -module -shared 
 
