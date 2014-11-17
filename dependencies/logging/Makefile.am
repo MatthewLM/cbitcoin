@@ -1,9 +1,9 @@
 INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
 
-lib_LTLIBRARIES = libcbitcoin-logging.la
-libcbitcoin_logging_la_SOURCES = CBLog.c  CBLog.h
-libcbitcoin_logging_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la $(top_srcdir)/dependencies/threads/libcbitcoin-threads.la
-libcbitcoin_logging_la_CFLAGS = -I$(top_srcdir)/include  -I$(top_srcdir)/dependencies/threads
-libcbitcoin_logging_la_LDFLAGS = -module -shared 
+noinst_LTLIBRARIES = liblogging.la
+liblogging_la_SOURCES = CBLog.c  CBLog.h
+liblogging_la_LIBADD = $(top_srcdir)/dependencies/threads/libthreads.la
+liblogging_la_CFLAGS = -I$(top_srcdir)/include  -I$(top_srcdir)/dependencies/threads
+#liblogging_la_LDFLAGS = -module -shared 
 
 
