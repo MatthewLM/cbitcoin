@@ -89,88 +89,89 @@ CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
 testCBAccounter_SOURCES = testCBAccounter.c
 testCBAccounter_OBJECTS = testCBAccounter.$(OBJEXT)
-testCBAccounter_DEPENDENCIES = $(COMMON_LDADD)
+am__DEPENDENCIES_1 = ../lib/libcbitcoin.la
+testCBAccounter_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBAddress_SOURCES = testCBAddress.c
 testCBAddress_OBJECTS = testCBAddress.$(OBJEXT)
-testCBAddress_DEPENDENCIES = $(COMMON_LDADD)
+testCBAddress_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBAddressBroadcast_SOURCES = testCBAddressBroadcast.c
 testCBAddressBroadcast_OBJECTS = testCBAddressBroadcast.$(OBJEXT)
-testCBAddressBroadcast_DEPENDENCIES = $(COMMON_LDADD)
+testCBAddressBroadcast_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBAddressManager_SOURCES = testCBAddressManager.c
 testCBAddressManager_OBJECTS = testCBAddressManager.$(OBJEXT)
-testCBAddressManager_DEPENDENCIES = $(COMMON_LDADD)
+testCBAddressManager_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBAlert_SOURCES = testCBAlert.c
 testCBAlert_OBJECTS = testCBAlert.$(OBJEXT)
-testCBAlert_DEPENDENCIES = $(COMMON_LDADD)
+testCBAlert_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBAssociativeArray_SOURCES = testCBAssociativeArray.c
 testCBAssociativeArray_OBJECTS = testCBAssociativeArray.$(OBJEXT)
-testCBAssociativeArray_DEPENDENCIES = $(COMMON_LDADD)
+testCBAssociativeArray_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBBase58_SOURCES = testCBBase58.c
 testCBBase58_OBJECTS = testCBBase58.$(OBJEXT)
-testCBBase58_DEPENDENCIES = $(COMMON_LDADD)
+testCBBase58_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBBigInt_SOURCES = testCBBigInt.c
 testCBBigInt_OBJECTS = testCBBigInt.$(OBJEXT)
-testCBBigInt_DEPENDENCIES = $(COMMON_LDADD)
+testCBBigInt_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBBlock_SOURCES = testCBBlock.c
 testCBBlock_OBJECTS = testCBBlock.$(OBJEXT)
-testCBBlock_DEPENDENCIES = $(COMMON_LDADD)
+testCBBlock_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBBlockHeaders_SOURCES = testCBBlockHeaders.c
 testCBBlockHeaders_OBJECTS = testCBBlockHeaders.$(OBJEXT)
-testCBBlockHeaders_DEPENDENCIES = $(COMMON_LDADD)
+testCBBlockHeaders_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBByteArray_SOURCES = testCBByteArray.c
 testCBByteArray_OBJECTS = testCBByteArray.$(OBJEXT)
-testCBByteArray_DEPENDENCIES = $(COMMON_LDADD)
+testCBByteArray_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBCallbackQueue_SOURCES = testCBCallbackQueue.c
 testCBCallbackQueue_OBJECTS = testCBCallbackQueue.$(OBJEXT)
-testCBCallbackQueue_DEPENDENCIES = $(COMMON_LDADD)
+testCBCallbackQueue_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBDatabase_SOURCES = testCBDatabase.c
 testCBDatabase_OBJECTS = testCBDatabase.$(OBJEXT)
-testCBDatabase_DEPENDENCIES = $(COMMON_LDADD) \
+testCBDatabase_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	../dependencies/storage/libcbitcoin-file-ec.la \
 	../dependencies/storage/libcbitcoin-storage.la
 testCBFile_SOURCES = testCBFile.c
 testCBFile_OBJECTS = testCBFile.$(OBJEXT)
-testCBFile_DEPENDENCIES = $(COMMON_LDADD) \
+testCBFile_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	../dependencies/storage/libcbitcoin-file-ec.la
 testCBFullValidator_SOURCES = testCBFullValidator.c
 testCBFullValidator_OBJECTS = testCBFullValidator.$(OBJEXT)
-testCBFullValidator_DEPENDENCIES = $(COMMON_LDADD)
+testCBFullValidator_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBGetBlocks_SOURCES = testCBGetBlocks.c
 testCBGetBlocks_OBJECTS = testCBGetBlocks.$(OBJEXT)
-testCBGetBlocks_DEPENDENCIES = $(COMMON_LDADD)
+testCBGetBlocks_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBHDKeys_SOURCES = testCBHDKeys.c
 testCBHDKeys_OBJECTS = testCBHDKeys.$(OBJEXT)
-testCBHDKeys_DEPENDENCIES = $(COMMON_LDADD)
+testCBHDKeys_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBHamming72_SOURCES = testCBHamming72.c
 testCBHamming72_OBJECTS = testCBHamming72.$(OBJEXT)
-testCBHamming72_DEPENDENCIES = $(COMMON_LDADD) \
+testCBHamming72_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	../dependencies/storage/libcbitcoin-file-ec.la
 testCBHeadersOnlyValidator_SOURCES = testCBHeadersOnlyValidator.c
 testCBHeadersOnlyValidator_OBJECTS =  \
 	testCBHeadersOnlyValidator.$(OBJEXT)
-testCBHeadersOnlyValidator_DEPENDENCIES = $(COMMON_LDADD)
+testCBHeadersOnlyValidator_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBInventory_SOURCES = testCBInventory.c
 testCBInventory_OBJECTS = testCBInventory.$(OBJEXT)
-testCBInventory_DEPENDENCIES = $(COMMON_LDADD)
+testCBInventory_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBNetworkCommunicator_SOURCES = testCBNetworkCommunicator.c
 testCBNetworkCommunicator_OBJECTS =  \
 	testCBNetworkCommunicator.$(OBJEXT)
-testCBNetworkCommunicator_DEPENDENCIES = $(COMMON_LDADD)
+testCBNetworkCommunicator_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBNodeFull_SOURCES = testCBNodeFull.c
 testCBNodeFull_OBJECTS = testCBNodeFull.$(OBJEXT)
-testCBNodeFull_DEPENDENCIES = $(COMMON_LDADD)
+testCBNodeFull_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBScript_SOURCES = testCBScript.c
 testCBScript_OBJECTS = testCBScript.$(OBJEXT)
-testCBScript_DEPENDENCIES = $(COMMON_LDADD)
+testCBScript_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBTransaction_SOURCES = testCBTransaction.c
 testCBTransaction_OBJECTS = testCBTransaction.$(OBJEXT)
-testCBTransaction_DEPENDENCIES = $(COMMON_LDADD)
+testCBTransaction_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testCBVersion_SOURCES = testCBVersion.c
 testCBVersion_OBJECTS = testCBVersion.$(OBJEXT)
-testCBVersion_DEPENDENCIES = $(COMMON_LDADD)
+testCBVersion_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testValidation_SOURCES = testValidation.c
 testValidation_OBJECTS = testValidation.$(OBJEXT)
-testValidation_DEPENDENCIES = $(COMMON_LDADD)
+testValidation_DEPENDENCIES = $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -337,13 +338,8 @@ INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
 	-I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets
 
 EXTRA_DIST = scriptCases.txt 
-COMMON_LDADD = ../lib/libcbitcoin.la \
-	../dependencies/crypto/libcbitcoin-crypto.la \
-	../dependencies/logging/libcbitcoin-logging.la \
-	../dependencies/random/libcbitcoin-random.la \
-	../dependencies/sockets/libcbitcoin-sockets.la \
-	../dependencies/threads/libcbitcoin-threads.la 
-
+LIBADD = $(EVENT_LIBS) ../lib/libcbitcoin.la
+COMMON_LDADD = @EVENT_LIBS@ ../lib/libcbitcoin.la 
 testCBByteArray_LDADD = $(COMMON_LDADD) 
 testCBBase58_LDADD = $(COMMON_LDADD) 
 testCBNetworkCommunicator_LDADD = $(COMMON_LDADD) 

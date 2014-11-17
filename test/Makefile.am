@@ -58,12 +58,9 @@ TESTS = testCBByteArray \
 	testCBAssociativeArray \
 	testCBHamming72 
 
-COMMON_LDADD = ../lib/libcbitcoin.la \
-	../dependencies/crypto/libcrypto.la \
-	../dependencies/logging/libcbitcoin-logging.la \
-	../dependencies/random/libcbitcoin-random.la \
-	../dependencies/sockets/libcbitcoin-sockets.la \
-	../dependencies/threads/libcbitcoin-threads.la 
+LIBADD = $(EVENT_LIBS) ../lib/libcbitcoin.la
+
+COMMON_LDADD = @EVENT_LIBS@ ../lib/libcbitcoin.la 
 
 
 testCBByteArray_LDADD 		= $(COMMON_LDADD) 

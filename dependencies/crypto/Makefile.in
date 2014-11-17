@@ -60,43 +60,13 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
-am__vpath_adj = case $$p in \
-    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
-    *) f=$$p;; \
-  esac;
-am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
-am__install_max = 40
-am__nobase_strip_setup = \
-  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
-am__nobase_strip = \
-  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
-am__nobase_list = $(am__nobase_strip_setup); \
-  for p in $$list; do echo "$$p $$p"; done | \
-  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
-  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
-    if (++n[$$2] == $(am__install_max)) \
-      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
-    END { for (dir in files) print dir, files[dir] }'
-am__base_list = \
-  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
-  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__uninstall_files_from_dir = { \
-  test -z "$$files" \
-    || { test ! -d "$$dir" && test ! -f "$$dir" && test ! -r "$$dir"; } \
-    || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
-         $(am__cd) "$$dir" && rm -f $$files; }; \
-  }
-am__installdirs = "$(DESTDIR)$(libdir)"
-LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_crypto_la_LIBADD =
-am_libcbitcoin_crypto_la_OBJECTS =  \
-	libcbitcoin_crypto_la-CBOpenSSLCrypto.lo
-libcbitcoin_crypto_la_OBJECTS = $(am_libcbitcoin_crypto_la_OBJECTS)
-libcbitcoin_crypto_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_crypto_la_CFLAGS) $(CFLAGS) \
-	$(libcbitcoin_crypto_la_LDFLAGS) $(LDFLAGS) -o $@
+LTLIBRARIES = $(noinst_LTLIBRARIES)
+libcrypto_la_LIBADD =
+am_libcrypto_la_OBJECTS = libcrypto_la-CBOpenSSLCrypto.lo
+libcrypto_la_OBJECTS = $(am_libcrypto_la_OBJECTS)
+libcrypto_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libcrypto_la_CFLAGS) \
+	$(CFLAGS) $(libcrypto_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -110,8 +80,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libcbitcoin_crypto_la_SOURCES)
-DIST_SOURCES = $(libcbitcoin_crypto_la_SOURCES)
+SOURCES = $(libcrypto_la_SOURCES)
+DIST_SOURCES = $(libcrypto_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -240,11 +210,11 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
-lib_LTLIBRARIES = libcbitcoin-crypto.la
-libcbitcoin_crypto_la_SOURCES = CBOpenSSLCrypto.c
+noinst_LTLIBRARIES = libcrypto.la
+libcrypto_la_SOURCES = CBOpenSSLCrypto.c
 #libcbitcoin_crypto_la_LIBADD = $(top_srcdir)/lib/libcbitcoin.la
-libcbitcoin_crypto_la_CFLAGS = -I$(top_srcdir)/include 
-libcbitcoin_crypto_la_LDFLAGS = -module -shared 
+libcrypto_la_CFLAGS = -I$(top_srcdir)/include 
+libcrypto_la_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -279,40 +249,17 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-install-libLTLIBRARIES: $(lib_LTLIBRARIES)
-	@$(NORMAL_INSTALL)
-	@list='$(lib_LTLIBRARIES)'; test -n "$(libdir)" || list=; \
-	list2=; for p in $$list; do \
-	  if test -f $$p; then \
-	    list2="$$list2 $$p"; \
-	  else :; fi; \
-	done; \
-	test -z "$$list2" || { \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(libdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(libdir)" || exit 1; \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(libdir)'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(libdir)"; \
-	}
 
-uninstall-libLTLIBRARIES:
-	@$(NORMAL_UNINSTALL)
-	@list='$(lib_LTLIBRARIES)'; test -n "$(libdir)" || list=; \
-	for p in $$list; do \
-	  $(am__strip_dir) \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(libdir)/$$f'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(libdir)/$$f"; \
-	done
-
-clean-libLTLIBRARIES:
-	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
-	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
+	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
 	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
 	  test "$$dir" != "$$p" || dir=.; \
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libcbitcoin-crypto.la: $(libcbitcoin_crypto_la_OBJECTS) $(libcbitcoin_crypto_la_DEPENDENCIES) $(EXTRA_libcbitcoin_crypto_la_DEPENDENCIES) 
-	$(libcbitcoin_crypto_la_LINK) -rpath $(libdir) $(libcbitcoin_crypto_la_OBJECTS) $(libcbitcoin_crypto_la_LIBADD) $(LIBS)
+libcrypto.la: $(libcrypto_la_OBJECTS) $(libcrypto_la_DEPENDENCIES) $(EXTRA_libcrypto_la_DEPENDENCIES) 
+	$(libcrypto_la_LINK)  $(libcrypto_la_OBJECTS) $(libcrypto_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -320,7 +267,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_crypto_la-CBOpenSSLCrypto.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcrypto_la-CBOpenSSLCrypto.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -343,12 +290,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libcbitcoin_crypto_la-CBOpenSSLCrypto.lo: CBOpenSSLCrypto.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_crypto_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_crypto_la-CBOpenSSLCrypto.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_crypto_la-CBOpenSSLCrypto.Tpo -c -o libcbitcoin_crypto_la-CBOpenSSLCrypto.lo `test -f 'CBOpenSSLCrypto.c' || echo '$(srcdir)/'`CBOpenSSLCrypto.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_crypto_la-CBOpenSSLCrypto.Tpo $(DEPDIR)/libcbitcoin_crypto_la-CBOpenSSLCrypto.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBOpenSSLCrypto.c' object='libcbitcoin_crypto_la-CBOpenSSLCrypto.lo' libtool=yes @AMDEPBACKSLASH@
+libcrypto_la-CBOpenSSLCrypto.lo: CBOpenSSLCrypto.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcrypto_la_CFLAGS) $(CFLAGS) -MT libcrypto_la-CBOpenSSLCrypto.lo -MD -MP -MF $(DEPDIR)/libcrypto_la-CBOpenSSLCrypto.Tpo -c -o libcrypto_la-CBOpenSSLCrypto.lo `test -f 'CBOpenSSLCrypto.c' || echo '$(srcdir)/'`CBOpenSSLCrypto.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcrypto_la-CBOpenSSLCrypto.Tpo $(DEPDIR)/libcrypto_la-CBOpenSSLCrypto.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBOpenSSLCrypto.c' object='libcrypto_la-CBOpenSSLCrypto.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_crypto_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_crypto_la-CBOpenSSLCrypto.lo `test -f 'CBOpenSSLCrypto.c' || echo '$(srcdir)/'`CBOpenSSLCrypto.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcrypto_la_CFLAGS) $(CFLAGS) -c -o libcrypto_la-CBOpenSSLCrypto.lo `test -f 'CBOpenSSLCrypto.c' || echo '$(srcdir)/'`CBOpenSSLCrypto.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -442,9 +389,6 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)"; do \
-	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
-	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -477,7 +421,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
+clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -504,7 +448,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-libLTLIBRARIES
+install-exec-am:
 
 install-html: install-html-am
 
@@ -544,23 +488,22 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-libLTLIBRARIES
+uninstall-am:
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libLTLIBRARIES clean-libtool ctags distclean \
+	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am \
-	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-libLTLIBRARIES
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

@@ -11102,11 +11102,15 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_event_core_event_base_new" >&5
 $as_echo "$ac_cv_lib_event_core_event_base_new" >&6; }
 if test "x$ac_cv_lib_event_core_event_base_new" = xyes; then :
-  EVENT_LIBS=-levent_core
+  EVENT_LIBS=" -levent_core -levent -levent_extra -levent_openssl -levent_pthreads"
 else
   as_fn_error $? "Missing required libevent" "$LINENO" 5
 fi
 
+
+if EVENT_LIBS
+#EVENT_LIBS += " -levent -levent_extra -levent_openssl -levent_pthreads "
+endif
 
 
 

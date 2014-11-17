@@ -89,7 +89,11 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_la_LIBADD =
+libcbitcoin_la_DEPENDENCIES = ../dependencies/crypto/libcrypto.la \
+	../dependencies/threads/libthreads.la \
+	../dependencies/sockets/libsockets.la \
+	../dependencies/logging/liblogging.la \
+	../dependencies/random/librandom.la
 am_libcbitcoin_la_OBJECTS = libcbitcoin_la-CBAlert.lo \
 	libcbitcoin_la-CBThreadPoolQueue.lo \
 	libcbitcoin_la-CBInventory.lo libcbitcoin_la-CBBigInt.lo \
@@ -263,7 +267,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
+INCLUDES = @EVENT_LIBS@ @CRYPTO_LIBS@ -I$(top_srcdir)/include
 lib_LTLIBRARIES = libcbitcoin.la
 libcbitcoin_la_SOURCES = \
 	CBAlert.c  \
@@ -305,6 +309,9 @@ libcbitcoin_la_SOURCES = \
 	CBNodeFull.c  \
 	CBBlockHeaders.c  \
 	CBPingPong.c
+
+libcbitcoin_la_LIBADD = ../dependencies/crypto/libcrypto.la ../dependencies/threads/libthreads.la  \
+	../dependencies/sockets/libsockets.la ../dependencies/logging/liblogging.la ../dependencies/random/librandom.la
 
 libcbitcoin_la_CFLAGS = -I$(top_srcdir)/include 
 libcbitcoin_la_LDFLAGS = -module -shared -version-info 2:0:1

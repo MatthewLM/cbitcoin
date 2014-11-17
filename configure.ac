@@ -95,7 +95,7 @@ LFLAGS=" $save_lflags "
 # Search for OpenSSL and LibEvent.
 AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
   [AC_MSG_ERROR([Missing required libcrypto])])
-AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
+AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=" -levent_core -levent -levent_extra -levent_openssl -levent_pthreads",
   [AC_MSG_ERROR([Missing required libevent])])
 
 AC_SUBST(CRYPTO_LIBS)

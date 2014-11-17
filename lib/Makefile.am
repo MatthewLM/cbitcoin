@@ -1,4 +1,4 @@
-INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
+INCLUDES = @EVENT_LIBS@ @CRYPTO_LIBS@ -I$(top_srcdir)/include
 
 lib_LTLIBRARIES = libcbitcoin.la
 
@@ -43,7 +43,9 @@ libcbitcoin_la_SOURCES= \
 	CBBlockHeaders.c  \
 	CBPingPong.c
 
-libcbitcoin_la_LIBADD = ../dependencies/crypto/libcrypto.la
+libcbitcoin_la_LIBADD = ../dependencies/crypto/libcrypto.la ../dependencies/threads/libthreads.la  \
+	../dependencies/sockets/libsockets.la ../dependencies/logging/liblogging.la ../dependencies/random/librandom.la
+
 libcbitcoin_la_CFLAGS = -I$(top_srcdir)/include 
 libcbitcoin_la_LDFLAGS = -module -shared -version-info 2:0:1
 # -I$(top_srcdir)/common
