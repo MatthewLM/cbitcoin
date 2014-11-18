@@ -60,65 +60,29 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
-am__vpath_adj = case $$p in \
-    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
-    *) f=$$p;; \
-  esac;
-am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
-am__install_max = 40
-am__nobase_strip_setup = \
-  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
-am__nobase_strip = \
-  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
-am__nobase_list = $(am__nobase_strip_setup); \
-  for p in $$list; do echo "$$p $$p"; done | \
-  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
-  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
-    if (++n[$$2] == $(am__install_max)) \
-      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
-    END { for (dir in files) print dir, files[dir] }'
-am__base_list = \
-  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
-  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__uninstall_files_from_dir = { \
-  test -z "$$files" \
-    || { test ! -d "$$dir" && test ! -f "$$dir" && test ! -r "$$dir"; } \
-    || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
-         $(am__cd) "$$dir" && rm -f $$files; }; \
-  }
-am__installdirs = "$(DESTDIR)$(libdir)"
-LTLIBRARIES = $(lib_LTLIBRARIES)
-libcbitcoin_file_ec_la_LIBADD =
-am_libcbitcoin_file_ec_la_OBJECTS =  \
-	libcbitcoin_file_ec_la-CBHamming72.lo \
-	libcbitcoin_file_ec_la-CBFileEC.lo
-libcbitcoin_file_ec_la_OBJECTS = $(am_libcbitcoin_file_ec_la_OBJECTS)
-libcbitcoin_file_ec_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_file_ec_la_CFLAGS) $(CFLAGS) \
-	$(libcbitcoin_file_ec_la_LDFLAGS) $(LDFLAGS) -o $@
-libcbitcoin_file_no_ec_la_LIBADD =
-am_libcbitcoin_file_no_ec_la_OBJECTS =  \
-	libcbitcoin_file_no_ec_la-CBFileNoEC.lo
-libcbitcoin_file_no_ec_la_OBJECTS =  \
-	$(am_libcbitcoin_file_no_ec_la_OBJECTS)
-libcbitcoin_file_no_ec_la_LINK = $(LIBTOOL) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_file_no_ec_la_CFLAGS) $(CFLAGS) \
-	$(libcbitcoin_file_no_ec_la_LDFLAGS) $(LDFLAGS) -o $@
-libcbitcoin_storage_la_LIBADD =
-am_libcbitcoin_storage_la_OBJECTS =  \
-	libcbitcoin_storage_la-CBAccounterStorage.lo \
-	libcbitcoin_storage_la-CBAddressStorage.lo \
-	libcbitcoin_storage_la-CBBlockChainStorage.lo \
-	libcbitcoin_storage_la-CBNodeStorage.lo \
-	libcbitcoin_storage_la-CBDatabase.lo
-libcbitcoin_storage_la_OBJECTS = $(am_libcbitcoin_storage_la_OBJECTS)
-libcbitcoin_storage_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) \
-	$(libcbitcoin_storage_la_LDFLAGS) $(LDFLAGS) -o $@
+LTLIBRARIES = $(noinst_LTLIBRARIES)
+libfileec_la_LIBADD =
+am_libfileec_la_OBJECTS = libfileec_la-CBHamming72.lo \
+	libfileec_la-CBFileEC.lo
+libfileec_la_OBJECTS = $(am_libfileec_la_OBJECTS)
+libfileec_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libfileec_la_CFLAGS) \
+	$(CFLAGS) $(libfileec_la_LDFLAGS) $(LDFLAGS) -o $@
+libfilenoec_la_LIBADD =
+am_libfilenoec_la_OBJECTS = libfilenoec_la-CBFileNoEC.lo
+libfilenoec_la_OBJECTS = $(am_libfilenoec_la_OBJECTS)
+libfilenoec_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libfilenoec_la_CFLAGS) \
+	$(CFLAGS) $(libfilenoec_la_LDFLAGS) $(LDFLAGS) -o $@
+libstorage_la_LIBADD =
+am_libstorage_la_OBJECTS = libstorage_la-CBAccounterStorage.lo \
+	libstorage_la-CBAddressStorage.lo \
+	libstorage_la-CBBlockChainStorage.lo \
+	libstorage_la-CBNodeStorage.lo libstorage_la-CBDatabase.lo
+libstorage_la_OBJECTS = $(am_libstorage_la_OBJECTS)
+libstorage_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libstorage_la_CFLAGS) \
+	$(CFLAGS) $(libstorage_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -132,12 +96,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libcbitcoin_file_ec_la_SOURCES) \
-	$(libcbitcoin_file_no_ec_la_SOURCES) \
-	$(libcbitcoin_storage_la_SOURCES)
-DIST_SOURCES = $(libcbitcoin_file_ec_la_SOURCES) \
-	$(libcbitcoin_file_no_ec_la_SOURCES) \
-	$(libcbitcoin_storage_la_SOURCES)
+SOURCES = $(libfileec_la_SOURCES) $(libfilenoec_la_SOURCES) \
+	$(libstorage_la_SOURCES)
+DIST_SOURCES = $(libfileec_la_SOURCES) $(libfilenoec_la_SOURCES) \
+	$(libstorage_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -266,20 +228,16 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 INCLUDES = @CRYPTO_LIBS@ -I$(top_srcdir)/include
-lib_LTLIBRARIES = libcbitcoin-file-ec.la libcbitcoin-file-no-ec.la libcbitcoin-storage.la
-#libcbitcoin_storage_la_SOURCES = CBAccounterStorage.c  CBAddressStorage.h     CBDatabase.c          CBFileEC.c    CBFileNoEC.h   CBNodeStorage.c CBAccounterStorage.h  CBBlockChainStorage.c  CBDatabase.h  CBFileEC.h    CBHamming72.c  CBNodeStorage.h CBAddressStorage.c    CBBlockChainStorage.h  CBFileDependencies.h  CBFileNoEC.c  CBHamming72.h
-#libcbitcoin_storage_la_LIBADD = $(top_srcdir)/src/libcbitcoin.la
-#libcbitcoin_storage_la_CFLAGS = -I$(top_srcdir)/include 
-#libcbitcoin_storage_la_LDFLAGS = -module -shared 
-libcbitcoin_file_ec_la_SOURCES = CBHamming72.c CBFileEC.c 
-libcbitcoin_file_no_ec_la_SOURCES = CBFileNoEC.c
-libcbitcoin_storage_la_SOURCES = CBAccounterStorage.c CBAddressStorage.c CBBlockChainStorage.c CBNodeStorage.c CBDatabase.c
-libcbitcoin_file_ec_la_CFLAGS = -I$(top_srcdir)/include
-libcbitcoin_file_no_ec_la_CFLAGS = -I$(top_srcdir)/include
-libcbitcoin_storage_la_CFLAGS = -I$(top_srcdir)/include
-libcbitcoin_file_ec_la_LDFLAGS = -module -shared
-libcbitcoin_file_no_ec_la_LDFLAGS = -module -shared
-libcbitcoin_storage_la_LDFLAGS = -module -shared
+noinst_LTLIBRARIES = libfileec.la libfilenoec.la libstorage.la
+libfileec_la_SOURCES = CBHamming72.c CBFileEC.c 
+libfilenoec_la_SOURCES = CBFileNoEC.c
+libstorage_la_SOURCES = CBAccounterStorage.c CBAddressStorage.c CBBlockChainStorage.c CBNodeStorage.c CBDatabase.c
+libfileec_la_CFLAGS = -I$(top_srcdir)/include
+libfilenoec_la_CFLAGS = -I$(top_srcdir)/include
+libstorage_la_CFLAGS = -I$(top_srcdir)/include
+libfileec_la_LDFLAGS = -static
+libfilenoec_la_LDFLAGS = -static
+libstorage_la_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -314,44 +272,21 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-install-libLTLIBRARIES: $(lib_LTLIBRARIES)
-	@$(NORMAL_INSTALL)
-	@list='$(lib_LTLIBRARIES)'; test -n "$(libdir)" || list=; \
-	list2=; for p in $$list; do \
-	  if test -f $$p; then \
-	    list2="$$list2 $$p"; \
-	  else :; fi; \
-	done; \
-	test -z "$$list2" || { \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(libdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(libdir)" || exit 1; \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(libdir)'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(libdir)"; \
-	}
 
-uninstall-libLTLIBRARIES:
-	@$(NORMAL_UNINSTALL)
-	@list='$(lib_LTLIBRARIES)'; test -n "$(libdir)" || list=; \
-	for p in $$list; do \
-	  $(am__strip_dir) \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(libdir)/$$f'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(libdir)/$$f"; \
-	done
-
-clean-libLTLIBRARIES:
-	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
-	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
+	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
 	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
 	  test "$$dir" != "$$p" || dir=.; \
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libcbitcoin-file-ec.la: $(libcbitcoin_file_ec_la_OBJECTS) $(libcbitcoin_file_ec_la_DEPENDENCIES) $(EXTRA_libcbitcoin_file_ec_la_DEPENDENCIES) 
-	$(libcbitcoin_file_ec_la_LINK) -rpath $(libdir) $(libcbitcoin_file_ec_la_OBJECTS) $(libcbitcoin_file_ec_la_LIBADD) $(LIBS)
-libcbitcoin-file-no-ec.la: $(libcbitcoin_file_no_ec_la_OBJECTS) $(libcbitcoin_file_no_ec_la_DEPENDENCIES) $(EXTRA_libcbitcoin_file_no_ec_la_DEPENDENCIES) 
-	$(libcbitcoin_file_no_ec_la_LINK) -rpath $(libdir) $(libcbitcoin_file_no_ec_la_OBJECTS) $(libcbitcoin_file_no_ec_la_LIBADD) $(LIBS)
-libcbitcoin-storage.la: $(libcbitcoin_storage_la_OBJECTS) $(libcbitcoin_storage_la_DEPENDENCIES) $(EXTRA_libcbitcoin_storage_la_DEPENDENCIES) 
-	$(libcbitcoin_storage_la_LINK) -rpath $(libdir) $(libcbitcoin_storage_la_OBJECTS) $(libcbitcoin_storage_la_LIBADD) $(LIBS)
+libfileec.la: $(libfileec_la_OBJECTS) $(libfileec_la_DEPENDENCIES) $(EXTRA_libfileec_la_DEPENDENCIES) 
+	$(libfileec_la_LINK)  $(libfileec_la_OBJECTS) $(libfileec_la_LIBADD) $(LIBS)
+libfilenoec.la: $(libfilenoec_la_OBJECTS) $(libfilenoec_la_DEPENDENCIES) $(EXTRA_libfilenoec_la_DEPENDENCIES) 
+	$(libfilenoec_la_LINK)  $(libfilenoec_la_OBJECTS) $(libfilenoec_la_LIBADD) $(LIBS)
+libstorage.la: $(libstorage_la_OBJECTS) $(libstorage_la_DEPENDENCIES) $(EXTRA_libstorage_la_DEPENDENCIES) 
+	$(libstorage_la_LINK)  $(libstorage_la_OBJECTS) $(libstorage_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -359,14 +294,14 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_file_ec_la-CBFileEC.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_file_ec_la-CBHamming72.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_file_no_ec_la-CBFileNoEC.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_storage_la-CBAccounterStorage.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_storage_la-CBAddressStorage.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_storage_la-CBBlockChainStorage.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_storage_la-CBDatabase.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libcbitcoin_storage_la-CBNodeStorage.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libfileec_la-CBFileEC.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libfileec_la-CBHamming72.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libfilenoec_la-CBFileNoEC.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstorage_la-CBAccounterStorage.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstorage_la-CBAddressStorage.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstorage_la-CBBlockChainStorage.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstorage_la-CBDatabase.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstorage_la-CBNodeStorage.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -389,61 +324,61 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libcbitcoin_file_ec_la-CBHamming72.lo: CBHamming72.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_file_ec_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_file_ec_la-CBHamming72.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_file_ec_la-CBHamming72.Tpo -c -o libcbitcoin_file_ec_la-CBHamming72.lo `test -f 'CBHamming72.c' || echo '$(srcdir)/'`CBHamming72.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_file_ec_la-CBHamming72.Tpo $(DEPDIR)/libcbitcoin_file_ec_la-CBHamming72.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBHamming72.c' object='libcbitcoin_file_ec_la-CBHamming72.lo' libtool=yes @AMDEPBACKSLASH@
+libfileec_la-CBHamming72.lo: CBHamming72.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libfileec_la_CFLAGS) $(CFLAGS) -MT libfileec_la-CBHamming72.lo -MD -MP -MF $(DEPDIR)/libfileec_la-CBHamming72.Tpo -c -o libfileec_la-CBHamming72.lo `test -f 'CBHamming72.c' || echo '$(srcdir)/'`CBHamming72.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libfileec_la-CBHamming72.Tpo $(DEPDIR)/libfileec_la-CBHamming72.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBHamming72.c' object='libfileec_la-CBHamming72.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_file_ec_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_file_ec_la-CBHamming72.lo `test -f 'CBHamming72.c' || echo '$(srcdir)/'`CBHamming72.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libfileec_la_CFLAGS) $(CFLAGS) -c -o libfileec_la-CBHamming72.lo `test -f 'CBHamming72.c' || echo '$(srcdir)/'`CBHamming72.c
 
-libcbitcoin_file_ec_la-CBFileEC.lo: CBFileEC.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_file_ec_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_file_ec_la-CBFileEC.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_file_ec_la-CBFileEC.Tpo -c -o libcbitcoin_file_ec_la-CBFileEC.lo `test -f 'CBFileEC.c' || echo '$(srcdir)/'`CBFileEC.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_file_ec_la-CBFileEC.Tpo $(DEPDIR)/libcbitcoin_file_ec_la-CBFileEC.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBFileEC.c' object='libcbitcoin_file_ec_la-CBFileEC.lo' libtool=yes @AMDEPBACKSLASH@
+libfileec_la-CBFileEC.lo: CBFileEC.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libfileec_la_CFLAGS) $(CFLAGS) -MT libfileec_la-CBFileEC.lo -MD -MP -MF $(DEPDIR)/libfileec_la-CBFileEC.Tpo -c -o libfileec_la-CBFileEC.lo `test -f 'CBFileEC.c' || echo '$(srcdir)/'`CBFileEC.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libfileec_la-CBFileEC.Tpo $(DEPDIR)/libfileec_la-CBFileEC.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBFileEC.c' object='libfileec_la-CBFileEC.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_file_ec_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_file_ec_la-CBFileEC.lo `test -f 'CBFileEC.c' || echo '$(srcdir)/'`CBFileEC.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libfileec_la_CFLAGS) $(CFLAGS) -c -o libfileec_la-CBFileEC.lo `test -f 'CBFileEC.c' || echo '$(srcdir)/'`CBFileEC.c
 
-libcbitcoin_file_no_ec_la-CBFileNoEC.lo: CBFileNoEC.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_file_no_ec_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_file_no_ec_la-CBFileNoEC.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_file_no_ec_la-CBFileNoEC.Tpo -c -o libcbitcoin_file_no_ec_la-CBFileNoEC.lo `test -f 'CBFileNoEC.c' || echo '$(srcdir)/'`CBFileNoEC.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_file_no_ec_la-CBFileNoEC.Tpo $(DEPDIR)/libcbitcoin_file_no_ec_la-CBFileNoEC.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBFileNoEC.c' object='libcbitcoin_file_no_ec_la-CBFileNoEC.lo' libtool=yes @AMDEPBACKSLASH@
+libfilenoec_la-CBFileNoEC.lo: CBFileNoEC.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libfilenoec_la_CFLAGS) $(CFLAGS) -MT libfilenoec_la-CBFileNoEC.lo -MD -MP -MF $(DEPDIR)/libfilenoec_la-CBFileNoEC.Tpo -c -o libfilenoec_la-CBFileNoEC.lo `test -f 'CBFileNoEC.c' || echo '$(srcdir)/'`CBFileNoEC.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libfilenoec_la-CBFileNoEC.Tpo $(DEPDIR)/libfilenoec_la-CBFileNoEC.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBFileNoEC.c' object='libfilenoec_la-CBFileNoEC.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_file_no_ec_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_file_no_ec_la-CBFileNoEC.lo `test -f 'CBFileNoEC.c' || echo '$(srcdir)/'`CBFileNoEC.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libfilenoec_la_CFLAGS) $(CFLAGS) -c -o libfilenoec_la-CBFileNoEC.lo `test -f 'CBFileNoEC.c' || echo '$(srcdir)/'`CBFileNoEC.c
 
-libcbitcoin_storage_la-CBAccounterStorage.lo: CBAccounterStorage.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_storage_la-CBAccounterStorage.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_storage_la-CBAccounterStorage.Tpo -c -o libcbitcoin_storage_la-CBAccounterStorage.lo `test -f 'CBAccounterStorage.c' || echo '$(srcdir)/'`CBAccounterStorage.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_storage_la-CBAccounterStorage.Tpo $(DEPDIR)/libcbitcoin_storage_la-CBAccounterStorage.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBAccounterStorage.c' object='libcbitcoin_storage_la-CBAccounterStorage.lo' libtool=yes @AMDEPBACKSLASH@
+libstorage_la-CBAccounterStorage.lo: CBAccounterStorage.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -MT libstorage_la-CBAccounterStorage.lo -MD -MP -MF $(DEPDIR)/libstorage_la-CBAccounterStorage.Tpo -c -o libstorage_la-CBAccounterStorage.lo `test -f 'CBAccounterStorage.c' || echo '$(srcdir)/'`CBAccounterStorage.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libstorage_la-CBAccounterStorage.Tpo $(DEPDIR)/libstorage_la-CBAccounterStorage.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBAccounterStorage.c' object='libstorage_la-CBAccounterStorage.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_storage_la-CBAccounterStorage.lo `test -f 'CBAccounterStorage.c' || echo '$(srcdir)/'`CBAccounterStorage.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -c -o libstorage_la-CBAccounterStorage.lo `test -f 'CBAccounterStorage.c' || echo '$(srcdir)/'`CBAccounterStorage.c
 
-libcbitcoin_storage_la-CBAddressStorage.lo: CBAddressStorage.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_storage_la-CBAddressStorage.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_storage_la-CBAddressStorage.Tpo -c -o libcbitcoin_storage_la-CBAddressStorage.lo `test -f 'CBAddressStorage.c' || echo '$(srcdir)/'`CBAddressStorage.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_storage_la-CBAddressStorage.Tpo $(DEPDIR)/libcbitcoin_storage_la-CBAddressStorage.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBAddressStorage.c' object='libcbitcoin_storage_la-CBAddressStorage.lo' libtool=yes @AMDEPBACKSLASH@
+libstorage_la-CBAddressStorage.lo: CBAddressStorage.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -MT libstorage_la-CBAddressStorage.lo -MD -MP -MF $(DEPDIR)/libstorage_la-CBAddressStorage.Tpo -c -o libstorage_la-CBAddressStorage.lo `test -f 'CBAddressStorage.c' || echo '$(srcdir)/'`CBAddressStorage.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libstorage_la-CBAddressStorage.Tpo $(DEPDIR)/libstorage_la-CBAddressStorage.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBAddressStorage.c' object='libstorage_la-CBAddressStorage.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_storage_la-CBAddressStorage.lo `test -f 'CBAddressStorage.c' || echo '$(srcdir)/'`CBAddressStorage.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -c -o libstorage_la-CBAddressStorage.lo `test -f 'CBAddressStorage.c' || echo '$(srcdir)/'`CBAddressStorage.c
 
-libcbitcoin_storage_la-CBBlockChainStorage.lo: CBBlockChainStorage.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_storage_la-CBBlockChainStorage.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_storage_la-CBBlockChainStorage.Tpo -c -o libcbitcoin_storage_la-CBBlockChainStorage.lo `test -f 'CBBlockChainStorage.c' || echo '$(srcdir)/'`CBBlockChainStorage.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_storage_la-CBBlockChainStorage.Tpo $(DEPDIR)/libcbitcoin_storage_la-CBBlockChainStorage.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBBlockChainStorage.c' object='libcbitcoin_storage_la-CBBlockChainStorage.lo' libtool=yes @AMDEPBACKSLASH@
+libstorage_la-CBBlockChainStorage.lo: CBBlockChainStorage.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -MT libstorage_la-CBBlockChainStorage.lo -MD -MP -MF $(DEPDIR)/libstorage_la-CBBlockChainStorage.Tpo -c -o libstorage_la-CBBlockChainStorage.lo `test -f 'CBBlockChainStorage.c' || echo '$(srcdir)/'`CBBlockChainStorage.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libstorage_la-CBBlockChainStorage.Tpo $(DEPDIR)/libstorage_la-CBBlockChainStorage.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBBlockChainStorage.c' object='libstorage_la-CBBlockChainStorage.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_storage_la-CBBlockChainStorage.lo `test -f 'CBBlockChainStorage.c' || echo '$(srcdir)/'`CBBlockChainStorage.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -c -o libstorage_la-CBBlockChainStorage.lo `test -f 'CBBlockChainStorage.c' || echo '$(srcdir)/'`CBBlockChainStorage.c
 
-libcbitcoin_storage_la-CBNodeStorage.lo: CBNodeStorage.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_storage_la-CBNodeStorage.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_storage_la-CBNodeStorage.Tpo -c -o libcbitcoin_storage_la-CBNodeStorage.lo `test -f 'CBNodeStorage.c' || echo '$(srcdir)/'`CBNodeStorage.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_storage_la-CBNodeStorage.Tpo $(DEPDIR)/libcbitcoin_storage_la-CBNodeStorage.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBNodeStorage.c' object='libcbitcoin_storage_la-CBNodeStorage.lo' libtool=yes @AMDEPBACKSLASH@
+libstorage_la-CBNodeStorage.lo: CBNodeStorage.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -MT libstorage_la-CBNodeStorage.lo -MD -MP -MF $(DEPDIR)/libstorage_la-CBNodeStorage.Tpo -c -o libstorage_la-CBNodeStorage.lo `test -f 'CBNodeStorage.c' || echo '$(srcdir)/'`CBNodeStorage.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libstorage_la-CBNodeStorage.Tpo $(DEPDIR)/libstorage_la-CBNodeStorage.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBNodeStorage.c' object='libstorage_la-CBNodeStorage.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_storage_la-CBNodeStorage.lo `test -f 'CBNodeStorage.c' || echo '$(srcdir)/'`CBNodeStorage.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -c -o libstorage_la-CBNodeStorage.lo `test -f 'CBNodeStorage.c' || echo '$(srcdir)/'`CBNodeStorage.c
 
-libcbitcoin_storage_la-CBDatabase.lo: CBDatabase.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -MT libcbitcoin_storage_la-CBDatabase.lo -MD -MP -MF $(DEPDIR)/libcbitcoin_storage_la-CBDatabase.Tpo -c -o libcbitcoin_storage_la-CBDatabase.lo `test -f 'CBDatabase.c' || echo '$(srcdir)/'`CBDatabase.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libcbitcoin_storage_la-CBDatabase.Tpo $(DEPDIR)/libcbitcoin_storage_la-CBDatabase.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBDatabase.c' object='libcbitcoin_storage_la-CBDatabase.lo' libtool=yes @AMDEPBACKSLASH@
+libstorage_la-CBDatabase.lo: CBDatabase.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -MT libstorage_la-CBDatabase.lo -MD -MP -MF $(DEPDIR)/libstorage_la-CBDatabase.Tpo -c -o libstorage_la-CBDatabase.lo `test -f 'CBDatabase.c' || echo '$(srcdir)/'`CBDatabase.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libstorage_la-CBDatabase.Tpo $(DEPDIR)/libstorage_la-CBDatabase.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='CBDatabase.c' object='libstorage_la-CBDatabase.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libcbitcoin_storage_la_CFLAGS) $(CFLAGS) -c -o libcbitcoin_storage_la-CBDatabase.lo `test -f 'CBDatabase.c' || echo '$(srcdir)/'`CBDatabase.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libstorage_la_CFLAGS) $(CFLAGS) -c -o libstorage_la-CBDatabase.lo `test -f 'CBDatabase.c' || echo '$(srcdir)/'`CBDatabase.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -537,9 +472,6 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)"; do \
-	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
-	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -572,7 +504,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
+clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -599,7 +531,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-libLTLIBRARIES
+install-exec-am:
 
 install-html: install-html-am
 
@@ -639,23 +571,22 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-libLTLIBRARIES
+uninstall-am:
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libLTLIBRARIES clean-libtool ctags distclean \
+	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am \
-	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-libLTLIBRARIES
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

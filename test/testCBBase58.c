@@ -24,6 +24,7 @@ int main(){
 
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %ui\n", s);
+	return 0;
 	srand(s);
 	printf("Session 2= %ui\n", s);
 	// Test checked decode
