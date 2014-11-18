@@ -32,7 +32,7 @@ int main(){
 	s = 1337544566;
 	printf("Session = %ui\n", s);
 	srand(s);
-	FILE * f = fopen("library/test/scriptCases.txt", "r");
+	FILE * f = fopen("scriptCases.txt", "r");
 	if (!f){
 		printf("FILE WONT OPEN\n");
 		return 1;
