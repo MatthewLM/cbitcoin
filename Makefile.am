@@ -4,8 +4,4 @@ CFLAGS = " -Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -
 
 ACLOCAL_AMFLAGS = ' -I m4 '
 
-SUBDIRS = include dependencies lib test 
-
-
-clean:
-	git reset --hard && git clean -fxd
+SUBDIRS = include dependencies lib test
