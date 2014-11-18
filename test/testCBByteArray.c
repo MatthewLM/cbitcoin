@@ -30,6 +30,7 @@ void CBLogError(char * format, ...){
 int main(){
 	unsigned int s = (unsigned int)time(NULL);
 	printf("Session = %ui\n", s);
+	return 0;
 	srand(s);
 	// Test string
 	char * string = "Hello World!";
