@@ -48,5 +48,5 @@ libcbitcoin_la_LIBADD = ../dependencies/crypto/libcrypto.la ../dependencies/thre
 	../dependencies/storage/libfileec.la ../dependencies/storage/libstorage.la
 
 libcbitcoin_la_CFLAGS = -I$(top_srcdir)/include 
-libcbitcoin_la_LDFLAGS = -module -shared -release-info
+libcbitcoin_la_LDFLAGS = -module -shared  -version-info 1:0:0
 # -I$(top_srcdir)/common

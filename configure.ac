@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([cbitcoin], [2.0.1], [cbitcoin@thelibertyportal.com])
+AC_INIT([cbitcoin], [0.01], [cbitcoin@thelibertyportal.com])
 AC_CONFIG_SRCDIR([lib/CBAddress.c])
 AM_MAINTAINER_MODE
 
