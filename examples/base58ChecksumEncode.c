@@ -15,7 +15,11 @@
 #include "CBChecksumBytes.h"
 
 int main(int argc, char * argv[]){
+
+    UNUSED(argc);
+
 	CBChecksumBytes * csb = CBNewChecksumBytesFromHex(argv[1], false);
 	puts((char *)CBByteArrayGetData(CBChecksumBytesGetString(csb)));
 	CBReleaseObject(csb);
+
 }

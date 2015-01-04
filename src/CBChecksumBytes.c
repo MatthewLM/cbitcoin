@@ -26,12 +26,14 @@ CBChecksumBytes * CBNewChecksumBytesFromString(CBByteArray * string, bool cacheS
 	free(self);
 	return NULL;
 }
+
 CBChecksumBytes * CBNewChecksumBytesFromBytes(unsigned char * bytes, int size, bool cacheString){
 	CBChecksumBytes * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeChecksumBytes;
 	CBInitChecksumBytesFromBytes(self, bytes, size, cacheString);
 	return self;
 }
+
 CBChecksumBytes * CBNewChecksumBytesFromHex(char * hex, bool cacheString){
 	CBChecksumBytes * self = malloc(sizeof(*self));
 	CBGetObject(self)->free = CBFreeChecksumBytes;
@@ -59,6 +61,7 @@ bool CBInitChecksumBytesFromString(CBChecksumBytes * self, CBByteArray * string,
 	CBByteArrayReverseBytes(CBGetByteArray(self)); // CBBigInt is in little-endian. Conversion needed to make bitcoin address the right way.
 	return true;
 }
+
 void CBInitChecksumBytesFromBytes(CBChecksumBytes * self, unsigned char * bytes, int size, bool cacheString){
 
 	self->cacheString = cacheString;
@@ -96,7 +99,7 @@ void CBInitChecksumBytesFromHex(CBChecksumBytes * self, char * hex, bool cacheSt
 
 	memmove(bytes + size, checksum2, 4);
 
-	CBInitByteArrayWithData(CBGetByteArray(self), bytes, size);
+	CBInitByteArrayWithData(CBGetByteArray(self), bytes, size + 4);
 
 }
 
