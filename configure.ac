@@ -6,12 +6,15 @@ AC_INIT([cbitcoin], [0.01], [cbitcoin@thelibertyportal.com])
 AC_CONFIG_SRCDIR([lib/CBAddress.c])
 AM_MAINTAINER_MODE
 
+ACX_PTHREAD
 
 # set flags
 CONFIGFLAGS=" -Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -std=gnu99 -D_GNU_SOURCE  "
 CONFIGFLAGS+=" $CFLAGS "
 CONFIGLFLAGS=" $LFLAGS "
 
+LIBS=" $PTHREAD_LIBS $LIBS "
+CFLAGS=" $CFLAGS $PTHREAD_CFLAGS "
 
 LT_PREREQ([2.2])
 LT_INIT()
@@ -95,7 +98,7 @@ LFLAGS=" $save_lflags "
 # Search for OpenSSL and LibEvent.
 AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
   [AC_MSG_ERROR([Missing required libcrypto])])
-AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=" -levent_core -levent -levent_extra -levent_openssl -levent_pthreads",
+AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=" -levent_core -levent -levent_extra -levent_openssl -levent_pthreads ",
   [AC_MSG_ERROR([Missing required libevent])])
 
 AC_SUBST(CRYPTO_LIBS)
@@ -127,7 +130,7 @@ AC_CHECK_FUNC([asprintf],
 
 # Determine additional compile options for libraries
 
-CFLAGS+=" -fPIC "
+CFLAGS+=" -fPIC -pthread "
 AC_MSG_CHECKING([whether CC supports -fPIC])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
     [AC_MSG_RESULT([yes])]

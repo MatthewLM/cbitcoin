@@ -1,5 +1,5 @@
 cbitcoin (0.1-1) unstable; urgency=low
 
-  * Initial release (Closes: #1)
+  * Cannot compile on armhf because we are missing pthread (Closes: #2)
 
- -- Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>  Sat, 25 Oct 2014 02:30:55 +0900
+ -- Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>  Wed, 07 Jan 2015 02:30:55 +0900
