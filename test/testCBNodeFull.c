@@ -1492,14 +1492,16 @@ int main() {
 	CBByteArray * loopBack = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1}, 16);
 	CBNetworkAddress * addr = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45563}, 0, true);
 	CBNetworkAddress * addr2 = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45564}, 0, true);
+	CBNetworkAddress * addractual = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 8333}, 0, true);
 	CBReleaseObject(loopBack);
-	
 	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr);
-	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr2);
+	//CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addr2);
+	CBNetworkAddressManagerAddAddress(CBGetNetworkCommunicator(nodes[0])->addresses, addractual);
 	
 	CBReleaseObject(addr);
 	CBReleaseObject(addr2);
-	
+	CBReleaseObject(addractual);
+
 	// Give 1001 blocks to node 0 with last block containing four transactions. Also give 500 of them to node 1 and then give 500 other blocks to node 1.
 	
 	CBBlock * block = CBNewBlock();
