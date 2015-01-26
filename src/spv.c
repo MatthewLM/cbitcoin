@@ -68,7 +68,7 @@ void uptodate(CBNode * node, bool uptodate){
 int main() {
 
 	puts("You may need to move your mouse around if this test stalls.");
-	CBDepObject databases[1];
+
 	CBNodeCallbacks callbacks = {
 		onFatalNodeError,
 		newBlock,
@@ -78,6 +78,28 @@ int main() {
 		transactionUnconfirmed,
 		uptodate
 	};
+	// set up storage
+	char directory[5], filename[26];
+
+	sprintf(directory, "./%u", 0);
+	mkdir(directory, S_IRWXU | S_IRWXG);
+	chmod(directory, S_IRWXU | S_IRWXG);
+
+	sprintf(filename, "%s/cbitcoin/log.dat", directory);
+	remove(filename);
+	sprintf(filename, "%s/cbitcoin/del.dat", directory);
+	remove(filename);
+	sprintf(filename, "%s/cbitcoin/val_0.dat", directory);
+	remove(filename);
+	for (uint8_t y = 0; y < 19; y++) {
+		sprintf(filename, "%s/cbitcoin/idx_%u_0.dat", directory, y);
+		remove(filename);
+	}
+	CBDepObject *database;
+	database->ptr = CBNewDatabase(directory, "cbitcoin", CB_DATABASE_EXTRA_DATA_SIZE, 10000000, 10000000);
+
+
+	//CBNode *node = CBNewNodeHeadersOnly(databases[x], CB_NODE_CHECK_STANDARD, 100000, callbacks);
 
 	return EXIT_SUCCESS;
 }
