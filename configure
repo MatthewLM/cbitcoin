@@ -11713,7 +11713,7 @@ done
 
 
 
-ac_config_files="$ac_config_files Makefile include/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile dependencies/sockets/Makefile dependencies/storage/Makefile dependencies/threads/Makefile lib/Makefile test/Makefile"
+ac_config_files="$ac_config_files Makefile include/Makefile dependencies/Makefile dependencies/crypto/Makefile dependencies/logging/Makefile dependencies/random/Makefile dependencies/sockets/Makefile dependencies/storage/Makefile dependencies/threads/Makefile lib/Makefile src/Makefile test/Makefile"
 
 
 ac_ext=c
@@ -14199,6 +14199,7 @@ do
     "dependencies/storage/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/storage/Makefile" ;;
     "dependencies/threads/Makefile") CONFIG_FILES="$CONFIG_FILES dependencies/threads/Makefile" ;;
     "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
+    "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
 
