@@ -235,7 +235,7 @@ int main(){
 	CBNetworkAddress * addrListenB = CBNewNetworkAddress(0, (CBSocketAddress){loopBack2, 45562}, 0, true); // Use in connector thread.
 	CBNetworkAddress * addrListen2 = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45563}, 0, false);
 	CBNetworkAddress * addrListen2B = CBNewNetworkAddress(0, (CBSocketAddress){loopBack2, 45563}, 0, true); // Use in connector thread.
-	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 45564}, 0, false); // Different port over loopback to seperate the CBNetworkCommunicators.
+	CBNetworkAddress * addrConnect = CBNewNetworkAddress(0, (CBSocketAddress){loopBack, 8333}, 0, false); // Different port over loopback to seperate the CBNetworkCommunicators.
 	CBReleaseObject(loopBack);
 	CBReleaseObject(loopBack2);
 	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
