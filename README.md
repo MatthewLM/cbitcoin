@@ -1,4 +1,4 @@
-cbitcoin 2.0 - A Bitcoin Library In The C Programming Language
+cbitcoin 0.01 - A Bitcoin Library In The C Programming Language
 ==========================================================
 
 cbitcoin is a bitcoin library written in standard C99 and is licensed under the GPLv3 with additional permissions. It is currently in development stage and should only be used experimentally. The purpose of the library is to make it easier for developers to create bitcoin applications and the library should be versatile enough to be used in many bitcoin projects.
@@ -55,10 +55,14 @@ The library will be built into a ./bin directory.
 
 If you are able to get it to work for other systems then please submit the changes. If you think you have found a debug, then you may wish to submit an issue on the gitbub repository page (https://github.com/MatthewLM/cbitcoin/). Otherwise you may wish to try to fix the problem yourself, in which case please submit fixes. You should check to see that the issue is not being worked upon already.
 
+If you wish to compile a debian package, do the following:
+ * dh_make -p cbitcoin_0.01 --createorig -l
+ * debuild -uc
+
 Donations
 ---------
 
-If you wish to support this project you can donate via the following methods:
+If you wish to support the author of the original cbitcoin library (Matthew Mitchell), you can donate via the following methods:
 
 Bitcoin: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
 Charitycoin: CSU54ZAa4VuhiVwzgyAudePmn7eJigkKU5  
@@ -73,6 +77,8 @@ Matthew Mitchell <matthewmitchell@thelibertyportal.com> - 1D5A1q5d192j5gYuWiP3CS
 Christian von Roques  
 Andrew Miller <amiller@dappervision.com>
 linuxdoctor - 1KB3RsW8H7TFV9awpt6MiXsjDqLD15oax3
+
+Joel De Jesus <dejesus.joel@e-flamingo.jp> compiled the debian package for cbitcoin.  You can donate to him via 18UaHvGTBqwpQypGxXHvUGMsYYxCHBmLpg.
 
 Making a Contribution
 ---------------------
