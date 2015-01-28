@@ -4,4 +4,4 @@ CFLAGS = " -Wall -Wextra -Wno-uninitialized -Wno-pointer-to-int-cast -pedantic -
 
 ACLOCAL_AMFLAGS = ' -I m4 '
 
-SUBDIRS = include dependencies lib src test
+SUBDIRS = include dependencies lib client-server test
