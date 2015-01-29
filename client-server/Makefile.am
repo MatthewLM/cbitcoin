@@ -1,1 +1,1 @@
-SUBDIRS = include src
+SUBDIRS = src

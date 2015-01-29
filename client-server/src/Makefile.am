@@ -1,5 +1,11 @@
-bin_PROGRAMS = cbrpcserver
+bin_PROGRAMS = spv
 
-cbrpcserver_SOURCES =  main.c
+spv_SOURCES =  spvmain.c
 
-cbrpcserver_CFLAGS = -I$(top_srcdir)/include -I../include
+LIBADD = $(EVENT_LIBS) $(top_srcdir)/lib/libcbitcoin.la
+
+COMMON_LDADD = @EVENT_LIBS@ $(top_srcdir)/lib/libcbitcoin.la
+
+
+spv_LDADD           = $(COMMON_LDADD)      -I$(top_srcdir)/dependencies/storage/libfileec.la -I$(top_srcdir)/dependencies/storage/libstorage.la
+

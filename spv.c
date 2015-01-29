@@ -15,26 +15,26 @@
 #include "main.h"
 
 bool CBAddNetworkAddress(CBNetworkAddressLinkedList * nodes, char * ip, bool isPublic) {
-
+	
 	CBNetworkAddressLinkedListNode * node = malloc(sizeof(*node));
-
+	
 	node->addr = CBReadNetworkAddress(ip, isPublic);
 	if (!node->addr)
 		return false;
-
+	
 	node->next = NULL;
-
+	
 	if (nodes->last == NULL)
 		nodes->start = nodes->last = node;
 	else
 		nodes->last = nodes->last->next = node;
-
+	
 	return true;
-
+	
 }
 
 bool CBCheckNumber(uint32_t num) {
-
+	
 	if (num == 0){
 		if (errno == ERANGE){
 			CBLogWarning("Number out of range.");
@@ -44,61 +44,61 @@ bool CBCheckNumber(uint32_t num) {
 			return false;
 		}
 	}
-
+	
 	return true;
-
+	
 }
 
 uint64_t CBGetMilliseconds(void) {
-
+	
 	struct timeval tv;
-
+	
 	gettimeofday(&tv, NULL);
-
+	
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-
+	
 }
 
 void CBOnDoubleSpend(CBNode * node, uint8_t * txHash) {
-
+	
 }
 
 void CBOnNewBlock(CBNode * node, CBBlock * block, uint32_t forkPoint) {
-
+	
 }
 
 void CBOnNewTransaction(CBNode * node, CBTransaction * tx, uint64_t timestamp, uint32_t blockHeight, CBTransactionAccountDetailList * details) {
-
+	
 }
 
 void CBOnFatalNodeError(CBNode * node, CBErrorReason reason) {
-
+	
 	if (reason == CB_ERROR_NO_PEERS)
 		CBLogWarning("Could not connect to nodes. Trying again in 20 seconds (if not incoming only).");
 	else{
 		CBLogError("Fatal Node Error");
 		exit(EXIT_FAILURE);
 	}
-
+	
 }
 
 void CBOnTransactionConfirmed(CBNode * node, uint8_t * txHash, uint32_t blockHeight) {
-
+	
 }
 
 void CBOnTransactionUnconfirmed(CBNode * node, uint8_t * txHash) {
-
+	
 }
 
 void CBUpToDate(CBNode * node, bool uptodate) {
-
+	
 }
 
 CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
-
+	
 	CBSocketAddress saddr = {NULL, 8333};
 	char * portStart;
-
+	
 	// Determine if dealing with an IPv6 address
 	if (ipStr[0] == '[') {
 		struct in6_addr ip;
@@ -128,7 +128,7 @@ CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
 		portStart = strchr(ipStr, ':');
 		if (portStart) portStart++;
 	}
-
+	
 	if (portStart){
 		saddr.port = strtoul(portStart, NULL, 10);
 		if (!CBCheckNumber(saddr.port)) {
@@ -136,27 +136,27 @@ CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
 			return NULL;
 		}
 	}
-
+	
 	CBNetworkAddress * addr = CBNewNetworkAddress(0, saddr, 0, isPublic);
 	CBReleaseObject(saddr.ip);
-
+	
 	return addr;
-
+	
 }
 
 void CBStartNode(void * vcomm) {
-
+	
 	CBNetworkCommunicator * comm = vcomm;
-
+	
 	// Use DNS if no addresses available.
 	CBNetworkCommunicatorTryConnections(comm, comm->addresses->addrNum == 0);
 	if (comm->maxIncommingConnections != 0)
 		CBNetworkCommunicatorStartListening(comm);
-
+	
 }
 
 int main(int argc, char * argv[]) {
-
+	
 	// Get home directory and set the default data directory.
 	struct passwd * pwd = getpwuid(getuid());
 	char defaultDataDir[strlen(pwd->pw_dir) + strlen(CB_DEFUALT_DATA_DIR) + 1];
@@ -165,7 +165,7 @@ int main(int argc, char * argv[]) {
 	char * dataDir = defaultDataDir;
 	CBNetworkAddressLinkedList extraNodes = {NULL};
 	bool incomingOnly = false;
-
+	
 	// Loop through arguments and set data
 	for (int x = 1; x < argc; x++) {
 		if (strcmp(argv[x], "--datadir") == 0)
@@ -221,7 +221,7 @@ int main(int argc, char * argv[]) {
 			return 1;
 		}
 	}
-
+	
 	// Read the configuration file or use default values
 	uint32_t commitGap = 30000;
 	uint32_t cacheLimit = 10000000;
@@ -233,21 +233,21 @@ int main(int argc, char * argv[]) {
 	char * userAgentString = CB_CLIENT_USER_AGENT;
 	CBNetworkAddress * explicitIPv4 = NULL;
 	CBNetworkAddress * explicitIPv6 = NULL;
-
+	
 	// Create filename and open file if we can
 	char filename[strlen(dataDir) + 13];
 	strcpy(filename, dataDir);
 	strcat(filename, "bitcoin.conf");
 	FILE * config = fopen(filename, "r");
 	if (config) {
-
+		
 		// bitcoin.conf exists
 		char * line, * linePtr;
 		size_t lineLen = 0, lineNum = 0;
-
+		
 		while (getline(&line, &lineLen, config) > 0) {
 			lineNum++;
-
+			
 			// Ignore leading white-space
 			linePtr = line;
 			while (linePtr[0] == ' ')
@@ -305,14 +305,14 @@ int main(int argc, char * argv[]) {
 				if (!CBAddNetworkAddress(&extraNodes, linePtr + 8, true))
 					CBLogWarning("Bad IP for addnode configuration option at line %u", lineNum);
 			}else if (strncmp(linePtr, "connect=", 8) == 0) {
-				if (!CBAddNetworkAddress(&extraNodes, linePtr + 8, false))
+				if (!CBAddNetworkAddress(&extraNodes, linePtr + 8, false)) 
 					CBLogWarning("Bad IP for connect configuration option at line %u", lineNum);
 			}
 		}
 		free(line);
 		fclose(config);
 	}
-
+	
 	// Create the data directory if needed.
 	if (access(dataDir, F_OK)
 		&& (mkdir(dataDir, S_IRWXU | S_IRWXG)
@@ -320,7 +320,7 @@ int main(int argc, char * argv[]) {
 			CBLogError("Unable to create the data directory.");
 			return EXIT_FAILURE;
 	}
-
+	
 	// Create the full node
 	CBDepObject database;
 	if (!CBNewStorageDatabase(&database, dataDir, commitGap, cacheLimit)){
@@ -347,7 +347,7 @@ int main(int argc, char * argv[]) {
 	CBByteArray * userAgent = CBNewByteArrayFromString(userAgentString, false);
 	CBNetworkCommunicatorSetUserAgent(comm, userAgent);
 	CBReleaseObject(userAgent);
-
+	
 	// Assume IPv4 and IPv6 support to start.
 	CBNetworkCommunicatorSetReachability(comm, CB_IP_IP4 | CB_IP_IP6 | CB_IP_LOCAL, true);
 	if (explicitIPv4) {
@@ -362,7 +362,7 @@ int main(int argc, char * argv[]) {
 		CBReleaseObject(explicitIPv6);
 	}else
 		comm->flags |= CB_NETWORK_COMMUNICATOR_DETERMINE_IP6;
-
+	
 	// Add the nodes
 	while (extraNodes.start) {
 		CBNetworkAddressLinkedListNode * node = extraNodes.start;
@@ -373,17 +373,17 @@ int main(int argc, char * argv[]) {
 	}
 	if (incomingOnly)
 		comm->flags |= CB_NETWORK_COMMUNICATOR_INCOMING_ONLY;
-
+	
 	// Start the node
 	CBRunOnEventLoop(comm->eventLoop, CBStartNode, comm, false);
-
+	
 	// Start the HTTP JSON-RPC server
 	CBRPCServer * server = malloc(sizeof(*server));
 	if (!CBStartRPCServer(server, node, 8332)) {
 		CBLogError("Could not start RPC server.");
 		return EXIT_FAILURE;
 	}
-
+	
 	pthread_exit(NULL);
-
+	
 }
