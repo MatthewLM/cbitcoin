@@ -53,7 +53,7 @@ CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
 
 	if (portStart){
 		saddr.port = strtoul(portStart, NULL, 10);
-		if (!CBCheckNumber(saddr.port)) {
+		if (saddr.port == 0) {
 			CBReleaseObject(saddr.ip);
 			return NULL;
 		}
@@ -63,6 +63,64 @@ CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
 	CBReleaseObject(saddr.ip);
 
 	return addr;
+
+}
+void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar);
+void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar){
+	return;
+}
+
+void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
+void CBNetworkCommunicatorTryConnectionsVoid(void * comm){
+	CBNetworkCommunicatorTryConnections(comm, false);
+}
+
+void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason);
+void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason){
+	CBLogError("DID LOSE LAST NODE");
+	exit(EXIT_FAILURE);
+}
+void onBadTime(void * foo);
+void onBadTime(void * foo){
+	CBLogError("BAD TIME FAIL");
+	exit(EXIT_FAILURE);
+}
+
+bool acceptType(CBNetworkCommunicator *, CBPeer *, CBMessageType);
+bool acceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessageType type){
+	if (type == CB_MESSAGE_TYPE_VERACK && peer->handshakeStatus & CB_HANDSHAKE_GOT_ACK) {
+		CBLogError("ALREADY HAVE ACK FAIL\n");
+		exit(EXIT_FAILURE);
+	}
+	if (type == CB_MESSAGE_TYPE_VERSION && peer->handshakeStatus & CB_HANDSHAKE_GOT_VERSION) {
+		CBLogError("ALREADY HAVE VERSION FAIL\n");
+		exit(EXIT_FAILURE);
+	}
+	return true;
+}
+
+CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * theMessage);
+CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * theMessage){
+	fprintf(stderr,"on message received");
+}
+
+CBNetworkCommunicator * createSelf(void){
+	CBNetworkCommunicator * self;
+	CBNetworkCommunicatorCallbacks callbacks = {
+		onPeerWhatever,
+		acceptType,
+		onMessageReceived,
+		onNetworkError
+	};
+	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(0, callbacks);
+	commConnect->networkID = CB_PRODUCTION_NETWORK_BYTES;
+	commConnect->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
+	commConnect->version = CB_PONG_VERSION;
+	commConnect->maxConnections = 2;
+	commConnect->maxIncommingConnections = 0;
+	commConnect->heartBeat = 2000;
+	commConnect->timeOut = 3000;
+	commConnect->recvTimeOut = 1000;
 
 }
 
@@ -87,7 +145,7 @@ int main(int argc, char * argv[]) {
 
 
 
-	fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);
+//	fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);
 
 //CBNetworkCommunicatorSendMessage, then see CBNetworkCommunicatorOnCanSend
 
