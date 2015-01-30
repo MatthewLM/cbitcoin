@@ -24,16 +24,16 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <pwd.h>
+#include "CBDependencies.h"
 #include "CBNodeFull.h"
 #include "CBRPCServer.h"
+#include "CBVersion.h"
 
 // Macros
 
-#if defined(CB_MACOSX)
-	#define CB_DEFUALT_DATA_DIR "/Library/Application Support/cbitcoin-server"
-#elif defined(CB_LINUX)
-	#define CB_DEFUALT_DATA_DIR "/.cbitcoin-server"
-#endif
+
+#define CB_DEFUALT_DATA_DIR "/.cbitcoin-server"
+
 
 #define CB_CLIENT_USER_AGENT CB_USER_AGENT_SEGMENT "client-server"
 #define CBInvalidArg(str) {printf("Invalid argument. " str ": %s %s\n", argv[x], argv[x+1]); return EXIT_FAILURE;}

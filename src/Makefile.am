@@ -1,10 +1,10 @@
 INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
         -I$(top_srcdir)/dependencies/storage  -I$(top_srcdir)/dependencies/logging \
-        -I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets
+        -I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets -I.
 
 bin_PROGRAMS = spv
 
-spv_SOURCES = spv.c
+spv_SOURCES = CBRPCServer.c CBRPCServer.h main.h spv.c 
 
 
 LIBADD = $(EVENT_LIBS) ../lib/libcbitcoin.la
