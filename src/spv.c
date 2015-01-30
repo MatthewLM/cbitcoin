@@ -122,6 +122,8 @@ CBNetworkCommunicator * createSelf(void){
 	commConnect->timeOut = 3000;
 	commConnect->recvTimeOut = 1000;
 
+
+
 }
 
 //CBLogWarning("Good IP (%s) for --addnode", argv[x]);
