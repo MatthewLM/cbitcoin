@@ -42,6 +42,19 @@ CBNetworkCommunicator * SPVcreateSelf(CBNetworkAddress * selfAddress){
 	self->timeOut = 3000;
 	self->recvTimeOut = 1000;
 
+	self->blockHeight = 0;
+
+
+	//CBNetworkAddressManager * addrManager = CBNewNetworkAddressManager(onBadTime);
+	//addrManager->maxAddressesInBucket = 2;
+	CBByteArray * userAgent = CBNewByteArrayFromString(CB_USER_AGENT_SEGMENT, false);
+
+	CBNetworkCommunicatorSetReachability(self, CB_IP_IP4 | CB_IP_LOCAL, true);
+	CBNetworkCommunicatorSetAlternativeMessages(self, NULL, NULL);
+	//CBNetworkCommunicatorSetNetworkAddressManager(self, addrManager);
+	CBNetworkCommunicatorSetUserAgent(self, userAgent);
+	CBNetworkCommunicatorSetOurIPv4(self, selfAddress);
+
 	self->ipData[CB_TOR_NETWORK].isSet = false;
 	self->ipData[CB_I2P_NETWORK].isSet = false;
 	self->ipData[CB_IP6_NETWORK].isSet = false;
@@ -50,11 +63,13 @@ CBNetworkCommunicator * SPVcreateSelf(CBNetworkAddress * selfAddress){
 	self->ipData[CB_IP4_NETWORK].isListening = false;
 	self->ipData[CB_IP4_NETWORK].ourAddress = selfAddress;
 
+	CBReleaseObject(userAgent);
+
 	return self;
 
 }
 
-CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv){
+CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv){
 	CBNetworkAddress * sourceAddr = CBNetworkCommunicatorGetOurMainAddress(self, addRecv->type);
 	self->nonce = rand();
 	// If the peer's address is local give a null address
@@ -64,10 +79,17 @@ CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetw
 		CBReleaseObject(ip);
 	}else
 		CBRetainObject(addRecv);
-	CBVersion * version = CBNewVersion(self->version, self->services, time(NULL), addRecv, sourceAddr, self->nonce, self->userAgent, self->blockHeight);
-	CBReleaseObject(addRecv);
+	CBVersion * version = CBNewVersion(
+			self->version, self->services, time(NULL),
+			addRecv, sourceAddr, self->nonce, self->userAgent,
+			self->blockHeight
+	);
+	//CBReleaseObject(addRecv);
+	//CBVersion *version;
 	return version;
 }
+
+
 
 int main(int argc, char * argv[]) {
 	fprintf(stderr, "Error: Hello\n");
@@ -77,7 +99,7 @@ int main(int argc, char * argv[]) {
 
 
 	CBNetworkCommunicator *self = SPVcreateSelf(CBReadNetworkAddress("10.21.0.67", false));
-	CBMessage *msg = CBNetworkCommunicatorGetVersion(self,peer->addr);
+	CBMessage *msg = SPVNetworkCommunicatorGetVersion(self,peer->addr);
 
 
 	//fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);

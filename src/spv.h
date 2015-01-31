@@ -39,8 +39,11 @@
 #define CB_CLIENT_USER_AGENT CB_USER_AGENT_SEGMENT "client-server"
 #define CBInvalidArg(str) {printf("Invalid argument. " str ": %s %s\n", argv[x], argv[x+1]); return EXIT_FAILURE;}
 
-
-
+/*
+ * Message Handling
+ */
+bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
+bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *toSend);
 
 
 
@@ -58,3 +61,5 @@ void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason);
 void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
 
 void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar);
+
+
