@@ -46,6 +46,7 @@ CBNetworkCommunicator * SPVcreateSelf(CBNetworkAddress * selfAddress){
 	self->timeOut = 3000;
 	self->recvTimeOut = 1000;
 	self->services = CB_SERVICE_NO_FULL_BLOCKS;
+	self->nonce = rand();
 
 	self->blockHeight = 0;
 
@@ -60,9 +61,9 @@ CBNetworkCommunicator * SPVcreateSelf(CBNetworkAddress * selfAddress){
 	CBNetworkCommunicatorSetUserAgent(self, userAgent);
 	CBNetworkCommunicatorSetOurIPv4(self, selfAddress);
 
-	//self->ipData[CB_TOR_NETWORK].isSet = false;
-	//self->ipData[CB_I2P_NETWORK].isSet = false;
-	//self->ipData[CB_IP6_NETWORK].isSet = false;
+	self->ipData[CB_TOR_NETWORK].isSet = false;
+	self->ipData[CB_I2P_NETWORK].isSet = false;
+	self->ipData[CB_IP6_NETWORK].isSet = false;
 
 	//self->ipData[CB_IP4_NETWORK].isSet = true;
 	//self->ipData[CB_IP4_NETWORK].isListening = false;
@@ -76,26 +77,26 @@ CBNetworkCommunicator * SPVcreateSelf(CBNetworkAddress * selfAddress){
 
 CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBPeer *peer){
 	CBNetworkAddress * addRecv = peer->addr;
-	//CBNetworkAddress * sourceAddr = CBNetworkCommunicatorGetOurMainAddress(self, addRecv->type);
-	CBNetworkAddress * sourceAddr = self->ipData[CB_IP4_NETWORK].ourAddress;
+	CBNetworkAddress * sourceAddr = CBNetworkCommunicatorGetOurMainAddress(self, addRecv->type);
+	//CBNetworkAddress * sourceAddr = self->ipData[CB_IP4_NETWORK].ourAddress;
 	char x[300];
 	CBNetworkAddressToString(addRecv,x);
 	fprintf(stderr,"Peer Address: %s \n",x);
 	CBNetworkAddressToString(sourceAddr,x);
 	fprintf(stderr,"Our Address: %s \n",x);
 
-	self->nonce = rand();
+
 	// If the peer's address is local give a null address
-	/*if (addRecv->type & CB_IP_LOCAL) {
+	if (addRecv->type & CB_IP_LOCAL) {
 		CBByteArray * ip = CBNewByteArrayWithDataCopy(CB_NULL_ADDRESS, 16);
 		addRecv = CBNewNetworkAddress(0, (CBSocketAddress){ip, 0}, 0, true);
 		CBReleaseObject(ip);
 	}else
-		CBRetainObject(addRecv);*/
+		CBRetainObject(addRecv);
 
-	self->nonce = rand();
+
 	CBVersion * version = CBNewVersion(
-			CB_PONG_VERSION, 0, time(NULL),
+			self->version, self->services, time(NULL),
 			sourceAddr, addRecv , self->nonce, self->userAgent,
 			self->blockHeight
 	);
@@ -119,27 +120,14 @@ int main(int argc, char * argv[]) {
 	//CBReleaseObject(peeraddr);
 	//CBReleaseObject(selfaddr);
 
-	fprintf(stderr,"main hello 1\n");
-
-
 	CBVersion *version = SPVNetworkCommunicatorGetVersion(self,peer);
 	CBMessage *msg = CBGetMessage(version);
-	fprintf(stderr,"main hello 2\n");
+
 	// bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
 	char verstr[CBVersionStringMaxSize(CBGetVersion(msg))];
 	CBVersionToString(CBGetVersion(msg), verstr);
 	fprintf(stderr,"main hello 3\n---\n%s\n---\n",verstr);
 
-	CBVersionPrepareBytes(version);
-	uint32_t len = CBVersionSerialise(version,true);
-	len = 60002;
-	fprintf(stderr,"Length=%d \n",len);
-	//BByteArray * bytes = CBNewByteArrayOfSize(4);
-	//CBByteArraySetInt32(bytes, 0, len);
-
-	//write(STDOUT_FILENO,CBByteArrayGetData(msg->bytes),msg->bytes->length);
-
-	//return 1;
 	SPVsendMessage(self,peer,msg);
 
 	//fprintf(stderr, "Error: Size(%d) 4\n",msg->bytes->length);
@@ -147,10 +135,10 @@ int main(int argc, char * argv[]) {
 	//CBNetworkCommunicatorSendMessage, then see CBNetworkCommunicatorOnCanSend
 	int x;
 	uint8_t buf[24];
-	fprintf(stderr,"main hello outside\n");
-	while(read(STDIN_FILENO,buf,24) > 0){
+	fprintf(stderr,"main hello outside forza \n");
+	if(SPVreceiveMessageHeader(self,peer)){
 		fprintf(stderr,"main hello inside\n");
-		fprintf(stderr,"Receiving:[data=%s] \n",buf);
+		return 1;
 	}
 	fprintf(stderr,"main hello 4\n");
 }

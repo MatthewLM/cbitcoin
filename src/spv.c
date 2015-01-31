@@ -360,3 +360,145 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 */
 	return true;
 }
+
+// see CBNetworkCommunicatorOnCanReceive
+//
+bool SPVreceiveMessageHeader(CBNetworkCommunicator * self, CBPeer * peer){
+	peer->receive = CBNewMessageByObject();
+	peer->receive->serialised = true;
+	peer->headerBuffer = malloc(24); // Twenty-four bytes for the message header.
+	peer->messageReceived = 0; // So far received nothing.
+
+	int len = 0;
+	free(peer->headerBuffer);
+	peer->headerBuffer = malloc(24);
+	while(peer->messageReceived < 24){
+		fprintf(stderr,"Reading in information");
+		len = read(STDIN_FILENO,peer->headerBuffer,24);
+		peer->messageReceived += len;
+		peer->downloadTimerStart = CBGetMilliseconds();
+		if(len < 24){
+			fprintf(stderr,"no bytes read for message header");
+			return false;
+		}
+
+	}
+	return SPVreadHeader(self,peer);
+}
+
+bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer){
+	CBByteArray * header = CBNewByteArrayWithData(peer->headerBuffer, 24);
+	uint32_t networkID = CBByteArrayReadInt32(header, 0);
+	if (networkID != self->networkID){
+		fprintf(stderr,"Wrong network id\n");
+		CBReleaseObject(header);
+		return false;
+	}
+
+	CBMessageType type = CB_MESSAGE_TYPE_NONE;
+
+	uint32_t size = CBByteArrayReadInt32(header, 16);
+
+	bool error = false;
+
+	CBByteArray * typeBytes = CBNewByteArraySubReference(header, 4, 12);
+
+	if (! memcmp(CBByteArrayGetData(typeBytes), "version\0\0\0\0\0", 12)) {
+		// Version message
+		// Check that we have not received their version yet.
+		type = CB_MESSAGE_TYPE_VERSION;
+		if (peer->handshakeStatus & CB_HANDSHAKE_GOT_VERSION)
+			 error = true;
+	}else if (!(peer->handshakeStatus & CB_HANDSHAKE_GOT_VERSION)){
+		// We have not yet received the version message.
+		CBLogWarning("Received non-version message before version message from %s.", peer->peerStr);
+		error = true;
+	}else if (! memcmp(CBByteArrayGetData(typeBytes), "verack\0\0\0\0\0\0", 12)){
+		// Version acknowledgement message
+		// Chek we have sent the version and not received a verack already.
+		type = CB_MESSAGE_TYPE_VERACK;
+		if (!(peer->handshakeStatus & CB_HANDSHAKE_SENT_VERSION)
+			|| peer->handshakeStatus & CB_HANDSHAKE_GOT_ACK)
+			error = true;
+	}else{
+		if (! memcmp(CBByteArrayGetData(typeBytes), "addr\0\0\0\0\0\0\0\0", 12)){
+			// Address broadcast message
+			type = CB_MESSAGE_TYPE_ADDR;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "inv\0\0\0\0\0\0\0\0\0", 12)){
+			// Inventory broadcast message
+			type = CB_MESSAGE_TYPE_INV;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "getdata\0\0\0\0\0", 12)){
+			// Get data message
+			type = CB_MESSAGE_TYPE_GETDATA;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "getblocks\0\0\0", 12)){
+			// Get blocks message
+			type = CB_MESSAGE_TYPE_GETBLOCKS;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "getheaders\0\0", 12)){
+			// Get headers message
+			type = CB_MESSAGE_TYPE_GETHEADERS;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "tx\0\0\0\0\0\0\0\0\0\0", 12)){
+			// Transaction message
+			type = CB_MESSAGE_TYPE_TX;
+			if (size > CB_BLOCK_MAX_SIZE)
+				error = true;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "block\0\0\0\0\0\0\0", 12)){
+			// Block message
+			type = CB_MESSAGE_TYPE_BLOCK;
+			if (size > CB_BLOCK_MAX_SIZE)
+				error = true;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "headers\0\0\0\0\0", 12)){
+			// Block headers message
+			type = CB_MESSAGE_TYPE_HEADERS;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "getaddr\0\0\0\0\0", 12)){
+			// Get Addresses message
+			type = CB_MESSAGE_TYPE_GETADDR;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "ping\0\0\0\0\0\0\0\0", 12)){
+			// Ping message
+			// Should be empty before version 60000.
+			type = CB_MESSAGE_TYPE_PING;
+			if ((peer->versionMessage->version < CB_PONG_VERSION || self->version < CB_PONG_VERSION) && size)
+				error = true;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "pong\0\0\0\0\0\0\0\0", 12)){
+			// Pong message
+			type = CB_MESSAGE_TYPE_PONG;
+		}else if (! memcmp(CBByteArrayGetData(typeBytes), "alert\0\0\0\0\0\0\0", 12)){
+			// Alert message
+			type = CB_MESSAGE_TYPE_ALERT;
+		}else{
+			// Either alternative or unknown. ??? Add tests for this.
+			if (self->alternativeMessages) {
+				for (uint16_t x = 0; x < self->alternativeMessages->length / 12; x++) {
+					// Check this alternative message
+					if (! memcmp(CBByteArrayGetData(typeBytes), CBByteArrayGetData(self->alternativeMessages) + 12 * x, 12)){
+						// Alternative message
+						type = CB_MESSAGE_TYPE_ALT;
+						// Check payload size
+						uint32_t altSize;
+						if (self->altMaxSizes)
+							altSize = self->altMaxSizes[x];
+						else
+							altSize = CB_MAX_MESSAGE_SIZE;
+						if (size <= altSize) // Should correspond to the user given value
+							error = false;
+						break;
+					}
+				}
+			}
+		}
+	}
+	fprintf(stderr, "Received a message header from %s with the type %s and expected size of %u.", peer->peerStr, CBByteArrayGetData(typeBytes), size);
+	//if (!self->callbacks.acceptingType(self, peer, type) ) {
+	CBReleaseObject(typeBytes);
+	if (error) {
+		fprintf(stderr, "There was an error with the message.\n");
+		//CBNetworkCommunicatorDisconnect(self, peer, CB_24_HOURS, false);
+		CBReleaseObject(header);
+		return false;
+	}
+	/*
+	 * still lots more to do !
+	 */
+
+	return false;
+}
+

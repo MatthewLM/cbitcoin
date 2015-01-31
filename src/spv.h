@@ -44,7 +44,8 @@
  */
 bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
 bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *toSend);
-
+bool SPVreceiveMessageHeader(CBNetworkCommunicator * self, CBPeer * peer);
+bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer);
 
 
 CBNetworkAddress * CBReadNetworkAddress(char * ip, bool isPublic);
