@@ -193,6 +193,7 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 	CBByteArraySetInt32(bytes, 0, self->version);
 	CBByteArraySetInt64(bytes, 4, self->services);
 	CBByteArraySetInt64(bytes, 12, self->time);
+
 	if (! CBGetMessage(self->addRecv)->serialised // Serailise if not serialised yet.
 		// Serialise if force is true.
 		|| force
@@ -200,10 +201,12 @@ uint32_t CBVersionSerialise(CBVersion * self, bool force){
 		|| CBGetMessage(self->addRecv)->bytes->sharedData == bytes->sharedData
 		// Reserialise if the address has a timestamp
 		|| (CBGetMessage(self->addRecv)->bytes->length != 26)) {
+
 		if (CBGetMessage(self->addRecv)->serialised)
 			// Release old byte array
 			CBReleaseObject(CBGetMessage(self->addRecv)->bytes);
 		CBGetMessage(self->addRecv)->bytes = CBByteArraySubReference(bytes, 20, bytes->length-20);
+
 		if (! CBNetworkAddressSerialise(self->addRecv, false)) {
 			CBLogError("CBVersion cannot be serialised because of an error with the receiving CBNetworkAddress");
 			// Release bytes to avoid problems overwritting pointer without release, if serialisation is tried again.

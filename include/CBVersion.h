@@ -31,7 +31,7 @@
 
 #define CB_MIN_PROTO_VERSION 209
 #define CB_ADDR_TIME_VERSION 31402 // Version where times are included in addr messages.
-#define CB_PONG_VERSION 60001 // Version where pings are responded with pongs.
+#define CB_PONG_VERSION 60002 // Version where pings are responded with pongs.
 #define CBGetVersion(x) ((CBVersion *)x)
 
 /**

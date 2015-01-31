@@ -128,11 +128,14 @@ bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * mes
 	//fprintf(stderr,"SPVsendMessage hello 1\n");
 	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking)
 		return false;
-	char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
-	CBMessageTypeToString(message->type, typeStr);
-	CBLogVerbose("Sending message of type %s (%u) to %s.", typeStr, message->type, peer->peerStr);
+	//char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
+	//CBMessageTypeToString(message->type, typeStr);
+	//CBLogVerbose("Sending message of type %s (%u) to %s.", typeStr, message->type, peer->peerStr);
 	// Serialise message if needed.
 	//fprintf(stderr,"SPVsendMessage hello 2\n");
+
+
+
 	if (! message->serialised) {
 		uint32_t len;
 		//fprintf(stderr,"SPVsendMessage hello 3\n");
@@ -199,8 +202,11 @@ bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * mes
 		//fprintf(stderr,"SPVsendMessage hello 4\n");
 		if (message->bytes) {
 			//fprintf(stderr,"SPVsendMessage hello 5\n");
-			if (message->bytes->length != len)
+			if (message->bytes->length != len){
+				fprintf(stderr,"Length does not match \n");
 				return false;
+			}
+
 		}
 	}
 	if (message->bytes) {
@@ -220,7 +226,9 @@ bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * mes
 	}
 	// Add the message and callback to the send queue
 	bool res = SPVsendMessageViaPeer(self,peer,message);
-
+	if(!res){
+		fprintf(stderr,"Failed to send message\n");
+	}
 	CBRetainObject(message);
 	return res;
 }
@@ -285,6 +293,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 		}
 		// Length
 		if (toSend->bytes){
+			//fprintf(stderr,"Printing length %d \n",toSend->bytes->length);
 			CBInt32ToArray(peer->sendingHeader, CB_MESSAGE_HEADER_LENGTH, toSend->bytes->length);
 		}else
 			memset(peer->sendingHeader + CB_MESSAGE_HEADER_LENGTH, 0, 4);
@@ -293,6 +302,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 	}
 	//int32_t len = CBSocketSend(peer->socketID, peer->sendingHeader + peer->messageSent, 24 - peer->messageSent);
 	int32_t len = write(STDOUT_FILENO,peer->sendingHeader,24);
+
 	if (len == CB_SOCKET_FAILURE) {
 		free(peer->sendingHeader);
 		fprintf(stderr,"Did not send full header");
@@ -318,7 +328,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 
 	// Sent header
 	//int32_t len = CBSocketSend(peer->socketID, CBByteArrayGetData(toSend->bytes) + peer->messageSent, toSend->bytes->length - peer->messageSent);
-	len = write(STDOUT_FILENO,toSend->bytes,toSend->bytes->length);
+	len = write(STDOUT_FILENO,CBByteArrayGetData(toSend->bytes),toSend->bytes->length);
 	if (len == CB_SOCKET_FAILURE)
 		CBNetworkCommunicatorDisconnect(self, peer, 0, false);
 	else{

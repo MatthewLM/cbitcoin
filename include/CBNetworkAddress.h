@@ -34,6 +34,7 @@
 #define CB_NETWORK_ADDR_STR_SIZE 48
 
 typedef enum{
+	CB_SERVICE_NO_FULL_BLOCKS = 0,
 	CB_SERVICE_FULL_BLOCKS = 1, /**< Service for full blocks. Node maintains the entire blockchain. */
 }CBVersionServices;
 
