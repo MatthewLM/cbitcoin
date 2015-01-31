@@ -63,7 +63,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_spv_OBJECTS = CBRPCServer.$(OBJEXT) spv.$(OBJEXT)
+am_spv_OBJECTS = CBRPCServer.$(OBJEXT) spv.$(OBJEXT) main.$(OBJEXT)
 spv_OBJECTS = $(am_spv_OBJECTS)
 am__DEPENDENCIES_1 = ../lib/libcbitcoin.la
 spv_DEPENDENCIES = $(am__DEPENDENCIES_1) \
@@ -215,7 +215,7 @@ INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
         -I$(top_srcdir)/dependencies/storage  -I$(top_srcdir)/dependencies/logging \
         -I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets -I.
 
-spv_SOURCES = CBRPCServer.c CBRPCServer.h main.h spv.c 
+spv_SOURCES = CBRPCServer.c CBRPCServer.h spv.h spv.c main.c 
 LIBADD = $(EVENT_LIBS) ../lib/libcbitcoin.la
 COMMON_LDADD = @EVENT_LIBS@ ../lib/libcbitcoin.la
 spv_LDADD = $(COMMON_LDADD)      ../dependencies/storage/libfileec.la ../dependencies/storage/libstorage.la
@@ -310,6 +310,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CBRPCServer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spv.Po@am__quote@
 
 .c.o:

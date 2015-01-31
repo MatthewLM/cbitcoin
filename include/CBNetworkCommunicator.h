@@ -222,7 +222,6 @@ CBNetworkAddress * CBNetworkCommunicatorGetOurMainAddress(CBNetworkCommunicator 
  @param addRecv The CBNetworkAddress of the receipient.
  */
 CBVersion * CBNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv);
-
 /**
  @brief Determines if an IP type is reachable.
  @param self The CBNetworkCommunicator object.

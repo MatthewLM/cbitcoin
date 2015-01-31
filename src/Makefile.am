@@ -4,7 +4,7 @@ INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
 
 bin_PROGRAMS = spv
 
-spv_SOURCES = CBRPCServer.c CBRPCServer.h main.h spv.c 
+spv_SOURCES = CBRPCServer.c CBRPCServer.h spv.h spv.c main.c 
 
 
 LIBADD = $(EVENT_LIBS) ../lib/libcbitcoin.la

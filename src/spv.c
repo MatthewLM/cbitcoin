@@ -12,7 +12,7 @@
 //  or distributed except according to the terms contained in the
 //  LICENSE file.
 
-#include "main.h"
+#include "spv.h"
 
 
 
@@ -65,28 +65,28 @@ CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
 	return addr;
 
 }
-void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar);
+
 void onPeerWhatever(CBNetworkCommunicator * foo, CBPeer * bar){
 	return;
 }
 
-void CBNetworkCommunicatorTryConnectionsVoid(void * comm);
+
 void CBNetworkCommunicatorTryConnectionsVoid(void * comm){
 	CBNetworkCommunicatorTryConnections(comm, false);
 }
 
-void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason);
+
 void onNetworkError(CBNetworkCommunicator * comm, CBErrorReason reason){
 	CBLogError("DID LOSE LAST NODE");
 	exit(EXIT_FAILURE);
 }
-void onBadTime(void * foo);
+
 void onBadTime(void * foo){
 	CBLogError("BAD TIME FAIL");
 	exit(EXIT_FAILURE);
 }
 
-bool acceptType(CBNetworkCommunicator *, CBPeer *, CBMessageType);
+
 bool acceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessageType type){
 	if (type == CB_MESSAGE_TYPE_VERACK && peer->handshakeStatus & CB_HANDSHAKE_GOT_ACK) {
 		CBLogError("ALREADY HAVE ACK FAIL\n");
@@ -99,10 +99,11 @@ bool acceptType(CBNetworkCommunicator * comm, CBPeer * peer, CBMessageType type)
 	return true;
 }
 
-CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * theMessage);
+
 CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer * peer, CBMessage * theMessage){
 	fprintf(stderr,"on message received");
 }
+
 
 CBNetworkCommunicator * createSelf(void){
 	CBNetworkCommunicator * self;
@@ -122,8 +123,17 @@ CBNetworkCommunicator * createSelf(void){
 	commConnect->timeOut = 3000;
 	commConnect->recvTimeOut = 1000;
 
+	return commConnect;
+
+}
+
+CBVersion * CBFDNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv){
+
+}
 
 
+CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer){
+	return CBGetMessage(CBNetworkCommunicatorGetVersion(self, peer));
 }
 
 //CBLogWarning("Good IP (%s) for --addnode", argv[x]);
@@ -136,19 +146,3 @@ CBNetworkCommunicator * createSelf(void){
  *
  */
 
-
-int main(int argc, char * argv[]) {
-	fprintf(stderr, "Error: Hello\n");
-	// Get home directory and set the default data directory.
-    // hi
-	CBNetworkAddress * peerAddress = CBReadNetworkAddress("10.21.0.189", false);
-	CBNetworkAddress * selfAddress = CBReadNetworkAddress("10.21.0.67", false);
-
-
-
-
-	fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);
-
-//CBNetworkCommunicatorSendMessage, then see CBNetworkCommunicatorOnCanSend
-
-}
