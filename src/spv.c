@@ -147,7 +147,7 @@ int main(int argc, char * argv[]) {
 
 
 
-//	fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);
+	fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);
 
 //CBNetworkCommunicatorSendMessage, then see CBNetworkCommunicatorOnCanSend
 
