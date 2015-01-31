@@ -125,15 +125,17 @@ CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer)
 
 
 bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message){
+	//fprintf(stderr,"SPVsendMessage hello 1\n");
 	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking)
 		return false;
 	char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
 	CBMessageTypeToString(message->type, typeStr);
 	CBLogVerbose("Sending message of type %s (%u) to %s.", typeStr, message->type, peer->peerStr);
 	// Serialise message if needed.
+	//fprintf(stderr,"SPVsendMessage hello 2\n");
 	if (! message->serialised) {
 		uint32_t len;
-
+		//fprintf(stderr,"SPVsendMessage hello 3\n");
 		switch (message->type) {
 
 			case CB_MESSAGE_TYPE_VERSION:
@@ -194,13 +196,16 @@ bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * mes
 				break;
 
 		}
+		//fprintf(stderr,"SPVsendMessage hello 4\n");
 		if (message->bytes) {
+			//fprintf(stderr,"SPVsendMessage hello 5\n");
 			if (message->bytes->length != len)
 				return false;
 		}
 	}
 	if (message->bytes) {
 		// Make checksum
+		//fprintf(stderr,"SPVsendMessage hello 6\n");
 		uint8_t hash[32];
 		uint8_t hash2[32];
 		CBSha256(CBByteArrayGetData(message->bytes), message->bytes->length, hash);

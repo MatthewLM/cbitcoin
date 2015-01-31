@@ -15,8 +15,12 @@
 #include "spv.h"
 
 
-CBPeer * SPVcreateNewPeer(char * ipAddr, bool isPublic){
-	return CBNewPeer(CBReadNetworkAddress(ipAddr, isPublic));
+CBPeer * SPVcreateNewPeer(CBNetworkAddress *addr){
+	CBPeer *peer = CBNewPeer(addr);
+	peer->sendQueueSize = 1;
+	peer->connectionWorking = 1;
+
+	return peer;
 }
 /*
 CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer){
@@ -69,8 +73,10 @@ CBNetworkCommunicator * SPVcreateSelf(CBNetworkAddress * selfAddress){
 
 }
 
-CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv){
-	CBNetworkAddress * sourceAddr = CBNetworkCommunicatorGetOurMainAddress(self, addRecv->type);
+CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBPeer *peer){
+	CBNetworkAddress * addRecv = peer->addr;
+	//CBNetworkAddress * sourceAddr = CBNetworkCommunicatorGetOurMainAddress(self, addRecv->type);
+	CBNetworkAddress * sourceAddr = self->ipData[CB_IP4_NETWORK].ourAddress;
 	self->nonce = rand();
 	// If the peer's address is local give a null address
 	if (addRecv->type & CB_IP_LOCAL) {
@@ -81,7 +87,7 @@ CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNet
 		CBRetainObject(addRecv);
 	CBVersion * version = CBNewVersion(
 			self->version, self->services, time(NULL),
-			addRecv, sourceAddr, self->nonce, self->userAgent,
+			sourceAddr, addRecv, self->nonce, self->userAgent,
 			self->blockHeight
 	);
 	//CBReleaseObject(addRecv);
@@ -95,15 +101,32 @@ int main(int argc, char * argv[]) {
 	fprintf(stderr, "Error: Hello\n");
 	// Get home directory and set the default data directory.
     // hi
-	CBPeer * peer = SPVcreateNewPeer("10.21.0.189",false);
+	// create peer ip address
+	CBByteArray * peeraddr = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 21, 0, 189}, 16);
+	CBByteArray * selfaddr = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 21, 0, 67}, 16);
+	CBNetworkCommunicator *self = SPVcreateSelf(CBNewNetworkAddress(0, (CBSocketAddress){selfaddr, 8333}, 0, false));
+	CBPeer * peer = SPVcreateNewPeer(CBNewNetworkAddress(0, (CBSocketAddress){peeraddr, 8333}, 0, false));
+	CBReleaseObject(peeraddr);
+	CBReleaseObject(selfaddr);
+
+	fprintf(stderr,"main hello 1\n");
 
 
-	CBNetworkCommunicator *self = SPVcreateSelf(CBReadNetworkAddress("10.21.0.67", false));
-	CBMessage *msg = SPVNetworkCommunicatorGetVersion(self,peer->addr);
-
-
+	CBMessage *msg = SPVNetworkCommunicatorGetVersion(self,peer);
+	fprintf(stderr,"main hello 2\n");
+	// bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
+	char verstr[CBVersionStringMaxSize(CBGetVersion(msg))];
+	CBVersionToString(CBGetVersion(msg), verstr);
+	//SPVsendMessage(self,peer,msg);
+	fprintf(stderr,"main hello 3\n---\nversion=%s\n---\n",verstr);
 	//fprintf(stderr, "Error: Size(%d) 4\n",CBGetMessage(version)->bytes->length);
-
+	return 0;
 //CBNetworkCommunicatorSendMessage, then see CBNetworkCommunicatorOnCanSend
-
+	int x;
+	uint8_t buf[24];
+	while(read(STDIN_FILENO,buf,24) > 0){
+		fprintf(stderr,"main hello inside\n");
+		fprintf(stderr,"Receiving:[data=%s] \n",buf);
+	}
+	fprintf(stderr,"main hello 4\n");
 }
