@@ -28,6 +28,7 @@
 #include "CBNodeFull.h"
 #include "CBRPCServer.h"
 #include "CBVersion.h"
+#include "CBPeer.h"
 
 // Macros
 
@@ -39,9 +40,9 @@
 #define CBInvalidArg(str) {printf("Invalid argument. " str ": %s %s\n", argv[x], argv[x+1]); return EXIT_FAILURE;}
 
 
-CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer);
-CBVersion * CBFDNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv);
-CBNetworkCommunicator * createSelf(void);
+
+
+
 
 CBNetworkAddress * CBReadNetworkAddress(char * ip, bool isPublic);
 

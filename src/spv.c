@@ -105,31 +105,7 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 }
 
 
-CBNetworkCommunicator * createSelf(void){
-	CBNetworkCommunicator * self;
-	CBNetworkCommunicatorCallbacks callbacks = {
-		onPeerWhatever,
-		acceptType,
-		onMessageReceived,
-		onNetworkError
-	};
-	CBNetworkCommunicator * commConnect = CBNewNetworkCommunicator(0, callbacks);
-	commConnect->networkID = CB_PRODUCTION_NETWORK_BYTES;
-	commConnect->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
-	commConnect->version = CB_PONG_VERSION;
-	commConnect->maxConnections = 2;
-	commConnect->maxIncommingConnections = 0;
-	commConnect->heartBeat = 2000;
-	commConnect->timeOut = 3000;
-	commConnect->recvTimeOut = 1000;
 
-	return commConnect;
-
-}
-
-CBVersion * CBFDNetworkCommunicatorGetVersion(CBNetworkCommunicator * self, CBNetworkAddress * addRecv){
-
-}
 
 
 CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer){
