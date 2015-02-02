@@ -13,7 +13,6 @@
 //  LICENSE file.
 
 #include "spv.h"
-#include "common.h"
 
 CBPeer * SPVcreateNewPeer(CBNetworkAddress *addr){
 	CBPeer *peer = CBNewPeer(addr);
@@ -143,33 +142,40 @@ void spvchild(int socket) {
 	fprintf(stderr,"main hello 4\n");
 }
 
-void child(mqd_t socket) {
+void child(mqd_t toparent,mqd_t fromparent) {
+	//fprintf(stderr, "Forking process child\n");
 	const char hello[] = "hello parent, I am child";
 	uint16_t len = strlen(hello);
 	uint8_t buffer[len + 1];
 	strcpy (buffer,hello);
-	CHECK(0 <= mq_send(socket, buffer, len, 0)); /* NB. this includes nul */
+	CHECK(0 <= mq_send(toparent, buffer, len, 0)); /* NB. this includes nul */
 	/* go forth and do childish things with this end of the pipe */
-	CHECK((mqd_t)-1 != mq_close(socket));
+	CHECK((mqd_t)-1 != mq_close(toparent));
+	CHECK((mqd_t)-1 != mq_close(fromparent));
 }
 
-void parent(mqd_t socket) {
+void parent(mqd_t tochild,mqd_t fromchild) {
+	//fprintf(stderr, "Forking process parent\n");
 	/* do parental things with this end, like reading the child's message */
 	uint8_t buffer[MAX_SIZE + 1];
 	ssize_t bytes_read;
 	/* receive the message */
-	bytes_read = mq_receive(socket, buffer, MAX_SIZE, NULL);
+	bytes_read = mq_receive(fromchild, buffer, MAX_SIZE, NULL);
 
 	printf("parent received mqueue '%.*s'\n", bytes_read, buffer);
 
-	CHECK((mqd_t)-1 != mq_close(socket));
-	CHECK((mqd_t)-1 != mq_unlink("/morning"));
+	CHECK((mqd_t)-1 != mq_close(fromchild));
+	CHECK((mqd_t)-1 != mq_close(tochild));
+	CHECK((mqd_t)-1 != mq_unlink("/morning_up"));
+	CHECK((mqd_t)-1 != mq_unlink("/morning_down"));
 }
 
 void socketfork() {
-	mqd_t fd[2];
-	static const int parentsocket = 0;
-	static const int childsocket = 1;
+	mqd_t fd[4];
+	static const int toparentsocket = 0; // for child /morning_parent
+	static const int tochildsocket = 1; // for parent /morning_child
+	static const int fromparentsocket = 2; // for child
+	static const int fromchildsocket = 3; // for parent
 	pid_t pid;
 
 	mqd_t mq;
@@ -180,19 +186,27 @@ void socketfork() {
 	attr.mq_msgsize = MAX_SIZE;
 	attr.mq_curmsgs = 0;
 
-	fd[parentsocket] = mq_open("/morning", O_CREAT | O_RDONLY, 0644, &attr);
-	CHECK((mqd_t)-1 != fd[parentsocket]);
-	fd[childsocket] = mq_open("/morning", O_CREAT | O_WRONLY, 0644, &attr);
-	CHECK((mqd_t)-1 != fd[childsocket]);
-
+	// sockets for parent
+	fd[fromchildsocket] = mq_open("/morning_up", O_CREAT | O_RDONLY, 0644, &attr);
+	CHECK((mqd_t)-1 != fd[fromchildsocket]);
+	fd[tochildsocket] = mq_open("/morning_down", O_CREAT | O_WRONLY, 0644, &attr);
+	CHECK((mqd_t)-1 != fd[tochildsocket]);
+	// sockets for child
+	fd[fromparentsocket] = mq_open("/morning_down", O_CREAT | O_RDONLY, 0644, &attr);
+	CHECK((mqd_t)-1 != fd[fromparentsocket]);
+	fd[toparentsocket] = mq_open("/morning_up", O_CREAT | O_WRONLY, 0644, &attr);
+	CHECK((mqd_t)-1 != fd[toparentsocket]);
+	//fprintf(stderr, "Forking process 2\n");
 	/* 2. call fork ... */
 	pid = fork();
 	if (pid == 0) { /* 2.1 if fork returned zero, you are the child */
-		CHECK((mqd_t)-1 != mq_close(fd[parentsocket])); /* Close the parent file descriptor */
-		child(fd[childsocket]);
+		CHECK((mqd_t)-1 != mq_close(fd[tochildsocket])); /* Close the parent file descriptor */
+		CHECK((mqd_t)-1 != mq_close(fd[fromchildsocket])); /* Close the parent file descriptor */
+		child(fd[toparentsocket],fd[fromparentsocket]);
 	} else { /* 2.2 ... you are the parent */
-		CHECK((mqd_t)-1 != mq_close(fd[childsocket])); /* Close the child file descriptor */
-		parent(fd[parentsocket]);
+		CHECK((mqd_t)-1 != mq_close(fd[toparentsocket])); /* Close the child file descriptor */
+		CHECK((mqd_t)-1 != mq_close(fd[fromparentsocket])); /* Close the child file descriptor */
+		parent(fd[tochildsocket],fd[fromchildsocket]);
 	}
 	exit(0); /* do everything in the parent and child functions */
 }

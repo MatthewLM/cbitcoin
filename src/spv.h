@@ -26,6 +26,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <pwd.h>
+#include "common.h"
 #include "CBDependencies.h"
 #include "CBNodeFull.h"
 #include "CBRPCServer.h"
