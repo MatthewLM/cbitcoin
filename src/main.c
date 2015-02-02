@@ -145,9 +145,10 @@ void spvchild(int socket) {
 
 void child(mqd_t socket) {
 	const char hello[] = "hello parent, I am child";
-	uint8_t buffer[MAX_SIZE + 1];
+	uint16_t len = strlen(hello);
+	uint8_t buffer[len + 1];
 	strcpy (buffer,hello);
-	CHECK(0 <= mq_send(socket, buffer, MAX_SIZE, 0)); /* NB. this includes nul */
+	CHECK(0 <= mq_send(socket, buffer, len, 0)); /* NB. this includes nul */
 	/* go forth and do childish things with this end of the pipe */
 	CHECK((mqd_t)-1 != mq_close(socket));
 }
@@ -159,7 +160,7 @@ void parent(mqd_t socket) {
 	/* receive the message */
 	bytes_read = mq_receive(socket, buffer, MAX_SIZE, NULL);
 
-	printf("parent received '%.*s'\n", bytes_read, buffer);
+	printf("parent received mqueue '%.*s'\n", bytes_read, buffer);
 
 	CHECK((mqd_t)-1 != mq_close(socket));
 	CHECK((mqd_t)-1 != mq_unlink("/morning"));

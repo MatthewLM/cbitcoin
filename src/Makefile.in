@@ -154,6 +154,7 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
+REALTIME_LIBS = @REALTIME_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -211,13 +212,13 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-INCLUDES = -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
+INCLUDES = @REALTIME_LIBS@ -DTEST_SRCDIR=\"$(top_srcdir)/build\" -I$(top_srcdir)/include \
         -I$(top_srcdir)/dependencies/storage  -I$(top_srcdir)/dependencies/logging \
         -I$(top_srcdir)/dependencies/threads  -I$(top_srcdir)/dependencies/sockets -I.
 
 spv_SOURCES = CBRPCServer.c CBRPCServer.h spv.h spv.c main.c 
-LIBADD = $(EVENT_LIBS) ../lib/libcbitcoin.la
-COMMON_LDADD = @EVENT_LIBS@ ../lib/libcbitcoin.la
+LIBADD = $(REALTIME_LIBS) $(EVENT_LIBS) ../lib/libcbitcoin.la
+COMMON_LDADD = @REALTIME_LIBS@ @EVENT_LIBS@ ../lib/libcbitcoin.la
 spv_LDADD = $(COMMON_LDADD)      ../dependencies/storage/libfileec.la ../dependencies/storage/libstorage.la
 all: all-am
 
