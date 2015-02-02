@@ -211,7 +211,61 @@ void socketfork() {
 	exit(0); /* do everything in the parent and child functions */
 }
 
+
+typedef struct {
+	int sock; /*socket descriptor*/
+	uint8_t *buffer;
+	ssize_t buffsize;
+	
+} btcpeer;
+
+// Using http://www.binarytides.com/tcp-connect-port-scanner-c-code-linux-sockets/
+btcpeer createbtcpeer(char *hostname,char *portNum){
+	int sock, err, port;                        /* Socket descriptor */
+	struct sockaddr_in sa;
+	struct hostent *host;
+	port = atoi(portNum); // for testing, use nc -l 48333 on the local host
+	strncpy((char*)&sa , "" , sizeof sa);
+	sa.sin_family = AF_INET;
+	//direct ip address, use it
+	if(isdigit(hostname[0]))
+	{
+		printf("Doing inet_addr...");
+		sa.sin_addr.s_addr = inet_addr(hostname);
+		printf("Done\n");
+	}
+	//Resolve hostname to ip address
+	else if( (host = gethostbyname(hostname)) != 0)
+	{
+		printf("Doing gethostbyname...");
+		strncpy((char*)&sa.sin_addr , (char*)host->h_addr , sizeof sa.sin_addr);
+		printf("Done\n");
+	}
+	else
+	{
+		herror(hostname);
+		exit(2);
+	}
+	sock = socket(AF_INET , SOCK_STREAM , 0);
+	if(sock < 0) 
+	{
+		fprintf(stderr,"\nSocket");
+		exit(1);
+	}
+	//Connect using that socket and sockaddr structure
+	err = connect(sock , (struct sockaddr*)&sa , sizeof sa);
+	struct btcpeer peer;
+	peer->fd = sock;
+	peer->buffsize = 8192;
+	return peer;
+}
+
+
 int main(int argc, char * argv[]) {
 	fprintf(stderr, "Forking process\n");
-	socketfork();
+	//socketfork();
+	struct btcpeer *peer = createbtcpeer("127.0.0.1","48333");
+	peer->buffer = "Hi, I am awesome.\n";	
+	write(peer->fd,peer->buffer,strlen(peer->buffer));
+	close(peer->fd);
 }
