@@ -137,7 +137,7 @@ void spvchild(int socket) {
 	fprintf(stderr,"main hello outside forza \n");
 	if(SPVreceiveMessageHeader(self,peer)){
 		fprintf(stderr,"main hello inside\n");
-		return 1;
+		return;
 	}
 	fprintf(stderr,"main hello 4\n");
 }
@@ -212,51 +212,51 @@ void socketfork() {
 }
 
 
-typedef struct {
-	int sock; /*socket descriptor*/
+typedef struct  {
+	int fd; /*socket descriptor*/
 	uint8_t *buffer;
 	ssize_t buffsize;
-	
 } btcpeer;
 
 // Using http://www.binarytides.com/tcp-connect-port-scanner-c-code-linux-sockets/
-btcpeer createbtcpeer(char *hostname,char *portNum){
+btcpeer * createbtcpeer(char *hostname,char *portNum){
 	int sock, err, port;                        /* Socket descriptor */
 	struct sockaddr_in sa;
+	memset(&sa, 0, sizeof(sa));
+
 	struct hostent *host;
+	fprintf(stderr,"create btc peer 1\n");
 	port = atoi(portNum); // for testing, use nc -l 48333 on the local host
-	strncpy((char*)&sa , "" , sizeof sa);
+	//strncpy((char*)&sa , "" , sizeof sa);
 	sa.sin_family = AF_INET;
+	fprintf(stderr,"create btc peer 2\n");
 	//direct ip address, use it
-	if(isdigit(hostname[0]))
-	{
-		printf("Doing inet_addr...");
-		sa.sin_addr.s_addr = inet_addr(hostname);
-		printf("Done\n");
-	}
-	//Resolve hostname to ip address
-	else if( (host = gethostbyname(hostname)) != 0)
-	{
-		printf("Doing gethostbyname...");
-		strncpy((char*)&sa.sin_addr , (char*)host->h_addr , sizeof sa.sin_addr);
-		printf("Done\n");
-	}
-	else
-	{
-		herror(hostname);
-		exit(2);
-	}
+	memset(&sa, 0, sizeof(sa));                /* zero the struct */
+	sa.sin_family = AF_INET;
+	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* set destination IP number - localhost, 127.0.0.1*/
+	sa.sin_port = htons(48333);                /* set destination port number */
 	sock = socket(AF_INET , SOCK_STREAM , 0);
+	fprintf(stderr,"create btc peer 3\n");
 	if(sock < 0) 
 	{
 		fprintf(stderr,"\nSocket");
 		exit(1);
 	}
 	//Connect using that socket and sockaddr structure
-	err = connect(sock , (struct sockaddr*)&sa , sizeof sa);
-	struct btcpeer peer;
+	//err = connect(sock , (struct sockaddr*)&sa , sizeof sa);
+	if((err = connect(sock, (struct sockaddr *)&sa, sizeof(sa))) < 0)
+	{
+		 fprintf(stderr,"Client-connect() error");
+		 close(sock);
+		 exit(-1);
+	}
+	fprintf(stderr,"create btc peer 4\n");
+	btcpeer *peer = (btcpeer*) calloc(1, sizeof(btcpeer));
+	fprintf(stderr,"create btc peer 5\n");
 	peer->fd = sock;
+	fprintf(stderr,"create btc peer 6\n");
 	peer->buffsize = 8192;
+	fprintf(stderr,"create btc peer 7\n");
 	return peer;
 }
 
@@ -264,8 +264,9 @@ btcpeer createbtcpeer(char *hostname,char *portNum){
 int main(int argc, char * argv[]) {
 	fprintf(stderr, "Forking process\n");
 	//socketfork();
-	struct btcpeer *peer = createbtcpeer("127.0.0.1","48333");
-	peer->buffer = "Hi, I am awesome.\n";	
+	btcpeer *peer = createbtcpeer("127.0.0.1","48333");
+	peer->buffer = "Hi, I am awesome.\n";
 	write(peer->fd,peer->buffer,strlen(peer->buffer));
 	close(peer->fd);
+	socketfork();
 }
