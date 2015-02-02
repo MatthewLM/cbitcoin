@@ -13,7 +13,7 @@
 //  LICENSE file.
 
 #include "spv.h"
-
+#include "common.h"
 
 CBPeer * SPVcreateNewPeer(CBNetworkAddress *addr){
 	CBPeer *peer = CBNewPeer(addr);
@@ -106,10 +106,10 @@ CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBPeer
 	return version;
 }
 
-
-
-int main(int argc, char * argv[]) {
-	fprintf(stderr, "Error: Hello\n");
+void spvchild(int socket) {
+//    const char hello[] = "hello parent, I am child";
+//	write(socket, hello, sizeof(hello)); /* NB. this includes nul */
+    /* go forth and do childish things with this end of the pipe */
 	// Get home directory and set the default data directory.
     // hi
 	// create peer ip address
@@ -141,4 +141,62 @@ int main(int argc, char * argv[]) {
 		return 1;
 	}
 	fprintf(stderr,"main hello 4\n");
+}
+
+void child(mqd_t socket) {
+	const char hello[] = "hello parent, I am child";
+	uint8_t buffer[MAX_SIZE + 1];
+	strcpy (buffer,hello);
+	CHECK(0 <= mq_send(socket, buffer, MAX_SIZE, 0)); /* NB. this includes nul */
+	/* go forth and do childish things with this end of the pipe */
+	CHECK((mqd_t)-1 != mq_close(socket));
+}
+
+void parent(mqd_t socket) {
+	/* do parental things with this end, like reading the child's message */
+	uint8_t buffer[MAX_SIZE + 1];
+	ssize_t bytes_read;
+	/* receive the message */
+	bytes_read = mq_receive(socket, buffer, MAX_SIZE, NULL);
+
+	printf("parent received '%.*s'\n", bytes_read, buffer);
+
+	CHECK((mqd_t)-1 != mq_close(socket));
+	CHECK((mqd_t)-1 != mq_unlink("/morning"));
+}
+
+void socketfork() {
+	mqd_t fd[2];
+	static const int parentsocket = 0;
+	static const int childsocket = 1;
+	pid_t pid;
+
+	mqd_t mq;
+	struct mq_attr attr;
+	char buffer[MAX_SIZE + 1];
+	attr.mq_flags = 0;
+	attr.mq_maxmsg = 10;
+	attr.mq_msgsize = MAX_SIZE;
+	attr.mq_curmsgs = 0;
+
+	fd[parentsocket] = mq_open("/morning", O_CREAT | O_RDONLY, 0644, &attr);
+	CHECK((mqd_t)-1 != fd[parentsocket]);
+	fd[childsocket] = mq_open("/morning", O_CREAT | O_WRONLY, 0644, &attr);
+	CHECK((mqd_t)-1 != fd[childsocket]);
+
+	/* 2. call fork ... */
+	pid = fork();
+	if (pid == 0) { /* 2.1 if fork returned zero, you are the child */
+		CHECK((mqd_t)-1 != mq_close(fd[parentsocket])); /* Close the parent file descriptor */
+		child(fd[childsocket]);
+	} else { /* 2.2 ... you are the parent */
+		CHECK((mqd_t)-1 != mq_close(fd[childsocket])); /* Close the child file descriptor */
+		parent(fd[parentsocket]);
+	}
+	exit(0); /* do everything in the parent and child functions */
+}
+
+int main(int argc, char * argv[]) {
+	fprintf(stderr, "Forking process\n");
+	socketfork();
 }

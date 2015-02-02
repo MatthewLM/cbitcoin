@@ -100,9 +100,12 @@ AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
   [AC_MSG_ERROR([Missing required libcrypto])])
 AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=" -levent_core -levent -levent_extra -levent_openssl -levent_pthreads ",
   [AC_MSG_ERROR([Missing required libevent])])
+AC_CHECK_LIB(rt, mq_send, REALTIME_LIBS=" -lrt ",
+  [AC_MSG_ERROR([Missing required librtai-dev])])
 
 AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(EVENT_LIBS)
+AC_SUBST(REALTIME_LIBS)
 
 AC_SEARCH_LIBS([SHA1], [crypto], [OPENSSL=1], [OPENSSL=0])
 AC_SEARCH_LIBS([event_new], [event], [LIBEVENT=1], [LIBEVENT=0])
@@ -114,7 +117,7 @@ AC_SEARCH_LIBS([event_new], [event], [LIBEVENT=1], [LIBEVENT=0])
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h stdbool.h], [], [AC_MSG_ERROR([Cannot configure core library])])
 
 # Checks for POSIX header files.
-AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h sys/socket.h arpa/inet.h sys/time.h], [], [echo Default dependencies cannot be installed.])
+AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h sys/socket.h arpa/inet.h sys/time.h mqueue.h], [], [echo Default dependencies cannot be installed.])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([malloc realloc memmove memset strchr strtol strtoul mkdir rmdir strerror strstr ], [], [AC_MSG_ERROR([Cannot configure core library])])
