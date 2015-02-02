@@ -670,6 +670,7 @@ LIBOBJS
 NOEC
 CONFIGLFLAGS
 CONFIGFLAGS
+REALTIME_LIBS
 EVENT_LIBS
 CRYPTO_LIBS
 CPP
@@ -11110,6 +11111,49 @@ else
   as_fn_error $? "Missing required libevent" "$LINENO" 5
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for mq_send in -lrt" >&5
+$as_echo_n "checking for mq_send in -lrt... " >&6; }
+if ${ac_cv_lib_rt_mq_send+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lrt  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char mq_send ();
+int
+main ()
+{
+return mq_send ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_rt_mq_send=yes
+else
+  ac_cv_lib_rt_mq_send=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rt_mq_send" >&5
+$as_echo "$ac_cv_lib_rt_mq_send" >&6; }
+if test "x$ac_cv_lib_rt_mq_send" = xyes; then :
+  REALTIME_LIBS=" -lrt "
+else
+  as_fn_error $? "Missing required librtai-dev" "$LINENO" 5
+fi
+
+
 
 
 
@@ -11252,7 +11296,7 @@ done
 
 
 # Checks for POSIX header files.
-for ac_header in fcntl.h netdb.h netinet/in.h sys/socket.h arpa/inet.h sys/time.h
+for ac_header in fcntl.h netdb.h netinet/in.h sys/socket.h arpa/inet.h sys/time.h mqueue.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
