@@ -34,6 +34,7 @@
 #include "CBAlert.h"
 #include <assert.h>
 #include <stdio.h>
+#include <mqueue.h>
 
 // Constants and Macros
 
@@ -109,6 +110,8 @@ typedef struct{
 */
 struct CBNetworkCommunicator {
 	CBObject base; /**< CBObject base structure */
+	mqd_t inbound; /** inbound queue to which the multiplexer writes to **/
+	mqd_t outbound; /**outbound queue which the multiplexer reads from **/
 	uint32_t networkID; /**< The 4 byte id for sending and receiving messages for a given network. */
 	CBNetworkCommunicatorFlags flags; /**< Flags for the operation of the CBNetworkCommunicator. */
 	int32_t version; /**< Used for automatic handshaking. This version will be advertised to peers. */

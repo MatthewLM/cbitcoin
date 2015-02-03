@@ -105,7 +105,7 @@ CBVersion * SPVNetworkCommunicatorGetVersion(CBNetworkCommunicator * self,CBPeer
 	return version;
 }
 
-void spvchild(int socket) {
+void spvchild(mqd_t toparent,mqd_t fromparent) {
 //    const char hello[] = "hello parent, I am child";
 //	write(socket, hello, sizeof(hello)); /* NB. this includes nul */
     /* go forth and do childish things with this end of the pipe */
@@ -115,34 +115,77 @@ void spvchild(int socket) {
 	CBByteArray * peeraddr = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 21, 0, 189}, 16);
 	CBByteArray * selfaddr = CBNewByteArrayWithDataCopy((uint8_t [16]){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 21, 0, 67}, 16);
 	CBNetworkCommunicator *self = SPVcreateSelf(CBNewNetworkAddress(0, (CBSocketAddress){selfaddr, 8333}, 0, false));
+	self->inbound = fromparent;
+	self->outbound = toparent;
+	fprintf(stderr,"Help 1 \n");
 	CBPeer * peer = SPVcreateNewPeer(CBNewNetworkAddress(0, (CBSocketAddress){peeraddr, 8333}, 0, false));
 	//CBReleaseObject(peeraddr);
 	//CBReleaseObject(selfaddr);
-
+	fprintf(stderr,"Help 2 \n");
 	CBVersion *version = SPVNetworkCommunicatorGetVersion(self,peer);
 	CBMessage *msg = CBGetMessage(version);
-
+	//fprintf(stderr,"Help 3 \n");
 	// bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
 	char verstr[CBVersionStringMaxSize(CBGetVersion(msg))];
 	CBVersionToString(CBGetVersion(msg), verstr);
-	fprintf(stderr,"main hello 3\n---\n%s\n---\n",verstr);
 
+	//fprintf(stderr,"Help 4 \n");
 	SPVsendMessage(self,peer,msg);
-
-	//fprintf(stderr, "Error: Size(%d) 4\n",msg->bytes->length);
-	//return 0;
-	//CBNetworkCommunicatorSendMessage, then see CBNetworkCommunicatorOnCanSend
-	int x;
-	uint8_t buf[24];
-	fprintf(stderr,"main hello outside forza \n");
-	if(SPVreceiveMessageHeader(self,peer)){
-		fprintf(stderr,"main hello inside\n");
-		return;
+	CBFreeMessage(msg);
+	char output[CB_MESSAGE_TYPE_STR_SIZE];
+	while(SPVreceiveMessageHeader(self,peer)){
+		CBMessageTypeToString(peer->receive->type, output);
+		fprintf(stderr,"Received message of type: %s \n",output);
+		CBFreeMessage(peer->receive);
 	}
-	fprintf(stderr,"main hello 4\n");
+	//fprintf(stderr,"Help 5 \n");
 }
 
-void child(mqd_t toparent,mqd_t fromparent) {
+// Using http://www.binarytides.com/tcp-connect-port-scanner-c-code-linux-sockets/
+btcpeer * createbtcpeer(char *hostname,char *portNum){
+	int sock, err, port;                        /* Socket descriptor */
+	struct sockaddr_in sa;
+	memset(&sa, 0, sizeof(sa));
+
+	struct hostent *host;
+	//fprintf(stderr,"create btc peer 1\n");
+	//port = atoi(portNum); // for testing, use nc -l 48333 on the local host
+	//strncpy((char*)&sa , "" , sizeof sa);
+	//sa.sin_family = AF_INET;
+	//fprintf(stderr,"create btc peer 2\n");
+	//direct ip address, use it
+	memset(&sa, 0, sizeof(sa));                /* zero the struct */
+	sa.sin_family = AF_INET;
+	//sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* set destination IP number - localhost, 127.0.0.1*/
+	sa.sin_addr.s_addr = inet_addr(hostname);
+	//sa.sin_port = htons(48333);                /* set destination port number */
+	sa.sin_port = htons(atoi(portNum));
+	sock = socket(AF_INET , SOCK_STREAM , 0);
+	fprintf(stderr,"create btc peer 3\n");
+	if(sock < 0)
+	{
+		fprintf(stderr,"\nSocket");
+		exit(1);
+	}
+	//Connect using that socket and sockaddr structure
+	//err = connect(sock , (struct sockaddr*)&sa , sizeof sa);
+	if((err = connect(sock, (struct sockaddr *)&sa, sizeof(sa))) < 0)
+	{
+		 fprintf(stderr,"Client-connect() error");
+		 close(sock);
+		 exit(-1);
+	}
+	//fprintf(stderr,"create btc peer 4\n");
+	btcpeer *peer = (btcpeer*) calloc(1, sizeof(btcpeer));
+	//fprintf(stderr,"create btc peer 5\n");
+	peer->fd = sock;
+	//fprintf(stderr,"create btc peer 6\n");
+	peer->buffsize = 8192;
+	//fprintf(stderr,"create btc peer 7\n");
+	return peer;
+}
+
+void child(mqd_t toparent,mqd_t fromparent, btcpeer *peer) {
 	//fprintf(stderr, "Forking process child\n");
 	const char hello[] = "hello parent, I am child";
 	uint16_t len = strlen(hello);
@@ -154,15 +197,66 @@ void child(mqd_t toparent,mqd_t fromparent) {
 	CHECK((mqd_t)-1 != mq_close(fromparent));
 }
 
-void parent(mqd_t tochild,mqd_t fromchild) {
+void parent(mqd_t tochild,mqd_t fromchild,btcpeer *peer) {
 	//fprintf(stderr, "Forking process parent\n");
 	/* do parental things with this end, like reading the child's message */
-	uint8_t buffer[MAX_SIZE + 1];
-	ssize_t bytes_read;
-	/* receive the message */
-	bytes_read = mq_receive(fromchild, buffer, MAX_SIZE, NULL);
 
-	printf("parent received mqueue '%.*s'\n", bytes_read, buffer);
+	//uint8_t *buffer = malloc(MAX_SIZE + 1);
+	CBByteArray * buffarray = CBNewByteArrayOfSize(MAX_SIZE + 1);
+	ssize_t bytes_read, bytes_written;
+	/* receive the message */
+
+	bool cont = true;
+
+	uint32_t payloadsize = 0;
+
+	bytes_read = mq_receive(fromchild, CBByteArrayGetData(buffarray), MAX_SIZE, NULL);
+	bytes_written = send(peer->fd,CBByteArrayGetData(buffarray),bytes_read,0);
+	fprintf(stderr,"sent version packet from parent to satoshi.[read=%d][sent=%d] \n",bytes_read,bytes_written);
+
+	while(cont){
+		//bytes_read = mq_receive(fromchild, CBByteArrayGetData(buffarray), MAX_SIZE, NULL);
+/*
+		if(bytes_read <= 0){
+			cont = false;
+			CBFreeByteArray(buffarray);
+			break;
+		}
+*/
+		//bytes_written = send(peer->fd,CBByteArrayGetData(buffarray),bytes_read,0);
+
+		if(bytes_written <= 0){
+			fprintf(stderr,"failed to send bytes to satoshi peer. \n");
+			CBFreeByteArray(buffarray);
+			break;
+		}
+
+		bytes_read = read(peer->fd,CBByteArrayGetData(buffarray),24);
+
+		if(bytes_read < 24){
+			fprintf(stderr,"did not receive full header (header=%d bytes;fd=%d) \n",bytes_read,peer->fd);
+			//CBFreeByteArray(buffarray);
+			break;
+		}
+		// get the payload size
+		payloadsize = CBByteArrayReadInt32(buffarray, 16);
+
+		// read in the next few bytes
+		if(payloadsize > 0){
+			bytes_read += recv(peer->fd,CBByteArrayGetData(buffarray)+24,payloadsize,0);
+			if(bytes_read - 24 == 0){
+				CBFreeByteArray(buffarray);
+				fprintf(stderr,"did not receive full payload");
+				break;
+			}
+		}
+
+		CHECK(0 <= mq_send(tochild, CBByteArrayGetData(buffarray), bytes_read, 0));
+
+
+	}
+	CBFreeByteArray(buffarray);
+	//printf("parent received mqueue '%.*s'\n", bytes_read, buffer);
 
 	CHECK((mqd_t)-1 != mq_close(fromchild));
 	CHECK((mqd_t)-1 != mq_close(tochild));
@@ -171,6 +265,11 @@ void parent(mqd_t tochild,mqd_t fromchild) {
 }
 
 void socketfork() {
+	// tcp connection
+	btcpeer *peer = createbtcpeer("10.21.0.189","8333");
+
+
+
 	mqd_t fd[4];
 	static const int toparentsocket = 0; // for child /morning_parent
 	static const int tochildsocket = 1; // for parent /morning_child
@@ -202,71 +301,25 @@ void socketfork() {
 	if (pid == 0) { /* 2.1 if fork returned zero, you are the child */
 		CHECK((mqd_t)-1 != mq_close(fd[tochildsocket])); /* Close the parent file descriptor */
 		CHECK((mqd_t)-1 != mq_close(fd[fromchildsocket])); /* Close the parent file descriptor */
-		child(fd[toparentsocket],fd[fromparentsocket]);
+		//child(fd[toparentsocket],fd[fromparentsocket],peer);
+		spvchild(fd[toparentsocket],fd[fromparentsocket]);
+		exit(0);
 	} else { /* 2.2 ... you are the parent */
 		CHECK((mqd_t)-1 != mq_close(fd[toparentsocket])); /* Close the child file descriptor */
 		CHECK((mqd_t)-1 != mq_close(fd[fromparentsocket])); /* Close the child file descriptor */
-		parent(fd[tochildsocket],fd[fromchildsocket]);
+		parent(fd[tochildsocket],fd[fromchildsocket],peer);
 	}
+
+	close(peer->fd);
 	exit(0); /* do everything in the parent and child functions */
-}
-
-
-typedef struct  {
-	int fd; /*socket descriptor*/
-	uint8_t *buffer;
-	ssize_t buffsize;
-} btcpeer;
-
-// Using http://www.binarytides.com/tcp-connect-port-scanner-c-code-linux-sockets/
-btcpeer * createbtcpeer(char *hostname,char *portNum){
-	int sock, err, port;                        /* Socket descriptor */
-	struct sockaddr_in sa;
-	memset(&sa, 0, sizeof(sa));
-
-	struct hostent *host;
-	fprintf(stderr,"create btc peer 1\n");
-	port = atoi(portNum); // for testing, use nc -l 48333 on the local host
-	//strncpy((char*)&sa , "" , sizeof sa);
-	sa.sin_family = AF_INET;
-	fprintf(stderr,"create btc peer 2\n");
-	//direct ip address, use it
-	memset(&sa, 0, sizeof(sa));                /* zero the struct */
-	sa.sin_family = AF_INET;
-	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* set destination IP number - localhost, 127.0.0.1*/
-	sa.sin_port = htons(48333);                /* set destination port number */
-	sock = socket(AF_INET , SOCK_STREAM , 0);
-	fprintf(stderr,"create btc peer 3\n");
-	if(sock < 0) 
-	{
-		fprintf(stderr,"\nSocket");
-		exit(1);
-	}
-	//Connect using that socket and sockaddr structure
-	//err = connect(sock , (struct sockaddr*)&sa , sizeof sa);
-	if((err = connect(sock, (struct sockaddr *)&sa, sizeof(sa))) < 0)
-	{
-		 fprintf(stderr,"Client-connect() error");
-		 close(sock);
-		 exit(-1);
-	}
-	fprintf(stderr,"create btc peer 4\n");
-	btcpeer *peer = (btcpeer*) calloc(1, sizeof(btcpeer));
-	fprintf(stderr,"create btc peer 5\n");
-	peer->fd = sock;
-	fprintf(stderr,"create btc peer 6\n");
-	peer->buffsize = 8192;
-	fprintf(stderr,"create btc peer 7\n");
-	return peer;
 }
 
 
 int main(int argc, char * argv[]) {
 	fprintf(stderr, "Forking process\n");
 	//socketfork();
-	btcpeer *peer = createbtcpeer("127.0.0.1","48333");
-	peer->buffer = "Hi, I am awesome.\n";
-	write(peer->fd,peer->buffer,strlen(peer->buffer));
-	close(peer->fd);
-	socketfork();
+	//peer->buffer = "Hi, I am awesome.\n";
+	//write(peer->fd,peer->buffer,strlen(peer->buffer));
+
+	//socketfork();
 }

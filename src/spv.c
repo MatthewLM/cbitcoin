@@ -126,8 +126,8 @@ CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer)
 
 bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message){
 	//fprintf(stderr,"SPVsendMessage hello 1\n");
-	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking)
-		return false;
+//	if (peer->sendQueueSize == CB_SEND_QUEUE_MAX_SIZE || !peer->connectionWorking)
+//		return false;
 	//char typeStr[CB_MESSAGE_TYPE_STR_SIZE];
 	//CBMessageTypeToString(message->type, typeStr);
 	//CBLogVerbose("Sending message of type %s (%u) to %s.", typeStr, message->type, peer->peerStr);
@@ -144,6 +144,7 @@ bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * mes
 			case CB_MESSAGE_TYPE_VERSION:
 				CBVersionPrepareBytes(CBGetVersion(message));
 				len = CBVersionSerialise(CBGetVersion(message), false);
+				fprintf(stderr,"Serialising Version [len=%d]",len);
 				break;
 
 			case CB_MESSAGE_TYPE_ADDR:
@@ -301,9 +302,11 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 		memcpy(peer->sendingHeader + CB_MESSAGE_HEADER_CHECKSUM, toSend->checksum, 4);
 	}
 	//int32_t len = CBSocketSend(peer->socketID, peer->sendingHeader + peer->messageSent, 24 - peer->messageSent);
-	int32_t len = write(STDOUT_FILENO,peer->sendingHeader,24);
+	//int32_t len = write(STDOUT_FILENO,peer->sendingHeader,24);
+	//CBByteArray * outbound = CBNewByteArrayOfSize(toSend);
 
-	if (len == CB_SOCKET_FAILURE) {
+/*
+	if (0) {
 		free(peer->sendingHeader);
 		fprintf(stderr,"Did not send full header");
 		exit;// exit the program and kill ourselves, because we cannot talk to the multiplexer
@@ -324,11 +327,24 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 			fprintf(stderr,"failed to send full header");
 			exit;
 		}
-	}
+	}*/
+	//int32_t len = write(STDOUT_FILENO,peer->sendingHeader,24);
+	CBByteArray * outbound = CBNewByteArrayOfSize(24+toSend->bytes->length);
 
+	for(uint32_t i=0;i<24+toSend->bytes->length;i++ ){
+		if(i < 24){
+			CBByteArraySetByte(outbound, i, peer->sendingHeader[i]);
+		}
+		else{
+			 CBByteArraySetByte(outbound, i, CBByteArrayGetByte(toSend->bytes,i-24));
+		}
+	}
 	// Sent header
 	//int32_t len = CBSocketSend(peer->socketID, CBByteArrayGetData(toSend->bytes) + peer->messageSent, toSend->bytes->length - peer->messageSent);
-	len = write(STDOUT_FILENO,CBByteArrayGetData(toSend->bytes),toSend->bytes->length);
+	//len = write(STDOUT_FILENO,CBByteArrayGetData(toSend->bytes),toSend->bytes->length);
+	CHECK(0 <= mq_send(self->outbound, CBByteArrayGetData(outbound), outbound->length, 0));
+
+/*
 	if (len == CB_SOCKET_FAILURE)
 		CBNetworkCommunicatorDisconnect(self, peer, 0, false);
 	else{
@@ -344,7 +360,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 		}
 
 	}
-
+*/
 	// If we sent version or verack, record this
 	if (toSend->type == CB_MESSAGE_TYPE_VERSION)
 		peer->handshakeStatus |= CB_HANDSHAKE_SENT_VERSION;
@@ -372,21 +388,29 @@ bool SPVreceiveMessageHeader(CBNetworkCommunicator * self, CBPeer * peer){
 	int len = 0;
 	free(peer->headerBuffer);
 	peer->headerBuffer = malloc(24);
-	while(peer->messageReceived < 24){
-		fprintf(stderr,"Reading in information");
-		len = read(STDIN_FILENO,peer->headerBuffer,24);
-		peer->messageReceived += len;
-		peer->downloadTimerStart = CBGetMilliseconds();
-		if(len < 24){
-			fprintf(stderr,"no bytes read for message header");
-			return false;
-		}
+	ssize_t bytes_read;
 
-	}
-	return SPVreadHeader(self,peer);
+	uint8_t *buffer = malloc(MAX_SIZE + 1);
+	CBByteArray * buffarray = CBNewByteArrayWithData(buffer, MAX_SIZE + 1);
+
+	bytes_read = mq_receive(self->inbound, CBByteArrayGetData(buffarray), MAX_SIZE + 1, NULL);
+
+	CBByteArray * msgbody;
+	CBInitByteArraySubReference(msgbody,buffarray,0,bytes_read);
+
+	bool success = SPVreadHeader(self,peer,msgbody);
+	CBFreeByteArray(msgbody);
+	CBFreeByteArray(buffarray);
+
+	return success;
 }
 
-bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer){
+bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer, CBByteArray *msgbody){
+
+	CBInitMessageByData(peer->receive,msgbody);
+	return true;
+	/*
+
 	CBByteArray * header = CBNewByteArrayWithData(peer->headerBuffer, 24);
 	uint32_t networkID = CBByteArrayReadInt32(header, 0);
 	if (networkID != self->networkID){

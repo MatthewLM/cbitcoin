@@ -42,13 +42,21 @@
 #define CB_CLIENT_USER_AGENT CB_USER_AGENT_SEGMENT "client-server"
 #define CBInvalidArg(str) {printf("Invalid argument. " str ": %s %s\n", argv[x], argv[x+1]); return EXIT_FAILURE;}
 
+
+typedef struct  {
+	int fd; /*socket descriptor*/
+	uint8_t *buffer;
+	ssize_t buffsize;
+} btcpeer;
+
 /*
  * Message Handling
  */
 bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
+
 bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *toSend);
 bool SPVreceiveMessageHeader(CBNetworkCommunicator * self, CBPeer * peer);
-bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer);
+bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer, CBByteArray *msgbody);
 
 
 CBNetworkAddress * CBReadNetworkAddress(char * ip, bool isPublic);
