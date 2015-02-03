@@ -185,97 +185,15 @@ btcpeer * createbtcpeer(char *hostname,char *portNum){
 	return peer;
 }
 
-void child(mqd_t toparent,mqd_t fromparent, btcpeer *peer) {
-	//fprintf(stderr, "Forking process child\n");
-	const char hello[] = "hello parent, I am child";
-	uint16_t len = strlen(hello);
-	uint8_t buffer[len + 1];
-	strcpy (buffer,hello);
-	CHECK(0 <= mq_send(toparent, buffer, len, 0)); /* NB. this includes nul */
-	/* go forth and do childish things with this end of the pipe */
-	CHECK((mqd_t)-1 != mq_close(toparent));
-	CHECK((mqd_t)-1 != mq_close(fromparent));
-}
-
-void parent(mqd_t tochild,mqd_t fromchild,btcpeer *peer) {
-	//fprintf(stderr, "Forking process parent\n");
-	/* do parental things with this end, like reading the child's message */
-
-	//uint8_t *buffer = malloc(MAX_SIZE + 1);
-	CBByteArray * buffarray = CBNewByteArrayOfSize(MAX_SIZE + 1);
-	ssize_t bytes_read, bytes_written;
-	/* receive the message */
-
-	bool cont = true;
-
-	uint32_t payloadsize = 0;
-
-	bytes_read = mq_receive(fromchild, CBByteArrayGetData(buffarray), MAX_SIZE, NULL);
-	bytes_written = send(peer->fd,CBByteArrayGetData(buffarray),bytes_read,0);
-	fprintf(stderr,"sent version packet from parent to satoshi.[read=%d][sent=%d] \n",bytes_read,bytes_written);
-
-	while(cont){
-		//bytes_read = mq_receive(fromchild, CBByteArrayGetData(buffarray), MAX_SIZE, NULL);
-/*
-		if(bytes_read <= 0){
-			cont = false;
-			CBFreeByteArray(buffarray);
-			break;
-		}
-*/
-		//bytes_written = send(peer->fd,CBByteArrayGetData(buffarray),bytes_read,0);
-
-		if(bytes_written <= 0){
-			fprintf(stderr,"failed to send bytes to satoshi peer. \n");
-			CBFreeByteArray(buffarray);
-			break;
-		}
-
-		bytes_read = read(peer->fd,CBByteArrayGetData(buffarray),24);
-
-		if(bytes_read < 24){
-			fprintf(stderr,"did not receive full header (header=%d bytes;fd=%d) \n",bytes_read,peer->fd);
-			//CBFreeByteArray(buffarray);
-			break;
-		}
-		// get the payload size
-		payloadsize = CBByteArrayReadInt32(buffarray, 16);
-
-		// read in the next few bytes
-		if(payloadsize > 0){
-			bytes_read += recv(peer->fd,CBByteArrayGetData(buffarray)+24,payloadsize,0);
-			if(bytes_read - 24 == 0){
-				CBFreeByteArray(buffarray);
-				fprintf(stderr,"did not receive full payload");
-				break;
-			}
-		}
-
-		CHECK(0 <= mq_send(tochild, CBByteArrayGetData(buffarray), bytes_read, 0));
-
-
-	}
-	CBFreeByteArray(buffarray);
-	//printf("parent received mqueue '%.*s'\n", bytes_read, buffer);
-
-	CHECK((mqd_t)-1 != mq_close(fromchild));
-	CHECK((mqd_t)-1 != mq_close(tochild));
-	CHECK((mqd_t)-1 != mq_unlink("/morning_up"));
-	CHECK((mqd_t)-1 != mq_unlink("/morning_down"));
-}
-
-void socketfork() {
+void start_service() {
 	// tcp connection
 	btcpeer *peer = createbtcpeer("10.21.0.189","8333");
 
 
 
-	mqd_t fd[4];
+	mqd_t fd[2];
 	static const int toparentsocket = 0; // for child /morning_parent
-	static const int tochildsocket = 1; // for parent /morning_child
-	static const int fromparentsocket = 2; // for child
-	static const int fromchildsocket = 3; // for parent
-	pid_t pid;
+	static const int fromparentsocket = 1; // for child
 
 	mqd_t mq;
 	struct mq_attr attr;
@@ -285,33 +203,21 @@ void socketfork() {
 	attr.mq_msgsize = MAX_SIZE;
 	attr.mq_curmsgs = 0;
 
-	// sockets for parent
-	fd[fromchildsocket] = mq_open("/morning_up", O_CREAT | O_RDONLY, 0644, &attr);
-	CHECK((mqd_t)-1 != fd[fromchildsocket]);
-	fd[tochildsocket] = mq_open("/morning_down", O_CREAT | O_WRONLY, 0644, &attr);
-	CHECK((mqd_t)-1 != fd[tochildsocket]);
 	// sockets for child
 	fd[fromparentsocket] = mq_open("/morning_down", O_CREAT | O_RDONLY, 0644, &attr);
 	CHECK((mqd_t)-1 != fd[fromparentsocket]);
 	fd[toparentsocket] = mq_open("/morning_up", O_CREAT | O_WRONLY, 0644, &attr);
 	CHECK((mqd_t)-1 != fd[toparentsocket]);
-	//fprintf(stderr, "Forking process 2\n");
-	/* 2. call fork ... */
-	pid = fork();
-	if (pid == 0) { /* 2.1 if fork returned zero, you are the child */
-		CHECK((mqd_t)-1 != mq_close(fd[tochildsocket])); /* Close the parent file descriptor */
-		CHECK((mqd_t)-1 != mq_close(fd[fromchildsocket])); /* Close the parent file descriptor */
-		//child(fd[toparentsocket],fd[fromparentsocket],peer);
-		spvchild(fd[toparentsocket],fd[fromparentsocket]);
-		exit(0);
-	} else { /* 2.2 ... you are the parent */
-		CHECK((mqd_t)-1 != mq_close(fd[toparentsocket])); /* Close the child file descriptor */
-		CHECK((mqd_t)-1 != mq_close(fd[fromparentsocket])); /* Close the child file descriptor */
-		parent(fd[tochildsocket],fd[fromchildsocket],peer);
-	}
 
-	close(peer->fd);
-	exit(0); /* do everything in the parent and child functions */
+	//child(fd[toparentsocket],fd[fromparentsocket],peer);
+	spvchild(fd[toparentsocket],fd[fromparentsocket]);
+
+	CHECK((mqd_t)-1 != mq_close(fd[toparentsocket]));
+	CHECK((mqd_t)-1 != mq_close(fd[fromparentsocket]));
+	CHECK((mqd_t)-1 != mq_unlink("/morning_up"));
+	CHECK((mqd_t)-1 != mq_unlink("/morning_down"));
+
+	exit(0);
 }
 
 
@@ -320,6 +226,6 @@ int main(int argc, char * argv[]) {
 	//socketfork();
 	//peer->buffer = "Hi, I am awesome.\n";
 	//write(peer->fd,peer->buffer,strlen(peer->buffer));
-
+	start_service();
 	//socketfork();
 }
