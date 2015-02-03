@@ -124,21 +124,102 @@ void spvchild(mqd_t toparent,mqd_t fromparent) {
 	fprintf(stderr,"Help 2 \n");
 	CBVersion *version = SPVNetworkCommunicatorGetVersion(self,peer);
 	CBMessage *msg = CBGetMessage(version);
-	//fprintf(stderr,"Help 3 \n");
+	fprintf(stderr,"Help 3 \n");
 	// bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message);
 	char verstr[CBVersionStringMaxSize(CBGetVersion(msg))];
 	CBVersionToString(CBGetVersion(msg), verstr);
 
-	//fprintf(stderr,"Help 4 \n");
-	SPVsendMessage(self,peer,msg);
-	CBFreeMessage(msg);
+	fprintf(stderr,"Help 4 \n");
+
+	peer->sendQueue[0].message = msg;
+	peer->sendQueueSize = 1;
+	peer->sendQueueFront = 0;
+
 	char output[CB_MESSAGE_TYPE_STR_SIZE];
-	while(SPVreceiveMessageHeader(self,peer)){
-		CBMessageTypeToString(peer->receive->type, output);
-		fprintf(stderr,"Received message of type: %s \n",output);
-		CBFreeMessage(peer->receive);
+
+/////////////////////////lib event//////////////////////////////////////////////////////
+	int sfd, s;
+	int w[2];
+	int efd;
+	// 0 for inbound, 1 for outbound
+	struct epoll_event event[2];
+	struct epoll_event *events;
+
+	fprintf(stderr,"Help 5 \n");
+
+	efd = epoll_create1 (0);
+	if(efd == -1){
+		fprintf(stderr,"failed to create epoll mechanism. \n");
+		exit(1);
 	}
-	//fprintf(stderr,"Help 5 \n");
+	event[0].data.fd = self->inbound;
+	event[0].events = EPOLLIN | EPOLLET;
+
+	event[1].data.fd = self->outbound;
+	event[1].events = EPOLLOUT | EPOLLET;
+
+	w[0] = epoll_ctl (efd, EPOLL_CTL_ADD, self->inbound, &event[0]);
+	w[1] = epoll_ctl (efd, EPOLL_CTL_ADD, self->outbound, &event[1]);
+
+
+	if(w[0] == -1 || w[1] == -1){
+		fprintf(stderr,"Problem creating epoll watcher \n");
+		exit(1);
+	}
+	int maxevents = 10;
+	events = calloc (maxevents, 2 * sizeof event[0]);
+	fprintf(stderr,"Help 6 \n");
+	int activeconnections = 2;
+	while(activeconnections > 0){
+		int n, i;
+		fprintf(stderr,"Help 7 \n");
+		n = epoll_wait (efd, events, maxevents, -1);
+		for(i=0;i<n;i++){
+			if(
+					(events[i].events & EPOLLERR) ||
+					(events[i].events & EPOLLHUP) ||
+					(!(events[i].events & EPOLLIN) && !(events[i].events & EPOLLOUT))
+			){
+				fprintf(stderr,"There was an error on this pipe. \n");
+				if(events[i].events & EPOLLERR){
+					fprintf(stderr,"poll error. \n");
+				}
+				else if(events[i].events & EPOLLHUP){
+					fprintf(stderr,"poll hup. \n");
+				}
+				close (events[i].data.fd);
+				activeconnections -= 1;
+				//exit(1);
+
+			}
+			else if(events[i].data.fd == self->inbound){
+				// time to read
+				fprintf(stderr,"Help read \n");
+				SPVreceiveMessageHeader(self,peer);
+				CBMessageTypeToString(peer->receive->type, output);
+				fprintf(stderr,"Received message of type: %s \n",output);
+				CBFreeMessage(peer->receive);
+			}
+			else if(events[i].data.fd == self->outbound && peer->sendQueueSize > 0){
+				// time to write
+				fprintf(stderr,"In Epoll, sending message. \n");
+				SPVsendMessage(self,peer,peer->sendQueue[peer->sendQueueFront].message);
+
+				peer->sendQueueSize -= 1;
+
+				peer->sendQueueFront += 1;
+				peer->sendQueueFront = peer->sendQueueFront % CB_SEND_QUEUE_MAX_SIZE;
+
+				CBFreeMessage(peer->sendQueue[peer->sendQueueFront].message);
+			}
+			else{
+				fprintf(stderr,"In Epoll, but nothing to do. \n");
+			}
+
+		}
+
+	}
+///////////////////////////////////////////////////////////////////////////////
 }
 
 // Using http://www.binarytides.com/tcp-connect-port-scanner-c-code-linux-sockets/
@@ -222,7 +303,7 @@ void start_service() {
 
 
 int main(int argc, char * argv[]) {
-	fprintf(stderr, "Forking process\n");
+
 	//socketfork();
 	//peer->buffer = "Hi, I am awesome.\n";
 	//write(peer->fd,peer->buffer,strlen(peer->buffer));

@@ -384,24 +384,28 @@ bool SPVreceiveMessageHeader(CBNetworkCommunicator * self, CBPeer * peer){
 	peer->receive->serialised = true;
 	peer->headerBuffer = malloc(24); // Twenty-four bytes for the message header.
 	peer->messageReceived = 0; // So far received nothing.
-
+	fprintf(stderr,"receive message 1 \n");
 	int len = 0;
 	free(peer->headerBuffer);
 	peer->headerBuffer = malloc(24);
 	ssize_t bytes_read;
 
+
 	uint8_t *buffer = malloc(MAX_SIZE + 1);
 	CBByteArray * buffarray = CBNewByteArrayWithData(buffer, MAX_SIZE + 1);
-
+	fprintf(stderr,"receive message 2 \n");
 	bytes_read = mq_receive(self->inbound, CBByteArrayGetData(buffarray), MAX_SIZE + 1, NULL);
+	fprintf(stderr,"receive message 3 \n");
 
-	CBByteArray * msgbody;
-	CBInitByteArraySubReference(msgbody,buffarray,0,bytes_read);
+	CBInitMessageByData(peer->receive,buffarray);
 
+	CBByteArray * msgbody = CBNewByteArraySubReference(heade, 4, 12);
+	//CBInitByteArraySubReference(msgbody,buffarray,0,bytes_read);
+	fprintf(stderr,"receive message 4 \n");
 	bool success = SPVreadHeader(self,peer,msgbody);
 	CBFreeByteArray(msgbody);
 	CBFreeByteArray(buffarray);
-
+	fprintf(stderr,"receive message 5 \n");
 	return success;
 }
 
