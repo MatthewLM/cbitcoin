@@ -15,3 +15,4 @@ databaseprofile/
 *tags
 .ycm_extra_conf.py*
 *.tar.gz
+Session.vim

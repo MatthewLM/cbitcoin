@@ -26,7 +26,7 @@ int main(int argc, char * argv[]){
 	bool useCompression = CBWIFUseCompression(&wif);
 
 	// Get key
-	int key[32];
+	unsigned char key[32];
 	CBWIFGetPrivateKey(&wif, key);
 	CBDestroyWIF(&wif);
 

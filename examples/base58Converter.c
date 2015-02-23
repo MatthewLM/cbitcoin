@@ -20,6 +20,11 @@
 
 int main(int argc, char * argv[]){
 
+    if (argc != 3) {
+        puts("Needs 2 arguments");
+        return 1;
+    }
+
 	bool encode = strcmp(argv[1],"-d");
 
 	// Read comma sperated inputs from the second argument

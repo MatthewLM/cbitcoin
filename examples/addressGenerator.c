@@ -47,12 +47,12 @@ int main(){
 		bool match = true;
 		int offset = 1;
 		size_t matchSize = strlen(stringMatch);
-		for (int y = 0; y < matchSize;) {
+		for (size_t y = 0; y < matchSize;) {
 			char other = islower(stringMatch[y]) ? toupper(stringMatch[y]) : (isupper(stringMatch[y])? tolower(stringMatch[y]) : '\0');
 			if (CBByteArrayGetByte(string, y+offset) != stringMatch[y] && CBByteArrayGetByte(string, y+offset) != other) {
 				offset++;
 				y = 0;
-				if (string->length < matchSize + offset) {
+				if (string->length < (int)matchSize + offset) {
 					match = false;
 					break;
 				}
