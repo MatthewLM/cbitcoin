@@ -14,8 +14,11 @@
 
 #include "spv.h"
 
+int dummy(void){
+	return 1;
+}
 
-
+/*
 CBNetworkAddress * CBReadNetworkAddress(char * ipStr, bool isPublic) {
 
 	CBSocketAddress saddr = {NULL, 8333};
@@ -111,7 +114,7 @@ CBOnMessageReceivedAction onMessageReceived(CBNetworkCommunicator * comm, CBPeer
 CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer){
 	return CBGetMessage(CBNetworkCommunicatorGetVersion(self, peer));
 }
-
+*/
 //CBLogWarning("Good IP (%s) for --addnode", argv[x]);
 //CBLogWarning("Bad IP for addnode configuration option at line %u", lineNum);
 // commConnect->flags = CB_NETWORK_COMMUNICATOR_AUTO_HANDSHAKE | CB_NETWORK_COMMUNICATOR_AUTO_PING | CB_NETWORK_COMMUNICATOR_AUTO_DISCOVERY;
@@ -122,7 +125,7 @@ CBMessage * CBFDgetVersion(CBNetworkCommunicator *self, CBNetworkAddress * peer)
  *
  */
 
-
+/*
 
 bool SPVsendMessage(CBNetworkCommunicator * self, CBPeer * peer, CBMessage * message){
 	//fprintf(stderr,"SPVsendMessage hello 1\n");
@@ -329,7 +332,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 		}
 	}*/
 	//int32_t len = write(STDOUT_FILENO,peer->sendingHeader,24);
-	CBByteArray * outbound = CBNewByteArrayOfSize(24+toSend->bytes->length);
+	/*CBByteArray * outbound = CBNewByteArrayOfSize(24+toSend->bytes->length);
 
 	for(uint32_t i=0;i<24+toSend->bytes->length;i++ ){
 		if(i < 24){
@@ -360,7 +363,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 		}
 
 	}
-*/
+*//*
 	// If we sent version or verack, record this
 	if (toSend->type == CB_MESSAGE_TYPE_VERSION)
 		peer->handshakeStatus |= CB_HANDSHAKE_SENT_VERSION;
@@ -373,7 +376,7 @@ bool SPVsendMessageViaPeer(CBNetworkCommunicator *self,CBPeer *peer, CBMessage *
 	// Done sending message.
 /*	if (peer->typeExpected != CB_MESSAGE_TYPE_NONE)
 		CBSocketAddEvent(peer->receiveEvent, self->responseTimeOut); // Expect response.
-*/
+*//*
 	return true;
 }
 
@@ -526,7 +529,7 @@ bool SPVreadHeader(CBNetworkCommunicator *self, CBPeer * peer, CBByteArray *msgb
 	/*
 	 * still lots more to do !
 	 */
-
+/*
 	return false;
 }
-
+*/
