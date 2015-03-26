@@ -6,6 +6,8 @@ AC_INIT([cbitcoin], [0.01], [cbitcoin@thelibertyportal.com])
 AC_CONFIG_SRCDIR([lib/CBAddress.c])
 AM_MAINTAINER_MODE
 
+
+
 ACX_PTHREAD
 
 # set flags
