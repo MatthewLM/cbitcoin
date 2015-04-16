@@ -93,7 +93,7 @@ bool CBInitHDKeyFromData(CBHDKey * key, unsigned char * data, CBHDKeyVersion ver
 		// Not master
 		int childNum = CBArrayToInt32BigEndian(data, 9);
 		key->childID.priv = childNum >> 31;
-		key->childID.childNumber = childNum & 0x8fffffff;
+		key->childID.childNumber = childNum & 0x7fffffff;
 	}
 
 	return true;
