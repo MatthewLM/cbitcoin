@@ -57,16 +57,9 @@ If you are able to get it to work for other systems then please submit the chang
 
 If you wish to compile a debian package, do the following:
  * dh_make -p cbitcoin_0.01 --createorig -l
- * debuild -uc
+ * debuild -S
+ * debuild -b
 
-Donations
----------
-
-If you wish to support the author of the original cbitcoin library (Matthew Mitchell), you can donate via the following methods:
-
-Bitcoin: 1D5A1q5d192j5gYuWiP3CSE5fcaaZxe6E9  
-Charitycoin: CSU54ZAa4VuhiVwzgyAudePmn7eJigkKU5  
-Paypal: [Click here to donate](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YPB6N4BBZQD3N)
 
 Contributors
 ------------
