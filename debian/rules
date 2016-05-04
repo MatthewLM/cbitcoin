@@ -17,3 +17,6 @@ export DH_VERBOSE=1
 
 override_dh_installdirs:
 	make installdirs
+
+override_dh_auto_test:
+	make check

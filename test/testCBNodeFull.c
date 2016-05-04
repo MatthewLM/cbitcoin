@@ -1418,8 +1418,8 @@ void CBNetworkCommunicatorStartListeningVoid(void * comm){
 int main() {
 
 	puts("You may need to move your mouse around if this test stalls.");
-	//puts("This test is not necessary yet.");
-	//return EXIT_SUCCESS;
+	puts("This test is not necessary yet.");
+	return EXIT_SUCCESS;
 	CBNewMutex(&testMutex);
 	
 	// Create three nodes to talk to each other
