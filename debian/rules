@@ -13,10 +13,10 @@ export DH_VERBOSE=1
 #include /usr/share/dpkg/buildflags.mk
 
 %:
-	dh $@  --with autotools-dev
+	dh $@  --with autoreconf
 
 override_dh_installdirs:
 	make installdirs
 
-override_dh_auto_test:
-	make check
+#override_dh_auto_test:
+#	make check

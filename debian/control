@@ -1,7 +1,7 @@
 Source: cbitcoin
 Priority: extra
 Maintainer: Joel DeJesus (Work Email) <dejesus.joel@e-flamingo.jp>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev, libev-dev, libssl-dev
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, libev-dev, libssl-dev, dh-autoreconf,  libevent-dev ,libevent-2.0-5 (>= 2.0.10-stable), libevent-core-2.0-5 (>= 2.0.10-stable), libevent-extra-2.0-5 (>= 2.0.10-stable), libevent-openssl-2.0-5 (>= 2.0.10-stable), libevent-pthreads-2.0-5 (>= 2.0.10-stable)
 Standards-Version: 3.9.3
 Section: libs
 Homepage: https://e-flamingo.jp
